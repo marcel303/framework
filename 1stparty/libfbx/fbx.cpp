@@ -366,9 +366,24 @@ bool FbxValueArray::isValid() const
 // FbxReader
 // --------------------------------------------------------------------------------
 
-void FbxReader::throwException() const
+struct FbxException : std::exception
 {
-	throw std::exception();
+	const char * m_what;
+	
+	FbxException(const char * what)
+		: m_what(what)
+	{
+	}
+	
+	virtual const char * what() const noexcept override final
+	{
+		return m_what ? m_what : "";
+	}
+};
+
+void FbxReader::throwException(const char * what) const
+{
+	throw FbxException(what);
 }
 
 template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T & result) const
@@ -380,7 +395,7 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 		if (offset + sizeof(result64) > m_numBytes)
 		{
 			memset(&result, 0, sizeof(result));
-			throwException();
+			throwException("read beyond buffer end");
 			return;
 		}
 		
@@ -390,7 +405,7 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 		if (result64 > std::numeric_limits<int32_t>::max())
 		{
 			memset(&result, 0, sizeof(result));
-			throwException();
+			throwException("read beyond int32 limit. this is not yet supported");
 			return;
 		}
 		
@@ -401,7 +416,7 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 		if (offset + sizeof(T) > m_numBytes)
 		{
 			memset(&result, 0, sizeof(result));
-			throwException();
+			throwException("read beyond buffer end");
 			return;
 		}
 		
@@ -415,7 +430,7 @@ template <typename T> void FbxReader::read(size_t & offset, T & result, size_t n
 	if (offset + numBytes > m_numBytes)
 	{
 		memset(&result, 0, numBytes);
-		throwException();
+		throwException("read beyond buffer end");
 		return;
 	}
 	
@@ -430,7 +445,7 @@ template <typename T> void FbxReader::readArray(size_t & offset, T * result, siz
 	if (offset + numBytes > m_numBytes)
 	{
 		memset(&result, 0, numBytes);
-		throwException();
+		throwException("array read beyond buffer end");
 		return;
 	}
 	
@@ -441,14 +456,14 @@ template <typename T> void FbxReader::readArray(size_t & offset, T * result, siz
 void FbxReader::skip(size_t & offset, size_t numBytes) const
 {
 	if (offset + numBytes > m_numBytes)
-		throwException();
+		throwException("skip beyond buffer end");
 	offset += numBytes;
 }
 
 void FbxReader::seek(size_t & offset, size_t newOffset) const
 {
 	if (newOffset > m_numBytes)
-		throwException();
+		throwException("seek beyond buffer end");
 	offset = newOffset;
 }
 
@@ -523,13 +538,13 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 		if (offset + compressedLength > m_numBytes)
 		{
 			delete [] values;
-			throwException();
+			throwException("array: compressed read beyond buffer end");
 		}
 		
 		if (!decompress(m_bytes + offset, compressedLength, values, sizeof(T) * arrayLength))
 		{
 			delete [] values;
-			throwException();
+			throwException("array: decompression error");
 		}
 		
 		offset += compressedLength;
@@ -537,7 +552,7 @@ template <typename T> void FbxReader::readArray(size_t & offset, FbxValueArray &
 	else
 	{
 		delete [] values;
-		throwException();
+		throwException("array: unknown encoding type");
 	}
 	
 	// convert to FbxValueArray
@@ -622,7 +637,7 @@ void FbxReader::readPropertyValue(size_t & offset, FbxValue & value) const
 		
 		default:
 		{
-			throwException(); // unknown property type
+			throwException("unknown property type");
 			break;
 		}
 	}
@@ -651,7 +666,7 @@ void FbxReader::readPropertyArray(size_t & offset, FbxValueArray & value) const
 		
 		default:
 		{
-			throwException(); // unknown property type
+			throwException("unknown property type");
 			break;
 		}
 	}
@@ -681,7 +696,7 @@ void FbxReader::openFromMemory(const void * bytes, size_t numBytes)
 	read(offset, magic[0], sizeof(kMagic));
 	if (strcmp(magic, kMagic))
 	{
-		throwException(); // not a binary FBX file
+		throwException("not a binary FBX file");
 		return;
 	}
 	

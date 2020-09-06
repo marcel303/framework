@@ -224,7 +224,7 @@ class FbxReader
 	int32_t m_version;
 	bool m_sizesAre64Bit;
 	
-	void throwException() const;
+	void throwException(const char * what) const;
 	
 	template <typename T> void read(const bool isSize, size_t & offset, T & result) const;
 	template <typename T> void read(size_t & offset, T & result, size_t numBytes) const;
