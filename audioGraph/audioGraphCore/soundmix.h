@@ -92,6 +92,12 @@ extern void audioBufferMul(
 	const int numSamples,
 	const float * __restrict scale);
 
+extern void audioBufferRamp(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float scale1,
+	const float scale2);
+
 extern void audioBufferAdd(
 	      float * __restrict audioBufferDst,
 	const float * __restrict audioBufferSrc,

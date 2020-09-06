@@ -94,15 +94,18 @@ void audioBufferMul(
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
-	const int numSamples4 = numSamples / 4;
+	const int numSamples16 = numSamples / 16;
 	const __m128 scale4 = _mm_load1_ps(&scale);
 	
-	for (int i = 0; i < numSamples4; ++i)
+	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i] = audioBuffer4[i] * scale4;
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4;
 	}
 	
-	begin = numSamples4 * 4;
+	begin = numSamples16 * 16;
 #elif ENABLE_GCC_VECTOR
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
@@ -138,33 +141,117 @@ void audioBufferMul(
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
 	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
-	const int numSamples4 = numSamples / 4;
+	const int numSamples16 = numSamples / 16;
 	const __m128 * __restrict scale4 = (__m128*)scale;
 	
-	for (int i = 0; i < numSamples4; ++i)
+	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i] = audioBuffer4[i] * scale4[i];
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i] * scale4[i * 4 + 0];
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i] * scale4[i * 4 + 1];
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i] * scale4[i * 4 + 2];
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i] * scale4[i * 4 + 3];
 	}
 	
-	begin = numSamples4 * 4;
+	begin = numSamples16 * 16;
 #elif ENABLE_GCC_VECTOR
 	Assert((uintptr_t(audioBuffer) & 15) == 0);
 	
 	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
-	const int numSamples4 = numSamples / 4;
+	const int numSamples16 = numSamples / 16;
 	const vec4f * __restrict scale4 = (vec4f*)scale;
 	
-	for (int i = 0; i < numSamples4; ++i)
+	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i] = audioBuffer4[i] * scale4[i];
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4[i * 4 + 0];
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4[i * 4 + 1];
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4[i * 4 + 2];
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4[i * 4 + 3];
 	}
 	
-	begin = numSamples4 * 4;
+	begin = numSamples16 * 16;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
 	{
 		audioBuffer[i] *= scale[i];
+	}
+}
+
+extern void audioBufferRamp(
+	float * __restrict audioBuffer,
+	const int numSamples,
+	const float scale1,
+	const float scale2)
+{
+	int begin = 0;
+	
+	const float scaleStep = (scale2 - scale1) / numSamples;
+	
+#if ENABLE_SSE
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
+	const int numSamples16 = numSamples / 16;
+	const float scaleStep_x4 = scaleStep * 4.f;
+	const __m128 scaleStep4 = _mm_set1_ps(scaleStep_x4);
+	__m128 scale4 = _mm_setr_ps(
+		(scale1),
+		(scale1 + scaleStep),
+		(scale1 + scaleStep) + (scaleStep),
+		(scale1 + scaleStep) + (scaleStep + scaleStep));
+	
+#if defined(DEBUG)
+	float * scale4_array = (float*)&scale4;
+	Assert(scale4_array[0] == scale1);
+#endif
+
+	for (int i = 0; i < numSamples16; ++i)
+	{
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 += scaleStep4;
+	}
+	
+	begin = numSamples16 * 16;
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(audioBuffer) & 15) == 0);
+	
+	vec4f * __restrict audioBuffer4 = (vec4f*)audioBuffer;
+	const int numSamples16 = numSamples / 16;
+	const float scaleStep_x4 = scaleStep * 4.f;
+	const vec4f scaleStep4 = { scaleStep_x4, scaleStep_x4, scaleStep_x4, scaleStep_x4 };
+	vec4f scale4 =
+		{
+			(scale1),
+			(scale1 + scaleStep),
+			(scale1 + scaleStep) + (scaleStep),
+			(scale1 + scaleStep) + (scaleStep + scaleStep)
+		};
+	
+#if defined(DEBUG)
+	float * scale4_array = (float*)&scale4;
+	Assert(scale4_array[0] == scale1);
+#endif
+
+	for (int i = 0; i < numSamples16; ++i)
+	{
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 += scaleStep4;
+	}
+	
+	begin = numSamples16 * 16;
+#endif
+
+	float scale = scale1;
+	
+	for (int i = begin; i < numSamples; ++i)
+	{
+		audioBuffer[i] *= scale;
+		
+		scale += scaleStep;
 	}
 }
 
