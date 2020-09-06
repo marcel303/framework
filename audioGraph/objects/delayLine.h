@@ -50,7 +50,7 @@ struct DelayLine
 		setLength(0);
 	}
 	
-	void setLength(const int _numSamples)
+	void setLength(const int in_numSamples)
 	{
 		delete[] samples;
 		samples = nullptr;
@@ -60,12 +60,14 @@ struct DelayLine
 
 		//
 
-		if (_numSamples > 0)
+		if (in_numSamples > 0)
 		{
-			samples = new float[_numSamples];
-			numSamples = _numSamples;
+			// allocate the delay line
+			samples = new float[in_numSamples];
+			numSamples = in_numSamples;
 			
-			memset(samples, 0, sizeof(float) * _numSamples);
+			// clear the delay line
+			memset(samples, 0, sizeof(float) * numSamples);
 		}
 	}
 	
