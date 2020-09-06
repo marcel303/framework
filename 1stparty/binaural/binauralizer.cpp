@@ -56,6 +56,10 @@ namespace binaural
 	{
 		memset(overlapBuffer, 0, sizeof(overlapBuffer));
 		memset(hrtfs, 0, sizeof(hrtfs));
+		
+	#if defined(DEBUG)
+		memset(sampleBuffer.samples, 0xff, sizeof(sampleBuffer.samples));
+	#endif
 	}
 	
 	void Binauralizer::init(const HRIRSampleSet * in_sampleSet, Mutex * in_mutex)
@@ -261,6 +265,8 @@ namespace binaural
 		const int numSamples,
 		const HRIRSample * hrir)
 	{
+		assert(numSamples <= SampleBuffer::kBufferSize);
+
 		int left = numSamples;
 		int done = 0;
 		
@@ -325,6 +331,8 @@ namespace binaural
 		const int numSamples,
 		const HRIRSample * hrir)
 	{
+		assert(numSamples <= SampleBuffer::kBufferSize);
+		
 		int left = numSamples;
 		int done = 0;
 		
