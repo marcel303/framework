@@ -1281,7 +1281,7 @@ void Scene::tick(const float dt)
 		{
 			controlPanel->window.setTransform(
 				vrPointer[1].getTransform(playerLocation)
-					.Translate(0, .2f, -.1f)
+					.Translate(0, .2f, .4f)
 					.RotateX(float(M_PI/180.0) * -15));
 		}
 	#endif
@@ -1823,12 +1823,15 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 		std::atomic<float> elevation;
 		std::atomic<float> azimuth;
 		std::atomic<float> intensity;
+		
+		float lastIntensity;
 
 		Source()
 			: enabled(true)
 			, elevation(0.f)
 			, azimuth(0.f)
 			, intensity(0.f)
+			, lastIntensity(0.f)
 		{
 		}
 	};
@@ -2016,7 +2019,8 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 				{
 					// distance attenuation
 					const float intensity = source->intensity.load();
-					audioBufferMul(inputSamples, numSamples, intensity);
+					audioBufferRamp(inputSamples, numSamples, source->lastIntensity, intensity);
+					source->lastIntensity = intensity;
 
 					source->binauralizer.provide(inputSamples, numSamples);
 
@@ -2046,7 +2050,8 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 				{
 					// volume
 					const float intensity = source->intensity.load();
-					audioBufferMul(inputSamples, numSamples, intensity);
+					audioBufferRamp(inputSamples, numSamples, source->lastIntensity, intensity);
+					source->lastIntensity = intensity;
 					
 					audioBufferAdd(outputSamplesL, inputSamples, numSamples);
 					audioBufferAdd(outputSamplesR, inputSamples, numSamples);
