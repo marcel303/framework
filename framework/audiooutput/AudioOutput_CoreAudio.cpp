@@ -232,8 +232,12 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 
 	{
 		// set maximum frame count
-		
+	
+	#if defined(IPHONEOS)
 		UInt32 maxFramesPerSlice = bufferSize;
+	#else
+		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size when in power saving mode
+	#endif
 		
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -244,6 +248,22 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		if (checkStatus(status) == false)
 			return false;
 	}
+	
+#if !defined(IPHONEOS)
+	{
+		// set the hardware buffer size
+		
+		UInt32 bufferSize = 256;
+	
+		auto status = AudioUnitSetProperty(
+			m_audioUnit,
+			kAudioDevicePropertyBufferFrameSize,
+			kAudioUnitScope_Output,
+			0,
+			&bufferSize, sizeof(bufferSize));
+		checkStatus(status);
+	}
+#endif
 
 	OSStatus status;
 	
