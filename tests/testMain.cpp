@@ -788,7 +788,7 @@ void testMain()
 			popSurface();
 			
 			//surface.invert();
-			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
+			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceil(blurStrength * 100.f));
 			
 			setColor(colorWhite);
 			surface.blit(BLEND_OPAQUE);
@@ -847,7 +847,7 @@ void testMenu()
 			
 			//surface.invert();
 		#if !USE_LEGACY_OPENGL
-			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceilf(blurStrength * 100.f));
+			surface.gaussianBlur(blurStrength * 100.f, blurStrength * 100.f, std::ceil(blurStrength * 100.f));
 		#endif
 			
 			setColor(colorWhite);
