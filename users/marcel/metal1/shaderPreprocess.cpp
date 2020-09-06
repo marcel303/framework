@@ -72,13 +72,6 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	return result;
 }
 
-static void addLineAndFileMarker(std::string & destination, const int lineNumber, const int fileId)
-{
-	char lineText[128];
-	sprintf_s(lineText, sizeof(lineText), "#line %d %d\n", int(lineNumber), fileId);
-	destination.append(lineText);
-}
-
 bool preprocessShader(
 	const std::string & source,
 	std::string & destination,
@@ -92,11 +85,6 @@ bool preprocessShader(
 	
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
-		if ((flags & kPreprocessShader_AddOpenglLineAndFileMarkers) != 0 && i == 0)
-		{
-			addLineAndFileMarker(destination, i, fileId);
-		}
-		
 		const std::string & line = lines[i];
 		const std::string trimmedLine = String::TrimLeft(lines[i]);
 
@@ -131,11 +119,6 @@ bool preprocessShader(
 				delete [] bytes;
 				bytes = 0;
 				numBytes = 0;
-				
-				if ((flags & kPreprocessShader_AddOpenglLineAndFileMarkers) != 0)
-				{
-					addLineAndFileMarker(destination, i + 1, fileId);
-				}
 			}
 		}
 		else

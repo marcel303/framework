@@ -166,7 +166,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 	std::string source;
 	
-	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages, includedFiles))
+	if (!preprocessShaderFromFile(filename, source, 0*kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages, includedFiles))
 	{
 		result = false;
 	}
