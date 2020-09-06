@@ -352,7 +352,6 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 	, audioOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Size, kAudioPlugType_Int);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_PositionDampening, kAudioPlugType_FloatVec);
 	addInput(kInput_VelocityDampening, kAudioPlugType_FloatVec);
@@ -443,8 +442,6 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocationX = getInputAudioFloat(kInput_SampleLocationX, &AudioFloat::Half);
 	const AudioFloat * sampleLocationY = getInputAudioFloat(kInput_SampleLocationY, &AudioFloat::Half);
-// todo : remove size input
-	const int size = getInputInt(kInput_Size, 16);
 	
 	//
 

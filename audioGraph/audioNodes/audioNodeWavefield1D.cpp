@@ -369,7 +369,6 @@ AudioNodeWavefield1D::AudioNodeWavefield1D()
 	, audioOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Size, kAudioPlugType_Int);
 	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	addInput(kInput_PositionDampening, kAudioPlugType_FloatVec);
 	addInput(kInput_VelocityDampening, kAudioPlugType_FloatVec);
@@ -452,7 +451,6 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &AudioFloat::Half);
-	//const int size = getInputInt(kInput_Size, 16);
 	
 	//
 
