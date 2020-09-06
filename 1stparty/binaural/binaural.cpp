@@ -612,6 +612,12 @@ namespace binaural
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
 		float4 t2 = _mm_set_ps(tStepScalar * 7.f, tStepScalar * 6.f, tStepScalar * 5.f, tStepScalar * 4.f);
 		
+	#if ENABLE_DEBUGGING
+		float * t1_array = (float*)&t1;
+		float * t2_array = (float*)&t2;
+		debugAssert(t2[3] == tStepScalar * 7.f);
+	#endif
+
 		const float4 * __restrict a4 = (float4*)a;
 		const float4 * __restrict b4 = (float4*)b;
 		      float4 * __restrict r4 = (float4*)r;
@@ -632,7 +638,6 @@ namespace binaural
 			t1 = t1 + tStep;
 			t2 = t2 + tStep;
 		}
-		
 	#else
 		const float tStep = 1.f / numSamples;
 		
