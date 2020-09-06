@@ -793,9 +793,9 @@ struct GraphEdit : GraphEditConnection
 		
 		std::set<GraphNodeId> nodeIds;
 		
-		std::set<EditorVisualizer*> visualizers;
+		std::set<GraphNodeId> visualizerIds;
 		
-		std::set<EditorComment*> comments;
+		std::set<GraphNodeId> commentIds;
 		
 		NodeSelect()
 			: beginX(0)
@@ -803,8 +803,8 @@ struct GraphEdit : GraphEditConnection
 			, endX(0)
 			, endY(0)
 			, nodeIds()
-			, visualizers()
-			, comments()
+			, visualizerIds()
+			, commentIds()
 		{
 		}
 	};
@@ -924,8 +924,8 @@ struct GraphEdit : GraphEditConnection
 	std::set<GraphLinkId> selectedLinks;
 	std::set<GraphLinkRoutePoint*> highlightedLinkRoutePoints;
 	std::set<GraphLinkRoutePoint*> selectedLinkRoutePoints;
-	std::set<EditorVisualizer*> selectedVisualizers;
-	std::set<EditorComment*> selectedComments;
+	std::set<GraphNodeId> selectedVisualizers;
+	std::set<GraphNodeId> selectedComments;
 	
 	SocketSelection highlightedSockets;
 	SocketSelection selectedSockets;
@@ -1039,8 +1039,8 @@ struct GraphEdit : GraphEditConnection
 	void selectNode(const GraphNodeId nodeId, const bool clearSelection);
 	void selectLink(const GraphLinkId linkId, const bool clearSelection);
 	void selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const bool clearSelection);
-	void selectVisualizer(EditorVisualizer * visualizer, const bool clearSelection);
-	void selectComment(EditorComment * comment, const bool clearSelection);
+	void selectVisualizer(const GraphNodeId visualizerId, const bool clearSelection);
+	void selectComment(const GraphNodeId commentId, const bool clearSelection);
 	void selectNodeAll();
 	void selectLinkAll();
 	void selectLinkRoutePointAll();
@@ -1076,6 +1076,11 @@ struct GraphEdit : GraphEditConnection
 	virtual void nodeRemove(const GraphNodeId nodeId) override;
 	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
 	virtual void linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
+	
+	// add/remove
+	
+	void visualizerRemove(const GraphNodeId visualizerId);
+	void commentRemove(const GraphNodeId commentId);
 };
 
 //

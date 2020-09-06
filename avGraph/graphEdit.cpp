@@ -2337,19 +2337,19 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					{
 						if (appendSelection == false)
 						{
-							if (selectedVisualizers.count(hitTestResult.visualizer) == 0)
+							if (selectedVisualizers.count(hitTestResult.visualizer->id) == 0)
 							{
-								selectVisualizer(hitTestResult.visualizer, true);
+								selectVisualizer(hitTestResult.visualizer->id, true);
 								
 								hitTestResult.visualizer->zKey = nextZKey++;
 							}
 						}
 						else
 						{
-							if (selectedVisualizers.count(hitTestResult.visualizer) == 0)
-								selectVisualizer(hitTestResult.visualizer, false);
+							if (selectedVisualizers.count(hitTestResult.visualizer->id) == 0)
+								selectVisualizer(hitTestResult.visualizer->id, false);
 							else
-								selectedVisualizers.erase(hitTestResult.visualizer);
+								selectedVisualizers.erase(hitTestResult.visualizer->id);
 						}
 						
 						if (enabled(kFlag_NodeDrag))
@@ -2381,17 +2381,17 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					{
 						if (appendSelection == false)
 						{
-							if (selectedComments.count(hitTestResult.comment) == 0)
+							if (selectedComments.count(hitTestResult.comment->id) == 0)
 							{
-								selectComment(hitTestResult.comment, true);
+								selectComment(hitTestResult.comment->id, true);
 							}
 						}
 						else
 						{
-							if (selectedComments.count(hitTestResult.comment) == 0)
-								selectComment(hitTestResult.comment, false);
+							if (selectedComments.count(hitTestResult.comment->id) == 0)
+								selectComment(hitTestResult.comment->id, false);
 							else
-								selectedComments.erase(hitTestResult.comment);
+								selectedComments.erase(hitTestResult.comment->id);
 						}
 						
 						if (enabled(kFlag_NodeDrag))
@@ -2541,14 +2541,24 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					for (auto * visualizer : selectedVisualizers)
+					for (auto visualizerId : selectedVisualizers)
 					{
-						snapToGrid(visualizer->x, visualizer->y);
+						auto * visualizer = tryGetVisualizer(visualizerId);
+						
+						if (visualizer != nullptr)
+						{
+							snapToGrid(visualizer->x, visualizer->y);
+						}
 					}
 					
-					for (auto * comment : selectedComments)
+					for (auto commentId : selectedComments)
 					{
-						snapToGrid(comment->x, comment->y);
+						auto * comment = tryGetComment(commentId);
+						
+						if (comment != nullptr)
+						{
+							snapToGrid(comment->x, comment->y);
+						}
 					}
 				}
 			}
@@ -2716,50 +2726,60 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				// copy visualizers
 				
-				std::set<EditorVisualizer*> newSelectedVisualizers;
+				std::set<GraphNodeId> newSelectedVisualizers;
 				
-				for (auto * visualizer : selectedVisualizers)
+				for (auto visualizerId : selectedVisualizers)
 				{
-					EditorVisualizer * newVisualizer = nullptr;
-					
-					if (tryAddVisualizer(
-						visualizer->nodeId,
-						visualizer->srcSocketName,
-						visualizer->srcSocketIndex,
-						visualizer->dstSocketName,
-						visualizer->dstSocketIndex,
-						visualizer->x + kGridSize,
-						visualizer->y + kGridSize,
-						false,
-						&newVisualizer))
+					auto * visualizer = tryGetVisualizer(visualizerId);
+					Assert(visualizer != nullptr);
+					if (visualizer != nullptr)
 					{
-						newVisualizer->sx = visualizer->sx;
-						newVisualizer->sy = visualizer->sy;
+						EditorVisualizer * newVisualizer = nullptr;
 						
-						newSelectedVisualizers.insert(newVisualizer);
+						if (tryAddVisualizer(
+							visualizer->nodeId,
+							visualizer->srcSocketName,
+							visualizer->srcSocketIndex,
+							visualizer->dstSocketName,
+							visualizer->dstSocketIndex,
+							visualizer->x + kGridSize,
+							visualizer->y + kGridSize,
+							false,
+							&newVisualizer))
+						{
+							newVisualizer->sx = visualizer->sx;
+							newVisualizer->sy = visualizer->sy;
+							
+							newSelectedVisualizers.insert(newVisualizer->id);
+						}
 					}
 				}
 				
 				// copy comments
 				
-				std::set<EditorComment*> newSelectedComments;
+				std::set<GraphNodeId> newSelectedComments;
 				
-				for (auto * comment : selectedComments)
+				for (auto commentId : selectedComments)
 				{
-					EditorComment * newComment = nullptr;
-					
-					if (tryAddComment(
-						comment->x + kGridSize,
-						comment->y + kGridSize,
-						false,
-						&newComment))
+					auto * comment = tryGetComment(commentId);
+					Assert(comment != nullptr);
+					if (comment != nullptr)
 					{
-						newComment->sx = comment->sx;
-						newComment->sy = comment->sy;
-						newComment->caption = comment->caption;
-						newComment->color = comment->color;
+						EditorComment * newComment = nullptr;
 						
-						newSelectedComments.insert(newComment);
+						if (tryAddComment(
+							comment->x + kGridSize,
+							comment->y + kGridSize,
+							false,
+							&newComment))
+						{
+							newComment->sx = comment->sx;
+							newComment->sy = comment->sy;
+							newComment->caption = comment->caption;
+							newComment->color = comment->color;
+							
+							newSelectedComments.insert(newComment->id);
+						}
 					}
 				}
 				
@@ -2856,16 +2876,28 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						routePoint->y += moveY;
 					}
 					
-					for (auto * visualizer : selectedVisualizers)
+					for (auto visualizerId : selectedVisualizers)
 					{
-						visualizer->x += moveX;
-						visualizer->y += moveY;
+						auto * visualizer = tryGetVisualizer(visualizerId);
+						
+						Assert(visualizer != nullptr);
+						if (visualizer != nullptr)
+						{
+							visualizer->x += moveX;
+							visualizer->y += moveY;
+						}
 					}
 					
-					for (auto * comment : selectedComments)
+					for (auto commentId : selectedComments)
 					{
-						comment->x += moveX;
-						comment->y += moveY;
+						auto * comment = tryGetComment(commentId);
+						
+						Assert(comment != nullptr);
+						if (comment != nullptr)
+						{
+							comment->x += moveX;
+							comment->y += moveY;
+						}
 					}
 				}
 			}
@@ -2949,29 +2981,21 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				if (enabled(kFlag_NodeRemove))
 				{
-					for (auto * visualizer : selectedVisualizers)
-					{
-						auto i = visualizers.find(visualizer->id);
-						
-						Assert(i != visualizers.end());
-						if (i != visualizers.end())
-							visualizers.erase(i);
-					}
+					auto visualizersToRemove = selectedVisualizers;
+					for (auto visualizerId : visualizersToRemove)
+						visualizerRemove(visualizerId);
 					
+					Assert(selectedVisualizers.empty());
 					selectedVisualizers.clear();
 				}
 				
 				if (enabled(kFlag_NodeRemove))
 				{
-					for (auto * comment : selectedComments)
-					{
-						auto i = comments.find(comment->id);
-						
-						Assert(i != comments.end());
-						if (i != comments.end())
-							comments.erase(i);
-					}
+					auto commentsToRemove = selectedComments;
+					for (auto commentId : commentsToRemove)
+						commentRemove(commentId);
 					
+					Assert(selectedComments.empty());
 					selectedComments.clear();
 				}
 			}
@@ -3073,7 +3097,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			// hit test visualizers
 			
-			nodeSelect.visualizers.clear();
+			nodeSelect.visualizerIds.clear();
 			
 			for (auto & visualizerItr : visualizers)
 			{
@@ -3089,13 +3113,13 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					visualizer.x + visualizer.sx,
 					visualizer.y + visualizer.sy))
 				{
-					nodeSelect.visualizers.insert(&visualizer);
+					nodeSelect.visualizerIds.insert(visualizer.id);
 				}
 			}
 			
 			// hit test comments
 			
-			nodeSelect.comments.clear();
+			nodeSelect.commentIds.clear();
 			
 			for (auto & commentItr : comments)
 			{
@@ -3111,7 +3135,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					comment.x + comment.sx,
 					comment.y + comment.sy))
 				{
-					nodeSelect.comments.insert(&comment);
+					nodeSelect.commentIds.insert(comment.id);
 				}
 			}
 			
@@ -3159,16 +3183,28 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				routePoint->y += mousePosition.dy;
 			}
 			
-			for (auto & visualizer : selectedVisualizers)
+			for (auto visualizerId : selectedVisualizers)
 			{
-				visualizer->x += mousePosition.dx;
-				visualizer->y += mousePosition.dy;
+				auto * visualizer = tryGetVisualizer(visualizerId);
+				
+				Assert(visualizer != nullptr);
+				if (visualizer != nullptr)
+				{
+					visualizer->x += mousePosition.dx;
+					visualizer->y += mousePosition.dy;
+				}
 			}
 			
-			for (auto & comment : selectedComments)
+			for (auto commentId : selectedComments)
 			{
-				comment->x += mousePosition.dx;
-				comment->y += mousePosition.dy;
+				auto * comment = tryGetComment(commentId);
+				
+				Assert(comment != nullptr);
+				if (comment != nullptr)
+				{
+					comment->x += mousePosition.dx;
+					comment->y += mousePosition.dy;
+				}
 			}
 		}
 		break;
@@ -4020,16 +4056,16 @@ void GraphEdit::nodeSelectEnd()
 	if (selectionMod())
 	{
 		selectedNodes.insert(nodeSelect.nodeIds.begin(), nodeSelect.nodeIds.end());
-		selectedVisualizers.insert(nodeSelect.visualizers.begin(), nodeSelect.visualizers.end());
-		selectedComments.insert(nodeSelect.comments.begin(), nodeSelect.comments.end());
+		selectedVisualizers.insert(nodeSelect.visualizerIds.begin(), nodeSelect.visualizerIds.end());
+		selectedComments.insert(nodeSelect.commentIds.begin(), nodeSelect.commentIds.end());
 	}
 	else
 	{
 		deselectAll();
 		
 		selectedNodes = nodeSelect.nodeIds;
-		selectedVisualizers = nodeSelect.visualizers;
-		selectedComments = nodeSelect.comments;
+		selectedVisualizers = nodeSelect.visualizerIds;
+		selectedComments = nodeSelect.commentIds;
 	}
 	
 	nodeSelect = NodeSelect();
@@ -4055,14 +4091,26 @@ void GraphEdit::nodeDragEnd()
 			snapToGrid(routePoint->x, routePoint->y);
 		}
 		
-		for (auto * visualizer : selectedVisualizers)
+		for (auto visualizerId : selectedVisualizers)
 		{
-			snapToGrid(visualizer->x, visualizer->y);
+			auto * visualizer = tryGetVisualizer(visualizerId);
+			
+			Assert(visualizer != nullptr);
+			if (visualizer != nullptr)
+			{
+				snapToGrid(visualizer->x, visualizer->y);
+			}
 		}
 		
-		for (auto * comment : selectedComments)
+		for (auto commentId : selectedComments)
 		{
-			snapToGrid(comment->x, comment->y);
+			auto * comment = tryGetComment(commentId);
+			
+			Assert(comment != nullptr);
+			if (comment != nullptr)
+			{
+				snapToGrid(comment->x, comment->y);
+			}
 		}
 	}
 }
@@ -4434,16 +4482,18 @@ void GraphEdit::doCommentProperties(const float dt)
 	
 	if (selectedComments.size() == 1)
 	{
-		auto & comment = **selectedComments.begin();
+		auto commentId = *selectedComments.begin();
+		auto * comment = tryGetComment(commentId);
+		Assert(comment != nullptr);
 		
 		pushMenu("commentProperties");
 		{
 			doLabel("comment", 0.f);
 			
-			doTextBox(comment.caption, "caption", dt);
-			doParticleColor(comment.color, "color");
+			doTextBox(comment->caption, "caption", dt);
+			doParticleColor(comment->color, "color");
 			
-			if (uiState->activeColor == &comment.color)
+			if (uiState->activeColor == &comment->color)
 			{
 				doColorWheel(*uiState->activeColor, "colorwheel", dt);
 			}
@@ -4547,7 +4597,7 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 		
 		if (select)
 		{
-			selectVisualizer(&visualizer, true);
+			selectVisualizer(visualizer.id, true);
 		}
 		
 		if (out_visualizer != nullptr)
@@ -4568,7 +4618,7 @@ bool GraphEdit::tryAddComment(const float x, const float y, const bool select, E
 	
 	if (select)
 	{
-		selectComment(&comment, true);
+		selectComment(comment.id, true);
 	}
 	
 	if (out_comment != nullptr)
@@ -4700,28 +4750,28 @@ void GraphEdit::selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const boo
 	selectedLinkRoutePoints.insert(routePoint);
 }
 
-void GraphEdit::selectVisualizer(EditorVisualizer * visualizer, const bool clearSelection)
+void GraphEdit::selectVisualizer(const GraphNodeId visualizerId, const bool clearSelection)
 {
-	Assert(selectedVisualizers.count(visualizer) == 0 || clearSelection);
+	Assert(selectedVisualizers.count(visualizerId) == 0 || clearSelection);
 	
 	if (clearSelection)
 	{
 		deselectAll();
 	}
 	
-	selectedVisualizers.insert(visualizer);
+	selectedVisualizers.insert(visualizerId);
 }
 
-void GraphEdit::selectComment(EditorComment * comment, const bool clearSelection)
+void GraphEdit::selectComment(const GraphNodeId commentId, const bool clearSelection)
 {
-	Assert(selectedComments.count(comment) == 0 || clearSelection);
+	Assert(selectedComments.count(commentId) == 0 || clearSelection);
 	
 	if (clearSelection)
 	{
 		deselectAll();
 	}
 	
-	selectedComments.insert(comment);
+	selectedComments.insert(commentId);
 }
 
 void GraphEdit::selectNodeAll()
@@ -4760,7 +4810,7 @@ void GraphEdit::selectVisualizerAll()
 	selectedVisualizers.clear();
 	
 	for (auto & visualizerItr : visualizers)
-		selectedVisualizers.insert(&visualizerItr.second);
+		selectedVisualizers.insert(visualizerItr.second.id);
 }
 
 void GraphEdit::selectCommentAll()
@@ -4768,7 +4818,7 @@ void GraphEdit::selectCommentAll()
 	selectedComments.clear();
 	
 	for (auto & commentItr : comments)
-		selectedComments.insert(&commentItr.second);
+		selectedComments.insert(commentItr.second.id);
 }
 
 void GraphEdit::selectAll()
@@ -5763,7 +5813,7 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 {
 	cpuTimingBlock(drawVisualizer);
 	
-	const bool isSelected = selectedVisualizers.count(const_cast<EditorVisualizer*>(&visualizer)) != 0;
+	const bool isSelected = selectedVisualizers.count(visualizer.id) != 0;
 	
 	auto * srcNode = tryGetNode(visualizer.nodeId);
 	auto * srcNodeData = tryGetNodeData(visualizer.nodeId);
@@ -5781,7 +5831,7 @@ void GraphEdit::drawComment(const EditorComment & comment) const
 	
 	setFont("calibri.ttf");
 	
-	const bool isSelected = selectedComments.count(const_cast<EditorComment*>(&comment)) != 0;
+	const bool isSelected = selectedComments.count(comment.id) != 0;
 	
 	const float kTextSize = 14.f;
 	
@@ -6373,15 +6423,14 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 	
 	// remove visualizers referenced by node
 	
-	for (auto i = visualizers.begin(); i != visualizers.end(); )
-	{
-		auto & visualizer = i->second;
-		
-		if (visualizer.nodeId == nodeId)
-			i = visualizers.erase(i);
-		else
-			++i;
-	}
+	std::set<GraphNodeId> visualizersToRemove;
+	
+	for (auto & visualizer : visualizers)
+		if (visualizer.second.nodeId == nodeId)
+			visualizersToRemove.insert(visualizer.second.id);
+	
+	for (auto visualizerToRemove : visualizersToRemove)
+		visualizerRemove(visualizerToRemove);
 	
 	if (realTimeSocketCapture.visualizer.nodeId == nodeId)
 	{
@@ -6438,6 +6487,24 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 				realTimeConnection->setSrcSocketValue(srcNodeId, srcSocket->index, srcSocket->name, valueText->second);
 		}
 	}
+}
+
+void GraphEdit::visualizerRemove(const GraphNodeId visualizerId)
+{
+	Assert(visualizers.find(visualizerId) != visualizers.end());
+	visualizers.erase(visualizerId);
+	
+	if (selectedVisualizers.count(visualizerId) != 0)
+		selectedVisualizers.erase(visualizerId);
+}
+
+void GraphEdit::commentRemove(const GraphNodeId commentId)
+{
+	Assert(comments.count(commentId) != 0);
+	comments.erase(commentId);
+	
+	if (selectedComments.count(commentId) != 0)
+		selectedComments.erase(commentId);
 }
 
 //
