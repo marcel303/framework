@@ -688,7 +688,7 @@ float atan(float x, float y) { return atan2(x, y); }
 					
 				#if defined(DEBUG)
 					// detect if a pass is added more than once
-					for (int j = 0; j < i; ++i)
+					for (int j = 0; j < i; ++j)
 						Assert(outputs[j] != outputs[i]);
 				#endif
 					
