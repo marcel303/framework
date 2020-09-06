@@ -447,7 +447,6 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 	const float y1 = position[1] - height;
 	const float y2 = position[1] + height;
 	
-#if true
 	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < resolution; ++i)
@@ -522,66 +521,6 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 		}
 	}
 	gxEnd();
-#else
-// todo : use a single triangle strip for everything
-
-	gxBegin(GX_TRIANGLE_STRIP);
-	{
-		for (int i = 0; i <= resolution; ++i)
-		{
-			const int vertex = i < resolution ? i : 0;
-			
-			// emit vertical segment
-			
-			gxNormal3f(dx[vertex], 0.f, dz[vertex]);
-			
-			gxVertex3f(x[vertex], y1, z[vertex]);
-			gxVertex3f(x[vertex], y2, z[vertex]);
-		}
-	}
-	gxEnd();
-	
-	gxBegin(GX_TRIANGLE_STRIP);
-	{
-		// emit bottom part
-		
-		gxNormal3f(0, -1, 0);
-		
-		int index1 = 0;
-		int index2 = resolution - 1;
-		
-		while (index1 < index2)
-		{
-			gxVertex3f(x[index1], y1, z[index1]);
-			gxVertex3f(x[index2], y1, z[index2]);
-			
-			index1++;
-			index2--;
-		}
-		
-		// emit top part
-		
-		gxNormal3f(0, +1, 0);
-		
-		index1--;
-		index2++;
-		
-		// note : the bottom and top will be connected through a degenerate
-		//        triangle, so we don't need to start a new triangle strip here
-		
-		gxVertex3f(x[index2], y1, z[index2]);
-		
-		while (index1 >= 0)
-		{
-			gxVertex3f(x[index2], y2, z[index2]);
-			gxVertex3f(x[index1], y2, z[index1]);
-			
-			index1--;
-			index2++;
-		}
-	}
-	gxEnd();
-#endif
 }
 
 void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset, const bool smoothNormals)
