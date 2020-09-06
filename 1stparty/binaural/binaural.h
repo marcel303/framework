@@ -481,14 +481,10 @@ namespace binaural
 	void debugTimerBegin(const char * name);
 	void debugTimerEnd(const char * name);
 #else
-	// todo : use macros, to avoid conditions and formatting arguments from still being evaluated
-	inline void debugAssert(const bool condition)
-	{
-	}
+	// note : use macros, to avoid conditions and formatting arguments from still being evaluated
+	#define debugAssert(condition) do { } while (false)
 	
-	inline void debugLog(const char * format, ...)
-	{
-	}
+	#define debugLog(...) do { } while (false)
 	
 	inline void debugTimerBegin(const char * name)
 	{
