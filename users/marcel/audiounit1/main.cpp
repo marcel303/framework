@@ -124,6 +124,7 @@ int main(int argc, char * argv[])
 		UInt32 size;
 		Boolean writable;
 		
+	#if defined(IPHONEOS)
 		status = AudioUnitGetPropertyInfo(
 			audioUnit,
 			kAudioUnitProperty_StreamFormat,
@@ -147,6 +148,7 @@ int main(int argc, char * argv[])
 			checkStatus(status);
 		#endif
 		}
+	#endif
 		
 	#if 1
 		status = AudioUnitGetPropertyInfo(
@@ -208,7 +210,11 @@ int main(int argc, char * argv[])
 	{
 		// set maximum frame count
 		
+	#if defined(IPHONEOS)
 		UInt32 maxFramesPerSlice = 256;
+	#else
+		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size when in power saving mode
+	#endif
 		
 		auto status = AudioUnitSetProperty(
 			audioUnit,
@@ -218,6 +224,20 @@ int main(int argc, char * argv[])
 			&maxFramesPerSlice, sizeof(maxFramesPerSlice));
 		checkStatus(status);
 	}
+	
+#if !defined(IPHONEOS)
+	{
+		UInt32 bufferSize = 256;
+	
+		auto status = AudioUnitSetProperty(
+			audioUnit,
+			kAudioDevicePropertyBufferFrameSize,
+			kAudioUnitScope_Output,
+			0,
+			&bufferSize, sizeof(bufferSize));
+		checkStatus(status);
+	}
+#endif
 
 	OSStatus status;
 	
