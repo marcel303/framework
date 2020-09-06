@@ -59,10 +59,6 @@
 
 #define USE_STBFONT 0
 
-#if FRAMEWORK_USE_OPENAL
-	#include <OpenAL/al.h>
-#endif
-
 #if !defined(USE_GLYPH_ATLAS)
 	#if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 		#define USE_GLYPH_ATLAS 1
@@ -824,11 +820,7 @@ public:
 class SoundCacheElem
 {
 public:
-#if FRAMEWORK_USE_OPENAL
-	ALuint buffer;
-#else
 	void * buffer;
-#endif
 	
 	SoundCacheElem();
 	void free();

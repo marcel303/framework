@@ -150,62 +150,6 @@ public:
 
 #endif
 
-#if FRAMEWORK_USE_OPENAL
-
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-
-class SoundPlayer_OpenAL : public SoundPlayer_Interface
-{
-	friend class SoundCacheElem;
-	
-	struct Source
-	{
-		ALuint source;
-		ALuint buffer;
-	
-		int playId;
-		bool loop;
-	};
-	
-	ALCdevice* m_device;
-	ALCcontext* m_context;
-	
-	int m_numSources;
-	Source* m_sources;
-	
-	class AudioStream_Vorbis * m_musicStream;
-	class AudioOutput_OpenAL * m_musicOutput;
-	
-	int m_playId;
-	
-	ALuint createSource();
-	void destroySource(ALuint & source);
-	Source * allocSource();
-	void checkError();
-	
-public:
-	SoundPlayer_OpenAL();
-	~SoundPlayer_OpenAL();
-	
-	bool init(int numSources);
-	bool shutdown();
-	void process();
-	
-	int playSound(ALuint buffer, float volume, bool loop);
-	void stopSound(int playId);
-	void stopSoundsForBuffer(ALuint buffer);
-	void stopAllSounds();
-	void setSoundVolume(int playId, float volume);
-	void playMusic(const char * filename, bool loop);
-	void stopMusic();
-	void setMusicVolume(float volume);
-};
-
-#endif
-
-//
-
 #if FRAMEWORK_USE_PORTAUDIO
 
 #include <stdint.h>
@@ -314,8 +258,6 @@ public:
 
 #if FRAMEWORK_USE_PORTAUDIO && 0
 	typedef SoundPlayer_PortAudio SoundPlayer;
-#elif FRAMEWORK_USE_OPENAL
-	typedef SoundPlayer_OpenAL SoundPlayer;
 #elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
 	typedef SoundPlayer_AudioOutput SoundPlayer;
 #else

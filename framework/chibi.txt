@@ -106,9 +106,7 @@ library framework
 
 	header_path . expose
 
-# todo : remove OpenAL altogether
 	compile_definition NO_SDL_GLEXT            * expose
-	compile_definition FRAMEWORK_USE_OPENAL    0 expose
 
 	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
@@ -155,11 +153,9 @@ library framework
 # Windows header file includes and libraries
 	with_platform windows header_path win32/include          expose
 	with_platform windows depend_library FreeImage
-	with_platform windows depend_library win32/lib/OpenAL32.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
 	with_platform windows depend_library Winmm.lib global
 	with_platform windows depend_library OpenGL32.lib global
-	with_platform windows add_dist_files win32/dll/OpenAL32.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 
 # Linux header file includes and libraries

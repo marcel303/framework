@@ -909,25 +909,12 @@ SpriterCacheElem & SpriterCache::findOrCreate(const char * name)
 
 SoundCacheElem::SoundCacheElem()
 {
-#if FRAMEWORK_USE_OPENAL
-	buffer = 0;
-#else
 	buffer = nullptr;
-#endif
 }
 
 void SoundCacheElem::free()
 {
-#if FRAMEWORK_USE_OPENAL
-	if (buffer != 0)
-	{
-		g_soundPlayer.stopSoundsForBuffer(buffer);
-		
-		alDeleteBuffers(1, &buffer);
-		g_soundPlayer.checkError();
-		buffer = 0;
-	}
-#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
 	if (buffer != nullptr)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -947,60 +934,7 @@ void SoundCacheElem::load(const char * filename)
 	
 	if (soundData != 0)
 	{
-	#if FRAMEWORK_USE_OPENAL
-		ALenum bufferFormat = (ALenum)-1;
-		
-		if (soundData->channelCount == 1)
-		{
-			if (soundData->channelSize == 1)
-				bufferFormat = AL_FORMAT_MONO8;
-			else if (soundData->channelSize == 2)
-				bufferFormat = AL_FORMAT_MONO16;
-		}
-		else if (soundData->channelCount == 2)
-		{
-			if (soundData->channelSize == 1)
-				bufferFormat = AL_FORMAT_STEREO8;
-			else if (soundData->channelSize == 2)
-				bufferFormat = AL_FORMAT_STEREO16;
-		}
-		
-		if (bufferFormat != -1)
-		{
-			alGenBuffers(1, &buffer);
-			g_soundPlayer.checkError();
-			
-			if (buffer != 0)
-			{
-				ALuint bufferSize = soundData->sampleCount * soundData->channelCount * soundData->channelSize;
-				ALuint bufferSampleRate = soundData->sampleRate;
-				
-				logDebug("%s: buffer=%x, bufferFormat=%x, samleData=%p, bufferSize=%d, sampleRate=%d",
-					filename,
-					buffer,
-					bufferFormat,
-					soundData->sampleData,
-					bufferSize,
-					soundData->sampleRate);
-	
-				alBufferData(buffer, bufferFormat, soundData->sampleData, bufferSize, bufferSampleRate);
-				g_soundPlayer.checkError();
-				
-				logInfo("loaded %s", filename);
-			}
-			else
-			{
-				logError("%s: failed to create OpenAL buffer", filename);
-			}
-		}
-		else
-		{
-			logError("%s: unknown channel config: channelCount=%d, channelSize=%d",
-				filename,
-				soundData->channelCount,
-				soundData->channelSize);
-		}
-	#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
+	#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
 		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
