@@ -341,7 +341,7 @@ int main(int argc, char * argv[])
 		
 		if (false)
 		{
-			if (!scene.bodies.empty() > 0)
+			if (!scene.bodies.empty())
 			{
 				auto & body = scene.bodies.begin()->second;
 				auto & target = body.joints["hips"].position;

@@ -7,6 +7,7 @@
 #include "graphEdit.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
+#include <time.h>
 
 #if !defined(DEBUG)
 	#define FINMODE 1

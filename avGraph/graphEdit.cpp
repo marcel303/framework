@@ -5001,8 +5001,8 @@ void GraphEdit::draw() const
 	{
 		Shader shader("graphEdit/gpupath");
 		setShader(shader);
-		shader.setImmediate("color1", 0.02, 0.02, 0.02, 1.0);
-		shader.setImmediate("color2", 0.8, 1.0, 0.1, 1.0);
+		shader.setImmediate("color1", 0.02f, 0.02f, 0.02f, 1.0f);
+		shader.setImmediate("color2", 0.8f, 1.0f, 0.1f, 1.0f);
 		shader.setImmediate("halfThickness", 5.f / 2.f);
 		shader.setImmediate("halfThicknessColor", 5.f * 1.f/2.f / 2.f);
 		shader.setImmediate("hardness", 2.f);

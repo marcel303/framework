@@ -1,3 +1,5 @@
+#ifndef WIN32
+
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include <sys/stat.h>
@@ -378,3 +380,12 @@ s << "APP_DEBUG := true";
 
 	return 0;
 }
+
+#else
+
+int main(int argc, char * argv[])
+{
+	return -1;
+}
+
+#endif

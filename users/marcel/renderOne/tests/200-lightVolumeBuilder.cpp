@@ -30,7 +30,7 @@ int main(int argc, char * argv[])
 		builder.addPointLight(3, Vec3(+4, 0, +4), 2.f);
 		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
 		
-		builder.addSpotLight(5, Vec3(0, 0, 0), Vec3(1, 1, 1).CalcNormalized(), M_PI/2.f, 1.f);
+		builder.addSpotLight(5, Vec3(0, 0, 0), Vec3(1, 1, 1).CalcNormalized(), float(M_PI)/2.f, 1.f);
 		
 		auto data = builder.generateLightVolumeData(32, 16.f, false);
 		
@@ -216,7 +216,7 @@ int main(int argc, char * argv[])
 							Vec3 min;
 							Vec3 max;
 							LightVolumeBuilder builder;
-							builder.computeSpotLightAabb(light.position, Vec3(0, -1, 0), M_PI/2.f, 2.f, min, max);
+							builder.computeSpotLightAabb(light.position, Vec3(0, -1, 0), float(M_PI)/2.f, 2.f, min, max);
 							
 							Vec3 position = (min + max) / 2.f;
 							Vec3 extents = (max - min) / 2.f;

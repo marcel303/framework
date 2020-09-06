@@ -402,7 +402,7 @@ struct Waves
 	{
 		transform = Mat4x4(true)
 			.Translate(0, -.05f, 0)
-			.RotateX(M_PI/2.f)
+			.RotateX(float(M_PI)/2.f)
 			.Scale(10, 10, WATER_HEIGHT)
 			.Translate(-.5f, -.5f, 0)
 			.Scale(1.f / kSize, 1.f / kSize, 1)

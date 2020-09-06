@@ -955,7 +955,7 @@ static void testCubes1()
 		int viewSy;
 		framework.getCurrentViewportSize(viewSx, viewSy);
 		
-		matProj.MakePerspectiveLH(M_PI / 2.0f, viewSy / float(viewSx), 0.01f, 100.0f);
+		matProj.MakePerspectiveLH(float(M_PI) / 2.0f, viewSy / float(viewSx), 0.01f, 100.0f);
 		matView.MakeLookat(Vec3(0.0f, 0.0f, 0.0f), Vec3(0.0f, 0.0f, 1.0f), Vec3(0.0f, 1.0f, 0.0f));
 		{
 			Mat4x4 matWorldPos;

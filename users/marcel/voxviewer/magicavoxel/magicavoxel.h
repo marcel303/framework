@@ -39,9 +39,9 @@ struct MagicaModel
 	MagicaVoxel * getVoxelWithBorder(int x, int y, int z, MagicaVoxel * border) const
 	{
 		bool inside =
-			(x >= 0 & x < sx) &
-			(y >= 0 & y < sy) &
-			(z >= 0 & z < sz);
+			(x >= 0) & (x < sx) &
+			(y >= 0) & (y < sy) &
+			(z >= 0) & (z < sz);
 		
 		if (inside)
 		{
