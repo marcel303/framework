@@ -254,6 +254,8 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
+	shutUi();
+	
 	framework.shutdown();
 
 	return 0;

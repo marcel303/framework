@@ -2466,6 +2466,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
+	shutUi();
+	
 	Font("calibri.ttf").saveCache();
 
 	framework.shutdown();

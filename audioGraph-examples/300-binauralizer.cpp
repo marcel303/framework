@@ -860,6 +860,8 @@ int main(int argc, char * argv[])
 	
 	s_audioMutex.shut();
 	
+	shutUi();
+	
 	framework.shutdown();
 
 	return 0;
