@@ -74,7 +74,8 @@
 /*
 
 todo : quality :
-- the audio seems to have a tin-can feel after being processed. todo : find out why. perhaps we need a low-pass filter ?
++ the audio seems to have a tin-can feel after being processed. todo : find out why. perhaps we need a low-pass filter ?
+	-> the reason is due to the way HRIR samples are combined. this creates a comb-like filter effect and colors the sound. the effect is not present when using the OpenAL soft HRTF filters, as they are properly processed to be able to blend them
 
 todo : performance :
 - batch binaural object : most of the remaining cost is in performing the fourier transformations prior and after the convolution step is performed. for the source to frequency <-> time domain transformations, it's possible to do four source of them at once when we create a batch binauralizer object. this object would then perform binauralization on four streams at a time. convolution etc which operates on the left and right channels separately could be made to use 8-component AVX instructions, for additional gains
