@@ -28,7 +28,7 @@
 #pragma once
 
 #include "Mat4x4.h"
-#include <list> // todo : remove std::list dependency
+#include <list>
 #include <map>
 #include <stdint.h>
 #include <string>
