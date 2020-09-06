@@ -302,9 +302,8 @@ int main(int argc, char * argv[])
 		Surface view3D(200, 200, false);
 	#endif
 		
-	// todo : rename testsounds/music2.ogg -> thegrooop/talkative.ogg
 		PcmData pcmData;
-		pcmData.load("testsounds/music2.ogg", 0, false);
+		pcmData.load("thegrooop/talkative.ogg", 0, false);
 		
 		MyPortAudioHandler audioHandler;
 		int numSources = 0;

@@ -35,7 +35,7 @@
         <input socket="outMin" value="0.300000"/>
     </node>
     <node id="22" typeName="pcm.fromFile">
-        <input socket="filename" value="music2.ogg"/>
+        <input socket="filename" value="talkative.ogg"/>
     </node>
     <node id="23" typeName="audio.pcm"/>
     <node id="26" typeName="audio.sine">

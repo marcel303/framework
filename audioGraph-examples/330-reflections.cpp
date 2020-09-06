@@ -703,8 +703,8 @@ struct MyAudioSource : AudioSource
 
 	MyAudioSource()
 	{
-		fillPcmDataCache("testsounds", true, true, true);
-		pcm.init(getPcmData("music2.ogg"), 0);
+		fillPcmDataCache("thegrooop", true, true, true);
+		pcm.init(getPcmData("talkative.ogg"), 0);
 		pcm.play();
 		
 		source = new Source();

@@ -12,7 +12,7 @@
         <input socket="filename" value="sound.ogg"/>
     </node>
     <node id="6" typeName="pcm.fromFile">
-        <input socket="filename" value="music2.ogg"/>
+        <input socket="filename" value="talkative.ogg"/>
     </node>
     <node id="8" typeName="mix">
         <input socket="gainA" value="0.000000"/>

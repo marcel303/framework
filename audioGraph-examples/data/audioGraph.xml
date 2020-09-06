@@ -9,10 +9,10 @@
         <input socket="rangeLength" value="0.011000"/>
     </node>
     <node id="5" typeName="pcm.fromFile">
-        <input socket="filename" value="sound.ogg"/>
+        <input socket="filename" value="wobbly.ogg"/>
     </node>
     <node id="6" typeName="pcm.fromFile">
-        <input socket="filename" value="music2.ogg"/>
+        <input socket="filename" value="talkative.ogg"/>
     </node>
     <node id="8" typeName="mix">
         <input socket="gainA" value="0.000000"/>
