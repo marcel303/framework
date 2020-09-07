@@ -186,12 +186,12 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 	#if DO_KINETIC_SCROLL
 	#if DO_TOUCH_SCROLL
 		Vec2 new_kinetic_scroll;
-		const bool hasWindowFocus = framework.getCurrentWindow().hasFocus();
 		for (auto & e : framework.events)
 		{
-			if (hasWindowFocus == false)
+			if (framework.windowIsActive == false)
 			{
 				kinetic_scroll.SetZero();
+				kinetic_scroll_smoothed.SetZero();
 				
 				num_touches = 0;
 			}
