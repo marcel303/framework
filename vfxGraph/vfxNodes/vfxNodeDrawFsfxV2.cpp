@@ -562,21 +562,21 @@ void VfxNodeFsfxV2::draw() const
 				shader->setImmediate("gaussianKernelSize", 60.f);
 			}
 			
-			popSurface();
+			pushBlend(BLEND_OPAQUE);
 			{
-				pushBlend(BLEND_OPAQUE);
+				pushTransform();
 				{
-					pushTransform();
+					setTransform(TRANSFORM_SCREEN);
+					
+					popSurface();
 					{
-						setTransform(TRANSFORM_SCREEN);
-						
 						g_currentVfxSurface->postprocess();
 					}
-					popTransform();
+					pushSurface(g_currentVfxSurface);
 				}
-				popBlend();
+				popTransform();
 			}
-			pushSurface(g_currentVfxSurface);
+			popBlend();
 		}
 		clearShader();
 	}
