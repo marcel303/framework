@@ -168,6 +168,8 @@ struct VfxGraph
 	
 	std::vector<ValueToFree> valuesToFree;
 	
+	Surface * dummySurface;
+	
 	MemoryComponent memory;
 	
 	int sx;

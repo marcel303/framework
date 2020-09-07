@@ -45,10 +45,6 @@ Surface * g_currentVfxSurface = nullptr;
 
 //
 
-static Surface * s_dummySurface = nullptr; // todo : add explicit vfx graph init and shutdown ?
-
-//
-
 void MemoryComponent::registerMemf(const char * name, const int numElements)
 {
 	auto & mem = memf[name];
@@ -152,6 +148,7 @@ VfxGraph::VfxGraph(VfxGraphContext * in_context)
 	, currentTickTraversalId(-1)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
+	, dummySurface(nullptr)
 	, memory()
 	, sx(0)
 	, sy(0)
@@ -163,6 +160,8 @@ VfxGraph::VfxGraph(VfxGraphContext * in_context)
 	context->refCount++;
 	
 	dynamicData = new VfxDynamicData();
+	
+	dummySurface = new Surface(1, 1, false, false, true, 1);
 }
 
 VfxGraph::~VfxGraph()
@@ -232,6 +231,9 @@ void VfxGraph::destroy()
 	Assert(displayNodeIds.empty());
 	
 	g_currentVfxGraph = nullptr;
+	
+	delete dummySurface;
+	dummySurface = nullptr;
 	
 	delete dynamicData;
 	dynamicData = nullptr;
@@ -420,18 +422,12 @@ int VfxGraph::traverseDraw() const
 
 	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior
 	
-// todo : create dummy surface explicitly during init ?
-	if (s_dummySurface == nullptr)
-	{
-		s_dummySurface = new Surface(1, 1, false, false, true, 1);
-	}
-	
-	pushSurface(s_dummySurface);
+	pushSurface(dummySurface);
 	{
 		// draw nodes that aren't connected to the display node
 		
 		Assert(g_currentVfxSurface == nullptr);
-		g_currentVfxSurface = s_dummySurface;
+		g_currentVfxSurface = dummySurface;
 		
 		for (auto & i : nodes)
 		{
