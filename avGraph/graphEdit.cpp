@@ -3674,7 +3674,7 @@ bool GraphEdit::tickTouches()
 	const float sy = 1080*2/3;
 
 #if FRAMEWORK_USE_SDL
-	for (auto & event : framework.events) // todo : use per-window list of events
+	for (auto & event : framework.events) // note : we checked if the current window is active above, so we are okay here to handle touch events
 	{
 		if (event.type == SDL_FINGERDOWN)
 		{
