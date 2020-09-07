@@ -35,7 +35,7 @@ static S s;
 
 static void push_dir(const char * path)
 {
-// todo : error checks
+// todo # error checks
 
 	mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	chdir(path);
@@ -329,7 +329,7 @@ for (auto & dep : lib.deps)
 		}
 	}
 }
-if (lib.is_app) shared_libs += " vrapi"; // todo : remove
+if (lib.is_app) shared_libs += " vrapi"; // todo # remove
 s << static_libs.c_str();
 s << shared_libs.c_str();
 s << "";

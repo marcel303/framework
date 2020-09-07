@@ -245,7 +245,7 @@ int main(int arg, char * argv[])
 	
 	gxShutdown();
 	
-// todo : add metal shutdown
+// todo # add metal shutdown
 	//metal_shutdown();
 	
 	return 0;

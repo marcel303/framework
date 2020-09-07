@@ -27,7 +27,7 @@ float evalPoint(float n1, float n2, float t)
 	return n1 + (diff * t);
 }
 
-// todo : simulate control points based on gravity, gravity well, sin/cos, ..
+// ideas : simulate control points based on gravity, gravity well, sin/cos
 
 const static float kInitialDuration = 6.f;
 
