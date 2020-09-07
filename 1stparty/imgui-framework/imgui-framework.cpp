@@ -191,7 +191,8 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			if (framework.windowIsActive == false)
 			{
 				kinetic_scroll.SetZero();
-				kinetic_scroll_smoothed.SetZero();
+				kinetic_scroll_smoothed[0] = 0.0;
+				kinetic_scroll_smoothed[1] = 0.0;
 				
 				num_touches = 0;
 			}
