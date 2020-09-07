@@ -1015,7 +1015,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			gxMatrixMode(GX_MODELVIEW);
 			pushCullFlip();
 		#endif
@@ -1137,7 +1137,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
@@ -1173,7 +1173,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
@@ -1232,7 +1232,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
@@ -1256,7 +1256,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
@@ -1313,7 +1313,7 @@ namespace rOne
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
-			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
@@ -1635,7 +1635,7 @@ namespace rOne
 			
 				#if ENABLE_OPENGL
 					gxMatrixMode(GX_PROJECTION);
-					gxScalef(1, -1, 1); // todo : remove the need to scale here
+					gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 					pushCullFlip();
 					gxMatrixMode(GX_MODELVIEW);
 				#endif
@@ -1664,7 +1664,7 @@ namespace rOne
 					
 				#if ENABLE_OPENGL
 					gxMatrixMode(GX_PROJECTION);
-					gxScalef(1, -1, 1); // todo : remove the need to scale here
+					gxScalef(1, -1, 1); // note : OpenGL UV-origin is at the bottom-left. verically flip rendering to compensate for this
 					pushCullFlip();
 					gxMatrixMode(GX_MODELVIEW);
 				#endif
