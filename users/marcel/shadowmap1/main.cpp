@@ -243,8 +243,7 @@ public:
 		gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
 		
 		drawState.worldToView = modelViewMatrix;
-		drawState.worldToProjection = projectionMatrix * modelViewMatrix;
-		drawState.projectionToWorld = drawState.worldToProjection.CalcInv();
+		drawState.projectionToWorld = (projectionMatrix * modelViewMatrix).CalcInv();
 	}
 	
 	void drawBegin(const GxTextureId sceneDepthTexture, const GxTextureId sceneNormalTexture)
@@ -384,7 +383,6 @@ private:
 		GxTextureId sceneDepthTexture;
 		GxTextureId sceneNormalTexture;
 		Mat4x4 worldToView;
-		Mat4x4 worldToProjection; // todo : remove ?
 		Mat4x4 projectionToWorld;
 	} drawState;
 };
