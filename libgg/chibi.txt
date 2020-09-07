@@ -7,7 +7,8 @@ library libgg
 
 	header_path . expose
 
-	compile_definition DEBUG 1 config Debug expose
+	compile_definition DEBUG        1 config Debug        expose
+	compile_definition DISTRIBUTION 1 config Distribution expose
 
 	compile_definition WDL_FFT_REALSIZE 8 expose
 	compile_definition EEL_F_SIZE 8 expose
