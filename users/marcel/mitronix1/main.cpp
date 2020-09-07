@@ -917,6 +917,7 @@ int main(int argc, char * argv[])
 		float wavefieldTimer = 2.f;
 		
 		Surface * mainButtonsSurface = new Surface(GFX_SX, GFX_SY, true);
+		mainButtonsSurface->setClearColor(0, 0, 0, 0);
 		
 		double mainButtonsOpacity = 0.0;
 		
@@ -1059,10 +1060,10 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				pushSurface(surface);
+				surface->setClearColor(220, 220, 220, 255);
+				
+				pushSurface(surface, true);
 				{
-					surface->clear(220, 220, 220);
-					
 					if (view == kView_Instrument)
 					{
 					#if DEVMODE == 0 || 1
@@ -1075,9 +1076,8 @@ int main(int argc, char * argv[])
 						instrumentButtons.process(nullptr, false, true, dt);
 					}
 					
-					pushSurface(mainButtonsSurface);
+					pushSurface(mainButtonsSurface, true);
 					{
-						mainButtonsSurface->clear(0, 0, 0, 0);
 						mainButtons.process(false, true, dt);
 						
 						const int numWigglyDots = 7;
@@ -1120,9 +1120,9 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 					
-					pushBlend(BLEND_ALPHA);
+					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 					gxSetTexture(mainButtonsSurface->getTexture());
-					setColorf(1, 1, 1, mainButtonsOpacity);
+					setColorf(mainButtonsOpacity, mainButtonsOpacity, mainButtonsOpacity, mainButtonsOpacity);
 					drawRect(0, 0, mainButtonsSurface->getWidth(), mainButtonsSurface->getHeight());
 					gxSetTexture(0);
 					popBlend();
