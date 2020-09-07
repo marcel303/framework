@@ -124,16 +124,17 @@ struct Test_TcpToI2S
 			
 			while (wantsToStop.load() == false)
 			{
-				// todo : detect is disconnected, and attempt to reconnect
+				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
 				
+			// todo : add explicit control to pause sending audio
 				while (keyboard.isDown(SDLK_SPACE))
 				{
 					SDL_Delay(10);
 				}
 				
-				// todo : generate some audio data
+				// generate some audio data
 				
 				int16_t data[I2S_2CH_FRAME_COUNT][2];
 				
@@ -280,16 +281,17 @@ struct Test_TcpToI2SQuad
 			
 			while (wantsToStop.load() == false)
 			{
-				// todo : detect is disconnected, and attempt to reconnect
+				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
 				
+			// todo : add explicit control to pause sending audio
 				while (keyboard.isDown(SDLK_SPACE))
 				{
 					SDL_Delay(10);
 				}
 				
-				// todo : generate some audio data
+				// generate some audio data
 				
 				int16_t data[I2S_4CH_FRAME_COUNT][4];
 				
@@ -438,16 +440,17 @@ struct Test_TcpToI2SMono8
 			
 			while (wantsToStop.load() == false)
 			{
-				// todo : detect is disconnected, and attempt to reconnect
+				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
 				
+			// todo : add explicit control to pause sending audio
 				while (keyboard.isDown(SDLK_SPACE))
 				{
 					SDL_Delay(10);
 				}
 				
-				// todo : generate some audio data
+				// generate some audio data
 				
 				int8_t data[I2S_1CH_8_FRAME_COUNT];
 				
@@ -1202,6 +1205,8 @@ int main(int argc, char * argv[])
 					if (nodeState.parameterUi.paramMgrs.empty() == false)
 					{
 						parameterUi::doParameterUi_recursive(nodeState.parameterUi.paramMgr, nullptr);
+						
+						// todo : send dirty parameters using http requests
 					}
 					
 					ImGui::PopID();
