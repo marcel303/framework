@@ -22,8 +22,9 @@ void CsvRow::parse(const std::string & line, char separator, std::vector<std::st
 
 int CsvRow::getInt(const char * name, int _default)
 {
-	if (m_values.count(name) != 0)
-		return Parse::Int32(m_values[name]);
+	int result;
+	if (m_values.count(name) != 0 && Parse::Int32(m_values[name], result))
+		return result;
 	else
 		return _default;
 }

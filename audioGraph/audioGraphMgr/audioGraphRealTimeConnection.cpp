@@ -503,16 +503,13 @@ bool AudioRealTimeConnection::setPlugValue(AudioGraph * audioGraph, AudioPlug * 
 		return false;
 		
 	case kAudioPlugType_Bool:
-		plug->getRwBool() = Parse::Bool(value);
-		return true;
+		return Parse::Bool(value, plug->getRwBool());
 	
 	case kAudioPlugType_Int:
-		plug->getRwInt() = Parse::Int32(value);
-		return true;
+		return Parse::Int32(value, plug->getRwInt());
 			
 	case kAudioPlugType_Float:
-		plug->getRwFloat() = Parse::Float(value);
-		return true;
+		return Parse::Float(value, plug->getRwFloat());
 		
 	case kAudioPlugType_String:
 		plug->getRwString() = value;
@@ -522,8 +519,13 @@ bool AudioRealTimeConnection::setPlugValue(AudioGraph * audioGraph, AudioPlug * 
 		return false;
 		
 	case kAudioPlugType_FloatVec:
-		plug->getRwAudioFloat().setScalar(Parse::Float(value));
-		return true;
+		{
+			float value_asFloat;
+			if (!Parse::Float(value, value_asFloat))
+				return false;
+			plug->getRwAudioFloat().setScalar(value_asFloat);
+			return true;
+		}
 
 	case kAudioPlugType_Trigger:
 		return false;

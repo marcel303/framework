@@ -1049,11 +1049,7 @@ namespace binaural
 	
 	bool parseInt32(const std::string & text, int & result)
 	{
-		// todo : return false on parse error
-		
-		result = Parse::Int32(text);
-		
-		return true;
+		return Parse::Int32(text, result);
 	}
 	
 	SoundData * loadSound(const char * filename)

@@ -201,7 +201,7 @@ struct VfxChannelData
 	void allocOnSizeChange(const int size);
 	void free();
 	
-	static void parse(const char * text, float *& data, int & dataSize);
+	static bool parse(const char * text, float *& data, int & dataSize);
 };
 
 struct VfxChannel

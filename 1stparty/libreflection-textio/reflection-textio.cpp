@@ -63,21 +63,16 @@ static bool extract_word(const char *& in_text, char * __restrict out_word, cons
 
 bool plain_type_fromtext(const PlainType * plain_type, void * object, const char * text)
 {
-// todo : I definitely need better parse functions. ones which return a success code
-
 	switch (plain_type->dataType)
 	{
 	case kDataType_Bool:
-		plain_type->access<bool>(object) = Parse::Bool(text);
-		return true;
+		return Parse::Bool(text, plain_type->access<bool>(object));
 		
 	case kDataType_Int:
-		plain_type->access<int>(object) = Parse::Int32(text);
-		return true;
+		return Parse::Int32(text, plain_type->access<int>(object));
 		
 	case kDataType_Float:
-		plain_type->access<float>(object) = Parse::Float(text);
-		return true;
+		return Parse::Float(text, plain_type->access<float>(object));
 		
 	case kDataType_Float2:
 		{
@@ -91,11 +86,12 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 				return false;
 			}
 			
-			plain_type->access<Vec2>(object).Set(
-				Parse::Float(parts[0]),
-				Parse::Float(parts[1]));
+			auto & value = plain_type->access<Vec2>(object);
+			
+			return
+				Parse::Float(parts[0], value[0]) &&
+				Parse::Float(parts[1], value[1]);
 		}
-		return true;
 		
 	case kDataType_Float3:
 		{
@@ -110,12 +106,13 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 				return false;
 			}
 			
-			plain_type->access<Vec3>(object).Set(
-				Parse::Float(parts[0]),
-				Parse::Float(parts[1]),
-				Parse::Float(parts[2]));
+			auto & value = plain_type->access<Vec3>(object);
+			
+			return
+				Parse::Float(parts[0], value[0]) &&
+				Parse::Float(parts[1], value[1]) &&
+				Parse::Float(parts[2], value[2]);
 		}
-		return true;
 		
 	case kDataType_Float4:
 		{
@@ -131,17 +128,17 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 				return false;
 			}
 			
-			plain_type->access<Vec4>(object).Set(
-				Parse::Float(parts[0]),
-				Parse::Float(parts[1]),
-				Parse::Float(parts[2]),
-				Parse::Float(parts[3]));
+			auto & value = plain_type->access<Vec4>(object);
+			
+			return
+				Parse::Float(parts[0], value[0]) &&
+				Parse::Float(parts[1], value[1]) &&
+				Parse::Float(parts[2], value[2]) &&
+				Parse::Float(parts[3], value[3]);
 		}
-		return true;
 		
 	case kDataType_Double:
-		plain_type->access<double>(object) = Parse::Float(text); // todo : parse doubles using more accuracy
-		return true;
+		return Parse::Double(text, plain_type->access<double>(object));
 		
 	case kDataType_String:
 		plain_type->access<std::string>(object) = text;

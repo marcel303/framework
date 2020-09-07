@@ -40,8 +40,9 @@ int CsvRow::getInt(const char * name, const int _default) const
 {
 	auto i = m_values.find(name);
 
-	if (i != m_values.end())
-		return Parse::Int32(i->second);
+	int result;
+	if (i != m_values.end() && Parse::Int32(i->second, result))
+		return result;
 	else
 		return _default;
 }
@@ -50,8 +51,9 @@ float CsvRow::getFloat(const char * name, const float _default) const
 {
 	auto i = m_values.find(name);
 
-	if (i != m_values.end())
-		return Parse::Float(i->second);
+	float result;
+	if (i != m_values.end() && Parse::Float(i->second, result))
+		return result;
 	else
 		return _default;
 }

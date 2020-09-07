@@ -599,20 +599,18 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		return false;
 		
 	case kVfxPlugType_Bool:
-		plug->getRwBool() = Parse::Bool(value);
-		return true;
+		return Parse::Bool(value, plug->getRwBool());
 	case kVfxPlugType_Int:
-		plug->getRwInt() = Parse::Int32(value);
-		return true;
+		return Parse::Int32(value, plug->getRwInt());
 	case kVfxPlugType_Float:
-		plug->getRwFloat() = Parse::Float(value);
-		return true;
+		return Parse::Float(value, plug->getRwFloat());
 		
 	case kVfxPlugType_String:
 		plug->getRwString() = value;
 		return true;
 	case kVfxPlugType_Color:
 		{
+		// todo : check for parse errors
 			const Color color = Color::fromHex(value.c_str());
 			plug->getRwColor() = VfxColor(color.r, color.g, color.b, color.a);
 			return true;
@@ -629,7 +627,8 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 			
 			float * data;
 			int dataSize;
-			VfxChannelData::parse(value.c_str(), data, dataSize);
+			if (!VfxChannelData::parse(value.c_str(), data, dataSize))
+				return false;
 			
 			delete [] channel.data;
 			channel.data = nullptr;

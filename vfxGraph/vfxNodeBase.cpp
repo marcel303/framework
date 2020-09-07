@@ -514,8 +514,10 @@ void VfxChannelData::free()
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-void VfxChannelData::parse(const char * text, float *& data, int & dataSize)
+bool VfxChannelData::parse(const char * text, float *& data, int & dataSize)
 {
+	bool result = true;
+	
 	std::vector<std::string> parts;
 	splitString(text, parts, ' ');
 	
@@ -531,11 +533,27 @@ void VfxChannelData::parse(const char * text, float *& data, int & dataSize)
 		
 		for (size_t i = 0; i < parts.size(); ++i)
 		{
-			const float value = Parse::Float(parts[i]);
+			float value;
+			if (!Parse::Float(parts[i], value))
+			{
+				result = false;
+				break;
+			}
 			
 			data[i] = value;
 		}
+		
+		return true;
 	}
+	
+	if (result == false)
+	{
+		delete [] data;
+		data = nullptr;
+		dataSize = 0;
+	}
+	
+	return result;
 }
 
 //
