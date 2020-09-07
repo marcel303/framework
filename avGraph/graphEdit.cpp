@@ -4525,11 +4525,14 @@ bool GraphEdit::isInputIdle() const
 	result &= mouse.isIdle();
 
 #if FRAMEWORK_USE_SDL
-	for (auto & e : framework.events)
+	if (framework.windowIsActive)
 	{
-		result &= e.type != SDL_FINGERDOWN;
-		result &= e.type != SDL_FINGERUP;
-		result &= e.type != SDL_FINGERMOTION;
+		for (auto & e : framework.events)
+		{
+			result &= e.type != SDL_FINGERDOWN;
+			result &= e.type != SDL_FINGERUP;
+			result &= e.type != SDL_FINGERMOTION;
+		}
 	}
 #endif
 	
