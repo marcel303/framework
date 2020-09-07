@@ -371,7 +371,7 @@ struct Camera
 
 	void calculateTransform(const float eyeOffset, const float eyeX, const float eyeY, Mat4x4 & matrix) const
 	{
-		// todo : use the correct eye position when we're trying to do head mounted VR
+		// note regarding the correct eye position when trying to do head mounted VR:
 		// right now the anatomy looks like this:
 		//
 		//      L----O----R
@@ -380,7 +380,7 @@ struct Camera
 		//           |
 		//
 		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
-		// in real life, the head and eyes rotate a little more complicated..
+		// in real life, the head and eyes rotate a little more complicated
 
 		matrix = Mat4x4(true)
 			.Translate(controllerCamera.position)

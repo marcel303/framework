@@ -201,7 +201,7 @@ void metal_draw_end()
 	
 	
 	//[activeWindowData->cmdbuf waitUntilCompleted];
-	freeResourcesToFree(); // todo : call in response to completion handler
+	freeResourcesToFree(); // todo # call in response to completion handler
 	
 	//
 	
@@ -874,7 +874,7 @@ static uint32_t computeHash(const void* bytes, int byteCount)
 {
 	uint32_t hash = FNV_Offset32;
 	
-#if 0 // todo : profile and use optimized hash function
+#if 0 // todo # profile and use optimized hash function
 	const int wordCount = byteCount / 4;
 	
 	for (int i = 0; i < wordCount; ++i)

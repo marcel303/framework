@@ -17,7 +17,7 @@
 	#include "script.cpp"
 #endif
 
-// todo : move FFT code to somewhere else
+// todo # move FFT code to somewhere else
 
 static const int kFFTBufferSize = 4096;
 static const int kFFTSize = 1024;
@@ -534,7 +534,7 @@ public:
 		Assert((bufferSampleCount % channelCount) == 0);
 		bufferSampleCount /= channelCount;
 
-		// todo : let the user select a device
+		// todo # let the user select a device
 
 		//const int numDevices = waveInGetNumDevs();
 

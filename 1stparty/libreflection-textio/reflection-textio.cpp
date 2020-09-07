@@ -6,7 +6,7 @@
 
 #include "Debugging.h"
 #include "Log.h"
-#include "Parse.h" // todo : remove this dependency
+#include "Parse.h"
 #include "StringEx.h" // strcpy_s
 #include "Vec2.h" // plain type supported for serialization
 #include "Vec3.h" // plain type supported for serialization

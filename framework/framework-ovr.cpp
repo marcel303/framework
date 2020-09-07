@@ -70,7 +70,7 @@ bool FrameworkOvr::init()
 
 	MainThreadTid = gettid();
 
-    UseMultiview = false; // todo : perhaps support multiview in the future ..
+    UseMultiview = false;
 	NumBuffers = UseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
 
     // Create the frame buffers.
@@ -343,13 +343,15 @@ void FrameworkOvr::processEvents()
                     {
                         if (NativeWindow != nullptr)
                         {
-                            // todo : perform actions due to window being destroyed
+                            // note : here we would perform actions due to the window being destroyed
+							
                             NativeWindow = nullptr;
                         }
 
                         if (app->window != nullptr)
                         {
-                            // todo : perform actions due to window being created
+                            // note : here we would perform actions due to the window being created
+							
                             NativeWindow = app->window;
                         }
                     }

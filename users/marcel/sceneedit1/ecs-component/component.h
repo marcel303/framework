@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Debugging.h"
+#include <stdlib.h> // realloc
 #include <typeindex>
 
 // forward declarations
@@ -113,7 +114,7 @@ struct ComponentMgr : ComponentMgrBase
 	
 	void resizeCapacity(const int capacity)
 	{
-		components = (T**)realloc(components, capacity * sizeof(T*)); // todo : include
+		components = (T**)realloc(components, capacity * sizeof(T*));
 		for (int i = numComponents; i < capacity; ++i)
 			components[i] = nullptr;
 		numComponents = capacity;

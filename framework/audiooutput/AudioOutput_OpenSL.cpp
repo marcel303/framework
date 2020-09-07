@@ -27,9 +27,7 @@
 
 #if FRAMEWORK_USE_OPENSL
 
-// todo : how do we figure out the native sample rate on Android? (to ensure we get the fast path)
-
-#if false // retrieve native sample rate and buffer size example code
+#if false // example code to retrieve the native sample rate and buffer size
 
 /*
  * retrieve fast audio path sample rate and buf size; if we have it, we pass to native
@@ -47,7 +45,7 @@ if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 
 #endif
 
-#if false // retrieve native sample rate and buffer size through JNI
+#if false // example code to retrieve the native sample rate and buffer size through JNI
 
 	JNIEnv * env = nullptr;
 	vm->AttachCurrentThread(&env, nullptr);

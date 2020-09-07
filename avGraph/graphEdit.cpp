@@ -2184,10 +2184,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 				{
-					// todo : clear node selection ?
-					// todo : clear link selection ?
-					// todo : make method to update selection and move logic for selecting/deselecting items there ?
-					
 					if (hitTestResult.hasNode)
 					{
 						if (enabled(kFlag_LinkAdd) && hitTestResult.nodeHitTestResult.inputSocket)
@@ -2212,8 +2208,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						{
 							if (appendSelection == false)
 							{
-								// todo : implement the following bahvior: click + hold/move = drag, click + release = select single and discard the rest of the selection
-								
 								if (selectedNodes.count(hitTestResult.node->id) == 0)
 								{
 									selectNode(hitTestResult.node->id, true);

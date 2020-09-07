@@ -46,7 +46,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	// todo : voxelizer the mesh
+	// voxelize the mesh
 	
 	float precision = .0f; // precision factor to reduce "holes" artifact
 
