@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
 		// exclude saving and loading
 		graphEdit.flags &= ~(GraphEdit::kFlag_SaveLoad);
 
-		Window visualsWindow("Output Window", VISUALS_SX, VISUALS_SY, true);
+		Window * visualsWindow = new Window("Output Window", VISUALS_SX, VISUALS_SY, true);
 		
 		while (!framework.quitRequested)
 		{
@@ -86,7 +86,7 @@ int main(int argc, char * argv[])
 			
 			const GxTextureId texture = vfxGraph->traverseDraw();
 			
-			pushWindow(visualsWindow);
+			pushWindow(*visualsWindow);
 			{
 				framework.beginDraw(0, 0, 0, 0);
 				{
@@ -95,7 +95,7 @@ int main(int argc, char * argv[])
 						gxSetTexture(texture);
 						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
-						drawRect(0, 0, visualsWindow.getWidth(), visualsWindow.getHeight());
+						drawRect(0, 0, visualsWindow->getWidth(), visualsWindow->getHeight());
 						popBlend();
 						gxSetTexture(0);
 					}
@@ -112,6 +112,9 @@ int main(int argc, char * argv[])
 			}
 			framework.endDraw();
 		}
+		
+		delete visualsWindow;
+		visualsWindow = nullptr;
 		
 		delete vfxGraph;
 		vfxGraph = nullptr;
