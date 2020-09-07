@@ -3655,6 +3655,16 @@ bool GraphEdit::tickTouches()
 {
 	if ((state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom) || !framework.windowIsActive)
 	{
+		// cancel touch state
+		
+		if (state == kState_TouchDrag ||
+			state == kState_TouchZoom)
+		{
+			state = kState_Idle;
+		}
+		
+		// reset touch state
+		
 		touches = Touches();
 		
 		return false;
