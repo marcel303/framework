@@ -1,5 +1,5 @@
 #include "audiooutput/AudioOutput.h"
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "FileStream.h"
@@ -202,7 +202,7 @@ static float g_audioVolume = 1.f;
 
 static SDL_Thread * g_audioThread = nullptr;
 static volatile bool g_stopAudioThread = false;
-static AudioOutput_PortAudio * g_audioOutput = nullptr;
+static AudioOutput_Native * g_audioOutput = nullptr;
 static bool g_wantsAudioPlayback = false;
 static uint32_t g_audioUpdateEvent = -1;
 
@@ -580,7 +580,7 @@ void loadAudio(const char * filename)
 
 	Assert(g_audioOutput == nullptr);
 	Assert(g_lastAudioTime == 0.0);
-	g_audioOutput = new AudioOutput_PortAudio();
+	g_audioOutput = new AudioOutput_Native();
 	g_audioOutput->Initialize(2, g_audioFile->m_sampleRate, 1 << 8);
 
 	Assert(g_audioThread == nullptr);

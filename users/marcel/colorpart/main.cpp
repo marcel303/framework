@@ -1,4 +1,4 @@
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStream.h"
 #include "Calc.h"
 #include "framework.h"
@@ -521,7 +521,7 @@ int main(int argc, char * argv[])
 		params.enableAudioStream = true;
 		mediaPlayer->openAsync(params);
 
-		AudioOutput_PortAudio * audioOutput = nullptr;
+		AudioOutput_Native * audioOutput = nullptr;
 	#endif
 
 		//Music("song.ogg").play(true);
@@ -573,7 +573,7 @@ int main(int argc, char * argv[])
 
 					if (mediaPlayer->getAudioProperties(channelCount, sampleRate))
 					{
-						audioOutput = new AudioOutput_PortAudio();
+						audioOutput = new AudioOutput_Native();
 						
 						audioOutput->Initialize(channelCount, sampleRate, 256);
 						audioOutput->Play(mediaPlayer);

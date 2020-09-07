@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "FileStream.h"
 #include "vfxNodeSound.h"
@@ -174,7 +174,7 @@ void VfxNodeSound::tick(const float dt)
 		// ensure audio output exists
 		
 		Assert(audioOutput == nullptr);
-		audioOutput = new AudioOutput_PortAudio();
+		audioOutput = new AudioOutput_Native();
 		audioOutput->Initialize(2, 44100, 256);
 		audioOutput->Volume_set(volume);
 		audioOutput->Play(&mixingAudioStream);
@@ -277,7 +277,7 @@ void VfxNodeSound::init(const GraphNode & node)
 		Assert(beatCountOutput == 0);
 	}
 	
-	audioOutput = new AudioOutput_PortAudio();
+	audioOutput = new AudioOutput_Native();
 	audioOutput->Initialize(2, 44100, 256);
 	audioOutput->Volume_set(volume);
 	audioOutput->Play(&mixingAudioStream);

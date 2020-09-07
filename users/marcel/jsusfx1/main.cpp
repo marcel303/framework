@@ -321,7 +321,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 
 //
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamVorbis.h"
 
@@ -1434,7 +1434,7 @@ static void testJsusFxList()
 	audioIO.Initialize(2, 1, SAMPLE_RATE, BUFFER_SIZE);
 	audioIO.Play(&audioStream);
 #else
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
 #endif
@@ -1973,7 +1973,7 @@ int main(int argc, char * argv[])
 	audioStream.init(&vorbis, &fx);
 	s_audioStream = &audioStream;
 	
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
 	audioOutput.Play(&audioStream);
 	

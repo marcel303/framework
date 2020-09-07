@@ -6,7 +6,7 @@
 #include "Path.h"
 #include "script.h"
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStreamVorbis.h"
 
 #if defined(WIN32)
@@ -673,7 +673,7 @@ int main(int argc, char * argv[])
 		AudioStream_Capture audioStream;
 		audioStream.mSource = &audioStreamOGG;
 
-		AudioOutput_PortAudio audioOutput;
+		AudioOutput_Native audioOutput;
 		audioOutput.Initialize(2, audioStreamOGG.SampleRate_get(), 256);
 		audioOutput.Volume_set(1.f);
 		audioOutput.Play(&audioStreamOGG);

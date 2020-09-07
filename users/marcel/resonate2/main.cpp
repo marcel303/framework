@@ -21,7 +21,7 @@
 	#include <alloca.h>
 #endif
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiostream/AudioStream.h"
 
 /*
@@ -591,7 +591,7 @@ struct Sonify : AudioStream
 	
 	DCBlocker dcBlocker;
 	
-	AudioOutput_PortAudio * audioOutput = nullptr;
+	AudioOutput_Native * audioOutput = nullptr;
 	
 	virtual ~Sonify() override
 	{
@@ -618,7 +618,7 @@ struct Sonify : AudioStream
 		
 		dcBlocker = DCBlocker();
 		
-		audioOutput = new AudioOutput_PortAudio();
+		audioOutput = new AudioOutput_Native();
 		audioOutput->Initialize(2, 44100, kBufferSize);
 		audioOutput->Play(this);
 	}

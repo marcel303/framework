@@ -1,4 +1,4 @@
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "framework.h"
 
 #define GFX_SX 1024
@@ -106,7 +106,7 @@ int main(int argc, char * argv[])
 	RawAudioStream audioStream;
 	audioStream.file = fopen(filename, "rb");
 	
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, 44100, 4096);
 	audioOutput.Play(&audioStream);
 	
