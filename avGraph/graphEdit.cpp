@@ -2539,6 +2539,11 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
+					for (auto * routeLinkPoint : selectedLinkRoutePoints)
+					{
+						snapToGrid(routeLinkPoint->x, routeLinkPoint->y);
+					}
+					
 					for (auto visualizerId : selectedVisualizers)
 					{
 						auto * visualizer = tryGetVisualizer(visualizerId);
