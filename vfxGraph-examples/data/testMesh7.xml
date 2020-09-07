@@ -1,0 +1,162 @@
+<graph nextNodeId="28" nextLinkId="46">
+    <node id="1" typeName="draw.surface">
+        <input socket="clear" value="0"/>
+        <input socket="format" value="0"/>
+        <input socket="multiply" value="1"/>
+        <input socket="multiplyColor" value="ece0efff"/>
+        <input socket="viewMode" value="1"/>
+    </node>
+    <node id="2" typeName="draw.display"/>
+    <node id="3" typeName="draw.transform3d">
+        <input socket="axisX" value="2.000000"/>
+        <input socket="axisY" value="1.000000"/>
+        <input socket="axisZ" value="0.000000"/>
+        <input socket="z" value="6.000000"/>
+    </node>
+    <node id="4" typeName="time">
+        <input socket="scale" value="0.100000"/>
+    </node>
+    <node id="5" typeName="mesh.fromPrefab">
+        <input socket="resolution" value="21"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="6" typeName="draw.mesh" passthrough="1">
+        <input socket="instanced" value="1"/>
+        <input socket="pos.mode" value="1"/>
+        <input socket="pos.y" value="-6 -3 0 3 6"/>
+        <input socket="rot.angle" value=""/>
+        <input socket="scale" value="1.45"/>
+        <input socket="scale.x" value="0.2"/>
+        <input socket="scale.y" value="1"/>
+        <input socket="scale.z" value="1"/>
+        <input socket="shader" value="mesh-instanced"/>
+    </node>
+    <node id="7" typeName="channel.literal">
+        <input socket="text" value="-9 -6 -3 0 3 6 9 1.5 -1.5 2.5 -2.5"/>
+    </node>
+    <node id="8" typeName="channel.literal">
+        <input socket="text" value="-6 -3 0 3 6"/>
+    </node>
+    <node id="9" typeName="channel.math"/>
+    <node id="10" typeName="channel.fromFloat"/>
+    <node id="12" typeName="time">
+        <input socket="scale" value="2.000000"/>
+    </node>
+    <node id="13" typeName="channel.math">
+        <input socket="type" value="4"/>
+    </node>
+    <node id="14" typeName="channel.math">
+        <input socket="b" value="0.1"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="17" typeName="draw.fsfx-v2">
+        <input socket="opacity" value="0.700000"/>
+        <input socket="param1" value="40.000000"/>
+        <input socket="shader" value="fsfx/gaussian-v.ps"/>
+    </node>
+    <node id="18" typeName="draw.fsfx-v2">
+        <input socket="color1" value="2364ffff"/>
+        <input socket="opacity" value="0.400000"/>
+        <input socket="param1" value="200.000000"/>
+        <input socket="shader" value="fsfx/sample_circle.ps"/>
+    </node>
+    <node id="19" typeName="draw.sequence"/>
+    <node id="20" typeName="mesh.fromPrefab">
+        <input socket="resolution" value="21"/>
+        <input socket="scale" value="0.500000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="21" typeName="draw.mesh">
+        <input socket="instanced" value="1"/>
+        <input socket="pos.mode" value="1"/>
+        <input socket="scale.x" value="0.01"/>
+        <input socket="scale.y" value="120"/>
+        <input socket="scale.z" value="0.01"/>
+        <input socket="shader" value="mesh-instanced"/>
+    </node>
+    <node id="22" typeName="draw.transform3d">
+        <input socket="angle" value="20.000000"/>
+        <input socket="z" value="3.000000"/>
+    </node>
+    <node id="23" typeName="time">
+        <input socket="scale" value="0.010000"/>
+    </node>
+    <node id="24" typeName="gen.sine">
+        <input socket="frequency" value="0.670000"/>
+    </node>
+    <node id="25" typeName="channel.fromFloat"/>
+    <node id="26" typeName="time">
+        <input socket="scale" value="90.000000"/>
+    </node>
+    <node id="27" typeName="channel.fromFloat"/>
+    <link id="3" srcNodeId="3" srcNodeSocketName="angle_norm" dstNodeId="4" dstNodeSocketName="time">
+        <param name="out.max" value="0.140000"/>
+    </link>
+    <link id="5" srcNodeId="6" srcNodeSocketName="mesh" dstNodeId="5" dstNodeSocketName="mesh"/>
+    <link id="6" srcNodeId="6" srcNodeSocketName="pos.x" dstNodeId="7" dstNodeSocketName="channel"/>
+    <link id="7" srcNodeId="6" srcNodeSocketName="pos.z" dstNodeId="8" dstNodeSocketName="channel"/>
+    <link id="8" srcNodeId="9" srcNodeSocketName="a" dstNodeId="7" dstNodeSocketName="channel"/>
+    <link id="9" srcNodeId="9" srcNodeSocketName="b" dstNodeId="10" dstNodeSocketName="channel"/>
+    <link id="10" srcNodeId="10" srcNodeSocketName="value1" dstNodeId="12" dstNodeSocketName="time"/>
+    <link id="12" srcNodeId="14" srcNodeSocketName="a" dstNodeId="9" dstNodeSocketName="result"/>
+    <link id="13" srcNodeId="13" srcNodeSocketName="a" dstNodeId="14" dstNodeSocketName="result"/>
+    <link id="19" srcNodeId="2" srcNodeSocketName="image" dstNodeId="1" dstNodeSocketName="image"/>
+    <link id="21" srcNodeId="17" srcNodeSocketName="before" dstNodeId="3" dstNodeSocketName="transform"/>
+    <link id="22" srcNodeId="1" srcNodeSocketName="source" dstNodeId="18" dstNodeSocketName="any"/>
+    <link id="23" srcNodeId="18" srcNodeSocketName="before" dstNodeId="17" dstNodeSocketName="any"/>
+    <link id="24" srcNodeId="3" srcNodeSocketName="any" dstNodeId="19" dstNodeSocketName="any"/>
+    <link id="25" srcNodeId="19" srcNodeSocketName="01" dstNodeId="6" dstNodeSocketName="draw"/>
+    <link id="26" srcNodeId="21" srcNodeSocketName="mesh" dstNodeId="20" dstNodeSocketName="mesh"/>
+    <link id="31" srcNodeId="21" srcNodeSocketName="pos.x" dstNodeId="7" dstNodeSocketName="channel"/>
+    <link id="32" srcNodeId="21" srcNodeSocketName="pos.y" dstNodeId="13" dstNodeSocketName="result"/>
+    <link id="33" srcNodeId="19" srcNodeSocketName="02" dstNodeId="22" dstNodeSocketName="transform"/>
+    <link id="34" srcNodeId="22" srcNodeSocketName="any" dstNodeId="21" dstNodeSocketName="draw"/>
+    <link id="36" srcNodeId="22" srcNodeSocketName="angle_norm" dstNodeId="23" dstNodeSocketName="time"/>
+    <link id="38" srcNodeId="25" srcNodeSocketName="value1" dstNodeId="24" dstNodeSocketName="value">
+        <param name="out.max" value="0.100000"/>
+        <param name="out.min" value="0.030000"/>
+    </link>
+    <link id="39" srcNodeId="21" srcNodeSocketName="scale.z" dstNodeId="25" dstNodeSocketName="channel"/>
+    <link id="40" srcNodeId="27" srcNodeSocketName="value1" dstNodeId="26" dstNodeSocketName="time"/>
+    <link id="41" srcNodeId="6" srcNodeSocketName="rot.angle" dstNodeId="27" dstNodeSocketName="channel"/>
+    <link id="42" srcNodeId="6" srcNodeSocketName="rot.axis.y" dstNodeId="7" dstNodeSocketName="channel"/>
+    <link id="43" srcNodeId="6" srcNodeSocketName="rot.axis.z" dstNodeId="27" dstNodeSocketName="channel"/>
+    <link id="45" srcNodeId="21" srcNodeSocketName="pos.z" dstNodeId="7" dstNodeSocketName="channel"/>
+    <editor nextZKey="288">
+        <dragAndZoom x="-530.85009765625" y="124.70365905761719" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="272" y="-80" zKey="283"/>
+            <nodeData nodeId="2" x="448" y="-64" zKey="131"/>
+            <nodeData nodeId="3" x="-208" y="-96" zKey="198"/>
+            <nodeData nodeId="4" x="-400" y="160" zKey="223"/>
+            <nodeData nodeId="5" x="-992" y="-320" zKey="252"/>
+            <nodeData nodeId="6" x="-720" y="-288" zKey="273"/>
+            <nodeData nodeId="7" x="-1232" y="-192" zKey="277"/>
+            <nodeData nodeId="8" x="-1264" y="-112" zKey="202"/>
+            <nodeData nodeId="9" x="-1040" y="0" zKey="195" folded="1"/>
+            <nodeData nodeId="10" x="-1168" y="0" zKey="248"/>
+            <nodeData nodeId="12" x="-1296" y="0" zKey="216"/>
+            <nodeData nodeId="13" x="-1040" y="64" zKey="194"/>
+            <nodeData nodeId="14" x="-1040" y="32" zKey="193" folded="1"/>
+            <nodeData nodeId="17" x="-32" y="-96" zKey="281"/>
+            <nodeData nodeId="18" x="112" y="-96" zKey="282"/>
+            <nodeData nodeId="19" x="-368" y="-96" zKey="267"/>
+            <nodeData nodeId="20" x="-848" y="144" zKey="286"/>
+            <nodeData nodeId="21" x="-656" y="32" zKey="287"/>
+            <nodeData nodeId="22" x="-512" y="-32" zKey="256"/>
+            <nodeData nodeId="23" x="-656" y="256" zKey="221"/>
+            <nodeData nodeId="24" x="-976" y="320" zKey="276"/>
+            <nodeData nodeId="25" x="-848" y="320" zKey="269"/>
+            <nodeData nodeId="26" x="-1056" y="-96" zKey="242"/>
+            <nodeData nodeId="27" x="-928" y="-96" zKey="229"/>
+        </nodeDatas>
+        <visualizers/>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="0d20bd4d" gridColor="ffffff0b">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="0.31999999284744263" r="0.38908833265304565" g="0.1291666179895401" b="0.87083327770233154" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
