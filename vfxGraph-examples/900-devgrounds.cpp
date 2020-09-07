@@ -790,7 +790,7 @@ int main(int argc, char * argv[])
 				
 				graphEdit->tickVisualizers(dt);
 				
-				graphEditSurface->setClearColor(0, 0, 0, 255);
+				graphEditSurface->setClearColor(0, 0, 0, 0);
 				pushSurface(graphEditSurface, true);
 				{
 					pushBlend(BLEND_ALPHA);
