@@ -46,9 +46,6 @@
 	#include <SDL2/SDL_mutex.h>
 	#include <SDL2/SDL_thread.h>
 	#include <SDL2/SDL_timer.h>
-#else
-// todo : remove these typedefs and SDLK enum
-	//typedef int SDL_Window; // todo : resolve what to do with windows on Android
 #endif
 
 #include <float.h> // FLT_MAX (sprite draw)
@@ -138,12 +135,12 @@ static const int MAX_GAMEPAD = 4;
 enum BLEND_MODE // setBlend
 {
 	BLEND_OPAQUE,
-	BLEND_ALPHA,
+	BLEND_ALPHA,                    // regular alpha blending
 	BLEND_PREMULTIPLIED_ALPHA,      // blend a color with premultiplied alpha
 	BLEND_PREMULTIPLIED_ALPHA_DRAW, // premultiply color with alpha and blend
-	BLEND_ABSORBTION_MASK, // the color blended with the mask MUST use premultiplied-alpha
-	BLEND_ADD,
-	BLEND_ADD_OPAQUE,
+	BLEND_ABSORBTION_MASK,          // generates a color mask, where colors are filtered away by the things drawn to a surface. the surface must be initialized to white with 100% opacity for this to work. the color blended with the mask MUST use premultiplied-alpha
+	BLEND_ADD,                      // the color is multiplied with alpha before being added
+	BLEND_ADD_OPAQUE,               // component-wise add. ignores alpha
 	BLEND_SUBTRACT,
 	BLEND_INVERT,
 	BLEND_MUL,
