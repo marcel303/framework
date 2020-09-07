@@ -1834,13 +1834,11 @@ static void gxValidatePipelineState()
 					att.blendingEnabled = false;
 					break;
 				case BLEND_ALPHA:
-					// note : source alpha is set to ZERO!
-					// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
 					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-					att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
 					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;

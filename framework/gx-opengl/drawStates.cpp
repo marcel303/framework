@@ -45,13 +45,11 @@ void setBlend(BLEND_MODE blendMode)
 		glDisable(GL_BLEND);
 		break;
 	case BLEND_ALPHA:
-		// note : source alpha is set to ZERO!
-		// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
 		if (glBlendFuncSeparate)
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_PREMULTIPLIED_ALPHA:
 		glEnable(GL_BLEND);
