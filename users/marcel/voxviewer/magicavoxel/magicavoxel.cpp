@@ -174,7 +174,8 @@ static void read_chunk(StreamReader & r, magica_chunk_t & c)
 
 static void skip_chunk(StreamReader & r, magica_chunk_t & c)
 {
-// todo : throw exception on failure
+	// note : Seek throws an exception on error. we catch it in readMagicaWorld(..)
+	
 	r.Stream_get()->Seek(c.content_length + c.children_length, SeekMode_Offset);
 }
 
@@ -450,6 +451,7 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 	{
 		LOG_ERR("failed to read VOX file: %s", e.what());
 		
+		world.free();
 		return false;
 	}
 }
