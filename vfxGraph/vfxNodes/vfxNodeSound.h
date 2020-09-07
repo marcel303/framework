@@ -27,10 +27,10 @@
 
 #pragma once
 
+#include "audiooutput/AudioOutput_Native.h"
 #include "vfxNodeBase.h"
 #include <atomic>
 
-class AudioOutput_PortAudio;
 class AudioStream_Vorbis;
 
 struct SDL_mutex;
@@ -84,7 +84,7 @@ struct VfxNodeSound : VfxNodeBase
 	
 	SDL_mutex * mutex;
 	
-	AudioOutput_PortAudio * audioOutput;
+	AudioOutput_Native * audioOutput;
 	AudioStream_Vorbis * audioStream;
 	
 	VfxNodeSound_AudioStream mixingAudioStream;
