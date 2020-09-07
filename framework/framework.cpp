@@ -169,10 +169,10 @@ Framework::Framework()
 	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
-#if defined(DEBUG) // todo : make this distribution. let libgg also set DISTRIBUTION define when config is Distribution
-	enableRealTimeEditing = true;
-#else
+#if defined(DISTRIBUTION)
 	enableRealTimeEditing = false;
+#else
+	enableRealTimeEditing = true;
 #endif
 	vrMode = false;
 	filedrop = false;
@@ -821,10 +821,10 @@ bool Framework::shutdown()
 	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
-#if defined(DEBUG) // todo : make this distribution. let libgg also set DISTRIBUTION define when config is Distribution
-	enableRealTimeEditing = true;
-#else
+#if defined(DISTRIBUTION)
 	enableRealTimeEditing = false;
+#else
+	enableRealTimeEditing = true;
 #endif
 	vrMode = false;
 	filedrop = false;
