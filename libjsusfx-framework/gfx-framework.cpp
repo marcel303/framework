@@ -266,7 +266,7 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	lastKey = 0;
 	
-	for (auto & e : framework.events)
+	for (auto & e : keyboard.events)
 	{
 		if (e.type == SDL_KEYDOWN)
 		{
