@@ -1037,6 +1037,7 @@ void Framework::process()
 		window->m_windowData->beginProcess();
 
 	events.clear();
+	windowEvents.clear();
 
 	changedFiles.clear();
 	droppedFiles.clear();
@@ -1069,49 +1070,27 @@ void Framework::process()
 
 		events.push_back(e);
 		
-		if (e.type == SDL_KEYDOWN)
+		WindowData * windowData = findWindowDataById(e.key.windowID);
+		
+		if (windowData != nullptr)
 		{
-			WindowData * windowData = findWindowDataById(e.key.windowID);
-			
-			if (windowData != nullptr)
+			windowData->events.push_back(e);
+		
+			if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 			{
 				windowData->keyEvents.push_back(e);
 			}
-		}
-		else if (e.type == SDL_KEYUP)
-		{
-			WindowData * windowData = findWindowDataById(e.key.windowID);
-			
-			if (windowData != nullptr)
+			else if (e.type == SDL_TEXTINPUT)
 			{
 				windowData->keyEvents.push_back(e);
 			}
-		}
-		else if (e.type == SDL_TEXTINPUT)
-		{
-			WindowData * windowData = findWindowDataById(e.key.windowID);
-			
-			if (windowData != nullptr)
-			{
-				windowData->keyEvents.push_back(e);
-			}
-		}
-		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
-		{
-			WindowData * windowData = findWindowDataById(e.button.windowID);
-			
-			if (windowData != nullptr)
+			else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 			{
 				//logDebug("mouse %d / %d", e.type, e.button.button);
 				
 				windowData->mouseData.addEvent(e);
 			}
-		}
-		else if (e.type == SDL_MOUSEMOTION)
-		{
-			WindowData * windowData = findWindowDataById(e.motion.windowID);
-			
-			if (windowData != nullptr)
+			else if (e.type == SDL_MOUSEMOTION)
 			{
 				SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
 				
@@ -1138,24 +1117,14 @@ void Framework::process()
 					windowData->mouseData.addEvent(e);
 				}
 			}
-		}
-		else if (e.type == SDL_MOUSEWHEEL)
-		{
-			WindowData * windowData = findWindowDataById(e.wheel.windowID);
-			
-			if (windowData != nullptr)
+			else if (e.type == SDL_MOUSEWHEEL)
 			{
 				if (e.wheel.which != SDL_TOUCH_MOUSEID)
 				{
 					windowData->mouseData.mouseScrollY += e.wheel.y * (e.wheel.direction == SDL_MOUSEWHEEL_NORMAL ? 1 : -1);
 				}
 			}
-		}
-		else if (e.type == SDL_WINDOWEVENT)
-		{
-			WindowData * windowData = findWindowDataById(e.window.windowID);
-			
-			if (windowData != nullptr)
+			else if (e.type == SDL_WINDOWEVENT)
 			{
 				if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
 					windowData->isActive = true;
@@ -1173,7 +1142,8 @@ void Framework::process()
 				}
 			}
 		}
-		else if (e.type == SDL_DROPFILE)
+		
+		if (e.type == SDL_DROPFILE)
 		{
 			droppedFiles.push_back(e.drop.file);
 			

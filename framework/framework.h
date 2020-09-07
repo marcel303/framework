@@ -536,7 +536,9 @@ public:
 	
 	std::vector<std::string> resourcePaths;
 	
-	std::vector<SDL_Event> events; // todo : add events for window (touch events), so ImGui integration can look at correct events
+	std::vector<SDL_Event> events;       // all events captured during the last process() call
+	std::vector<SDL_Event> windowEvents; // events for the current window captured during the last process() call
+	
 	std::vector<std::string> changedFiles;
 	std::vector<std::string> droppedFiles;
 	

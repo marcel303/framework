@@ -351,6 +351,8 @@ public:
 	{
 		quitRequested = false;
 		
+		events.clear();
+		
 		keyData_beginProcess();
 		
 		mouseData.beginProcess();
@@ -366,6 +368,7 @@ public:
 	void makeActive() const
 	{
 		framework.windowIsActive = isActive;
+		framework.windowEvents = events;
 		
 		keyboard.events = keyEvents;
 		
@@ -385,6 +388,7 @@ public:
 	int keyRepeat[256];
 	int keyRepeatCount;
 	
+	std::vector<SDL_Event> events;
 	std::vector<SDL_Event> keyEvents;
 	std::vector<SDL_Event> pendingKeyEvents;
 	
