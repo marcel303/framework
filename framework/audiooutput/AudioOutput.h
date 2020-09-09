@@ -34,6 +34,9 @@ class AudioOutput
 public:
 	virtual ~AudioOutput() { }
 	
+	virtual bool Initialize(const int numChannels, const int sampleRate, const int bufferSize) = 0;
+	virtual bool Shutdown() = 0;
+	
 	virtual void Play(AudioStream * stream) = 0;
 	virtual void Stop() = 0;
 	virtual void Update() = 0;

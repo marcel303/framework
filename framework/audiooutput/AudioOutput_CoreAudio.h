@@ -66,8 +66,8 @@ public:
 	AudioOutput_CoreAudio();
 	virtual ~AudioOutput_CoreAudio() override;
 	
-	bool Initialize(const int numChannels, const int sampleRate, const int bufferSize);
-	bool Shutdown();
+	virtual bool Initialize(const int numChannels, const int sampleRate, const int bufferSize) override;
+	virtual bool Shutdown() override;
 	
 	virtual void Play(AudioStream * __nonnull stream) override;
 	virtual void Stop() override;
