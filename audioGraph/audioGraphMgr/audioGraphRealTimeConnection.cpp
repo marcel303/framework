@@ -37,6 +37,14 @@
 
 //
 
+#if defined(DEBUG)
+	#define AUDIOGRAPH_DEBUG_DISCONNECTS 1
+#else
+	#define AUDIOGRAPH_DEBUG_DISCONNECTS 0 // do not alter
+#endif
+
+//
+
 #include "audioNodeBase.h"
 #include "Timer.h"
 
@@ -283,13 +291,32 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (nodeItr == audioGraph->nodes.end())
 		return;
 	
-	auto node = nodeItr->second;
+	auto * node = nodeItr->second;
 	
+#if AUDIOGRAPH_DEBUG_DISCONNECTS
 	// all links should be removed at this point. there should be no remaining predeps or connected nodes
 	Assert(node->predeps.empty());
-	//for (auto & input : node->inputs)
-	//	Assert(!input.isConnected()); // may be a literal value node with a non-accounted for (in the graph) connection when created directly from socket value
-	// todo : iterate all other nodes, to ensure there are no nodes with references back to this node?
+	
+	// ensure all inputs are disconnected
+	for (auto & input : node->inputs)
+		Assert(!input.isConnected() || input.mem == input.immediateMem);
+	for (auto & i : audioGraph->nodes)
+	{
+		auto * foreignNode = i.second;
+		// ensure there are no foreign node inputs pointing to our memory
+		for (auto & foreignInput : foreignNode->inputs)
+		{
+			for (auto & output : node->outputs)
+				Assert(foreignInput.mem != output.mem);
+		}
+		// ensure there are no foreign node outputs referenced by our inputs
+		for (auto & foreignOutput : foreignNode->outputs)
+		{
+			for (auto & input : node->inputs)
+				Assert(foreignOutput.mem != input.mem);
+		}
+	}
+#endif
 	
 	AUDIO_SCOPE;
 	
