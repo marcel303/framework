@@ -417,10 +417,8 @@ int VfxGraph::traverseDraw() const
 			result = image->getTexture();
 		}
 	}
-	
-#if 1 // todo : make this depend on whether the graph editor is visible or not ? or whether the node is referenced by the editor ?
 
-	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior
+	// note : traversal for sub-graphs not connected to the display node should start at nodes without any connected outputs. otherwise we might start in the middle of a sub-graph, resulting in undefined behavior. this is why we perform the 'isRootNode' check below
 	
 	pushSurface(dummySurface);
 	{
@@ -451,7 +449,6 @@ int VfxGraph::traverseDraw() const
 		g_currentVfxSurface = nullptr;
 	}
 	popSurface();
-#endif
 
 	++nextDrawTraversalId;
 	
