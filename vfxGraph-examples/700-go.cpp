@@ -191,8 +191,6 @@ int main(int argc, char * argv[])
 		
 		auto startTime = std::chrono::high_resolution_clock::now();
 		
-		// todo : create a truely headless mode
-		
 		for (;;)
 		{
 			/*

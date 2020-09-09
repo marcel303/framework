@@ -486,7 +486,7 @@ todo : nodes :
 	+ add surface node. push surface before tick, pop surface after tick
 	+ add sequence node. has multiple any type inputs. inputs are processed in socket order
 + add interval (once every N seconds) mode to OSC send mode
-- add audio playback node
++ add audio playback node
 	+ add play! trigger
 	+ add pause! trigger
 	+ add resume! trigger
