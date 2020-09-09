@@ -288,8 +288,6 @@ namespace binaural
 			
 			const int todo = std::min(left, AUDIO_BUFFER_SIZE - nextReadLocation);
 			
-			// todo : add BINAURAL_USE_SIMD check
-			
 		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			debugAssert((todo % 4) == 0);
 			

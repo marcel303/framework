@@ -517,8 +517,16 @@ namespace binaural
 	// todo : use SSE transpose
 		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
 		{
-			filter_wdl[i].re.v = _mm_set_ps(rFilterNew.real[i], lFilterNew.real[i], rFilterOld.real[i], lFilterOld.real[i]);
-			filter_wdl[i].im.v = _mm_set_ps(rFilterNew.imag[i], lFilterNew.imag[i], rFilterOld.imag[i], lFilterOld.imag[i]);
+			filter_wdl[i].re.v = _mm_set_ps(
+				rFilterNew.real[i],
+				lFilterNew.real[i],
+				rFilterOld.real[i],
+				lFilterOld.real[i]);
+			filter_wdl[i].im.v = _mm_set_ps(
+				rFilterNew.imag[i],
+				lFilterNew.imag[i],
+				rFilterOld.imag[i],
+				lFilterOld.imag[i]);
 		}
 		
 		// convolve audio data with impulse-response data in the frequency-domain

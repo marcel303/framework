@@ -55,8 +55,8 @@ within the triangle.
 
 */
 
-#include <list>
-#include <string>
+#include <stdlib.h> // posix_memalign
+#include <string> // listFiles
 #include <vector>
 
 #ifndef ALIGN16
@@ -197,8 +197,8 @@ namespace binaural
 			sampleDelayR = _sampleDelayR;
 		}
 
+	#if BINAURAL_USE_SIMD
 	#if BINAURAL_USE_SSE
-	// todo : aligned alloc for all SIMD implementations
 		void * operator new(size_t size)
 		{
 			return _mm_malloc(size, 32);
@@ -208,6 +208,19 @@ namespace binaural
 		{
 			_mm_free(mem);
 		}
+	#else
+		void * operator new(size_t size)
+		{
+			void * result = nullptr;
+			posix_memalign(&result, 16, size);
+			return result;
+		}
+
+		void operator delete(void * mem)
+		{
+			free(mem);
+		}
+	#endif
 	#endif
 	};
 
