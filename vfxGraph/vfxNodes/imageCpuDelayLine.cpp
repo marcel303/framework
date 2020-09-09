@@ -328,7 +328,7 @@ void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLeve
 	}
 }
 
-bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch)
+bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch, const float glitchiness)
 {
 	if (jpegData.bytes == nullptr)
 	{
@@ -338,16 +338,15 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 	{
 		// decode JPEG data
 		
-		if (glitch)
+		if (glitch && glitchiness > 0.f)
 		{
-			// todo : make glitchiness an option!
 			ofxJpegGlitch glitch;
 			ofBuffer buffer(jpegData.bytes, jpegData.numBytes);
 			glitch.setJpegBuffer(buffer);
 			glitch.setDataGlitchness(0);
 			glitch.setDHTGlitchness(0);
 			//glitch.setQNGlitchness(0);
-			glitch.setQNGlitchness(100000);
+			glitch.setQNGlitchness(glitchiness * ofxJpegGlitch::kMaxGlitchiness);
 			glitch.glitch();
 		}
 		
@@ -406,7 +405,7 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 	}
 }
 
-bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch)
+bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch, const float glitchiness)
 {
 	JpegData jpegData;
 	bool gotImageData = false;
@@ -443,10 +442,10 @@ bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, doubl
 	if (gotImageData)
 		return true;
 	else
-		return decode(jpegData, imageData, glitch);
+		return decode(jpegData, imageData, glitch, glitchiness);
 }
 
-bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch)
+bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch, const float glitchiness)
 {
 	JpegData jpegData;
 	
@@ -478,7 +477,7 @@ bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData &
 	}
 	SDL_UnlockMutex(mutex);
 	
-	return decode(jpegData, imageData, glitch);
+	return decode(jpegData, imageData, glitch, glitchiness);
 }
 
 void ImageCpuDelayLine::clearHistory()

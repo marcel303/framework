@@ -120,9 +120,9 @@ struct ImageCpuDelayLine
 	
 	void add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp = 0.0, const bool useCompression = true);
 	
-	bool decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch);
-	bool get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false);
-	bool getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false);
+	bool decode(const JpegData & jpegData, VfxImageCpuData & imageData, const bool glitch, const float glitchiness);
+	bool get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false, const float glitchiness = 0.f);
+	bool getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp = nullptr, const bool glitch = false, const float glitchiness = 0.f);
 	
 	void clearHistory();
 	
