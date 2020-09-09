@@ -9,8 +9,6 @@
 
 typedef unsigned char Byte;
 
-const static float randomMax = 1000000.0f;
-
 void ofxJpegGlitch::setup(int data, int qn, int dht) {
     dataBlock = data;
     qnBlock   = qn;
@@ -122,7 +120,7 @@ void ofxJpegGlitch::glitch() {
                         for(int i = 0; i < 64; i++) {
                             Qn[i] = *(bytes + cur + offset + i);
                             // RANDOMIZE
-                            if(ofRandom(0.0f, randomMax) < qnBlock) {
+                            if(ofRandom(0.0f, kMaxGlitchiness) < qnBlock) {
                                 *(bytes + cur + offset + i) = rand() % 256;
                             }
                         }
@@ -132,7 +130,7 @@ void ofxJpegGlitch::glitch() {
                             Qn[i] = *(bytes + cur + offset + 2 * i);
                             Qn[i] = Qn[i] * 256 + *(bytes + cur + offset + 2 * i + 1);
                             // RANDOMIZE
-                            if(ofRandom(0.0f, randomMax) < qnBlock) {
+                            if(ofRandom(0.0f, kMaxGlitchiness) < qnBlock) {
                                 *(bytes + cur + offset + i) = rand() % 256;
                             }
                         }
@@ -157,7 +155,7 @@ void ofxJpegGlitch::glitch() {
                     for(int i = 0; i < 16; i++) {
                         memcpy(Vnn[i], bytes + cur + offset + vOffset, Ln[i]);
                         for(int i = 0; i < Ln[i]; i++) {
-                            if(ofRandom(0.0f, randomMax) < dhtBlock) {
+                            if(ofRandom(0.0f, kMaxGlitchiness) < dhtBlock) {
                                 *(bytes + cur + offset + vOffset) = rand() % 256;
                             }
                         }
@@ -204,7 +202,7 @@ void ofxJpegGlitch::glitch() {
             cur += 2;
         } else {
             // RANDOMIZE
-            if(*(bytes + cur) != 0xFF && (ofRandom(0.0f, randomMax) < dataBlock)) {
+            if(*(bytes + cur) != 0xFF && (ofRandom(0.0f, kMaxGlitchiness) < dataBlock)) {
                 *(bytes + cur) = rand() % 255;
             }
             

@@ -12,6 +12,8 @@
 
 class ofxJpegGlitch {
 public:
+	static const int kMaxGlitchiness = 1000000;
+	
     ofxJpegGlitch() {
         dataBlock = 16384;
         qnBlock  = 2048;
@@ -19,17 +21,20 @@ public:
     };
     void setup(int data = 16384, int qn = 2048, int dht = 2048);
     void setJpegBuffer(ofBuffer &buf);
-    
+	
+    // glitchness should be between 0 and 1000000
     void setDataGlitchness(int glitchness) {
         if(glitchness < 0) return;
         dataBlock = glitchness;
     }
-    
+	
+    // glitchness should be between 0 and 1000000
     void setQNGlitchness(int glitchness) {
         if(glitchness < 0) return;
         qnBlock = glitchness;
     }
-    
+	
+    // glitchness should be between 0 and 1000000
     void setDHTGlitchness(int glitchness) {
         if(glitchness < 0) return;
         dhtBlock = glitchness;
