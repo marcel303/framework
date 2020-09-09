@@ -110,6 +110,11 @@ struct VfxImage_Texture : VfxImageBase
 	virtual int getSy() const override;
 	virtual uint32_t getTexture() const override;
 	virtual uint32_t getTextureFormat() const override; // GX_TEXTURE_FORMAT
+	
+	void reset()
+	{
+		texture = 0;
+	}
 };
 
 //
