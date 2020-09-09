@@ -215,42 +215,33 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 					popDepthTest();
 				}
 				
-				// draw model
+				// setup material
 				
 				Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
 				Shader specularGlossinessShader("gltf/shaders/pbr-specularGlossiness");
-				
-			// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
-				Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
-				for (auto * shader : shaders)
-				{
-					setShader(*shader);
-					
-					Mat4x4 objectToView;
-					gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
-					
-					const float dx = cosf(framework.time / 1.56f) * 2.f;
-					const float dz = sinf(framework.time / 1.67f) * 2.f;
-					const Vec3 lightDir_world(dx, -1.f, dz);
-					const Vec3 lightDir_view = objectToView.Mul3(lightDir_world).CalcNormalized();
-			
-					shader->setImmediate("scene_lightParams1",
-						lightDir_view[0],
-						lightDir_view[1],
-						lightDir_view[2],
-						0.f /* directional */);
-					shader->setImmediate("scene_lightParams2",
-						1.f, 1.f, 1.f,
-						1.f);
-					shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
-					
-					clearShader();
-				}
 				
 				gltf::MaterialShaders materialShaders;
 				materialShaders.specularGlossinessShader = &specularGlossinessShader;
 				materialShaders.metallicRoughnessShader = &metallicRoughnessShader;
 				materialShaders.init();
+				
+				// setup material : lighting
+				
+				const float dx = cosf(framework.time / 1.56f) * 2.f;
+				const float dz = sinf(framework.time / 1.67f) * 2.f;
+				const Vec3 lightDir_world(dx, -1.f, dz);
+				
+				Mat4x4 objectToView;
+				gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
+				
+				gltf::setDefaultMaterialLighting(
+					materialShaders,
+					objectToView,
+					lightDir_world,
+					Vec3(1.f),
+					Vec3(.2f));
+			
+				// draw model
 				
 				gltf::DrawOptions drawOptions;
 				drawOptions.alphaMode = alphaMode;
