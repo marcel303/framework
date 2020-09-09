@@ -37,48 +37,43 @@ static std::map<std::string, binaural::HRIRSampleSet*> s_hrirSampleSetCache;
 
 void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type)
 {
-	const auto paths = std::vector<std::string>({ path });
+	binaural::HRIRSampleSet * sampleSet = new binaural::HRIRSampleSet();
 	
-	for (auto & path : paths)
+	bool result = false;
+	
+	switch (type)
 	{
-		binaural::HRIRSampleSet * sampleSet = new binaural::HRIRSampleSet();
+	case kHRIRSampleSetType_Cipic:
+		result = binaural::loadHRIRSampleSet_Cipic(path, *sampleSet);
+		break;
+	case kHRIRSampleSetType_Ircam:
+		result = binaural::loadHRIRSampleSet_Ircam(path, *sampleSet);
+		break;
+	case kHRIRSampleSetType_Mit:
+		result = binaural::loadHRIRSampleSet_Mit(path, *sampleSet);
+		break;
+	case kHRIRSampleSetType_Oalsoft:
+		result = binaural::loadHRIRSampleSet_Oalsoft(path, *sampleSet);
+		break;
+	}
+	
+	if (result == false)
+	{
+		debugLog("failed to load sample set. path=%s", path);
+	
+		delete sampleSet;
+		sampleSet = nullptr;
+	}
+	else
+	{
+		sampleSet->finalize();
 		
-		bool result = false;
+		auto & elem = s_hrirSampleSetCache[name];
 		
-		switch (type)
-		{
-		case kHRIRSampleSetType_Cipic:
-			result = binaural::loadHRIRSampleSet_Cipic(path.c_str(), *sampleSet);
-			break;
-		case kHRIRSampleSetType_Ircam:
-			result = binaural::loadHRIRSampleSet_Ircam(path.c_str(), *sampleSet);
-			break;
-		case kHRIRSampleSetType_Mit:
-			result = binaural::loadHRIRSampleSet_Mit(path.c_str(), *sampleSet);
-			break;
-		case kHRIRSampleSetType_Oalsoft:
-			result = binaural::loadHRIRSampleSet_Oalsoft(path.c_str(), *sampleSet);
-			break;
-		}
+		delete elem;
+		elem = nullptr;
 		
-		if (result == false)
-		{
-		// todo : log error
-		
-			delete sampleSet;
-			sampleSet = nullptr;
-		}
-		else
-		{
-			sampleSet->finalize();
-			
-			auto & elem = s_hrirSampleSetCache[name];
-			
-			delete elem;
-			elem = nullptr;
-			
-			elem = sampleSet;
-		}
+		elem = sampleSet;
 	}
 }
 
