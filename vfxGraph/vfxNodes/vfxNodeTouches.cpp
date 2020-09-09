@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "vfxNodeTouches.h"
 
-// todo : add wentDown, wentUp and moved triggers
-
 VFX_NODE_TYPE(VfxNodeTouches)
 {
 	typeName = "touches";
@@ -123,58 +121,70 @@ void VfxNodeTouches::tick(const float dt)
 	wentUpOutput = 0;
 	movedOutput = 0;
 
-	for (auto & event : framework.events)
+	if (framework.windowIsActive == false)
 	{
-		if (event.type == SDL_FINGERDOWN)
+		for (int i = 0; i < numTouches; ++i)
 		{
-			Touch * touch = findTouch(event.tfinger.fingerId);
-			Assert(touch == nullptr);
-
-			if (touch == nullptr)
-				touch = allocTouch();
+			touches[i].isDangling = true;
 			
-			if (touch != nullptr)
-			{
-				const int touchIndex = touch - touches;
-
-				touch->id = event.tfinger.fingerId;
-				touch->x = event.tfinger.x;
-				touch->y = event.tfinger.y;
-
-				wentDownOutput |= 1 << touchIndex;
-			}
+			wentUpOutput |= 1 << i;
 		}
-		else if (event.type == SDL_FINGERUP)
+	}
+	else
+	{
+		for (auto & event : framework.events)
 		{
-			Touch * touch = findTouch(event.tfinger.fingerId);
-			
-			if (touch != nullptr)
+			if (event.type == SDL_FINGERDOWN)
 			{
-				const int touchIndex = touch - touches;
+				Touch * touch = findTouch(event.tfinger.fingerId);
+				Assert(touch == nullptr);
 
-				touch->x = event.tfinger.x;
-				touch->y = event.tfinger.y;
-				touch->isDangling = true;
+				if (touch == nullptr)
+					touch = allocTouch();
+				
+				if (touch != nullptr)
+				{
+					const int touchIndex = touch - touches;
 
-				wentUpOutput |= 1 << touchIndex;
+					touch->id = event.tfinger.fingerId;
+					touch->x = event.tfinger.x;
+					touch->y = event.tfinger.y;
+
+					wentDownOutput |= 1 << touchIndex;
+				}
 			}
-		}
-		else if (event.type == SDL_FINGERMOTION)
-		{
-			Touch * touch = findTouch(event.tfinger.fingerId);
-			
-			if (touch != nullptr)
+			else if (event.type == SDL_FINGERUP)
 			{
-				const int touchIndex = touch - touches;
+				Touch * touch = findTouch(event.tfinger.fingerId);
+				
+				if (touch != nullptr)
+				{
+					const int touchIndex = touch - touches;
 
-				touch->x = event.tfinger.x;
-				touch->y = event.tfinger.y;
+					touch->x = event.tfinger.x;
+					touch->y = event.tfinger.y;
+					touch->isDangling = true;
 
-				movedOutput |= 1 << touchIndex;
+					wentUpOutput |= 1 << touchIndex;
+				}
+			}
+			else if (event.type == SDL_FINGERMOTION)
+			{
+				Touch * touch = findTouch(event.tfinger.fingerId);
+				
+				if (touch != nullptr)
+				{
+					const int touchIndex = touch - touches;
+
+					touch->x = event.tfinger.x;
+					touch->y = event.tfinger.y;
+
+					movedOutput |= 1 << touchIndex;
+				}
 			}
 		}
 	}
-
+	
 	// update up/down output
 
 	isDownOutput = 0;
