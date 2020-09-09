@@ -27,7 +27,7 @@
 
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
@@ -90,7 +90,7 @@ VfxNodeJgmod::VfxNodeJgmod()
 	
 // todo : to make sure audio nodes added 'at the same time' (graph construction) are perfectly in sync, audio streaming should be paused globally, to avoid things from triggering ahead of things, before all streams are registered. this pleads for a global vfx graph controlled audio stream
 
-	audioOutput = new AudioOutput_PortAudio();
+	audioOutput = new AudioOutput_Native();
 	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
 	audioOutput->Play(audioStream);
 
