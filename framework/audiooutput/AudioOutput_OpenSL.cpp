@@ -161,7 +161,15 @@ bool AudioOutput_OpenSL::doInitialize(const int numChannels, const int sampleRat
 		return false;
 	}
 
-	if (!checkError("slCreateEngine", slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr)) ||
+	// note : we call SLES api functions from both the render thread (enqueue) and the main thread (SetVolumeLevel), so we need a thread-safe context, as according to the spec, no two api calls are ever allowed to be called simultanously without a thread-safe context
+	const SLEngineOption engineOptions[] =
+		{
+ 			(SLuint32)SL_ENGINEOPTION_THREADSAFE,
+ 			(SLuint32)SL_BOOLEAN_TRUE
+		};
+	const int numEngineOptions = sizeof(engineOptions) / sizeof(engineOptions[0]) / 2;
+	
+	if (!checkError("slCreateEngine", (&engineObject, numEngineOptions, engineOptions, 0, nullptr, nullptr)) ||
 		!checkError("Realize",        (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE)) ||
 		!checkError("GetInterface",   (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine)))
 	{
@@ -366,8 +374,7 @@ void AudioOutput_OpenSL::Volume_set(float volume)
 #if USE_VOLUME_INTERFACE
     if (playVolume != nullptr)
 	{
-		// todo : is this thread safe ?
-        auto result = (*playVolume)->SetVolumeLevel(playVolume, volume); // todo: millibel
+        auto result = (*playVolume)->SetVolumeLevel(playVolume, volume); // todo: millibel. should convert from volume to dB, and multiply by 1000.0
         assert(SL_RESULT_SUCCESS == result);
         (void)result;
     }
