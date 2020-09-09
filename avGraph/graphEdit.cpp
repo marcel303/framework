@@ -1984,7 +1984,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 		HitTestResult result;
 		
-		if (hitTest(mousePosition.x, mousePosition.y, result))
+		if (framework.windowIsActive && hitTest(mousePosition.x, mousePosition.y, result))
 		{
 			if (result.hasNode && result.nodeHitTestResult.inputSocket != nullptr)
 			{
@@ -2120,7 +2120,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			HitTestResult hitTestResult;
 			
-			if (hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+			if (framework.windowIsActive && hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 			{
 				if (hitTestResult.hasNode)
 				{
@@ -5520,7 +5520,7 @@ void GraphEdit::draw() const
 	
 	HitTestResult hitTestResult;
 	
-	if (state == kState_Idle && hitTest(mousePosition.x, mousePosition.y, hitTestResult))
+	if (state == kState_Idle && framework.windowIsActive && hitTest(mousePosition.x, mousePosition.y, hitTestResult))
 	{
 		if (hitTestResult.hasNode &&
 			hitTestResult.nodeHitTestResult.background)
