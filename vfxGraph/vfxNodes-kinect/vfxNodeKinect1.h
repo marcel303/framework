@@ -33,6 +33,8 @@
 
 #include "vfxNodeBase.h"
 
+#include "gx_texture.h"
+
 struct Kinect1;
 
 struct VfxNodeKinect1 : VfxNodeBase
@@ -51,6 +53,9 @@ struct VfxNodeKinect1 : VfxNodeBase
 		kOutput_COUNT
 	};
 
+	GxTexture videoTexture;
+	GxTexture depthTexture;
+	
 	VfxImage_Texture videoImage;
 	VfxImage_Texture depthImage;
 	

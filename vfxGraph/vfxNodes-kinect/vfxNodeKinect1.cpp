@@ -45,6 +45,8 @@ VFX_NODE_TYPE(VfxNodeKinect1)
 
 VfxNodeKinect1::VfxNodeKinect1()
 	: VfxNodeBase()
+	, videoTexture()
+	, depthTexture()
 	, videoImage()
 	, depthImage()
 	, kinect(nullptr)
@@ -58,16 +60,28 @@ VfxNodeKinect1::VfxNodeKinect1()
 
 VfxNodeKinect1::~VfxNodeKinect1()
 {
-	kinect->shut();
+	videoTexture.free();
+	depthTexture.free();
+	
+	videoImage.reset();
+	depthImage.reset();
+	
+	if (kinect != nullptr)
+	{
+		kinect->shut();
 
-	delete kinect;
-	kinect = nullptr;	
+		delete kinect;
+		kinect = nullptr;
+	}
 }
 
 void VfxNodeKinect1::init(const GraphNode & node)
 {
-	const bool videoIsInfrared = getInputBool(kInput_Infrared, false);
+	if (isPassthrough)
+		return;
 	
+	const bool videoIsInfrared = getInputBool(kInput_Infrared, false);
+
 	kinect = new Kinect1();
 	kinect->bIsVideoInfrared = videoIsInfrared;
 	
@@ -77,6 +91,47 @@ void VfxNodeKinect1::init(const GraphNode & node)
 void VfxNodeKinect1::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeKinect1);
+	
+	if (isPassthrough)
+	{
+		videoTexture.free();
+		depthTexture.free();
+		
+		videoImage.reset();
+		depthImage.reset();
+		
+		if (kinect != nullptr)
+		{
+			kinect->shut();
+			
+			delete kinect;
+			kinect = nullptr;
+		}
+		
+		return;
+	}
+	
+	// (re)create the kinect device if necessary
+	
+	if (kinect == nullptr)
+	{
+		kinect = new Kinect1();
+		kinect->bIsVideoInfrared = videoIsInfrared;
+		
+		kinect->init();
+	}
+	
+	// check for configuration changes
+	
+	const bool videoIsInfrared = getInputBool(kInput_Infrared, false);
+	
+	if (videoIsInfrared != kinect->bIsVideoInfrared)
+	{
+		kinect->shut();
+	
+		kinect->bIsVideoInfrared = videoIsInfrared;
+		kinect->init();
+	}
 	
 	kinect->lockBuffers();
 	{
@@ -88,21 +143,30 @@ void VfxNodeKinect1::tick(const float dt)
 			
 			// create texture from video data
 			
-			if (videoImage.texture != 0)
-			{
-				glDeleteTextures(1, &videoImage.texture);
-			}
-			
 			if (kinect->bIsVideoInfrared)
 			{
-				videoImage.texture = createTextureFromR8(kinect->video, kinect->width, kinect->height, true, true);
+				if (videoTexture.isChanged(kinect->width, kinect->height, GX_R8_UNORM))
+				{
+					videoTexture.alloc(kinect->width, kinect->height, GX_R8_UNORM, true, true);
+					videoTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+				}
 				
-				glBindTexture(GL_TEXTURE_2D, videoImage.texture);
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+				videoTexture.upload(kinect->video);
+				
+				videoImage.texture = videoTexture.id;
 			}
 			else
-				videoImage.texture = createTextureFromRGB8(kinect->video, kinect->width, kinect->height, true, true);
+			{
+				if (videoTexture.isChanged(kinect->width, kinect->height, GX_RGB8_UNORM))
+				{
+					videoTexture.alloc(kinect->width, kinect->height, GX_RGB8_UNORM, true, true);
+					videoTexture.setSwizzle(0, 1, 2, GX_SWIZZLE_ONE);
+				}
+				
+				videoTexture.upload(kinect->video);
+				
+				videoImage.texture = videoTexture.id;
+			}
 		}
 		
 		if (kinect->hasDepth)
@@ -116,16 +180,15 @@ void VfxNodeKinect1::tick(const float dt)
 			
 			// create texture from depth data
 			
-			if (depthImage.texture != 0)
+			if (depthTexture.isChanged(kinect->width, kinect->height, GX_R16_UNORM))
 			{
-				glDeleteTextures(1, &depthImage.texture);
+				depthTexture.alloc(kinect->width, kinect->height, GX_R16_UNORM, true, true);
+				depthTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 			}
+		
+			depthTexture.upload(kinect->depth);
 			
-			depthImage.texture = createTextureFromR16(kinect->depth, kinect->width, kinect->height, true, true);
-			
-			glBindTexture(GL_TEXTURE_2D, depthImage.texture);
-			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			depthImage.texture = depthTexture.id;
 		}
 	}
 	kinect->unlockBuffers();
