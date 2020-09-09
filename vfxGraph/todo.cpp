@@ -166,7 +166,7 @@ todo : framework
 
 
 
-todo :
+done :
 + fix threshold typo (treshold) throughout the entire code base
 + save wavefield data when saving. should be faster to restore than randomizing values. and also allows for finding nice sounds and saving them
 	+ review resource implementation vfx graph
@@ -335,7 +335,7 @@ todo :
 	+ copied gaussian shadr to fsfx/ folder
  + add FSFX shaderSource which exposes main function and uses applyFsfx function from .fsfx file to change pixels. also exposes shared uniforms, applies alpha blended, opacity control, color mode and color post
 + fix issue with link mappings not being restored updating dynamic sockets
-+ fix SDL text input when selecting a text field before the previously active one (start before stop). todo : test IME support
++ fix SDL text input when selecting a text field before the previously active one (start before stop). done : test IME support
 + add mouse cursor to user interface
 + fix issue where freeing texture here can result in issues when drawing visualizer. tick of visualizer should always happen after cpuToGpu tick, but there's no link connecting visualizer to the node it references, so tick order is undefined .. ! -> maybe update visualizer in draw. or never capture references (to textures ID's or whatever) in visualizer. only let it copy values by value (as needed for graph) but capture everything else on draw
 	+ add a separate tickVisualizers(..) or similar ? it would run after evaluating the vfx graph, so get the latest values. conceptually, doing the regular tick before the vfx graph also makes sense, as it ensures vfx graph uses the latest version of the graph. so editor.tick, vfxGraph.tick/draw, editor.tickVisualizers. editor.draw, composite vfxGraph/editor
@@ -370,7 +370,7 @@ todo :
 + add a note field in editor options -> for versioning
 
 
-todo : nodes :
+done : nodes :
 + add ease node
 	+ value
 	+ ease type
@@ -500,7 +500,7 @@ todo : nodes :
 	+ fix issue with output time not stable when paused
 
 
-todo : fsfx :
+done : fsfx :
 + let FSFX use fsfx.vs vertex shader. don't require effects to have their own vertex shader
 + expose uniforms/inputs from FSFX pixel shader
  iterate FSFX pixel shaders and generate type definitions based on FSFX name and exposed uniforms
@@ -511,7 +511,7 @@ todo : fsfx :
 + add standard include file (shaderSource(..)) for FSFX nodes. include params, time, texture1 and 2 and maybe some common functions too
 
 
-todo : framework :
+done : framework :
 + optimize text rendering. use a dynamic texture atlas instead of one separate texture for each glyph. drawText should only emit a single draw call
 + add MSDF font rendering support
 + add ability to save MSDF texture atlas and load/supplement it
@@ -524,7 +524,7 @@ todo : framework :
 + remove stage and UI classes
 + add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
 
-todo : media player
+done : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
 	+ outputting Y+UV is just as cheap as Y only. added planar YUV support.
 + add image_cpu value type ?
@@ -539,14 +539,14 @@ todo : media player
 + add image_cpu to image (gpu) node. default behaviour is to upload immediately
 + add openAsync call which accepts OpenParams
 
-todo : UI
+done : UI
 + add drop down list for (large) enums
 + add load/save notifications to UI., maybe a UI message that briefly appears on the bottom. white text on dark background ?
 + touch zoom on moving fingers threshold distance apart. also, try to convert normalized touch coords into inches or cms
 + fix issue with shift + <char> not resulting in desired character in text fields
 
 
-todo : audio graph
+done : audio graph
 + add ramp down option when freeing audio graph instances
 
 
