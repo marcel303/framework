@@ -270,8 +270,8 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 					for (int x = 0; x < image->sx; ++x)
 					{
 						const int srcValue = srcPtr[x];
-						const float dstValuef = remap[srcValue];
-						const int dstValue = std::max(0, std::min(255, int(std::round(dstValuef + error))));
+						const float dstValuef = remap[srcValue] + error;
+						const int dstValue = std::max(0, std::min(255, int(std::round(dstValuef))));
 						
 						dstPtr[x] = dstValue;
 						
