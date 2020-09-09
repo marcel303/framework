@@ -26,7 +26,7 @@ static thread_local AllegroVoiceApi * voiceApi = nullptr;
 
 extern "C"
 {
-static AudioOutput_Native * audioOutput = nullptr;
+static AudioOutput * audioOutput = nullptr;
 static AudioStream_AllegroVoiceMixer * audioStream = nullptr;
 
 int install_timer()
@@ -46,8 +46,9 @@ int install_sound(int digi, int midi, const char * cfg_path)
 	
 	voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
 	
-	audioOutput = new AudioOutput_Native();
-	audioOutput->Initialize(2, DIGI_SAMPLERATE, 64);
+	AudioOutput_Native * audioOutput_native = new AudioOutput_Native();
+	audioOutput_native->Initialize(2, DIGI_SAMPLERATE, 64);
+	audioOutput = audioOutput_native;
 	
 	audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, s_timerApi);
 	audioOutput->Play(audioStream);
