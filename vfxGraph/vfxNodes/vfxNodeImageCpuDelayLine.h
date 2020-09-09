@@ -41,6 +41,7 @@ struct VfxNodeImageCpuDelayLine : VfxNodeBase
 		kInput_MaxDelay,
 		kInput_CompressionEnabled,
 		kInput_JpegQualityLevel,
+		kInput_Glitchiness,
 		kInput_Delay1,
 		kInput_Delay2,
 		kInput_Delay3,

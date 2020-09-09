@@ -40,6 +40,7 @@ VFX_NODE_TYPE(VfxNodeImageCpuDelayLine)
 	in("maxDelay", "float");
 	in("compress", "bool");
 	in("jpegQuality", "float", "0.85");
+	in("glitchiness", "float", "0");
 	in("delay1", "float", "-1");
 	in("delay2", "float", "-1");
 	in("delay3", "float", "-1");
@@ -62,6 +63,7 @@ VfxNodeImageCpuDelayLine::VfxNodeImageCpuDelayLine()
 	addInput(kInput_MaxDelay, kVfxPlugType_Float);
 	addInput(kInput_CompressionEnabled, kVfxPlugType_Bool);
 	addInput(kInput_JpegQualityLevel, kVfxPlugType_Float);
+	addInput(kInput_Glitchiness, kVfxPlugType_Float);
 	addInput(kInput_Delay1, kVfxPlugType_Float);
 	addInput(kInput_Delay2, kVfxPlugType_Float);
 	addInput(kInput_Delay3, kVfxPlugType_Float);
@@ -104,6 +106,7 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 	const int maxDelay = 1 + std::max(0, (int)std::ceil(getInputFloat(kInput_MaxDelay, 0.f)));
 	const bool compressionEnabled = getInputBool(kInput_CompressionEnabled, false);
 	const int jpegQualityLevel = std::max(0, std::min(100, (int)std::round(getInputFloat(kInput_JpegQualityLevel, .85f) * 100.f)));
+	const float glitchiness = std::max(0.0f, std::min(1.f, getInputFloat(kInput_Glitchiness, 0.f)));
 	
 	const int delay1 = (int)std::round(getInputFloat(kInput_Delay1, -1.f) * maxDelay);
 	const int delay2 = (int)std::round(getInputFloat(kInput_Delay2, -1.f) * maxDelay);
@@ -151,7 +154,7 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 		{
 			if (tryGetInput(kInput_Delay1 + i)->isConnected())
 			{
-				if (delayLine->get(offset[i], imageData[i]) == false)
+				if (delayLine->get(offset[i], imageData[i], nullptr, glitchiness > 0.f, glitchiness) == false)
 				{
 					imageData[i].free();
 				}
