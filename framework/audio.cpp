@@ -40,13 +40,7 @@ SoundPlayer g_soundPlayer;
 
 #if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
 
-#if defined(IPHONEOS)
-	#include "audiooutput/AudioOutput_CoreAudio.h"
-#elif defined(ANDROID)
-	#include "audiooutput/AudioOutput_OpenSL.h"
-#else
-	#include "audiooutput/AudioOutput_PortAudio.h"
-#endif
+#include "audiooutput/AudioOutput_Native.h"
 
 #define RESAMPLE_FIXEDBITS 32
 
@@ -312,13 +306,7 @@ void SoundPlayer_AudioOutput::generateAudio(AudioSample * __restrict samples, co
 
 bool SoundPlayer_AudioOutput::initAudioOutput(const int numChannels, const int sampleRate, const int bufferSize)
 {
-#if defined(IHPONEOS)
-	auto * audioOutput = new AudioOutput_CoreAudio();
-#elif defined(ANDROID)
-	auto * audioOutput = new AudioOutput_OpenSL();
-#else
-	auto * audioOutput = new AudioOutput_PortAudio();
-#endif
+	auto * audioOutput = new AudioOutput_Native();
 	
 	fassert(m_audioOutput == nullptr);
 	m_audioOutput = audioOutput;
