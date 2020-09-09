@@ -394,7 +394,7 @@ namespace gltf
 		const Vec3 & directionalColor,
 		const Vec3 & ambientColor)
 	{
-		const Vec3 lightDirection_view = worldToView.Mul3(directionalDirection);
+		const Vec3 lightDirection_view = worldToView.Mul3(directionalDirection).CalcNormalized();
 
 		shader.setImmediate("scene_lightParams1",
 			lightDirection_view[0],
