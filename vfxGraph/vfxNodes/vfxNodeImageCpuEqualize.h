@@ -45,6 +45,7 @@ struct VfxNodeImageCpuEqualize : VfxNodeBase
 	{
 		kInput_Image,
 		kInput_Channel,
+		kInput_ErrorDiffusion,
 		kInput_COUNT
 	};
 
@@ -55,6 +56,8 @@ struct VfxNodeImageCpuEqualize : VfxNodeBase
 	};
 
 	VfxImageCpuData imageData;
+	
+	VfxImageCpu imageOutput;
 
 	VfxNodeImageCpuEqualize();
 	

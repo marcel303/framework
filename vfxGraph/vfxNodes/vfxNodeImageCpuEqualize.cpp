@@ -31,18 +31,17 @@
 
 // todo : use floyd steinberg error diffusion
 
-#define USE_AVX2 0
-#define USE_ERROR_DIFFUSION 0
+// todo : add bit crushing node
+
+#if defined(__AVX2__) && __AVX2__
+	#define USE_AVX2 1
+#else
+	#define USE_AVX2 0 // do not alter
+#endif
 
 #if USE_AVX2
 	#include <emmintrin.h>
 	#include <immintrin.h>
-#endif
-
-#if USE_ERROR_DIFFUSION
-	typedef float LookupElem;
-#else
-	typedef int LookupElem;
 #endif
 
 VFX_ENUM_TYPE(imageCpuEqualizeChannel)
@@ -61,6 +60,7 @@ VFX_NODE_TYPE(VfxNodeImageCpuEqualize)
 	
 	in("image", "image_cpu");
 	inEnum("channel", "imageCpuEqualizeChannel", "1");
+	in("errorDiffusion", "bool", "0");
 	out("image", "image_cpu");
 }
 
@@ -81,12 +81,14 @@ static void computeHistogram(const VfxImageCpu::Channel * __restrict channel, co
 	}
 }
 
+template <typename LookupElem>
 static void equalizeHistogram(const int * __restrict srcHistogram, const int numSamples, LookupElem * __restrict dstHistorgram)
 {
 	int total = 0;
 	
 	for (int i = 0; i < 256; ++i)
 	{
+		// note : we take the mid-point of the histogram bucket, to avoid brightening the image
 		const int step1 = srcHistogram[i] >> 1;
 		const int step2 = srcHistogram[i] - step1;
 		
@@ -94,7 +96,7 @@ static void equalizeHistogram(const int * __restrict srcHistogram, const int num
 		dstHistorgram[i] = total * LookupElem(255) / numSamples;
 		total += step2;
 		
-		Assert(dstHistorgram[i] >= 0 && dstHistorgram[i] <= 255);
+		Assert(dstHistorgram[i] >= 0 && dstHistorgram[i] < 256);
 	}
 	
 	dstHistorgram[0] = 0;
@@ -108,7 +110,8 @@ VfxNodeImageCpuEqualize::VfxNodeImageCpuEqualize()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
 	addInput(kInput_Channel, kVfxPlugType_Int);
-	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageData.image);
+	addInput(kInput_ErrorDiffusion, kVfxPlugType_Bool);
+	addOutput(kOutput_Image, kVfxPlugType_ImageCpu, &imageOutput);
 }
 
 void VfxNodeImageCpuEqualize::tick(const float dt)
@@ -117,14 +120,22 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, kChannel_RGB);
+	const bool errorDiffusion = getInputBool(kInput_ErrorDiffusion, false);
 	
 	if (image == nullptr || image->sx == 0 || image->sy == 0 || image->numChannels == 0)
 	{
 		imageData.free();
+		
+		imageOutput.reset();
 	}
 	else if (isPassthrough)
 	{
 		imageData.free();
+		
+		if (image == nullptr)
+			imageOutput.reset();
+		else
+			imageOutput = *image;
 	}
 	else
 	{
@@ -134,6 +145,8 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			channel == kChannel_RGB ? 3 : 1);
 		
 		imageData.allocOnSizeChange(image->sx, image->sy, numChannels);
+		
+		imageOutput = imageData.image;
 
 		for (int i = 0; i < numChannels; ++i)
 		{
@@ -141,7 +154,6 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			
 			const VfxImageCpu::Channel * __restrict srcChannel = nullptr;
 			
-			// todo : optimize : if the source only has one channel there's no point of doing equalization x4
 			if (channel == kChannel_R)
 				srcChannel = &image->channel[0];
 			else if (channel == kChannel_G)
@@ -159,29 +171,26 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 
 			computeHistogram(srcChannel, image->sx, image->sy, histogram);
 			
-			// equalize the histogram. this yields our remapping table
-			
-			const int numPixels = image->sx * image->sy;
-			
-			LookupElem remap[256];
-			
-			equalizeHistogram(histogram, numPixels, remap);
-			
-			// apply the remapping table to every value in the source channel
-			
-			VfxImageCpu::Channel * __restrict dstChannel = &imageData.image.channel[i];
-			
-			for (int y = 0; y < image->sy; ++y)
+			if (errorDiffusion == false)
 			{
-				const uint8_t * __restrict srcPtr = srcChannel->data + y * srcChannel->pitch;
-					  uint8_t * __restrict dstPtr = (uint8_t*)dstChannel->data + y * dstChannel->pitch;
-
-			#if USE_ERROR_DIFFUSION
-				float error = 0.f;
-			#endif
-			
+				// equalize the histogram. this yields our remapping table
+				
+				const int numPixels = image->sx * image->sy;
+				
+				int remap[256];
+				
+				equalizeHistogram<int>(histogram, numPixels, remap);
+				
+				// apply the remapping table to every value in the source channel
+				
+				VfxImageCpu::Channel * __restrict dstChannel = &imageData.image.channel[i];
+				
+				for (int y = 0; y < image->sy; ++y)
 				{
-				#if USE_AVX2 && USE_ERROR_DIFFUSION == 0
+					const uint8_t * __restrict srcPtr = srcChannel->data + y * srcChannel->pitch;
+						  uint8_t * __restrict dstPtr = (uint8_t*)dstChannel->data + y * dstChannel->pitch;
+
+				#if USE_AVX2
 					// optimized version using AVX scattered reads from remap table
 					
 					const int sx32 = image->sx / 32;
@@ -209,10 +218,10 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 						const __m256i i3 = _mm256_unpackhi_epi16(i01, zero);
 						
 						// gather 4x8 values from the remap table
-						const __m256i d1 = _mm256_i32gather_epi32(remap, i0, sizeof(LookupElem));
-						const __m256i d2 = _mm256_i32gather_epi32(remap, i1, sizeof(LookupElem));
-						const __m256i d3 = _mm256_i32gather_epi32(remap, i2, sizeof(LookupElem));
-						const __m256i d4 = _mm256_i32gather_epi32(remap, i3, sizeof(LookupElem));
+						const __m256i d1 = _mm256_i32gather_epi32(remap, i0, sizeof(int));
+						const __m256i d2 = _mm256_i32gather_epi32(remap, i1, sizeof(int));
+						const __m256i d3 = _mm256_i32gather_epi32(remap, i2, sizeof(int));
+						const __m256i d4 = _mm256_i32gather_epi32(remap, i3, sizeof(int));
 						
 						// 4x8 uint32 -> 2x16 uint16
 						const __m256i d00 = _mm256_packus_epi32(d1, d2);
@@ -230,18 +239,43 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 					for (int x = 0; x < image->sx; ++x)
 				#endif
 					{
-					#if USE_ERROR_DIFFUSION
+						const int srcValue = srcPtr[x];
+						const int dstValue = remap[srcValue];
+						
+						dstPtr[x] = dstValue;
+					}
+				}
+			}
+			else
+			{
+				// equalize the histogram. this yields our remapping table
+				
+				const int numPixels = image->sx * image->sy;
+				
+				float remap[256];
+				
+				equalizeHistogram<float>(histogram, numPixels, remap);
+				
+				// apply the remapping table to every value in the source channel
+				
+				VfxImageCpu::Channel * __restrict dstChannel = &imageData.image.channel[i];
+				
+				for (int y = 0; y < image->sy; ++y)
+				{
+					const uint8_t * __restrict srcPtr = srcChannel->data + y * srcChannel->pitch;
+						  uint8_t * __restrict dstPtr = (uint8_t*)dstChannel->data + y * dstChannel->pitch;
+
+					float error = 0.f;
+				
+					for (int x = 0; x < image->sx; ++x)
+					{
 						const int srcValue = srcPtr[x];
 						const float dstValuef = remap[srcValue];
 						const int dstValue = std::max(0, std::min(255, int(std::round(dstValuef + error))));
 						
-						error = dstValuef - dstValue;
-					#else
-						const int srcValue = srcPtr[x];
-						const int dstValue = remap[srcValue];
-					#endif
-						
 						dstPtr[x] = dstValue;
+						
+						error = dstValuef - dstValue;
 					}
 				}
 			}
