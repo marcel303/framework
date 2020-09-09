@@ -28,6 +28,8 @@
 #include "audioNodeSourceGenerator.h"
 #include <math.h>
 
+// todo : sine, triangle and square have a different phase. investigate which phase relative to each other makes sense. whether phase should 'match' at all, and if so how
+
 AUDIO_ENUM_TYPE(audioSineType)
 {
 	elem("sine");
@@ -49,11 +51,13 @@ AUDIO_NODE_TYPE(AudioNodeSourceSine)
 	inEnum("type", "audioSineType");
 	inEnum("mode", "audioSineMode", "1");
 	in("frequency", "audioValue", "1");
-	in("skew", "float", "0.5");
+	in("skew", "audioValue", "0.5");
 	in("a", "audioValue", "0");
 	in("b", "audioValue", "1");
 	out("audio", "audioValue");
 }
+
+static const AudioFloat defaultSkew(.5f);
 
 AudioNodeSourceSine::AudioNodeSourceSine()
 	: AudioNodeBase()
@@ -65,7 +69,7 @@ AudioNodeSourceSine::AudioNodeSourceSine()
 	addInput(kInput_Type, kAudioPlugType_Int);
 	addInput(kInput_Mode, kAudioPlugType_Int);
 	addInput(kInput_Frequency, kAudioPlugType_FloatVec);
-	addInput(kInput_Skew, kAudioPlugType_Float); // todo : change into float vec
+	addInput(kInput_Skew, kAudioPlugType_FloatVec);
 	addInput(kInput_A, kAudioPlugType_FloatVec);
 	addInput(kInput_B, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
@@ -81,7 +85,7 @@ void AudioNodeSourceSine::drawSine()
 	
 	const float twoPi = float(2.f * M_PI);
 	
-	const double dt = 1.0 / SAMPLE_RATE;
+	const float dt = 1.f / SAMPLE_RATE;
 	
 	if (fine)
 	{
@@ -143,37 +147,36 @@ void AudioNodeSourceSine::drawTriangle()
 	const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::One);
-	const float skew = getInputFloat(kInput_Skew, .5f);
+	const AudioFloat * skew = getInputAudioFloat(kInput_Skew, &defaultSkew);
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 	
 	if (fine)
 	{
-	// todo : float <-> double conversions
-		const double dt = 1.0 / SAMPLE_RATE;
+		const float dt = 1.f / SAMPLE_RATE;
 		
 		audioOutput.setVector();
 		
 		frequency->expand();
+		skew->expand();
 		a->expand();
 		b->expand();
 		
 		if (mode == kMode_BaseScale)
 		{
-			const float mulA = 1.f / skew;
-			const float mulB = 2.f / (1.f - skew);
-			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
 				float value;
 				
-				if (phase < skew)
+				const float skew_i = skew->samples[i];
+				
+				if (phase < skew_i)
 				{
-					value = -1.f + 2.f * phase * mulA;
+					value = -1.f + 2.f * phase / skew_i;
 				}
 				else
 				{
-					value = +1.f - (phase - skew) * mulB;
+					value = +1.f - 2.f * (phase - skew_i) / (1.f - skew_i);
 				}
 				
 				audioOutput.samples[i] = a->samples[i] + value * b->samples[i];
@@ -184,20 +187,19 @@ void AudioNodeSourceSine::drawTriangle()
 		}
 		else if (mode == kMode_MinMax)
 		{
-			const float mulA = 1.f / skew;
-			const float mulB = 1.f / (1.f - skew);
-			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
 				float value;
 				
-				if (phase < skew)
+				const float skew_i = skew->samples[i];
+				
+				if (phase < skew_i)
 				{
-					value = phase * mulA;
+					value = phase / skew_i;
 				}
 				else
 				{
-					value = 1.f - (phase - skew) * mulB;
+					value = 1.f - (phase - skew_i) / (1.f - skew_i);
 				}
 				
 				audioOutput.samples[i] = a->samples[i] + value * (b->samples[i] - a->samples[i]);
@@ -209,7 +211,7 @@ void AudioNodeSourceSine::drawTriangle()
 	}
 	else
 	{
-		const double dt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
+		const float dt = AUDIO_UPDATE_SIZE / float(SAMPLE_RATE);
 		
 		const float frequency_scalar = frequency->getMean();
 		const float a_scalar = a->getMean();
@@ -217,18 +219,17 @@ void AudioNodeSourceSine::drawTriangle()
 		
 		if (mode == kMode_BaseScale)
 		{
-			const float mulA = 1.f / skew;
-			const float mulB = 2.f / (1.f - skew);
-			
 			float value;
 			
-			if (phase < skew)
+			const float skew_i = skew->getMean();
+			
+			if (phase < skew_i)
 			{
-				value = -1.f + 2.f * phase * mulA;
+				value = -1.f + 2.f * phase / skew_i;
 			}
 			else
 			{
-				value = +1.f - (phase - skew) * mulB;
+				value = +1.f - 2.f * (phase - skew_i) / (1.f - skew_i);
 			}
 				
 			audioOutput.setScalar(a_scalar + value * b_scalar);
@@ -238,18 +239,17 @@ void AudioNodeSourceSine::drawTriangle()
 		}
 		else if (mode == kMode_MinMax)
 		{
-			const float mulA = 1.f / skew;
-			const float mulB = 1.f / (1.f - skew);
-			
 			float value;
 			
-			if (phase < skew)
+			const float skew_i = skew->getMean();
+			
+			if (phase < skew_i)
 			{
-				value = phase * mulA;
+				value = phase / skew_i;
 			}
 			else
 			{
-				value = 1.f - (phase - skew) * mulB;
+				value = 1.f - (phase - skew_i) / (1.f - skew_i);
 			}
 			
 			audioOutput.setScalar(a_scalar + value * (b_scalar - a_scalar));
@@ -265,17 +265,18 @@ void AudioNodeSourceSine::drawSquare()
 	const Mode mode = (Mode)getInputInt(kInput_Mode, kMode_MinMax);
 	const bool fine = getInputBool(kInput_Fine, true);
 	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::One);
-	const float skew = getInputFloat(kInput_Skew, .5f);
+	const AudioFloat * skew = getInputAudioFloat(kInput_Skew, &defaultSkew);
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 	
-	const double dt = 1.0 / SAMPLE_RATE;
-	
-	if (fine || true)
+	if (fine)
 	{
+		const float dt = 1.f / SAMPLE_RATE;
+		
 		audioOutput.setVector();
 		
 		frequency->expand();
+		skew->expand();
 		a->expand();
 		b->expand();
 		
@@ -285,7 +286,9 @@ void AudioNodeSourceSine::drawSquare()
 			{
 				float value = a->samples[i];
 				
-				if (phase < skew)
+				const float skew_i = skew->samples[i];
+				
+				if (phase < skew_i)
 					value -= b->samples[i];
 				else
 					value += b->samples[i];
@@ -300,11 +303,45 @@ void AudioNodeSourceSine::drawSquare()
 		{
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				audioOutput.samples[i] = phase < skew ? a->samples[i] : b->samples[i];
+				const float skew_i = skew->samples[i];
+				
+				audioOutput.samples[i] = phase < skew_i ? a->samples[i] : b->samples[i];
 				
 				phase += dt * frequency->samples[i];
 				phase = phase - floorf(phase);
 			}
+		}
+	}
+	else
+	{
+		const float dt = AUDIO_UPDATE_SIZE / float(SAMPLE_RATE);
+		
+		if (mode == kMode_BaseScale)
+		{
+			float value = a->getMean();
+			
+			const float skew_i = skew->getMean();
+			
+			if (phase < skew_i)
+				value -= b->getMean();
+			else
+				value += b->getMean();
+			
+			audioOutput.setScalar(value);
+			
+			phase += dt * frequency->getMean();
+			phase = phase - floorf(phase);
+		}
+		else if (mode == kMode_MinMax)
+		{
+			const float skew_i = skew->getMean();
+			
+			const float value = phase < skew_i ? a->getMean() : b->getMean();
+			
+			audioOutput.setScalar(value);
+			
+			phase += dt * frequency->getMean();
+			phase = phase - floorf(phase);
 		}
 	}
 }
