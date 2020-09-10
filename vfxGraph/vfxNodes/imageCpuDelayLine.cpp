@@ -102,11 +102,14 @@ ImageCpuDelayLine::WorkItem::WorkItem()
 	, jpegQualityLevel(0)
 	, timestamp(0.0)
 	, jpegData(nullptr)
+	, isDone(false)
 {
 }
 
 ImageCpuDelayLine::WorkItem::~WorkItem()
 {
+	isDone = false;
+	
 	delete jpegData;
 	jpegData = nullptr;
 	
@@ -163,6 +166,7 @@ void ImageCpuDelayLine::init(const int _maxHistorySize, const int _saveBufferSiz
 	Assert(work.imageDataIsConsumed);
 	Assert(work.jpegQualityLevel == 0);
 	Assert(work.jpegData == nullptr);
+	Assert(work.isDone == false);
 	work = WorkItem();
 	
 	Assert(stop == false);
@@ -182,6 +186,11 @@ void ImageCpuDelayLine::init(const int _maxHistorySize, const int _saveBufferSiz
 	
 	Assert(cachedLoadData == nullptr);
 	cachedLoadData = new JpegLoadData();
+	
+	Assert(workEvent != nullptr);
+	Assert(doneEvent != nullptr);
+	Assert(mutex != nullptr);
+	Assert(thread != nullptr);
 }
 
 void ImageCpuDelayLine::shut()
@@ -196,13 +205,13 @@ void ImageCpuDelayLine::shut()
 	
 	if (thread != nullptr)
 	{
-		SDL_LockMutex(mutex);
+		Verify(SDL_LockMutex(mutex) == 0);
 		{
 			stop = true;
+			
+			Verify(SDL_CondSignal(workEvent) == 0);
 		}
-		SDL_UnlockMutex(mutex);
-		
-		SDL_CondSignal(workEvent);
+		Verify(SDL_UnlockMutex(mutex) == 0);
 
 		SDL_WaitThread(thread, nullptr);
 		thread = nullptr;
@@ -232,6 +241,7 @@ void ImageCpuDelayLine::shut()
 	Assert(work.imageDataIsConsumed);
 	Assert(work.jpegQualityLevel == 0);
 	Assert(work.jpegData == nullptr);
+	Assert(work.isDone == false);
 	work = WorkItem();
 
 	while (!history.empty())
@@ -265,26 +275,26 @@ void ImageCpuDelayLine::setLength(const int length)
 {
 	compressWait();
 	
-	SDL_LockMutex(mutex);
+	//
+	
+	maxHistorySize = length;
+	
+	while (historySize > maxHistorySize)
 	{
-		maxHistorySize = length;
-		
-		while (historySize > maxHistorySize)
-		{
-			HistoryItem * item = history.back();
-			delete item;
-			item = nullptr;
+		HistoryItem * item = history.back();
+		delete item;
+		item = nullptr;
 
-			history.pop_back();
-			
-			historySize--;
-		}
+		history.pop_back();
+		
+		historySize--;
 	}
-	SDL_UnlockMutex(mutex);
 }
 
 void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp, const bool useCompression)
 {
+	// note : compressWait may add to the history. we need to wait here before we add another item
+	
 	compressWait();
 	
 	// note : turbojpeg doesn't like it when we try to compress a 0x0 sized image. just use the non-compressed
@@ -296,35 +306,31 @@ void ImageCpuDelayLine::add(const VfxImageCpu & image, const int jpegQualityLeve
 	}
 	else
 	{
-		SDL_LockMutex(mutex);
+		HistoryItem * historyItem = nullptr;
+		
+		if (historySize == maxHistorySize)
 		{
-			HistoryItem * historyItem = nullptr;
-			
-			if (historySize == maxHistorySize)
-			{
-				historyItem = history.back();
+			historyItem = history.back();
 
-				history.pop_back();
-			}
-			else
-			{
-				historySize++;
-				
-				historyItem = new HistoryItem();
-			}
-			
-			delete historyItem->jpegData;
-			historyItem->jpegData = nullptr;
-			
-			if (historyItem->imageData == nullptr)
-				historyItem->imageData = new VfxImageCpuData();
-			
-			copyImage(image, *historyItem->imageData);
-			historyItem->timestamp = timestamp;
-			
-			history.push_front(historyItem);
+			history.pop_back();
 		}
-		SDL_UnlockMutex(mutex);
+		else
+		{
+			historySize++;
+			
+			historyItem = new HistoryItem();
+		}
+		
+		delete historyItem->jpegData;
+		historyItem->jpegData = nullptr;
+		
+		if (historyItem->imageData == nullptr)
+			historyItem->imageData = new VfxImageCpuData();
+		
+		copyImage(image, *historyItem->imageData);
+		historyItem->timestamp = timestamp;
+		
+		history.push_front(historyItem);
 	}
 }
 
@@ -412,32 +418,28 @@ bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, doubl
 	
 	// make a copy of the data, so we can leave the mutex quickly again and let the worker thread do it's encode thing
 	
-	SDL_LockMutex(mutex);
+	if (offset >= 0 && offset < historySize)
 	{
-		if (offset >= 0 && offset < historySize)
+		HistoryItem * item = history[offset];
+		
+		if (item->jpegData != nullptr)
 		{
-			HistoryItem * item = history[offset];
+			memcpy(&jpegData, item->jpegData, sizeof(jpegData));
+			jpegData.bytes = new uint8_t[jpegData.numBytes];
+			memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
 			
-			if (item->jpegData != nullptr)
+			if (imageTimestamp != nullptr)
 			{
-				memcpy(&jpegData, item->jpegData, sizeof(jpegData));
-				jpegData.bytes = new uint8_t[jpegData.numBytes];
-				memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
-				
-				if (imageTimestamp != nullptr)
-				{
-					*imageTimestamp = item->timestamp;
-				}
-			}
-			else
-			{
-				gotImageData = true;
-				
-				copyImage(item->imageData->image, imageData);
+				*imageTimestamp = item->timestamp;
 			}
 		}
+		else
+		{
+			gotImageData = true;
+			
+			copyImage(item->imageData->image, imageData);
+		}
 	}
-	SDL_UnlockMutex(mutex);
 	
 	if (gotImageData)
 		return true;
@@ -451,58 +453,49 @@ bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData &
 	
 	// make a copy of the data, so we can leave the mutex quickly again and let the worker thread do it's encode thing
 	
-	SDL_LockMutex(mutex);
+	HistoryItem * item = nullptr;
+	
+	for (auto & h : history)
 	{
-		HistoryItem * item = nullptr;
+		if (h->timestamp < timestamp)
+			break;
 		
-		for (auto & h : history)
-		{
-			if (h->timestamp < timestamp)
-				break;
-			
-			item = h;
-		}
+		item = h;
+	}
+	
+	if (item != nullptr)
+	{
+		memcpy(&jpegData, item->jpegData, sizeof(jpegData));
+		jpegData.bytes = new uint8_t[item->jpegData->numBytes];
+		memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
 		
-		if (item != nullptr)
+		if (imageTimestamp != nullptr)
 		{
-			memcpy(&jpegData, item->jpegData, sizeof(jpegData));
-			jpegData.bytes = new uint8_t[item->jpegData->numBytes];
-			memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
-			
-			if (imageTimestamp != nullptr)
-			{
-				*imageTimestamp = item->timestamp;
-			}
+			*imageTimestamp = item->timestamp;
 		}
 	}
-	SDL_UnlockMutex(mutex);
 	
 	return decode(jpegData, imageData, glitch, glitchiness);
 }
 
 void ImageCpuDelayLine::clearHistory()
 {
-	SDL_LockMutex(mutex);
+	while (!history.empty())
 	{
-		while (!history.empty())
-		{
-			HistoryItem * item = history.back();
-			delete item;
-			item = nullptr;
+		HistoryItem * item = history.back();
+		delete item;
+		item = nullptr;
 
-			history.pop_back();
-		}
-		
-		historySize = 0;
+		history.pop_back();
 	}
-	SDL_UnlockMutex(mutex);
+	
+	historySize = 0;
 }
 
 ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 {
 	MemoryUsage result;
 	
-	SDL_LockMutex(mutex);
 	{
 		result.numHistoryBytes = 0;
 		
@@ -528,24 +521,33 @@ ImageCpuDelayLine::MemoryUsage ImageCpuDelayLine::getMemoryUsage() const
 		result.numSaveBufferBytes = 0;
 		
 		result.numSaveBufferBytes += saveBufferSize;
-		
-		if (work.imageDataIsConsumed == false)
-		{
-			result.numSaveBufferBytes += work.imageData->image.getMemoryUsage();
-		}
-		
-		if (work.jpegData != nullptr)
-		{
-			result.numSaveBufferBytes += work.jpegData->numBytes;
-		}
-		
-		//
-		
-		result.historySize = historySize;
 	}
-	SDL_UnlockMutex(mutex);
 	
-	result.numBytes = result.numHistoryBytes + result.numCachedImageBytes + result.numSaveBufferBytes;
+	if (mutex != nullptr)
+	{
+		Verify(SDL_LockMutex(mutex) == 0);
+		{
+			if (work.imageDataIsConsumed == false)
+			{
+				result.numSaveBufferBytes += work.imageData->image.getMemoryUsage();
+			}
+			
+			if (work.jpegData != nullptr)
+			{
+				result.numSaveBufferBytes += work.jpegData->numBytes;
+			}
+			
+			//
+			
+			result.historySize = historySize;
+		}
+		Verify(SDL_UnlockMutex(mutex) == 0);
+	}
+	
+	result.numBytes =
+		result.numHistoryBytes +
+		result.numCachedImageBytes +
+		result.numSaveBufferBytes;
 	
 	return result;
 }
@@ -634,19 +636,26 @@ int ImageCpuDelayLine::threadProc(void * arg)
 
 void ImageCpuDelayLine::threadMain()
 {
-	SDL_LockMutex(mutex);
+	Verify(SDL_LockMutex(mutex) == 0);
 
 	for (;;)
 	{
+		Verify(SDL_CondWait(workEvent, mutex) == 0);
+		
+		// note : we check explicitly for all of the conditions here, because they may not all be satistfied!
+		//        there is a peculiarity when using the debugger on macOS, where when the app is paused and
+		//        then resumed, the SDL_CondSignal call succeeds, without the main thread explicitly setting the event
+		
 		if (stop)
 		{
 			delete work.imageData;
-			work.imageData = nullptr;
-			work.jpegQualityLevel = 0;
+			
+			Verify(SDL_CondSignal(doneEvent) == 0);
 			
 			break;
 		}
-		else if (work.imageData != nullptr)
+		
+		if (work.imageData != nullptr)
 		{
 			VfxImageCpuData * imageData = work.imageData;
 			const int jpegQualityLevel = work.jpegQualityLevel;
@@ -655,7 +664,7 @@ void ImageCpuDelayLine::threadMain()
 			
 			work.imageDataIsConsumed = true;
 			
-			SDL_UnlockMutex(mutex);
+			Verify(SDL_UnlockMutex(mutex) == 0);
 			{
 				if (stop == false)
 				{
@@ -665,8 +674,9 @@ void ImageCpuDelayLine::threadMain()
 				delete imageData;
 				//imageData = nullptr; // not set to nullptr, so we can validate the pointer later, to check work.imageData was left untouched
 			}
-			SDL_LockMutex(mutex);
+			Verify(SDL_LockMutex(mutex) == 0);
 			
+			// store the result
 			if (jpegData != nullptr)
 			{
 				Assert(work.jpegData == nullptr);
@@ -677,20 +687,16 @@ void ImageCpuDelayLine::threadMain()
 			Assert(work.imageData == imageData);
 			Assert(work.imageDataIsConsumed);
 			Assert(work.jpegQualityLevel == jpegQualityLevel);
-			work.imageData = nullptr;
-			work.jpegQualityLevel = 0;
-			imageData = nullptr;
-		}
-		
-		SDL_CondSignal(doneEvent);
-		
-		if (stop == false && work.imageData == nullptr) // 'if no more work to be done and should go idle'
-		{
-			SDL_CondWait(workEvent, mutex);
+			Assert(work.isDone == false);
+			
+			// tell the main thread we're done
+			work.isDone = true;
+			
+			Verify(SDL_CondSignal(doneEvent) == 0);
 		}
 	}
 
-	SDL_UnlockMutex(mutex);
+	Verify(SDL_UnlockMutex(mutex) == 0);
 }
 
 void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQualityLevel, const double timestamp)
@@ -702,42 +708,71 @@ void ImageCpuDelayLine::compressWork(const VfxImageCpu & image, const int jpegQu
 	
 	// kick the compression thread
 	
-	SDL_LockMutex(mutex);
+	Verify(SDL_LockMutex(mutex) == 0);
 	{
 		Assert(work.imageData == nullptr);
 		Assert(work.imageDataIsConsumed);
 		Assert(work.jpegQualityLevel == 0);
 		Assert(work.timestamp == 0.0);
+		Assert(work.isDone == false);
+		
 		work.imageData = imageData;
 		work.imageDataIsConsumed = false;
 		work.jpegQualityLevel = jpegQualityLevel;
 		work.timestamp = timestamp;
-
-		SDL_CondSignal(workEvent);
+		work.isDone = false;
+		
+		Verify(SDL_CondSignal(workEvent) == 0);
 	}
-	SDL_UnlockMutex(mutex);
+	Verify(SDL_UnlockMutex(mutex) == 0);
 }
 
 void ImageCpuDelayLine::compressWait()
 {
-	SDL_LockMutex(mutex);
+	JpegData * jpegData = nullptr;
+	double timestamp = 0.0;
 	
-	if (work.imageData != nullptr)
+	Verify(SDL_LockMutex(mutex) == 0);
 	{
-		SDL_CondWait(doneEvent, mutex);
+		if (work.imageData != nullptr)
+		{
+			Verify(SDL_CondWait(doneEvent, mutex) == 0);
+			
+			// is the compression work done?
+			
+			if (work.isDone)
+			{
+				// if so, finish up the work
+				
+				// steal the data
+				jpegData = work.jpegData;
+				timestamp = work.timestamp;
+				
+				// and clear the work item
+				work.imageData = nullptr;
+				work.jpegQualityLevel = 0;
+				work.jpegData = nullptr;
+				work.isDone = false;
+				work.timestamp = 0.0;
+				
+				Assert(work.imageData == nullptr);
+				Assert(work.imageDataIsConsumed);
+				Assert(work.jpegQualityLevel == 0);
+				Assert(work.jpegData == 0);
+				Assert(work.isDone == false);
+				Assert(work.timestamp == 0.0);
+			}
+		}
 	}
+	Verify(SDL_UnlockMutex(mutex) == 0);
 	
-	Assert(work.imageData == nullptr);
-	Assert(work.imageDataIsConsumed);
-	Assert(work.jpegQualityLevel == 0);
-	
-	if (work.jpegData != nullptr)
+	if (jpegData != nullptr)
 	{
+		// add the compressed data to the history
+		
 		HistoryItem * historyItem = new HistoryItem();
-		historyItem->jpegData = work.jpegData;
-		historyItem->timestamp = work.timestamp;
-		work.jpegData = nullptr;
-		work.timestamp = 0.0;
+		historyItem->jpegData = jpegData;
+		historyItem->timestamp = timestamp;
 		
 		if (historySize == maxHistorySize)
 		{
@@ -754,8 +789,6 @@ void ImageCpuDelayLine::compressWait()
 		
 		history.push_front(historyItem);
 	}
-	
-	SDL_UnlockMutex(mutex);
 }
 
 #endif

@@ -74,6 +74,7 @@ struct ImageCpuDelayLine
 		double timestamp;
 		
 		JpegData * jpegData;
+		bool isDone;
 
 		WorkItem();
 		~WorkItem();
