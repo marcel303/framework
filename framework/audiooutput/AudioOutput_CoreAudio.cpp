@@ -285,12 +285,12 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	if (checkStatus(status) == false)
 		return false;
 	
+	m_numChannels = numChannels;
+	m_sampleRate = sampleRate;
+	
 	status = AudioOutputUnitStart(m_audioUnit);
 	if (checkStatus(status) == false)
 		return false;
-
-	m_numChannels = numChannels;
-	m_sampleRate = sampleRate;
 
 	return true;
 }
