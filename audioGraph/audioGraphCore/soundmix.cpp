@@ -207,10 +207,10 @@ extern void audioBufferRamp(
 
 	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 = scale4 + scaleStep4;
 	}
 	
 	begin = numSamples16 * 16;
@@ -236,10 +236,10 @@ extern void audioBufferRamp(
 
 	for (int i = 0; i < numSamples16; ++i)
 	{
-		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 += scaleStep4;
-		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 += scaleStep4;
+		audioBuffer4[i * 4 + 0] = audioBuffer4[i * 4 + 0] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 1] = audioBuffer4[i * 4 + 1] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 2] = audioBuffer4[i * 4 + 2] * scale4; scale4 = scale4 + scaleStep4;
+		audioBuffer4[i * 4 + 3] = audioBuffer4[i * 4 + 3] * scale4; scale4 = scale4 + scaleStep4;
 	}
 	
 	begin = numSamples16 * 16;
