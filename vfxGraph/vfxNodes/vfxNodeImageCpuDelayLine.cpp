@@ -68,10 +68,10 @@ VfxNodeImageCpuDelayLine::VfxNodeImageCpuDelayLine()
 	addInput(kInput_Delay2, kVfxPlugType_Float);
 	addInput(kInput_Delay3, kVfxPlugType_Float);
 	addInput(kInput_Delay4, kVfxPlugType_Float);
-	addOutput(kOutput_Image1, kVfxPlugType_ImageCpu, &imageData[0].image);
-	addOutput(kOutput_Image2, kVfxPlugType_ImageCpu, &imageData[1].image);
-	addOutput(kOutput_Image3, kVfxPlugType_ImageCpu, &imageData[2].image);
-	addOutput(kOutput_Image4, kVfxPlugType_ImageCpu, &imageData[3].image);
+	addOutput(kOutput_Image1, kVfxPlugType_ImageCpu, &imageOutput[0]);
+	addOutput(kOutput_Image2, kVfxPlugType_ImageCpu, &imageOutput[1]);
+	addOutput(kOutput_Image3, kVfxPlugType_ImageCpu, &imageOutput[2]);
+	addOutput(kOutput_Image4, kVfxPlugType_ImageCpu, &imageOutput[3]);
 	
 	delayLine->init(0, 1024 * 512);
 }
@@ -88,12 +88,22 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeImageCpuDelayLine);
 	
+	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
+	
 	if (isPassthrough)
 	{
 		delayLine->shut();
 		
 		for (int i = 0; i < 4; ++i)
 			imageData[i].free();
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			if (image != nullptr)
+				imageOutput[i] = *image;
+			else
+				imageOutput[i].reset();
+		}
 		
 		return;
 	}
@@ -126,8 +136,6 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 	
 	if (delayLine->getLength() > 0)
 	{
-		const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
-
 		if (image != nullptr)
 		{
 			delayLine->add(*image, jpegQualityLevel, 0.0, compressionEnabled);
@@ -171,6 +179,11 @@ void VfxNodeImageCpuDelayLine::tick(const float dt)
 		{
 			imageData[i].free();
 		}
+	}
+	
+	for (int i = 0; i < 4; ++i)
+	{
+		imageOutput[i] = imageData[i].image;
 	}
 }
 

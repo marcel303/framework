@@ -62,6 +62,8 @@ struct VfxNodeImageCpuDelayLine : VfxNodeBase
 	
 	ImageCpuDelayLine * delayLine;
 	
+	VfxImageCpu imageOutput[4];
+	
 	VfxNodeImageCpuDelayLine();
 	virtual ~VfxNodeImageCpuDelayLine() override;
 	
