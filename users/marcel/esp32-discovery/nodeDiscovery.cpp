@@ -3,6 +3,7 @@
 #include "nodeDiscovery.h"
 #include "StringEx.h"
 #include <chrono>
+#include <inttypes.h> // PRIx64
 #include <mutex>
 #include <string>
 #include <string.h>
@@ -192,7 +193,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	if (existingRecord == nullptr)
 	{
-		LOG_DBG("found a new node! id=%llx", discoveryPacket->id);
+		LOG_DBG("found a new node! id=%" PRIx64, discoveryPacket->id);
 		
 		lock();
 		{
@@ -204,7 +205,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	{
 		if (memcmp(existingRecord, &record, sizeof(record)) != 0)
 		{
-			LOG_DBG("updating existing node! id=%llx", discoveryPacket->id);
+			LOG_DBG("updating existing node! id=%" PRIx64, discoveryPacket->id);
 			
 			lock();
 			{

@@ -7,6 +7,7 @@
 #include "StringEx.h"
 #include "webrequest.h"
 #include <atomic>
+#include <inttypes.h> // PRIx64
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <vector>
@@ -1090,7 +1091,7 @@ int main(int argc, char * argv[])
 					
 					ImGui::TextColored(ImVec4(0, 255, 0, 255), "%s", endpointName);
 					ImGui::SameLine();
-					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%llx", record.id);
+					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%" PRIx64, record.id);
 					ImGui::SameLine();
 					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%s", record.description);
 					ImGui::SameLine();
@@ -1099,7 +1100,8 @@ int main(int argc, char * argv[])
 					{
 						char command[128];
 						sprintf_s(command, sizeof(command), "open http://%s", endpointName);
-						system(command);
+						if (system(command) != 0)
+							logDebug("failed to open webpage using shell command");
 					}
 					ImGui::SameLine();
 					
@@ -1251,7 +1253,8 @@ int main(int argc, char * argv[])
 				{
 					char command[128];
 					sprintf_s(command, sizeof(command), "open http://%s", endpointName);
-					system(command);
+					if (system(command) != 0)
+						logDebug("failed to open webpage using shell command");
 				}
 				
 				int x = x1 + 10;
@@ -1265,7 +1268,7 @@ int main(int argc, char * argv[])
 				x += 100;
 				
 				setColor(colorWhite);
-				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%llx", record.id);
+				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%" PRIx64, record.id);
 				x += 100;
 				
 				setColor(colorWhite);
