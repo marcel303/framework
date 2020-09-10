@@ -101,9 +101,11 @@ int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 			{
 				// not done yet!
 				
+				const std::string fileName = mFileName;
+				
 				Close();
 				
-				Open(mFileName.c_str(), mLoop);
+				Open(fileName.c_str(), mLoop);
 				
 				mHasLooped = true;
 			}
@@ -189,6 +191,7 @@ void AudioStream_Vorbis::Close()
 		LOG_DBG("Vorbis Audio Stream: closed file", 0);
 	}
 	
+	mFileName.clear();
 	mPosition = 0;
 }
 
