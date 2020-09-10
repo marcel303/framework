@@ -109,12 +109,12 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		{
 			resource->f[x] = 1.0;
 			
-			resource->f[x] *= lerp(1.0, random(0.0, 1.0), randomFactor);
-			resource->f[x] *= lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+			resource->f[x] *= Wavefield::lerp<double>(1.0, random(0.0, 1.0), randomFactor);
+			resource->f[x] *= Wavefield::lerp<double>(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
 			//resource->f[x] = 1.0 - std::pow(m_wavefield.f[x], 2.0);
 			
 			//resource->f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
-			resource->f[x] *= lerp(1.0, (double)scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
+			resource->f[x] *= Wavefield::lerp<double>(1.0, (double)scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 		}
 	}
 	
