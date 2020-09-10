@@ -1,7 +1,9 @@
 #ifndef WIN32
 
+#include "Exception.h"
 #include "StringBuilder.h"
 #include "StringEx.h"
+#include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -35,15 +37,17 @@ static S s;
 
 static void push_dir(const char * path)
 {
-// todo # error checks
+	if (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) != 0 && errno != EEXIST)
+		throw ExceptionVA("failed to create directory");
 
-	mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	chdir(path);
+	if (chdir(path) != 0)
+		throw ExceptionVA("failed to change directory");
 }
 
 static void pop_dir()
 {
-	chdir("..");
+	if (chdir("..") != 0)
+		throw ExceptionVA("failed to create directory");
 }
 
 static const char * s_androidManifestTemplateForApp =
@@ -118,7 +122,7 @@ struct Library
 
 int main(int argc, char * argv[])
 {
-	chdir(CHIBI_RESOURCE_PATH);
+	(void)chdir(CHIBI_RESOURCE_PATH);
 	
 	const char * module_path = CHIBI_RESOURCE_PATH;
 	
