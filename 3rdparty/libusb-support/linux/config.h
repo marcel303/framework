@@ -100,7 +100,7 @@
 /* Windows backend */
 /* #undef OS_WINDOWS */
 
-* Name of package */
+/* Name of package */
 #define PACKAGE "libusb"
 
 /* Define to the address where bug reports for this package should be sent. */
