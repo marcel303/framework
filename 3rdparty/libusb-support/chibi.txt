@@ -1,11 +1,30 @@
 library libusb
+
 	scan_files c path ../libusb/libusb
 	scan_files h path ../libusb/libusb
-	add_files ../libusb/libusb/os/darwin_usb.c
-	add_files ../libusb/libusb/os/darwin_usb.h
-	add_files ../libusb/libusb/os/poll_posix.c
-	add_files ../libusb/libusb/os/poll_posix.h
-	add_files ../libusb/libusb/os/threads_posix.c
-	add_files ../libusb/libusb/os/threads_posix.h
+	
+	with_platform macos   header_path macos
+	with_platform windows header_path win32
+
+	with_platform macos add_files ../libusb/libusb/os/darwin_usb.c
+	with_platform macos add_files ../libusb/libusb/os/darwin_usb.h
+	with_platform macos add_files ../libusb/libusb/os/poll_posix.c
+	with_platform macos add_files ../libusb/libusb/os/poll_posix.h
+	with_platform macos add_files ../libusb/libusb/os/threads_posix.c
+	with_platform macos add_files ../libusb/libusb/os/threads_posix.h
+
+	with_platform linux add_files ../libusb/libusb/os/poll_posix.c
+	with_platform linux add_files ../libusb/libusb/os/poll_posix.h
+	with_platform linux add_files ../libusb/libusb/os/threads_posix.c
+	with_platform linux add_files ../libusb/libusb/os/threads_posix.h
+
+	with_platform windows add_files ../libusb/libusb/os/poll_windows.c
+	with_platform windows add_files ../libusb/libusb/os/poll_windows.h
+	with_platform windows add_files ../libusb/libusb/os/threads_windows.c
+	with_platform windows add_files ../libusb/libusb/os/threads_windows.h
+	with_platform windows add_files ../libusb/libusb/os/windows_nt_common.c
+	with_platform windows add_files ../libusb/libusb/os/windows_nt_common.h
+	with_platform windows add_files ../libusb/libusb/os/windows_winusb.c
+	with_platform windows add_files ../libusb/libusb/os/windows_winusb.h
+
 	header_path ../libusb/libusb expose
-	header_path macos
