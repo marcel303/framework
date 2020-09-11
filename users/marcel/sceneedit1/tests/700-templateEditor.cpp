@@ -679,7 +679,13 @@ int main(int argc, char * argv[])
 								bool isSet = true;
 								auto * base_component = template_instances[0].findComponentInstance(component_instance.componentType->typeName, component_instance.id.c_str());
 								
-								ImGui::Reflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, base_component, nullptr);
+								ImGui::Reflection_StructuredType(
+									typeDB,
+									*component_instance.componentType,
+									component_instance.component,
+									isSet,
+									base_component,
+									nullptr);
 							}
 						#else
 							// iterate over all of the components' properties

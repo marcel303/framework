@@ -67,7 +67,13 @@ namespace ImGui
 				// note : process these as a group, so the context menu below works when right-clicking on any item inside the structure
 				ImGui::BeginGroup();
 				{
-					if (Reflection_StructuredType(typeDB, *structured_type, member_object, isSet, default_member_object, nullptr))
+					if (Reflection_StructuredType(
+						typeDB,
+						*structured_type,
+						member_object,
+						isSet,
+						default_member_object,
+						nullptr))
 					{
 						if (signalChanges)
 							component->propertyChanged(member_object);
@@ -706,7 +712,7 @@ namespace ImGui
 		const StructuredType & type,
 		void * object,
 		bool & isSet,
-		void * defaultObject,
+		void * default_object,
 		void ** changedMemberObject)
 	{
 		Assert(changedMemberObject == nullptr || *changedMemberObject == nullptr);
@@ -717,7 +723,7 @@ namespace ImGui
 			object,
 			nullptr,
 			isSet,
-			defaultObject,
+			default_object,
 			changedMemberObject);
 	}
 }
