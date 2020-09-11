@@ -25,3 +25,6 @@ url=https://github.com/marcel303/SDL-mirror.git
 [submodule "3rdparty/nanovg"]
 	path = 3rdparty/nanovg
 	url = https://github.com/marcel303/nanovg.git
+[submodule "3rdparty/libusb"]
+	path = 3rdparty/libusb
+	url = https://github.com/libusb/libusb.git
