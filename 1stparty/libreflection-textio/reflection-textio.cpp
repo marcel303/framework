@@ -165,7 +165,11 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 #include "rapidjson/internal/dtoa.h"
 #include "rapidjson/internal/itoa.h"
 
-bool plain_type_totext(const PlainType * plain_type, const void * object, char * out_text, const int out_text_size)
+bool plain_type_totext(
+	const PlainType * plain_type,
+	const void * object,
+	char * out_text,
+	const int out_text_size)
 {
 	switch (plain_type->dataType)
 	{
@@ -254,76 +258,10 @@ bool plain_type_totext(const PlainType * plain_type, const void * object, char *
 
 //
 
-bool member_tolines_recursive(
-	const TypeDB & typeDB,
-	const StructuredType * structured_type,
-	const void * object,
-	const Member * member,
-	LineWriter & line_writer,
-	const int currentIndent)
-{
-	bool result = true;
-	
-	if (member->isVector)
-	{
-		auto * member_interface = static_cast<const Member_VectorInterface*>(member);
-		
-		auto * vector_type = typeDB.findType(member_interface->vector_type());
-		
-		if (vector_type == nullptr)
-		{
-			LOG_ERR("failed to find type for type name %s", structured_type->typeName);
-			result &= false;
-		}
-		else
-		{
-			const size_t vector_size = member_interface->vector_size(object);
-			
-			if (vector_type->isStructured)
-			{
-				for (size_t i = 0; i < vector_size; ++i)
-				{
-					auto * vector_object = member_interface->vector_access((void*)object, i);
-					
-					line_writer.append_indented_line(currentIndent, "-");
-					
-					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent + 1);
-				}
-			}
-			else
-			{
-				for (size_t i = 0; i < vector_size; ++i)
-				{
-					auto * vector_object = member_interface->vector_access((void*)object, i);
-					
-					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent);
-				}
-			}
-		}
-	}
-	else
-	{
-		auto * member_scalar = static_cast<const Member_Scalar*>(member);
-		
-		auto * member_type = typeDB.findType(member_scalar->typeIndex);
-		auto * member_object = member_scalar->scalar_access(object);
-		
-		if (member_type == nullptr)
-		{
-			LOG_ERR("failed to find type for member %s", member->name);
-			result &= false;
-		}
-		else
-		{
-			result &= object_tolines_recursive(typeDB, member_type, member_object, line_writer, currentIndent);
-		}
-	}
-	
-	return result;
-}
-
 bool object_fromlines_recursive(
-	const TypeDB & typeDB, const Type * type, void * object,
+	const TypeDB & typeDB,
+	const Type * type,
+	void * object,
 	LineReader & line_reader)
 {
 	if (type->isStructured)
@@ -425,7 +363,9 @@ bool object_fromlines_recursive(
 }
 
 bool member_fromlines_recursive(
-	const TypeDB & typeDB, const Member * member, void * object,
+	const TypeDB & typeDB,
+	const Member * member,
+	void * object,
 	LineReader & line_reader)
 {
 	bool result = true;
@@ -465,7 +405,11 @@ bool member_fromlines_recursive(
 					
 					line_reader.push_indent();
 					{
-						result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
+						result &= object_fromlines_recursive(
+							typeDB,
+							vector_type,
+							vector_object,
+							line_reader);
 					}
 					line_reader.pop_indent();
 				}
@@ -511,7 +455,11 @@ bool member_fromlines_recursive(
 		}
 		else
 		{
-			result &= object_fromlines_recursive(typeDB, member_type, member_object, line_reader);
+			result &= object_fromlines_recursive(
+				typeDB,
+				member_type,
+				member_object,
+				line_reader);
 		}
 	}
 	
@@ -519,8 +467,11 @@ bool member_fromlines_recursive(
 }
 
 bool object_tolines_recursive(
-	const TypeDB & typeDB, const Type * type, const void * object,
-	LineWriter & line_writer, const int currentIndent)
+	const TypeDB & typeDB,
+	const Type * type,
+	const void * object,
+	LineWriter & line_writer,
+	const int currentIndent)
 {
 	if (type->isStructured)
 	{
@@ -532,7 +483,12 @@ bool object_tolines_recursive(
 		{
 			line_writer.append_indented_line(currentIndent, member->name);
 			
-			result &= member_tolines_recursive(typeDB, structured_type, object, member, line_writer, currentIndent + 1);
+			result &= member_tolines_recursive(
+				typeDB,
+				member,
+				object,
+				line_writer,
+				currentIndent + 1);
 		}
 		
 		return result;
@@ -560,17 +516,60 @@ bool object_tolines_recursive(
 }
 
 bool member_tolines_recursive(
-	const TypeDB & typeDB, const Member * member, const void * object,
-	LineWriter & line_writer, const int currentIndent)
+	const TypeDB & typeDB,
+	const Member * member,
+	const void * object,
+	LineWriter & line_writer,
+	const int currentIndent)
 {
 	bool result = true;
 	
 	if (member->isVector)
 	{
-	// todo : add vector support
-		LOG_ERR("vector types aren't supported yet", 0);
-		Assert(false);
-		//result &= false;
+		auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+		
+		auto * vector_type = typeDB.findType(member_interface->vector_type());
+		
+		if (vector_type == nullptr)
+		{
+			LOG_ERR("failed to find type for member %s", member->name);
+			result &= false;
+		}
+		else
+		{
+			const size_t vector_size = member_interface->vector_size(object);
+			
+			if (vector_type->isStructured)
+			{
+				for (size_t i = 0; i < vector_size; ++i)
+				{
+					auto * vector_object = member_interface->vector_access((void*)object, i);
+					
+					line_writer.append_indented_line(currentIndent, "-");
+					
+					result &= object_tolines_recursive(
+						typeDB,
+						vector_type,
+						vector_object,
+						line_writer,
+						currentIndent + 1);
+				}
+			}
+			else
+			{
+				for (size_t i = 0; i < vector_size; ++i)
+				{
+					auto * vector_object = member_interface->vector_access((void*)object, i);
+					
+					result &= object_tolines_recursive(
+						typeDB,
+						vector_type,
+						vector_object,
+						line_writer,
+						currentIndent);
+				}
+			}
+		}
 	}
 	else
 	{
@@ -586,7 +585,12 @@ bool member_tolines_recursive(
 		}
 		else
 		{
-			result &= object_tolines_recursive(typeDB, member_type, member_object, line_writer, currentIndent);
+			result &= object_tolines_recursive(
+				typeDB,
+				member_type,
+				member_object,
+				line_writer,
+				currentIndent);
 		}
 	}
 	
