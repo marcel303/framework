@@ -85,7 +85,7 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 		template_property.name = member->name;
 		
 		LineWriter line_writer;
-		if (!member_tolines_recursive(typeDB, componentType, component, member, line_writer, 0))
+		if (!member_tolines_recursive(typeDB, member, component, line_writer, 0))
 		{
 		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
 			LOG_ERR("failed to serialize component property to text", 0);
