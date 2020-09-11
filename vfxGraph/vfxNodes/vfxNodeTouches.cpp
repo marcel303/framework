@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "vfxNodeTouches.h"
+#include <inttypes.h> // PRIu64
 
 VFX_NODE_TYPE(VfxNodeTouches)
 {
@@ -226,6 +227,6 @@ void VfxNodeTouches::getDescription(VfxNodeDescription & d)
 	
 	for (int i = 0; i < numTouches; ++i)
 	{
-		d.add("[%02d] fingerId: %llx, x: %.2f, y: %.2f", i, touches[i].id, touches[i].x, touches[i].y);
+		d.add("[%02d] fingerId: %" PRIx64 ", x: %.2f, y: %.2f", i, touches[i].id, touches[i].x, touches[i].y);
 	}
 }
