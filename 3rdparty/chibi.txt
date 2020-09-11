@@ -18,6 +18,7 @@ add leapmotion
 add libfreenect2
 add libnfd
 add liboscpack
+add libusb-support
 add midifile
 add miniz
 add msdfgen
@@ -25,8 +26,7 @@ add nanovg-support
 add oggvorbis
 with_platform android add ovr-mobile
 add portaudio-support
-with_platform linux add PS3EYEDriver/framework
-with_platform macos add PS3EYEDriver/framework
+add PS3EYEDriver/framework
 add rapidjson-support
 add remotery
 add rgbe
