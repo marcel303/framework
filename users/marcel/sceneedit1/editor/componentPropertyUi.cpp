@@ -82,7 +82,7 @@ namespace ImGui
 		{
 			auto & plain_type = static_cast<const PlainType&>(*member_type);
 			
-			if (Reflection_PlainType(member, plain_type, member_object, isSet, default_member_object))
+			if (Reflection_PlainTypeMember(member, plain_type, member_object, isSet, default_member_object))
 			{
 				if (signalChanges)
 					component->propertyChanged(member_object);
@@ -129,7 +129,7 @@ namespace ImGui
 		return result;
 	}
 
-	bool Reflection_PlainType(
+	bool Reflection_PlainTypeMember(
 		const Member & member,
 		const PlainType & plain_type,
 		void * member_object,
@@ -689,7 +689,7 @@ namespace ImGui
 			
 			auto & plain_type = static_cast<const PlainType&>(type);
 			
-			if (Reflection_PlainType(*in_member, plain_type, object, isSet, default_object))
+			if (Reflection_PlainTypeMember(*in_member, plain_type, object, isSet, default_object))
 			{
 				result = true;
 				
