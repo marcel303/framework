@@ -418,7 +418,7 @@ void SceneEditor::editNode(const int nodeId)
 						bool isSet = true;
 						void * changedMemberObject = nullptr;
 						
-						if (doReflection_StructuredType(*typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
+						if (ImGui::Reflection_StructuredType(*typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
 						{
 							// signal the component one of its properties has changed
 							component->propertyChanged(changedMemberObject);

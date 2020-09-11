@@ -674,12 +674,12 @@ int main(int argc, char * argv[])
 							}
 							
 						#if 0
-						// todo : remove doReflection_StructuredType test code
+						// todo : remove Reflection_StructuredType test code
 							{
 								bool isSet = true;
 								auto * base_component = template_instances[0].findComponentInstance(component_instance.componentType->typeName, component_instance.id.c_str());
 								
-								doReflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, base_component, nullptr);
+								ImGui::Reflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, base_component, nullptr);
 							}
 						#else
 							// iterate over all of the components' properties
@@ -706,7 +706,7 @@ int main(int argc, char * argv[])
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
 								
-								doComponentProperty(typeDB, *member, component_instance.component, false, propertyIsSet, component_with_value);
+								ImGui::ComponentProperty(typeDB, *member, component_instance.component, false, propertyIsSet, component_with_value);
 								
 								component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 							}
