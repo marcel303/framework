@@ -62,7 +62,7 @@ Color::Color(float r, float g, float b, float a)
 	this->a = a;
 }
 
-Color Color::fromHex(const char * str)
+Color Color::fromHex(const char * str, bool * success)
 {
 	if (str[0] == '#')
 		str++;
@@ -71,7 +71,9 @@ Color Color::fromHex(const char * str)
 	
 	if (len == 0)
 	{
-		return Color(0.f, 0.f, 0.f, 0.f);
+		if (success != nullptr)
+			*success = false;
+		return colorBlackTranslucent;
 	}
 	else if (len == 3)
 	{
@@ -80,6 +82,8 @@ Color Color::fromHex(const char * str)
 		const float g = scale255(((hex >> 4) & 0xf) * 255/15);
 		const float b = scale255(((hex >> 0) & 0xf) * 255/15);
 		const float a = 1.f;
+		if (success != nullptr)
+			*success = true;
 		return Color(r, g, b, a);
 	}
 	else if (len == 4)
@@ -89,6 +93,8 @@ Color Color::fromHex(const char * str)
 		const float g = scale255(((hex >>  8) & 0xf) * 255/15);
 		const float b = scale255(((hex >>  4) & 0xf) * 255/15);
 		const float a = scale255(((hex >>  0) & 0xf) * 255/15);
+		if (success != nullptr)
+			*success = true;
 		return Color(r, g, b, a);
 	}
 	else if (len == 6)
@@ -98,6 +104,8 @@ Color Color::fromHex(const char * str)
 		const float g = scale255((hex >>  8) & 0xff);
 		const float b = scale255((hex >>  0) & 0xff);
 		const float a = 1.f;
+		if (success != nullptr)
+			*success = true;
 		return Color(r, g, b, a);
 	}
 	else if (len == 8)
@@ -107,11 +115,15 @@ Color Color::fromHex(const char * str)
 		const float g = scale255((hex >> 16) & 0xff);
 		const float b = scale255((hex >>  8) & 0xff);
 		const float a = scale255((hex >>  0) & 0xff);
+		if (success != nullptr)
+			*success = true;
 		return Color(r, g, b, a);
 	}
 	else
 	{
-		return colorBlack;
+		if (success != nullptr)
+			*success = false;
+		return colorBlackTranslucent;
 	}
 }
 
