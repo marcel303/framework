@@ -133,19 +133,15 @@ library vfxgraph-leapmotion
 library vfxgraph-ps3eye
 
 	depend_library vfxgraph
-	
-# todo : add with_library chibi directive ?
-	with_platform linux depend_library libps3eye
-	with_platform macos depend_library libps3eye
+
+	depend_library libps3eye
 
 	header_path vfxNodes-ps3eye expose
 
 	scan_files cpp path vfxNodes-ps3eye
 	scan_files h   path vfxNodes-ps3eye
 
-	with_platform macos   compile_definition ENABLE_PS3EYE 1 expose
-	with_platform linux   compile_definition ENABLE_PS3EYE 1 expose
-	with_platform windows compile_definition ENABLE_PS3EYE 0 expose
+	compile_definition ENABLE_PS3EYE 1 expose
 
 	link_translation_unit_using_function_call linkVfxNodes_Ps3eye
 
