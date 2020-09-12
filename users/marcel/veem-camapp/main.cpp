@@ -546,7 +546,11 @@ void changeDirectory(const char * path);
 
 int main(int argc, char * argv[])
 {
+#if DO_CONTROLLER
 	setupPaths(CHIBI_RESOURCE_PATHS);
+#else
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
 
 #if 1
 	// show connected devices
