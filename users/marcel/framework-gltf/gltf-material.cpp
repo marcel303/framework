@@ -51,7 +51,6 @@ namespace gltf
 		
 		//shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
 		normalTextureCoord = shader.getImmediateIndex("normalTextureCoord");
-	// todo : add normal scale. see GLTF spec
 		u_normalTextureScale = shader.getImmediateIndex("u_normalTextureScale");
 		
 		//shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
@@ -235,7 +234,6 @@ namespace gltf
 		
 		//shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
 		normalTextureCoord = shader.getImmediateIndex("normalTextureCoord");
-	// todo : add normal scale. see GLTF spec
 		u_normalTextureScale = shader.getImmediateIndex("u_normalTextureScale");
 		
 		//shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
