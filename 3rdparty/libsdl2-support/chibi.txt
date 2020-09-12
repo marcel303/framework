@@ -1,4 +1,4 @@
-# note : the iphoneos library needs to be compile as a static library, due to how it links to SDL_main
+# note : the iphoneos library needs to be compiled as a static library, due to how it links to SDL_main
 
 with_platform macos    library libsdl2 shared
 with_platform iphoneos library libsdl2
