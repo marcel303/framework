@@ -60,9 +60,7 @@ add pincushion1
 add planetvis
 add planetvis2
 add phonograph1
-# todo : add with_library ?
-with_platform macos add ps3eye-to-osc
-with_platform linux add ps3eye-to-osc
+add ps3eye-to-osc
 with_platform macos add rast
 add rawaudio1
 add reaper1
@@ -80,8 +78,7 @@ add speakwithus
 with_platform macos add sRGB
 add twinkle
 add veem-360
-# todo : add with_library ?
-with_platform macos add veem-camapp
+add veem-camapp
 add veem-osc
 add veem-sound
 add veem-sound-satellites
