@@ -304,11 +304,7 @@ ShaderBuffer & VrHand::getSkinningMatrices(const bool update) const
 
 void VrHand::drawMesh() const
 {
-	pushCullFlip(); // note : the face winding is flipped, due to converting the root pose from using a right-handed into a left-handed coordinate frame
-	{
-		data->mesh.draw();
-	}
-	popCullFlip();
+	data->mesh.draw();
 }
 
 #else
