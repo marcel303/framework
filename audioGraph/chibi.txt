@@ -14,7 +14,6 @@ library audiograph-core
 library audiograph-voice
 
 	depend_library audiograph-core
-	depend_library libosc
 
 	scan_files cpp path audioVoiceMgr
 	scan_files h   path audioVoiceMgr
