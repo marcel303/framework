@@ -1153,11 +1153,13 @@ void VfxNodeBase::reconnectDynamicInputs()
 	
 	for (auto & inputSocketValue : g_currentVfxGraph->dynamicData->inputSocketValues)
 	{
+		if (inputSocketValue.nodeId == id)
+		{
 		VfxPlug * input = nullptr;
 	
 		for (int i = 0; i < dynamicInputs.size(); ++i)
 		{
-			if (inputSocketValue.nodeId == id && inputSocketValue.socketName == dynamicInputs[i].name)
+				if (inputSocketValue.socketName == dynamicInputs[i].name)
 				input = &inputs[numStaticInputs + i];
 		}
 		
@@ -1167,6 +1169,7 @@ void VfxNodeBase::reconnectDynamicInputs()
 			
 			g_currentVfxGraph->connectToInputLiteral(*input, inputSocketValue.value);
 		}
+	}
 	}
 	
 	// hook up the dynamic links
