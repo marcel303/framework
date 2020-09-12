@@ -153,17 +153,9 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 	const int gridSx = sx / cellSx + 1;
 	const int gridSy = sy / cellSy + 1;
 	
-#ifdef WIN32 // todo : use same code path on Win32
-	uint16_t ** grid = (uint16_t**)alloca(gridSx * sizeof(uint16_t*));
-	for (int x = 0; x < gridSx; ++x)
-	{
-		grid[x] = (uint16_t*)alloca(gridSy * sizeof(uint16_t));
-		memset(grid[x], 0xff, gridSy * sizeof(uint16_t));
-	}
-#else
-	uint16_t grid[gridSx][gridSy];
-	memset(grid, 0xff, sizeof(grid));
-#endif
+	uint16_t * __restrict grid_data = (uint16_t*)alloca(gridSx * gridSy * sizeof(uint16_t));
+	memset(grid_data, 0xff, gridSx * gridSy * sizeof(uint16_t));
+	#define grid(x, y) grid_data[x * gridSy + y]
 #endif
 	
 	for (int y = 0; y < sy; ++y)
@@ -207,7 +199,7 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 						{
 							if (gx >= 0 && gx < gridSx && gy >= 0 && gy < gridSy)
 							{
-								for (uint16_t islandIndex = grid[gx][gy]; isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
+								for (uint16_t islandIndex = grid(gx, gy); isValidIndex(islandIndex); islandIndex = islands[islandIndex].next)
 								{
 									auto & island = islands[islandIndex];
 									
@@ -287,8 +279,8 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 				#if USE_GRID
 					if (useGrid)
 					{
-						island.next = grid[gridX][gridY];
-						grid[gridX][gridY] = numIslands;
+						island.next = grid(gridX, gridY);
+						grid(gridX, gridY) = numIslands;
 					}
 				#endif
 				
@@ -305,6 +297,10 @@ int DotDetector::detectDots(const uint8_t * data, const int sx, const int sy, co
 			++x;
 		}
 	}
+	
+#if USE_GRID
+	#undef grid
+#endif
 	
 done:
 	for (int i = 0; i < numIslands; ++i)
