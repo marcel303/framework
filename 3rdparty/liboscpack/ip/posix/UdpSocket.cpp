@@ -443,7 +443,7 @@ public:
                 timerQueue_.push_back( std::make_pair( currentTimeMs + i->initialDelayMs, *i ) );
             std::sort( timerQueue_.begin(), timerQueue_.end(), CompareScheduledTimerCalls );
 
-            const int MAX_BUFFER_SIZE = 4098;
+            const int MAX_BUFFER_SIZE = 1<<15;
             data = new char[ MAX_BUFFER_SIZE ];
             IpEndpointName remoteEndpoint;
 
