@@ -98,7 +98,9 @@ void VfxNodeOscSheet::updateOscSheet()
 		currentOscSheet.clear();
 	}
 	
-	if (oscPrefix == currentOscPrefix && oscSheet == currentOscSheet && groupPrefix == currentGroupPrefix)
+	if (oscPrefix == currentOscPrefix &&
+		oscSheet == currentOscSheet &&
+		groupPrefix == currentGroupPrefix)
 	{
 		return;
 	}
@@ -283,12 +285,15 @@ void VfxNodeOscSheet::updateOscSheet()
 						VfxNodeBase::DynamicInput input;
 						input.type = kVfxPlugType_Int;
 						input.name = name;
-						input.defaultValue = defaultValue; // todo : look up default enum value from OSC sheet
+						
+						std::string defaultValueText;
 						
 						if (enumValues_index >= 0)
 						{
 							std::vector<std::string> enumNames;
 							splitString(i[enumValues_index], enumNames, ',');
+							for (auto & enumName : enumNames)
+								enumName = String::Trim(enumName);
 							
 							input.enumElems.resize(enumNames.size());
 							
@@ -296,14 +301,26 @@ void VfxNodeOscSheet::updateOscSheet()
 							{
 								input.enumElems[i].name = enumNames[i];
 								input.enumElems[i].valueText = String::FormatC("%d", i);
+								
+								if (input.enumElems[i].name == defaultValue)
+								{
+									defaultValueText = input.enumElems[i].valueText;
+								}
 							}
 						}
+						
+						if (defaultValueText.empty())
+						{
+							logWarning("failed to find default enum value for enum name %s", defaultValue);
+						}
+						
+						input.defaultValue = defaultValueText;
 						
 						inputs.push_back(input);
 					 
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultInt = Parse::Int32(defaultValue); // todo : check default enum value from sheet
+						inputInfo.defaultInt = Parse::Int32(defaultValueText);
 						inputInfos.push_back(inputInfo);
 					}
 					else
