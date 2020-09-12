@@ -73,8 +73,8 @@
 
 /*
 
-todo : quality :
-+ the audio seems to have a tin-can feel after being processed. todo : find out why. perhaps we need a low-pass filter ?
+done : quality :
++ the audio seems to have a tin-can feel after being processed. find out why. perhaps we need a low-pass filter ?
 	-> the reason is due to the way HRIR samples are combined. this creates a comb-like filter effect and colors the sound. the effect is not present when using the OpenAL soft HRTF filters, as they are properly processed to be able to blend them
 
 todo : performance :
@@ -82,6 +82,10 @@ todo : performance :
 - optimize the time domain to frequency domain transformation by using a FFT optimized for working with real-values inputs. since the last 50% of the fourier transformation is a mirror of the first 50% (symmetry), the algortihm could be optimized to only compute the first half
 
 */
+
+#if BINAURAL_USE_NEON
+	#include "neon-transpose.h"
+#endif
 
 namespace binaural
 {
@@ -539,8 +543,7 @@ namespace binaural
 		
 		const float scale = 1.f / AUDIO_BUFFER_SIZE;
 		
-		// todo : include neon; requires transpose function
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 		float4 * __restrict lResultOld_4 = (float4*)lResultOld;
 		float4 * __restrict rResultOld_4 = (float4*)rResultOld;
 		float4 * __restrict lResultNew_4 = (float4*)lResultNew;
@@ -550,7 +553,7 @@ namespace binaural
 		{
 			const int sortedIndex = i;
 			
-		#if BINAURAL_USE_SSE
+		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			float4 value1 = filter_wdl[i * 4 + 0].re.v;
 			float4 value2 = filter_wdl[i * 4 + 1].re.v;
 			float4 value3 = filter_wdl[i * 4 + 2].re.v;
@@ -615,7 +618,7 @@ namespace binaural
 	{
 		debugAssert((numSamples % 4) == 0);
 		
-	#if BINAURAL_USE_SIMD || BINAURAL_USE_NEON
+	#if BINAURAL_USE_SIMD
 		const float tStepScalar = 1.f / numSamples;
 		const float4 tStep = _mm_set1_ps(8.f / numSamples);
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
@@ -672,8 +675,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
-		// todo : include neon; requires transpose function
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -681,8 +683,7 @@ namespace binaural
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE / 8; ++i)
 		{
-		// todo : neon : this is actually suitable for vldq4_f32?
-		#if BINAURAL_USE_SSE
+		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			float4 value1a = array1_4[i * 2 + 0];
 			float4 value2a = array2_4[i * 2 + 0];
 			float4 value3a = array3_4[i * 2 + 0];
@@ -734,8 +735,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
-		// todo : include neon; requires transpose function
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
 		const float4 * __restrict array3_4 = (float4*)array3;
@@ -748,7 +748,7 @@ namespace binaural
 			const int index3 = fftIndices.indices[i * 4 + 2];
 			const int index4 = fftIndices.indices[i * 4 + 3];
 			
-		#if BINAURAL_USE_SSE
+		#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 			float4 value1 = array1_4[i];
 			float4 value2 = array2_4[i];
 			float4 value3 = array3_4[i];
