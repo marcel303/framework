@@ -631,9 +631,14 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		return true;
 	case kVfxPlugType_Color:
 		{
-		// todo : check for parse errors
-			const Color color = Color::fromHex(value.c_str());
+			bool success;
+			const Color color = Color::fromHex(value.c_str(), &success);
+
+			if (!success)
+				return false;
+
 			plug->getRwColor() = VfxColor(color.r, color.g, color.b, color.a);
+			
 			return true;
 		}
 		
