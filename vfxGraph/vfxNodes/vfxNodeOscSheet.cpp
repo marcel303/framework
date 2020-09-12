@@ -115,7 +115,7 @@ void VfxNodeOscSheet::updateOscSheet()
 	}
 	else
 	{
-		// parse OSC sheet. detect which parameters belong to this sound object. create dynamic inputs
+		// parse OSC sheet and create dynamic inputs for paths passing the desired (group) prefix
 		
 		std::vector<VfxNodeBase::DynamicInput> inputs;
 		
@@ -150,10 +150,10 @@ void VfxNodeOscSheet::updateOscSheet()
 					
 					const char * name = oscAddress + currentOscPrefixSize;
 					
-					if (groupPrefix && *name != '/')
+					if (groupPrefix && currentOscPrefixSize > 1 /* osc prefix '/' is special and includes all OSC addresses */ && name[0] != '/')
 						continue;
 					
-					while (*name == '/')
+					while (name[0] == '/')
 						name++;
 					
 					bool skipped = false;
@@ -172,8 +172,11 @@ void VfxNodeOscSheet::updateOscSheet()
 						inputInfo.lastFloat = inputInfo.defaultFloat;
 						inputInfos.push_back(inputInfo);
 					}
-					else if (strcmp(type, "f f") == 0) // todo : not yet supported
+					else if (strcmp(type, "f f") == 0)
 					{
+						std::vector<string> defaultValueElems;
+						splitString(defaultValue, defaultValueElems, ' ');
+						
 						for (int i = 0; i < 2; ++i)
 						{
 							const char elem[2] = { 'x', 'y' };
@@ -181,19 +184,25 @@ void VfxNodeOscSheet::updateOscSheet()
 							VfxNodeBase::DynamicInput input;
 							input.type = kVfxPlugType_Float;
 							input.name = String::FormatC("%s.%c", name, elem[i]);
-							input.defaultValue = defaultValue;
+							input.defaultValue =
+								i < defaultValueElems.size()
+									? defaultValueElems[i]
+									: "";
 							inputs.push_back(input);
 							
 							InputInfo inputInfo;
 							inputInfo.oscAddress = oscAddress;
 							inputInfo.isVec2f = true;
-							inputInfo.defaultFloat = Parse::Float(defaultValue);
+							inputInfo.defaultFloat = Parse::Float(input.defaultValue);
 							inputInfo.lastFloat = inputInfo.defaultFloat;
 							inputInfos.push_back(inputInfo);
 						}
 					}
-					else if (strcmp(type, "f f f") == 0) // todo : not yet supported
+					else if (strcmp(type, "f f f") == 0)
 					{
+						std::vector<string> defaultValueElems;
+						splitString(defaultValue, defaultValueElems, ' ');
+						
 						for (int i = 0; i < 3; ++i)
 						{
 							const char elem[3] = { 'x', 'y', 'z' };
@@ -201,13 +210,42 @@ void VfxNodeOscSheet::updateOscSheet()
 							VfxNodeBase::DynamicInput input;
 							input.type = kVfxPlugType_Float;
 							input.name = String::FormatC("%s.%c", name, elem[i]);
-							input.defaultValue = defaultValue;
+							input.defaultValue =
+								i < defaultValueElems.size()
+									? defaultValueElems[i]
+									: "";
 							inputs.push_back(input);
 							
 							InputInfo inputInfo;
 							inputInfo.oscAddress = oscAddress;
 							inputInfo.isVec3f = true;
-							inputInfo.defaultFloat = Parse::Float(defaultValue);
+							inputInfo.defaultFloat = Parse::Float(input.defaultValue);
+							inputInfo.lastFloat = inputInfo.defaultFloat;
+							inputInfos.push_back(inputInfo);
+						}
+					}
+					else if (strcmp(type, "f f f f") == 0)
+					{
+						std::vector<string> defaultValueElems;
+						splitString(defaultValue, defaultValueElems, ' ');
+						
+						for (int i = 0; i < 4; ++i)
+						{
+							const char elem[4] = { 'x', 'y', 'z', 'w' };
+							
+							VfxNodeBase::DynamicInput input;
+							input.type = kVfxPlugType_Float;
+							input.name = String::FormatC("%s.%c", name, elem[i]);
+							input.defaultValue =
+								i < defaultValueElems.size()
+									? defaultValueElems[i]
+									: "";
+							inputs.push_back(input);
+							
+							InputInfo inputInfo;
+							inputInfo.oscAddress = oscAddress;
+							inputInfo.isVec4f = true;
+							inputInfo.defaultFloat = Parse::Float(input.defaultValue);
 							inputInfo.lastFloat = inputInfo.defaultFloat;
 							inputInfos.push_back(inputInfo);
 						}
@@ -226,7 +264,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						inputInfo.lastInt = inputInfo.defaultInt;
 						inputInfos.push_back(inputInfo);
 					}
-					else if (strstr(type, "boolean") != nullptr)
+					else if (strstr(type, "b") != nullptr)
 					{
 						VfxNodeBase::DynamicInput input;
 						input.type = kVfxPlugType_Bool;
@@ -375,6 +413,41 @@ void VfxNodeOscSheet::tick(const float dt)
 				}
 				
 				i += 3;
+			}
+			else if (inputInfo.isVec4f)
+			{
+				const float value1 = getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat);
+				const float value2 = getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat);
+				const float value3 = getInputFloat(kInput_COUNT + i + 2, inputInfo.defaultFloat);
+				const float value4 = getInputFloat(kInput_COUNT + i + 3, inputInfo.defaultFloat);
+				
+				const bool isChanged =
+					value1 != inputInfos[i + 0].lastFloat ||
+					value2 != inputInfos[i + 1].lastFloat ||
+					value3 != inputInfos[i + 2].lastFloat ||
+					value4 != inputInfos[i + 3].lastFloat;
+				
+				if (shouldSend(isChanged))
+				{
+					isEmpty = false;
+					
+					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+					{
+						stream
+							<< value1
+							<< value2
+							<< value3
+							<< value4;
+					}
+					stream << osc::EndMessage;
+					
+					inputInfos[i + 0].lastFloat = value1;
+					inputInfos[i + 1].lastFloat = value2;
+					inputInfos[i + 2].lastFloat = value3;
+					inputInfos[i + 3].lastFloat = value4;
+				}
+				
+				i += 4;
 			}
 			else
 			{

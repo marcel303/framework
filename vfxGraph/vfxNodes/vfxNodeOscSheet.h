@@ -61,6 +61,7 @@ struct VfxNodeOscSheet : VfxNodeBase
 		
 		bool isVec2f = false;
 		bool isVec3f = false;
+		bool isVec4f = false;
 		
 		float defaultFloat = 0.f;
 		int defaultInt = 0;
