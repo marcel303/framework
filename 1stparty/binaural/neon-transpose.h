@@ -37,16 +37,12 @@ float32x4_t _dst3 = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.va
 
 #include <arm_neon.h>
 
-#define _MM_TRANSPOSE4_PS(a, b, c, d) \
+#define _MM_TRANSPOSE4_PS(_v0, _v1, _v2, _v3) \
 	{ \
-		float32x4_t _v0 = a; \
-		float32x4_t _v1 = b; \
-		float32x4_t _v2 = c; \
-		float32x4_t _v3 = d; \
 		float32x4x2_t v01 = vtrnq_f32(_v0, _v1); \
 		float32x4x2_t v23 = vtrnq_f32(_v2, _v3); \
-		a = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0])); \
-		b = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1])); \
-		c = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0])); \
-		d = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.val[1])); \
+		_v0 = vcombine_f32(vget_low_f32(v01.val[0]), vget_low_f32(v23.val[0])); \
+		_v1 = vcombine_f32(vget_low_f32(v01.val[1]), vget_low_f32(v23.val[1])); \
+		_v2 = vcombine_f32(vget_high_f32(v01.val[0]), vget_high_f32(v23.val[0])); \
+		_v3 = vcombine_f32(vget_high_f32(v01.val[1]), vget_high_f32(v23.val[1])); \
 	}
