@@ -137,14 +137,14 @@ void AudioRealTimeConnection::updateAudioValues()
 	if (audioGraph->currentTickTraversalId < 0)
 		return;
 	
-	for (auto i = audioValueHistorySet->s_audioValues.begin(); i != audioValueHistorySet->s_audioValues.end(); )
+	for (auto i = audioValueHistorySet->audioValues.begin(); i != audioValueHistorySet->audioValues.end(); )
 	{
 		auto & socketRef = i->first;
 		auto & audioValueHistory = i->second;
 		
 		if (audioValueHistory.isActive() == false)
 		{
-			i = audioValueHistorySet->s_audioValues.erase(i);
+			i = audioValueHistorySet->audioValues.erase(i);
 		}
 		else
 		{
@@ -345,13 +345,13 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	audioGraph->nodes.erase(nodeItr);
 	
-	for (auto audioValueItr = audioValueHistorySet->s_audioValues.begin(); audioValueItr != audioValueHistorySet->s_audioValues.end(); )
+	for (auto audioValueItr = audioValueHistorySet->audioValues.begin(); audioValueItr != audioValueHistorySet->audioValues.end(); )
 	{
 		auto & socketRef = audioValueItr->first;
 		
 		if (socketRef.nodeId == nodeId)
 		{
-			audioValueItr = audioValueHistorySet->s_audioValues.erase(audioValueItr);
+			audioValueItr = audioValueHistorySet->audioValues.erase(audioValueItr);
 		}
 		else
 		{
@@ -814,7 +814,7 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
-		auto & history = audioValueHistorySetCapture->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->audioValues[ref];
 		
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
@@ -878,7 +878,7 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
-		auto & history = audioValueHistorySetCapture->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)
