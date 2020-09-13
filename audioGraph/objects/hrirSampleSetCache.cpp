@@ -31,6 +31,7 @@
 #include "binaural_mit.h"
 #include "binaural_oalsoft.h"
 #include "hrirSampleSetCache.h"
+#include "Log.h"
 #include <map>
 
 static std::map<std::string, binaural::HRIRSampleSet*> s_hrirSampleSetCache;
@@ -59,7 +60,7 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	
 	if (result == false)
 	{
-		debugLog("failed to load sample set. path=%s", path);
+		LOG_ERR("failed to load sample set. path=%s", path);
 	
 		delete sampleSet;
 		sampleSet = nullptr;
