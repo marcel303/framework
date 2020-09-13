@@ -518,7 +518,45 @@ namespace binaural
 		
 		WDL_FFT4_COMPLEX filter_wdl[HRTF_BUFFER_SIZE]; // lOld, rOld, lNew, rNew
 
-	// todo : use SSE transpose
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
+		// 0.113ms -> 0.075ms for 100x
+		const float4 * __restrict lFilterOld_re_4 = (const float4*)lFilterOld.real;
+		const float4 * __restrict rFilterOld_re_4 = (const float4*)rFilterOld.real;
+		const float4 * __restrict lFilterNew_re_4 = (const float4*)lFilterNew.real;
+		const float4 * __restrict rFilterNew_re_4 = (const float4*)rFilterNew.real;
+		
+		const float4 * __restrict lFilterOld_im_4 = (const float4*)lFilterOld.imag;
+		const float4 * __restrict rFilterOld_im_4 = (const float4*)rFilterOld.imag;
+		const float4 * __restrict lFilterNew_im_4 = (const float4*)lFilterNew.imag;
+		const float4 * __restrict rFilterNew_im_4 = (const float4*)rFilterNew.imag;
+		
+		for (int i = 0; i < HRTF_BUFFER_SIZE / 4; ++i)
+		{
+			float4 re1 = lFilterOld_re_4[i];
+			float4 re2 = rFilterOld_re_4[i];
+			float4 re3 = lFilterNew_re_4[i];
+			float4 re4 = rFilterNew_re_4[i];
+		
+			_MM_TRANSPOSE4_PS(re1, re2, re3, re4);
+			
+			filter_wdl[i * 4 + 0].re.v = re1;
+			filter_wdl[i * 4 + 1].re.v = re2;
+			filter_wdl[i * 4 + 2].re.v = re3;
+			filter_wdl[i * 4 + 3].re.v = re4;
+			
+			float4 im1 = lFilterOld_im_4[i];
+			float4 im2 = rFilterOld_im_4[i];
+			float4 im3 = lFilterNew_im_4[i];
+			float4 im4 = rFilterNew_im_4[i];
+			
+			_MM_TRANSPOSE4_PS(im1, im2, im3, im4);
+			
+			filter_wdl[i * 4 + 0].im.v = im1;
+			filter_wdl[i * 4 + 1].im.v = im2;
+			filter_wdl[i * 4 + 2].im.v = im3;
+			filter_wdl[i * 4 + 3].im.v = im4;
+		}
+	#else
 		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
 		{
 			filter_wdl[i].re.v = _mm_set_ps(
@@ -532,6 +570,7 @@ namespace binaural
 				rFilterOld.imag[i],
 				lFilterOld.imag[i]);
 		}
+	#endif
 		
 		// convolve audio data with impulse-response data in the frequency-domain
 		
@@ -558,7 +597,7 @@ namespace binaural
 			float4 value2 = filter_wdl[i * 4 + 1].re.v;
 			float4 value3 = filter_wdl[i * 4 + 2].re.v;
 			float4 value4 = filter_wdl[i * 4 + 3].re.v;
-			
+
 			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
 			
 			lResultOld_4[sortedIndex] = value1 * scale;
