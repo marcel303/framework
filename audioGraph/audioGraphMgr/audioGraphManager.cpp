@@ -217,12 +217,14 @@ AudioGraphFile::AudioGraphFile()
 	, activeInstance(nullptr)
 	, realTimeConnection(nullptr)
 	, audioValueHistorySet(nullptr)
+	, audioValueHistorySetCapture(nullptr)
 	, graphEdit(nullptr)
 {
 	realTimeConnection = new AudioGraphFileRTC();
 	realTimeConnection->file = this;
 	
 	audioValueHistorySet = new AudioValueHistorySet();
+	audioValueHistorySetCapture = new AudioValueHistorySet();
 }
 
 AudioGraphFile::~AudioGraphFile()
@@ -244,6 +246,9 @@ AudioGraphFile::~AudioGraphFile()
 	
 	delete audioValueHistorySet;
 	audioValueHistorySet = nullptr;
+	
+	delete audioValueHistorySetCapture;
+	audioValueHistorySetCapture = nullptr;
 	
 	delete realTimeConnection;
 	realTimeConnection = nullptr;
@@ -772,7 +777,11 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	auto * audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
 	instance->audioGraph = audioGraph;
 	
-	auto * realTimeConnection = new AudioRealTimeConnection(instance->audioGraph, context, file->audioValueHistorySet);
+	auto * realTimeConnection = new AudioRealTimeConnection(
+		instance->audioGraph,
+		context,
+		file->audioValueHistorySet,
+		file->audioValueHistorySetCapture);
 	instance->realTimeConnection = realTimeConnection;
 	instance->realTimeConnection->audioMutex = audioMutex;
 	
@@ -905,6 +914,13 @@ void AudioGraphManager_RTE::tickMain()
 		{
 			instance->audioGraph->tickMain();
 		}
+	}
+	
+	// copy audio values
+	
+	if (selectedFile && selectedFile->activeInstance)
+	{
+		selectedFile->activeInstance->realTimeConnection->captureAudioValues();
 	}
 }
 
@@ -1209,7 +1225,11 @@ AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * fil
 	auto * audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
 	instance->audioGraph = audioGraph;
 	
-	auto * realTimeConnection = new AudioRealTimeConnection(instance->audioGraph, context, file->audioValueHistorySet);
+	auto * realTimeConnection = new AudioRealTimeConnection(
+		instance->audioGraph,
+		context,
+		file->audioValueHistorySet,
+		file->audioValueHistorySetCapture);
 	instance->realTimeConnection = realTimeConnection;
 	instance->realTimeConnection->audioMutex = audioMutex;
 	
@@ -1341,6 +1361,22 @@ void AudioGraphManager_MultiRTE::tickMain()
 			instance->audioGraph->tickMain();
 		}
 	}
+	
+	// copy audio values
+	
+	audioMutex->lock();
+	{
+		for (auto & fileItr : files)
+		{
+			AudioGraphFile * file = fileItr.second;
+			
+			if (file && file->activeInstance)
+			{
+				file->activeInstance->realTimeConnection->captureAudioValues();
+			}
+		}
+	}
+	audioMutex->unlock();
 }
 
 void AudioGraphManager_MultiRTE::tickAudio(const float dt)

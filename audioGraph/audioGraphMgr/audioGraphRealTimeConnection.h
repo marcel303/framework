@@ -43,13 +43,19 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	bool isLoading;
 	
 	AudioValueHistorySet * audioValueHistorySet;
+	AudioValueHistorySet * audioValueHistorySetCapture;
 	
 	AudioGraphContext * context;
 	
-	AudioRealTimeConnection(AudioGraph *& audioGraph, AudioGraphContext * context, AudioValueHistorySet * audioValueHistorySet);
+	AudioRealTimeConnection(
+		AudioGraph *& audioGraph,
+		AudioGraphContext * context,
+		AudioValueHistorySet * audioValueHistorySet,
+		AudioValueHistorySet * audioValueHistorySetCapture);
 	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();
+	void captureAudioValues();
 	
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;
@@ -138,4 +144,32 @@ struct AudioValueHistory_SocketRef
 struct AudioValueHistorySet
 {
 	std::map<AudioValueHistory_SocketRef, AudioValueHistory> s_audioValues;
+	
+	void captureInto(AudioValueHistorySet & dst)
+	{
+		// add or update audio values
+		
+		for (auto & audioValueItr : s_audioValues)
+		{
+			auto & srcAudioValue = audioValueItr.second;
+			auto & dstAudioValue = dst.s_audioValues[audioValueItr.first];
+			
+			memcpy(
+				dstAudioValue.samples,
+				srcAudioValue.samples,
+				sizeof(dstAudioValue.samples));
+			dstAudioValue.isValid = srcAudioValue.isValid;
+		}
+		
+		// prune out-of-date audio values
+		
+		for (auto i = dst.s_audioValues.begin(); i != dst.s_audioValues.end(); )
+		{
+			if (s_audioValues.count(i->first) == 0)
+				i = dst.s_audioValues.erase(i);
+			else
+				++i;
+		}
+	}
 };
+

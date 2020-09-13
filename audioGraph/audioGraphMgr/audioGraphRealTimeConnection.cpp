@@ -95,19 +95,25 @@ struct AudioScope
 
 //
 
-AudioRealTimeConnection::AudioRealTimeConnection(AudioGraph *& in_audioGraph, AudioGraphContext * in_context, AudioValueHistorySet * in_audioValueHistorySet)
+AudioRealTimeConnection::AudioRealTimeConnection(
+	AudioGraph *& in_audioGraph,
+	AudioGraphContext * in_context,
+	AudioValueHistorySet * in_audioValueHistorySet,
+	AudioValueHistorySet * in_audioValueHistorySetCapture)
 	: GraphEdit_RealTimeConnection()
 	, audioGraph(nullptr)
 	, audioGraphPtr(nullptr)
 	, audioMutex(nullptr)
 	, isLoading(false)
 	, audioValueHistorySet(nullptr)
+	, audioValueHistorySetCapture(nullptr)
 	, context(nullptr)
 {
 	audioGraph = in_audioGraph;
 	audioGraphPtr = &in_audioGraph;
 	
 	audioValueHistorySet = in_audioValueHistorySet;
+	audioValueHistorySetCapture = in_audioValueHistorySetCapture;
 	
 	context = in_context;
 }
@@ -206,6 +212,13 @@ void AudioRealTimeConnection::updateAudioValues()
 			++i;
 		}
 	}
+}
+
+void AudioRealTimeConnection::captureAudioValues()
+{
+	AUDIO_SCOPE;
+	
+	audioValueHistorySet->captureInto(*audioValueHistorySetCapture);
 }
 
 void AudioRealTimeConnection::loadBegin()
@@ -792,15 +805,16 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 	if (input->isConnected() == false)
 		return false;
 	
+	// note : this method operates on a copy of the audio data, which is why
+	//        we don't have to use a mutex
+	
 	if (input->type == kAudioPlugType_FloatVec)
 	{
-		AUDIO_SCOPE;
-		
 		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
-		auto & history = audioValueHistorySet->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->s_audioValues[ref];
 		
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
@@ -855,15 +869,16 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 	if (output == nullptr)
 		return false;
 	
+	// note : this method operates on a copy of the audio data, which is why
+	//        we don't have to use a mutex
+	
 	if (output->type == kAudioPlugType_FloatVec)
 	{
-		AUDIO_SCOPE;
-		
 		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
-		auto & history = audioValueHistorySet->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->s_audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)
