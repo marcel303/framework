@@ -128,10 +128,6 @@ void AudioRealTimeConnection::updateAudioValues()
 	if (audioGraph == nullptr)
 		return;
 
-// todo : make a copy of the history data when we're done here
-//        this to avoid data races, where the audio thread is calling this method and providing more data
-//        while at the same time we're drawing visualizers
-
 	AUDIO_SCOPE;
 	
 	if (audioGraph->currentTickTraversalId < 0)
