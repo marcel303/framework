@@ -342,7 +342,6 @@ namespace jgmod
 			SAMPLE_INFO * si = j->si + index;
 			SAMPLE      * s =  j->s  + index;
 
-		// todo : check result of seek operations
 			jgmod_fseek(&f, filename, parapointer[index] + start_offset);
 			
 			if (jgmod_getc(f) != 1) // is not a sample structure
@@ -368,8 +367,7 @@ namespace jgmod
 			type = jgmod_getc(f);
 			si->c2spd = jgmod_igetl(f) & 0xFFFF;
 			jgmod_skip(f, 12);
-		// todo : store the sample name
-			jgmod_skip(f, 28); // skip sample name
+			jgmod_fread(si->name, 28, f); // read sample name
 
 			jgmod_fread(id, 4, f);
 
