@@ -145,31 +145,5 @@ struct AudioValueHistorySet
 {
 	std::map<AudioValueHistory_SocketRef, AudioValueHistory> audioValues;
 	
-	void captureInto(AudioValueHistorySet & dst)
-	{
-		// add or update audio values
-		
-		for (auto & audioValueItr : audioValues)
-		{
-			auto & srcAudioValue = audioValueItr.second;
-			auto & dstAudioValue = dst.audioValues[audioValueItr.first];
-			
-			memcpy(
-				dstAudioValue.samples,
-				srcAudioValue.samples,
-				sizeof(dstAudioValue.samples));
-			dstAudioValue.isValid = srcAudioValue.isValid;
-		}
-		
-		// prune out-of-date audio values
-		
-		for (auto i = dst.audioValues.begin(); i != dst.audioValues.end(); )
-		{
-			if (audioValues.count(i->first) == 0)
-				i = dst.audioValues.erase(i);
-			else
-				++i;
-		}
-	}
+	void captureInto(AudioValueHistorySet & dst) const;
 };
-
