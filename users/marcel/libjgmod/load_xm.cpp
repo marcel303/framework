@@ -49,6 +49,7 @@ namespace jgmod
 		int type;
 		int panning;
 		int relnote;
+		char name[22];
 
 		int vibrato_type;
 		int vibrato_spd;
@@ -471,7 +472,7 @@ namespace jgmod
 						tempwv->panning = jgmod_getc(f);
 						tempwv->relnote = (char)jgmod_getc(f);
 						jgmod_getc(f);
-						jgmod_skip (f, 22);
+						jgmod_fread(tempwv->name, 22, f);
 						loc += 40;
 
 						nextwav [j->no_sample + temp] = next;
@@ -611,6 +612,8 @@ namespace jgmod
 			si->repoff = tempwv->loop_start;
 			si->replen = tempwv->loop_start + tempwv->loop_lenght;
 			si->loop = tempwv->type & 7;
+			
+			memcpy(si->name, tempwv->name, sizeof(tempwv->name));
 			
 			si->vibrato_type = tempwv->vibrato_type;
 			si->vibrato_spd = tempwv->vibrato_spd;

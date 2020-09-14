@@ -12,9 +12,6 @@
  *  The player. Just to demonstrate how JGMOD sounds.
  *  Also used by me for testing MODs. */
 
-// todo : load sample and instrument names
-// todo : check mod, xm, s3m loaders for file seeks that skip bytes and reference vs file formats. perhaps something interesthing is skipped?
-
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
 #include "audiooutput/AudioOutput_PortAudio.h"

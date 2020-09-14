@@ -243,7 +243,7 @@ namespace jgmod
 			{
 			si = j->si + index;
 
-			jgmod_skip (f, 22);
+			jgmod_fread(si->name, 22, f);
 			si->lenght = jgmod_mgetw (f);
 			si->c2spd = jgmod_getc(f);   //get finetune and change to c2spd
 			si->volume = jgmod_getc(f);
