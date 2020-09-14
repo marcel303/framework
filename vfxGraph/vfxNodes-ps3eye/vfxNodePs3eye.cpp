@@ -33,8 +33,6 @@
 
 // todo : add mutex and copy captured frame data
 
-// todo : change from RGB8 texture format to RGBA8
-
 using namespace ps3eye;
 
 VFX_ENUM_TYPE(ps3eyeResolution)
@@ -195,7 +193,7 @@ void VfxNodePs3eye::tick(const float dt)
 				desiredSy,
 				desiredFramerate,
 				enableColor
-				? PS3EYECam::EOutputFormat::RGB
+				? PS3EYECam::EOutputFormat::RGBA
 				: PS3EYECam::EOutputFormat::Gray);
 
 			if (result == false)
@@ -207,7 +205,7 @@ void VfxNodePs3eye::tick(const float dt)
 				const int sx = ps3eye->getWidth();
 				const int sy = ps3eye->getHeight();
 				
-				const int numBytes = sx * sy * (enableColor ? 3 : 1);
+				const int numBytes = sx * sy * (enableColor ? 4 : 1);
 				
 				Assert(frameData == nullptr);
 				frameData = new uint8_t[numBytes];
@@ -236,7 +234,7 @@ void VfxNodePs3eye::tick(const float dt)
 			{
 				vfxGpuTimingBlock(VfxNodePs3eye);
 				
-				const GX_TEXTURE_FORMAT format = enableColor ? GX_RGB8_UNORM : GX_R8_UNORM;
+				const GX_TEXTURE_FORMAT format = enableColor ? GX_RGBA8_UNORM : GX_R8_UNORM;
 
 				if (texture.isChanged(sx, sy, format))
 				{
@@ -252,15 +250,16 @@ void VfxNodePs3eye::tick(const float dt)
 			
 			if (enableColor)
 			{
-				imageCpuData.allocOnSizeChange(sx, sy, 3);
+				imageCpuData.allocOnSizeChange(sx, sy, 4);
 				imageCpuOutput = imageCpuData.image;
 				
-				VfxImageCpu::deinterleave3(
+				VfxImageCpu::deinterleave4(
 					frameData,
-					sx, sy, 4, sx * 3,
+					sx, sy, 4, sx * 4,
 					imageCpuOutput.channel[0],
 					imageCpuOutput.channel[1],
-					imageCpuOutput.channel[2]);
+					imageCpuOutput.channel[2],
+					imageCpuOutput.channel[3]);
 			}
 			else
 			{
