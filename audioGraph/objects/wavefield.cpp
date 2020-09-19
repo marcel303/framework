@@ -28,6 +28,7 @@
 #include "Noise.h"
 #include "wavefield.h"
 #include <algorithm>
+#include <assert.h>
 #include <cmath>
 #include <string.h>
 
