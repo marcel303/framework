@@ -384,14 +384,14 @@ int main(int argc, char * argv[])
 			
 			// generate audio signal
 			
-			memcpy(overlapBuffer, overlapBuffer + AUDIO_UPDATE_SIZE, (AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE) * sizeof(float));
+			memcpy(overlapBuffer, overlapBuffer + (AUDIO_BUFFER_SIZE/2), (AUDIO_BUFFER_SIZE/2) * sizeof(float));
 			
-			float * __restrict samples = overlapBuffer + AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
+			float * __restrict samples = overlapBuffer + (AUDIO_BUFFER_SIZE/2);
 			
 			float oscillatorPhaseStep = 1.f / 50.f;
 			const float twoPi = float(M_PI) * 2.f;
 			
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			for (int i = 0; i < AUDIO_BUFFER_SIZE/2; ++i)
 			{
 				samples[i] = std::sin(oscillatorPhase * twoPi);
 				
