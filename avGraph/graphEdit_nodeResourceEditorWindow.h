@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "graph.h"
+#include "graphEdit.h"
 
 struct GraphEdit_NodeResourceEditorWindow
 {
