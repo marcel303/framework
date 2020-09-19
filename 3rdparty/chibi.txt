@@ -17,13 +17,13 @@ add jsoncpp
 add leapmotion
 add libfreenect2
 add libnfd
-add liboscpack
 add libusb-support
 add midifile
 add miniz
 add msdfgen
 add nanovg-support
 add oggvorbis
+add oscpack
 with_platform android add ovr-mobile
 add portaudio-support
 add PS3EYEDriver/framework
