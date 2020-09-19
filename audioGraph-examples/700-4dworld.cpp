@@ -1837,7 +1837,6 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 	
 	return result;
 }
-#endif
 #else
 	#include "audiooutput/AudioOutput_Native.h"
 #endif
