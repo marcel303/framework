@@ -53,6 +53,8 @@ VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 	: VfxNodeBase()
 	, texture()
 	, imageOutput()
+	, interleaveBuffer(nullptr)
+	, interleaveBufferSize(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Image, kVfxPlugType_ImageCpu);
@@ -65,6 +67,13 @@ VfxNodeImageCpuToGpu::VfxNodeImageCpuToGpu()
 VfxNodeImageCpuToGpu::~VfxNodeImageCpuToGpu()
 {
 	texture.free();
+	
+	imageOutput.texture = 0;
+	
+	delete [] interleaveBuffer;
+	interleaveBuffer = nullptr;
+	
+	interleaveBufferSize = 0;
 }
 
 void VfxNodeImageCpuToGpu::tick(const float dt)
@@ -84,12 +93,19 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		imageOutput.texture = 0;
 		
+		delete [] interleaveBuffer;
+		interleaveBuffer = nullptr;
+		
+		interleaveBufferSize = 0;
+		
 		return;
 	}
 	
 	//
 	
 	vfxGpuTimingBlock(VfxNodeImageCpuToGpu);
+	
+	bool interleaveBufferIsUsed = false;
 	
 	if (image->numChannels == 1)
 	{
@@ -101,7 +117,10 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
-		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch);
+		texture.upload(
+			image->channel[0].data,
+			image->alignment,
+			image->channel[0].pitch);
 	}
 	else if (channel == kChannel_RGB || channel == kChannel_RGBA)
 	{
@@ -111,10 +130,23 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 			texture.setSwizzle(0, 1, 2, 3);
 		}
 		
-		// todo : should we keep this temp buffer allocated ?
+		// note : we keep the interleave buffer around, to avoid constantly allocating and freeing memory
 		
-		const int tempPitch = ((image->sx * 4) + 15) & (~15);
-		uint8_t * temp = (uint8_t*)MemAlloc(image->sy * tempPitch, 16);
+		const int interleaveBufferPitch = ((image->sx * 4) + 15) & (~15);
+		const int interleaveBufferSizeNeeded = image->sy * interleaveBufferPitch;
+		
+		if (interleaveBufferSize != interleaveBufferSizeNeeded)
+		{
+			logDebug("reallocating image channel interleave buffer");
+			
+			delete [] interleaveBuffer;
+			interleaveBuffer = nullptr;
+			
+			interleaveBuffer = (uint8_t*)MemAlloc(interleaveBufferSizeNeeded, 16);
+			interleaveBufferSize = interleaveBufferSizeNeeded;
+		}
+		
+		interleaveBufferIsUsed = true;
 		
 		if (image->numChannels == 3)
 		{
@@ -132,7 +164,9 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				image->channel[1],
 				image->channel[2],
 				alphaChannel,
-				temp, tempPitch, image->sx, image->sy);
+				interleaveBuffer,
+				interleaveBufferPitch,
+				image->sx, image->sy);
 		}
 		else
 		{
@@ -141,13 +175,12 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				image->channel[1],
 				image->channel[2],
 				image->channel[3],
-				temp, tempPitch, image->sx, image->sy);
+				interleaveBuffer,
+				interleaveBufferPitch,
+				image->sx, image->sy);
 		}
 		
-		texture.upload(temp, 4, tempPitch / 4);
-		
-		MemFree(temp);
-		temp = nullptr;
+		texture.upload(interleaveBuffer, 16, interleaveBufferPitch / 4);
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
@@ -173,6 +206,14 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	else
 	{
 		Assert(false);
+	}
+	
+	if (interleaveBufferIsUsed == false)
+	{
+		delete [] interleaveBuffer;
+		interleaveBuffer = nullptr;
+		
+		interleaveBufferSize = 0;
 	}
 	
 	if (texture.isSamplingChange(filter, clamp))
