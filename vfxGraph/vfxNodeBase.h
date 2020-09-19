@@ -556,10 +556,13 @@ struct VfxNodeBase
 	void addOutput(const int index, VfxPlugType type, void * mem)
 	{
 		Assert(index >= 0 && index < (int)outputs.size());
-		Assert(type == kVfxPlugType_Trigger || mem != nullptr);
-		Assert(type != kVfxPlugType_Trigger || mem == nullptr);
+		Assert(type == kVfxPlugType_Trigger || mem != nullptr); // other type must have mem set to non-null
+		Assert(type != kVfxPlugType_Trigger || mem == nullptr); // trigger type must have mem set to null
 		if (index >= 0 && index < (int)outputs.size())
 		{
+			if (type == kVfxPlugType_Trigger)
+				mem = this;
+				
 			outputs[index].type = type;
 			outputs[index].mem = mem;
 		}

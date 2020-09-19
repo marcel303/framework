@@ -1348,6 +1348,13 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 	
 	for (int i = 0; i < numOutputs; ++i)
 	{
+		Assert( // other type must have mem set to non-null
+			dynamicOutputs[i].type == kVfxPlugType_Trigger ||
+			dynamicOutputs[i].mem != nullptr);
+		Assert( // trigger type must have mem set to null
+			dynamicOutputs[i].type != kVfxPlugType_Trigger ||
+			dynamicOutputs[i].mem == nullptr);
+		
 		outputs[numStaticOutputs + i] = VfxPlug();
 		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
 		outputs[numStaticOutputs + i].mem = dynamicOutputs[i].mem;
