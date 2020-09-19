@@ -63,6 +63,8 @@ struct VfxNodeOscSheet : VfxNodeBase
 		bool isVec3f = false;
 		bool isVec4f = false;
 		
+		bool isEnum = false;
+		
 		float defaultFloat = 0.f;
 		int defaultInt = 0;
 		bool defaultBool = false;
@@ -83,6 +85,11 @@ struct VfxNodeOscSheet : VfxNodeBase
 	
 	bool sync;
 	
+	int lastNumMessages;
+	int lastNumBundles;
+	int totalNumMessages;
+	int totalNumBundles;
+	
 	VfxNodeOscSheet();
 	
 	void updateOscSheet();
@@ -91,4 +98,6 @@ struct VfxNodeOscSheet : VfxNodeBase
 	virtual void init(const GraphNode & node) override;
 	
 	virtual void handleTrigger(const int socketIndex) override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

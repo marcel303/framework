@@ -69,8 +69,12 @@ VfxNodeOscSheet::VfxNodeOscSheet()
 	: VfxNodeBase()
 	, currentOscPrefix()
 	, currentOscSheet()
-	, currentGroupPrefix(false)
+	, currentGroupPrefix(true)
 	, sync(false)
+	, lastNumMessages(0)
+	, lastNumBundles(0)
+	, totalNumMessages(0)
+	, totalNumBundles(0)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_OscEndpoint, kVfxPlugType_String);
@@ -138,6 +142,8 @@ void VfxNodeOscSheet::updateOscSheet()
 				logWarning("missing 'Type' column");
 			if (defaultValue_index < 0)
 				logWarning("missing 'Default Value' column");
+			if (enumValues_index < 0)
+				logWarning("missing 'Enumeration Values' column");
 			
 			if (oscAddress_index >= 0 && type_index >= 0 && defaultValue_index >= 0)
 			{
@@ -179,6 +185,11 @@ void VfxNodeOscSheet::updateOscSheet()
 						std::vector<string> defaultValueElems;
 						splitString(defaultValue, defaultValueElems, ' ');
 						
+						if (defaultValueElems.size() != 2)
+						{
+							logWarning("'Default Value' column should contain two elements for OSC address %s", oscAddress);
+						}
+						
 						for (int i = 0; i < 2; ++i)
 						{
 							const char elem[2] = { 'x', 'y' };
@@ -205,6 +216,11 @@ void VfxNodeOscSheet::updateOscSheet()
 						std::vector<string> defaultValueElems;
 						splitString(defaultValue, defaultValueElems, ' ');
 						
+						if (defaultValueElems.size() != 3)
+						{
+							logWarning("'Default Value' column should contain three elements for OSC address %s", oscAddress);
+						}
+						
 						for (int i = 0; i < 3; ++i)
 						{
 							const char elem[3] = { 'x', 'y', 'z' };
@@ -230,6 +246,11 @@ void VfxNodeOscSheet::updateOscSheet()
 					{
 						std::vector<string> defaultValueElems;
 						splitString(defaultValue, defaultValueElems, ' ');
+						
+						if (defaultValueElems.size() != 4)
+						{
+							logWarning("'Default Value' column should contain four elements for OSC address %s", oscAddress);
+						}
 						
 						for (int i = 0; i < 4; ++i)
 						{
@@ -311,7 +332,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						
 						if (defaultValueText.empty())
 						{
-							logWarning("failed to find default enum value for enum name %s", defaultValue);
+							logWarning("failed to find default enum value for enum %s (%s)", oscAddress, defaultValue);
 						}
 						
 						input.defaultValue = defaultValueText;
@@ -320,7 +341,9 @@ void VfxNodeOscSheet::updateOscSheet()
 					 
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
+						inputInfo.isEnum = true;
 						inputInfo.defaultInt = Parse::Int32(defaultValueText);
+						inputInfo.lastInt = inputInfo.defaultInt;
 						inputInfos.push_back(inputInfo);
 					}
 					else
@@ -358,6 +381,9 @@ void VfxNodeOscSheet::tick(const float dt)
 	
 #define shouldSend(in_isChanged) ((sendMode == kSend_OnChange && (in_isChanged)) || (sendMode == kSend_OnTick) || sync)
 
+	int numMessages = 0;
+	int numBundles = 0;
+	
 	if (endpoint != nullptr)
 	{
 		char buffer[1 << 12];
@@ -385,6 +411,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				if (shouldSend(isChanged))
 				{
 					isEmpty = false;
+					numMessages++;
 					
 					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 					{
@@ -414,6 +441,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				if (shouldSend(isChanged))
 				{
 					isEmpty = false;
+					numMessages++;
 					
 					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 					{
@@ -447,6 +475,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				if (shouldSend(isChanged))
 				{
 					isEmpty = false;
+					numMessages++;
 					
 					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 					{
@@ -466,6 +495,37 @@ void VfxNodeOscSheet::tick(const float dt)
 				
 				i += 4;
 			}
+			else if (inputInfo.isEnum)
+			{
+				const int value = getInputInt(kInput_COUNT + i, inputInfo.defaultInt);
+				
+				if (shouldSend(value != inputInfo.lastInt))
+				{
+					const char * key = nullptr;
+					
+					for (auto & enumElem : input.enumElems)
+						if (Parse::Int32(enumElem.valueText) == value)
+							key = enumElem.name.c_str();
+					
+					if (key == nullptr)
+						logWarning("failed to find enum key for value %d", value);
+					else
+					{
+						isEmpty = false;
+						numMessages++;
+						
+						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+						{
+							stream << key;
+						}
+						stream << osc::EndMessage;
+					}
+					
+					inputInfo.lastInt = value;
+				}
+				
+				i += 1;
+			}
 			else
 			{
 				if (input.type == kVfxPlugType_Float)
@@ -475,6 +535,7 @@ void VfxNodeOscSheet::tick(const float dt)
 					if (shouldSend(value != inputInfo.lastFloat))
 					{
 						isEmpty = false;
+						numMessages++;
 						
 						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 						{
@@ -492,6 +553,7 @@ void VfxNodeOscSheet::tick(const float dt)
 					if (shouldSend(value != inputInfo.lastInt))
 					{
 						isEmpty = false;
+						numMessages++;
 						
 						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 						{
@@ -509,6 +571,7 @@ void VfxNodeOscSheet::tick(const float dt)
 					if (shouldSend(value != inputInfo.lastBool))
 					{
 						isEmpty = false;
+						numMessages++;
 						
 						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
 						{
@@ -534,6 +597,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				stream << osc::EndBundle;
 				
 				endpoint->send(stream.Data(), stream.Size());
+				numBundles++;
 				
 				stream = osc::OutboundPacketStream(buffer, sizeof(buffer));
 				
@@ -550,7 +614,22 @@ void VfxNodeOscSheet::tick(const float dt)
 			stream << osc::EndBundle;
 			
 			endpoint->send(stream.Data(), stream.Size());
+			numBundles++;
 		}
+	}
+	
+	if (numMessages > 0)
+	{
+		Assert(numBundles > 0);
+		
+		lastNumMessages = numMessages;
+		lastNumBundles = numBundles;
+		totalNumMessages += numMessages;
+		totalNumBundles += numBundles;
+	}
+	else
+	{
+		Assert(numBundles == 0);
 	}
 	
 #undef shouldSend
@@ -569,4 +648,15 @@ void VfxNodeOscSheet::handleTrigger(const int socketIndex)
 {
 	if (socketIndex == kInput_Sync)
 		sync = true;
+}
+
+void VfxNodeOscSheet::getDescription(VfxNodeDescription & d)
+{
+	d.add("last send details:");
+	d.add("   messages: %d", lastNumMessages);
+	d.add("   bundles: %d", lastNumBundles);
+	
+	d.add("total send details:");
+	d.add("   messages: %d", totalNumMessages);
+	d.add("   bundles: %d", totalNumBundles);
 }
