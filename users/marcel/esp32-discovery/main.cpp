@@ -26,6 +26,7 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 //
 
 #include "audiostream/AudioIO.h"
+#include "audiostream/AudioStreamVorbis.h"
 
 #include <stdio.h>
 #include <thread>
@@ -50,7 +51,6 @@ struct ThreadedTcpConnection
 	struct Options
 	{
 		bool noDelay = false;
-		bool useKeepalives = true;
 	};
 	
 	bool isActive = false;
@@ -98,18 +98,6 @@ struct ThreadedTcpConnection
 		
 		if (success)
 		{
-			// avoid signals being generated (which will crash the program if left unhandled)
-			const int sock_value = 1;
-			logInfo("setting SO_NOSIGPIPE to %d", sock_value);
-			if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (const char*)&sock_value, sizeof(sock_value)) == -1)
-			{
-				logError("failed to set SO_NOSIGPIPE socket option");
-				success = false;
-			}
-		}
-		
-		if (success)
-		{
 			// optionally disable nagle's algorithm and send out packets immediately on write
 			const int sock_value = options.noDelay;
 			logInfo("setting TCP_NODELAY to %d", sock_value);
@@ -122,23 +110,16 @@ struct ThreadedTcpConnection
 		
 		if (success)
 		{
-			const int sock_value = options.useKeepalives;
-			logInfo("setting TCP_KEEPALIVE to %d", sock_value);
-			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, (const char*)&sock_value, sizeof(sock_value)) == -1)
-			{
-				logError("failed to set TCP_KEEPALIVE socket option");
-				success = false;
-			}
-		}
-		
-		if (success)
-		{
 			addr.sin_family = AF_INET;
 			addr.sin_addr.s_addr = htonl(endpointName.address);
 			addr.sin_port = htons(endpointName.port);
 			
 			thread = std::thread([=]()
 			{
+				// avoid SIGPIPE signals from being generated. they will crash the program if left unhandled. we check error codes from send/recv and assume the user does so too, so we don't need signals to kill our app
+				
+				signal(SIGPIPE, SIG_IGN);
+				
 				logDebug("connecting socket to remote endpoint");
 			
 			// todo : connect from the main thread ?
@@ -193,18 +174,12 @@ struct ThreadedTcpConnection
 	
 	void waitForShutdown()
 	{
-	// todo : disable TCP_KEEPALIVE for audio streamers
 	// todo : set TCP_CONNECTIONTIMEOUT (initial connection timeout)
 	// todo : set TCP_RXT_CONNDROPTIME (drop/retransmission timeout)
 	// todo : set TCP_SENDMOREACKS for audio streamers (requires sender to hold less data)
 	
-	
 		if (sock != -1)
 		{
-			// todo : ensure the socket is blocking, so the recv call(s) below don't take up all of the cpu
-			//int sock_value = 1;
-			//setsockopt(sock, IPPROTO_TCP, ?, (const char*)&sock_value, sizeof(sock_value));
-		
 			// perform recv on the socket. a recv of zero bytes means the underlying TCP
 			// layer has completed the shutdown sequence
 			char c;
@@ -222,16 +197,19 @@ struct Test_TcpToI2S
 {
 	ThreadedTcpConnection tcpConnection;
 	
-	bool init(const IpEndpointName & endpointName)
+	std::atomic<float> volume;
+	
+	AudioStream_Vorbis audioStream;
+	
+	bool init(const IpEndpointName & endpointName, const char * filename)
 	{
+		audioStream.Open(filename, true);
+		
 		ThreadedTcpConnection::Options options;
 		options.noDelay = true;
 		
 		return tcpConnection.init(endpointName, options, [=]()
 		{
-			SoundData * soundData = nullptr;
-			int samplePosition = 0;
-		
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
@@ -246,50 +224,36 @@ struct Test_TcpToI2S
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
-
-			soundData = loadSound("loop01-short.ogg");
 			
 			while (tcpConnection.wantsToStop.load() == false)
 			{
-				// todo : detect if disconnected, and attempt to reconnect
-				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
-				
-			// todo : add explicit control to pause sending audio
-				while (keyboard.isDown(SDLK_SPACE))
-				{
-					SDL_Delay(10);
-				}
 				
 				// generate some audio data
 				
 				int16_t data[I2S_2CH_FRAME_COUNT][2];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
-				if (soundData == nullptr ||
-					soundData->sampleCount == 0 ||
-					soundData->channelCount != 2 ||
-					soundData->channelSize != 2)
+				if (audioStream.IsOpen_get() == false)
 				{
 					memset(data, 0, sizeof(data));
 				}
 				else
 				{
-					const int16_t * samples = (const int16_t*)soundData->sampleData;
-				
-				// todo : add explicit volume control
-					//const int volume = mouse.x * 256 / 800;
-					const int volume = 256;
+					AudioSample samples[I2S_2CH_FRAME_COUNT];
+					
+					for (int i = audioStream.Provide(I2S_2CH_FRAME_COUNT, samples); i < I2S_2CH_FRAME_COUNT; ++i)
+					{
+						samples[i].channel[0] = 0;
+						samples[i].channel[1] = 0;
+					}
+					
+					const int volume14 = volume.load() * (1 << 14);
 					
 					for (int i = 0; i < I2S_2CH_FRAME_COUNT; ++i)
 					{
-						data[i][0] = (samples[samplePosition * 2 + 0] * volume) >> 8;
-						data[i][1] = (samples[samplePosition * 2 + 1] * volume) >> 8;
-						
-						samplePosition++;
-						
-						if (samplePosition == soundData->sampleCount)
-							samplePosition = 0;
+						data[i][0] = (samples[i].channel[0] * volume14) >> 14;
+						data[i][1] = (samples[i].channel[1] * volume14) >> 14;
 					}
 				}
 				
@@ -299,17 +263,24 @@ struct Test_TcpToI2S
 					tcpConnection.wantsToStop = true;
 				}
 			}
-			
-			delete soundData;
-			soundData = nullptr;
 		});
 	}
 	
 	void shut()
 	{
+		logDebug("shutting down TCP connection");
+		
 		tcpConnection.beginShutdown();
 		
+		//
+		
+		audioStream.Close();
+		
+		//
+		
 		tcpConnection.waitForShutdown();
+		
+		logDebug("shutting down TCP connection [done]");
 	}
 };
 
@@ -319,16 +290,19 @@ struct Test_TcpToI2SQuad
 {
 	ThreadedTcpConnection tcpConnection;
 	
-	bool init(const IpEndpointName & endpointName)
+	std::atomic<float> volume;
+	
+	AudioStream_Vorbis audioStream;
+	
+	bool init(const IpEndpointName & endpointName, const char * filename)
 	{
+		audioStream.Open(filename, true);
+		
 		ThreadedTcpConnection::Options options;
 		options.noDelay = true;
 		
 		return tcpConnection.init(endpointName, options, [=]()
 		{
-			SoundData * soundData = nullptr;
-			int samplePosition = 0;
-			
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
@@ -344,51 +318,39 @@ struct Test_TcpToI2SQuad
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 			
-			soundData = loadSound("loop01-short.ogg");
-			
 			logDebug("frame size: %d", I2S_4CH_FRAME_COUNT * 4 * sizeof(int16_t));
 			
 			while (tcpConnection.wantsToStop.load() == false)
 			{
-				// todo : detect if disconnected, and attempt to reconnect
-				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
-				
-			// todo : add explicit control to pause sending audio
-				while (keyboard.isDown(SDLK_SPACE))
-				{
-					SDL_Delay(10);
-				}
 				
 				// generate some audio data
 				
 				int16_t data[I2S_4CH_FRAME_COUNT][4];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
-				if (soundData == nullptr ||
-					soundData->sampleCount == 0 ||
-					soundData->channelCount != 2 ||
-					soundData->channelSize != 2)
+				if (audioStream.IsOpen_get() == false)
 				{
 					memset(data, 0, sizeof(data));
 				}
 				else
 				{
-					const int16_t * samples = (const int16_t*)soundData->sampleData;
+					AudioSample samples[I2S_4CH_FRAME_COUNT];
 					
-					const int volume = mouse.x * 256 / 800;
+					for (int i = audioStream.Provide(I2S_4CH_FRAME_COUNT, samples); i < I2S_4CH_FRAME_COUNT; ++i)
+					{
+						samples[i].channel[0] = 0;
+						samples[i].channel[1] = 0;
+					}
+					
+					const int volume14 = volume.load() * (1 << 14);
 					
 					for (int i = 0; i < I2S_4CH_FRAME_COUNT; ++i)
 					{
-						data[i][0] = (samples[samplePosition * 2 + 0] * volume) >> 8;
-						data[i][1] = (samples[samplePosition * 2 + 1] * volume) >> 8;
-						data[i][2] = (samples[samplePosition * 2 + 0] * volume) >> 8;
-						data[i][3] = (samples[samplePosition * 2 + 1] * volume) >> 8;
-						
-						samplePosition++;
-						
-						if (samplePosition == soundData->sampleCount)
-							samplePosition = 0;
+						data[i][0] = (samples[i].channel[0] * volume14) >> 14;
+						data[i][1] = (samples[i].channel[1] * volume14) >> 14;
+						data[i][2] = (samples[i].channel[0] * volume14) >> 14;
+						data[i][3] = (samples[i].channel[1] * volume14) >> 14;
 					}
 				}
 				
@@ -398,9 +360,6 @@ struct Test_TcpToI2SQuad
 					tcpConnection.wantsToStop = true;
 				}
 			}
-			
-			delete soundData;
-			soundData = nullptr;
 		});
 		
 		return true;
@@ -411,6 +370,12 @@ struct Test_TcpToI2SQuad
 		logDebug("shutting down TCP connection");
 		
 		tcpConnection.beginShutdown();
+		
+		//
+		
+		audioStream.Close();
+		
+		//
 		
 		tcpConnection.waitForShutdown();
 		
@@ -424,20 +389,19 @@ struct Test_TcpToI2SMono8
 {
 	ThreadedTcpConnection tcpConnection;
 	
-	Test_TcpToI2SMono8()
-	{
-	}
+	std::atomic<float> volume;
 	
-	bool init(const IpEndpointName & endpointName)
+	AudioStream_Vorbis audioStream;
+	
+	bool init(const IpEndpointName & endpointName, const char * filename)
 	{
+		audioStream.Open(filename, true);
+		
 		ThreadedTcpConnection::Options options;
 		options.noDelay = true;
 		
 		return tcpConnection.init(endpointName, options, [=]()
 		{
-			SoundData * soundData = nullptr;
-			int samplePosition = 0;
-			
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
@@ -453,59 +417,48 @@ struct Test_TcpToI2SMono8
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
-			soundData = loadSound("loop01-short.ogg");
-			
 			logDebug("frame size: %d", I2S_1CH_8_FRAME_COUNT * sizeof(int8_t));
 			
 			while (tcpConnection.wantsToStop.load() == false)
 			{
-				// todo : detect if disconnected, and attempt to reconnect
-				// todo : avoid high CPU on disconnect
 				// todo : perform disconnection test
-				
-			// todo : add explicit control to pause sending audio
-				while (keyboard.isDown(SDLK_SPACE))
-				{
-					SDL_Delay(10);
-				}
 				
 				// generate some audio data
 				
 				int8_t data[I2S_1CH_8_FRAME_COUNT];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
-				if (soundData->sampleCount == 0 ||
-					soundData->channelCount != 2 ||
-					soundData->channelSize != 2)
+				if (audioStream.IsOpen_get() == false)
 				{
 					memset(data, 0, sizeof(data));
 				}
 				else
 				{
-					const int16_t * samples = (const int16_t*)soundData->sampleData;
+					AudioSample samples[I2S_1CH_8_FRAME_COUNT];
 					
-					const int volume = mouse.x * 256 / 800;
+					for (int i = audioStream.Provide(I2S_1CH_8_FRAME_COUNT, samples); i < I2S_1CH_8_FRAME_COUNT; ++i)
+					{
+						samples[i].channel[0] = 0;
+						samples[i].channel[1] = 0;
+					}
+					
+					const int volume14 = volume.load() * (1 << 14);
 					
 					for (int i = 0; i < I2S_1CH_8_FRAME_COUNT; ++i)
 					{
 						const int value =
 							(
 								(
-									samples[samplePosition * 2 + 0] +
-									samples[samplePosition * 2 + 1]
-								) * volume
-							) >> (16 + 1);
+									samples[i].channel[0] +
+									samples[i].channel[1]
+								) * volume14
+							) >> (14 + 1);
 						
 						//Assert(value >= -128 && value <= +127);
 						
 						data[i] = value;
 						
 						//Assert(data[i] == value);
-						
-						samplePosition++;
-						
-						if (samplePosition == soundData->sampleCount)
-							samplePosition = 0;
 					}
 				}
 				
@@ -515,9 +468,6 @@ struct Test_TcpToI2SMono8
 					tcpConnection.wantsToStop = true;
 				}
 			}
-			
-			delete soundData;
-			soundData = nullptr;
 		});
 		
 		return true;
@@ -528,6 +478,12 @@ struct Test_TcpToI2SMono8
 		logDebug("shutting down TCP connection");
 		
 		tcpConnection.beginShutdown();
+		
+		//
+		
+		audioStream.Close();
+		
+		//
 		
 		tcpConnection.waitForShutdown();
 		
@@ -944,7 +900,7 @@ static void testDummyTcpReceiver()
 #if 1
 	Test_TcpToI2S tcpToI2S;
 	
-	tcpToI2S.init(IpEndpointName("127.0.0.1", 4000));
+	tcpToI2S.init(IpEndpointName("127.0.0.1", 4000), "loop01-short.ogg");
 	
 	sleep(3);
 	
@@ -1062,9 +1018,12 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SQuad.init(IpEndpointName(record.endpointName.address, I2S_4CH_PORT));
+						nodeState.test_tcpToI2SQuad.init(IpEndpointName(record.endpointName.address, I2S_4CH_PORT), "loop01-short.ogg");
 					}
 				}
+				
+				const float volume = mouse.x / 800.f;
+				nodeState.test_tcpToI2SQuad.volume.store(volume);
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2S)
 			{
@@ -1080,9 +1039,12 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2S.init(IpEndpointName(record.endpointName.address, I2S_2CH_PORT));
+						nodeState.test_tcpToI2S.init(IpEndpointName(record.endpointName.address, I2S_2CH_PORT), "loop01-short.ogg");
 					}
 				}
+				
+				const float volume = mouse.x / 800.f;
+				nodeState.test_tcpToI2S.volume.store(volume);
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2SMono8)
 			{
@@ -1098,9 +1060,12 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SMono8.init(IpEndpointName(record.endpointName.address, I2S_1CH_8_PORT));
+						nodeState.test_tcpToI2SMono8.init(IpEndpointName(record.endpointName.address, I2S_1CH_8_PORT), "loop01-short.ogg");
 					}
 				}
+				
+				const float volume = mouse.x / 800.f;
+				nodeState.test_tcpToI2SMono8.volume.store(volume);
 			}
 		
 			// send some artnet data to discovered nodes
