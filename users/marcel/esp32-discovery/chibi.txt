@@ -2,6 +2,7 @@ library nodeDiscovery
 	depend_library libgg
 	depend_library liboscpack
 	add_files nodeDiscovery.cpp nodeDiscovery.h
+	add_files dummyTcpServer.cpp dummyTcpServer.h
 	header_path . expose
 
 app marcel-esp32-discovery

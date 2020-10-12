@@ -107,7 +107,7 @@ void NodeDiscoveryProcess::beginThread()
 	
 	mutex = new std::mutex();
 	
-	thread = new std::thread(threadMain, this); // todo : set thread name to "ESP32 Discovery Process"
+	thread = new std::thread(threadMain, this); // todo : set thread name to "Node Discovery Process"
 }
 
 void NodeDiscoveryProcess::endThread()
@@ -193,7 +193,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	if (existingRecord == nullptr)
 	{
-		LOG_DBG("found a new node! id=%" PRIx64, discoveryPacket->id);
+		LOG_DBG("found a new node! id=%016" PRIx64, discoveryPacket->id);
 		
 		lock();
 		{

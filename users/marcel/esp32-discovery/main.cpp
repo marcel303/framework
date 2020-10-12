@@ -21,6 +21,8 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 #include "nodeDiscovery.h"
 
+#include "dummyTcpServer.h"
+
 //
 
 #include "audiostream/AudioIO.h"
@@ -40,90 +42,214 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #undef GetObject // define in Windows.h..
 
 #if !defined(WINDOWS)
-	#define closesocket close
+	#define closesocket close // todo : remove once all code moved
 #endif
 
-struct Test_TcpToI2S
+struct ThreadedTcpConnection
 {
+	struct Options
+	{
+		bool noDelay = false;
+		bool useKeepalives = true;
+	};
+	
 	bool isActive = false;
 	
 	std::atomic<bool> wantsToStop;
 	
 	std::thread thread;
 	
-	Test_TcpToI2S()
+	int sock = -1;
+	
+	ThreadedTcpConnection()
 		: wantsToStop(false)
 	{
 	}
 	
-	bool init(const uint32_t ipAddress, const uint16_t tcpPort)
+	bool init(
+		const IpEndpointName & endpointName,
+		const Options & options,
+		const std::function<void()> threadFunction)
 	{
 		Assert(isActive == false);
 		
 		if (isActive)
 		{
-			shut();
+			beginShutdown();
+			
+			waitForShutdown();
 		}
+		
+		//
+		
+		bool success = true;
 		
 		isActive = true;
 		
-		thread = std::thread([=]()
+		struct sockaddr_in addr;
+	
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+	
+		if (sock == -1)
 		{
-			struct sockaddr_in addr;
-			int sock = 0;
-			int sock_value = 0;
+			logError("failed opening socket");
+			success = false;
+		}
+		
+		if (success)
+		{
+			// avoid signals being generated (which will crash the program if left unhandled)
+			const int sock_value = 1;
+			logInfo("setting SO_NOSIGPIPE to %d", sock_value);
+			if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, (const char*)&sock_value, sizeof(sock_value)) == -1)
+			{
+				logError("failed to set SO_NOSIGPIPE socket option");
+				success = false;
+			}
+		}
+		
+		if (success)
+		{
+			// optionally disable nagle's algorithm and send out packets immediately on write
+			const int sock_value = options.noDelay;
+			logInfo("setting TCP_NODELAY to %d", sock_value);
+			if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value)) == -1)
+			{
+				logError("failed to set TCP_NODELAY socket option");
+				success = false;
+			}
+		}
+		
+		if (success)
+		{
+			const int sock_value = options.useKeepalives;
+			logInfo("setting TCP_KEEPALIVE to %d", sock_value);
+			if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, (const char*)&sock_value, sizeof(sock_value)) == -1)
+			{
+				logError("failed to set TCP_KEEPALIVE socket option");
+				success = false;
+			}
+		}
+		
+		if (success)
+		{
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(endpointName.address);
+			addr.sin_port = htons(endpointName.port);
+			
+			thread = std::thread([=]()
+			{
+				logDebug("connecting socket to remote endpoint");
+			
+			// todo : connect from the main thread ?
+				if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+				{
+					logError("failed to connect socket");
+					
+					closesocket(sock);
+					sock = -1;
+				}
+				else
+				{
+					logDebug("connected to remote endpoint!");
+					
+					logDebug("invoking thread function");
+					
+					threadFunction();
+					
+					logDebug("begin graceful shutdown TCP layer");
+					
+					if (shutdown(sock, SHUT_WR) == -1)
+					{
+						logError("failed to shutdown socket. closing socket NOW");
+					
+						// close the socket
+						closesocket(sock);
+						sock = -1;
+					}
+				}
+			});
+		}
+		
+		return success;
+	}
+	
+	void beginShutdown()
+	{
+		if (isActive)
+		{
+			wantsToStop = true;
+			
+		// todo : signal socket so recv is interrupted
+		// fixme : socket is created on another thread. if we want to signal: we need a mutex. or create/close the socket on the main thread
+			
+			thread.join();
+			
+			wantsToStop = false;
+			
+			isActive = false;
+		}
+	}
+	
+	void waitForShutdown()
+	{
+	// todo : disable TCP_KEEPALIVE for audio streamers
+	// todo : set TCP_CONNECTIONTIMEOUT (initial connection timeout)
+	// todo : set TCP_RXT_CONNDROPTIME (drop/retransmission timeout)
+	// todo : set TCP_SENDMOREACKS for audio streamers (requires sender to hold less data)
+	
+	
+		if (sock != -1)
+		{
+			// todo : ensure the socket is blocking, so the recv call(s) below don't take up all of the cpu
+			//int sock_value = 1;
+			//setsockopt(sock, IPPROTO_TCP, ?, (const char*)&sock_value, sizeof(sock_value));
+		
+			// perform recv on the socket. a recv of zero bytes means the underlying TCP
+			// layer has completed the shutdown sequence
+			char c;
+			while (recv(sock, &c, 1, 0) != 0)
+				sleep(0);
+			
+			// close the socket
+			closesocket(sock);
+			sock = -1;
+		}
+	}
+};
+
+struct Test_TcpToI2S
+{
+	ThreadedTcpConnection tcpConnection;
+	
+	bool init(const IpEndpointName & endpointName)
+	{
+		ThreadedTcpConnection::Options options;
+		options.noDelay = true;
+		
+		return tcpConnection.init(endpointName, options, [=]()
+		{
 			SoundData * soundData = nullptr;
 			int samplePosition = 0;
-			
-			//
-			
-			sock = socket(AF_INET, SOCK_STREAM, 0);
-			
-			if (sock == -1)
-			{
-				logError("failed opening socket");
-				goto error;
-			}
-			
-			// disable nagle's algorithm and send out packets immediately on write
-			
-		#if 1
-			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
-		#endif
 		
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
 			// to keep latency down however, so we reduce the buffer size here
 			
-			sock_value =
+			const int sock_value =
 				I2S_2CH_BUFFER_COUNT  * /* N times buffered */
 				I2S_2CH_FRAME_COUNT   * /* frame count */
 				I2S_2CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
+ 			setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
-		
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(ipAddress);
-			addr.sin_port = htons(tcpPort);
 
-			logDebug("connecting socket to remote endpoint");
-			
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-			{
-				logError("failed to connect socket");
-				goto error;
-			}
-			
-			logError("connected to remote endpoint!");
-			
 			soundData = loadSound("loop01-short.ogg");
 			
-			while (wantsToStop.load() == false)
+			while (tcpConnection.wantsToStop.load() == false)
 			{
 				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
@@ -140,7 +266,8 @@ struct Test_TcpToI2S
 				int16_t data[I2S_2CH_FRAME_COUNT][2];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
-				if (soundData->sampleCount == 0 ||
+				if (soundData == nullptr ||
+					soundData->sampleCount == 0 ||
 					soundData->channelCount != 2 ||
 					soundData->channelSize != 2)
 				{
@@ -149,8 +276,10 @@ struct Test_TcpToI2S
 				else
 				{
 					const int16_t * samples = (const int16_t*)soundData->sampleData;
-					
-					const int volume = mouse.x * 256 / 800;
+				
+				// todo : add explicit volume control
+					//const int volume = mouse.x * 256 / 800;
+					const int volume = 256;
 					
 					for (int i = 0; i < I2S_2CH_FRAME_COUNT; ++i)
 					{
@@ -164,35 +293,23 @@ struct Test_TcpToI2S
 					}
 				}
 				
-				send(sock, (const char*)data, sizeof(data), 0);
+				if (send(tcpConnection.sock, (const char*)data, sizeof(data), 0) < (ssize_t)sizeof(data))
+				{
+					logError("failed to send data");
+					tcpConnection.wantsToStop = true;
+				}
 			}
 			
-		error:
 			delete soundData;
 			soundData = nullptr;
-			
-			if (sock != -1)
-			{
-				closesocket(sock);
-				sock = -1;
-			}
 		});
-		
-		return true;
 	}
 	
 	void shut()
 	{
-		if (isActive)
-		{
-			wantsToStop = true;
-			
-			thread.join();
-			
-			wantsToStop = false;
-			
-			isActive = false;
-		}
+		tcpConnection.beginShutdown();
+		
+		tcpConnection.waitForShutdown();
 	}
 };
 
@@ -200,87 +317,38 @@ struct Test_TcpToI2S
 
 struct Test_TcpToI2SQuad
 {
-	bool isActive = false;
+	ThreadedTcpConnection tcpConnection;
 	
-	std::atomic<bool> wantsToStop;
-	
-	std::thread thread;
-	
-	Test_TcpToI2SQuad()
-		: wantsToStop(false)
+	bool init(const IpEndpointName & endpointName)
 	{
-	}
-	
-	bool init(const uint32_t ipAddress, const uint16_t tcpPort)
-	{
-		Assert(isActive == false);
+		ThreadedTcpConnection::Options options;
+		options.noDelay = true;
 		
-		if (isActive)
+		return tcpConnection.init(endpointName, options, [=]()
 		{
-			shut();
-		}
-		
-		isActive = true;
-		
-		thread = std::thread([=]()
-		{
-			struct sockaddr_in addr;
-			int sock = 0;
-			int sock_value = 0;
 			SoundData * soundData = nullptr;
 			int samplePosition = 0;
 			
-			//
-			
-			sock = socket(AF_INET, SOCK_STREAM, 0);
-			
-			if (sock == -1)
-			{
-				logError("failed opening socket");
-				goto error;
-			}
-			
-			// disable nagle's algorithm and send out packets immediately on write
-			
-		#if 1
-			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
-		#endif
-		
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
 			// to keep latency down however, so we reduce the buffer size here
 			
-			sock_value =
+			const int sock_value =
 				I2S_4CH_BUFFER_COUNT  * /* N times buffered */
 				I2S_4CH_FRAME_COUNT   * /* frame count */
 				I2S_4CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
+ 			setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
-		
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(ipAddress);
-			addr.sin_port = htons(tcpPort);
-
-			logDebug("connecting socket to remote endpoint");
-			
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-			{
-				logError("failed to connect socket");
-				goto error;
-			}
-			
-			logError("connected to remote endpoint!");
 			
 			soundData = loadSound("loop01-short.ogg");
 			
 			logDebug("frame size: %d", I2S_4CH_FRAME_COUNT * 4 * sizeof(int16_t));
 			
-			while (wantsToStop.load() == false)
+			while (tcpConnection.wantsToStop.load() == false)
 			{
 				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
@@ -297,7 +365,8 @@ struct Test_TcpToI2SQuad
 				int16_t data[I2S_4CH_FRAME_COUNT][4];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
-				if (soundData->sampleCount == 0 ||
+				if (soundData == nullptr ||
+					soundData->sampleCount == 0 ||
 					soundData->channelCount != 2 ||
 					soundData->channelSize != 2)
 				{
@@ -323,18 +392,15 @@ struct Test_TcpToI2SQuad
 					}
 				}
 				
-				send(sock, (const char*)data, sizeof(data), 0);
+				if (send(tcpConnection.sock, (const char*)data, sizeof(data), 0) < (ssize_t)sizeof(data))
+				{
+					logError("failed to send data");
+					tcpConnection.wantsToStop = true;
+				}
 			}
 			
-		error:
 			delete soundData;
 			soundData = nullptr;
-			
-			if (sock != -1)
-			{
-				closesocket(sock);
-				sock = -1;
-			}
 		});
 		
 		return true;
@@ -342,16 +408,13 @@ struct Test_TcpToI2SQuad
 	
 	void shut()
 	{
-		if (isActive)
-		{
-			wantsToStop = true;
-			{
-				thread.join();
-			}
-			wantsToStop = false;
-			
-			isActive = false;
-		}
+		logDebug("shutting down TCP connection");
+		
+		tcpConnection.beginShutdown();
+		
+		tcpConnection.waitForShutdown();
+		
+		logDebug("shutting down TCP connection [done]");
 	}
 };
 
@@ -359,87 +422,42 @@ struct Test_TcpToI2SQuad
 
 struct Test_TcpToI2SMono8
 {
-	bool isActive = false;
-	
-	std::atomic<bool> wantsToStop;
-	
-	std::thread thread;
+	ThreadedTcpConnection tcpConnection;
 	
 	Test_TcpToI2SMono8()
-		: wantsToStop(false)
 	{
 	}
 	
-	bool init(const uint32_t ipAddress, const uint16_t tcpPort)
+	bool init(const IpEndpointName & endpointName)
 	{
-		Assert(isActive == false);
+		ThreadedTcpConnection::Options options;
+		options.noDelay = true;
 		
-		if (isActive)
+		return tcpConnection.init(endpointName, options, [=]()
 		{
-			shut();
-		}
-		
-		isActive = true;
-		
-		thread = std::thread([=]()
-		{
-			struct sockaddr_in addr;
-			int sock = 0;
-			int sock_value = 0;
 			SoundData * soundData = nullptr;
 			int samplePosition = 0;
 			
-			//
-			
-			sock = socket(AF_INET, SOCK_STREAM, 0);
-			
-			if (sock == -1)
-			{
-				logError("failed opening socket");
-				goto error;
-			}
-			
-			// disable nagle's algorithm and send out packets immediately on write
-			
-		#if 1
-			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
-		#endif
-		
 		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
 			// to keep latency down however, so we reduce the buffer size here
 			
-			sock_value =
+			const int sock_value =
 				I2S_1CH_8_BUFFER_COUNT  * /* N times buffered */
 				I2S_1CH_8_FRAME_COUNT   * /* frame count */
 				I2S_1CH_8_CHANNEL_COUNT * /* stereo */
 				sizeof(int8_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
+ 			setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
-			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = htonl(ipAddress);
-			addr.sin_port = htons(tcpPort);
-
-			logDebug("connecting socket to remote endpoint");
-			
-			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
-			{
-				logError("failed to connect socket");
-				goto error;
-			}
-			
-			logError("connected to remote endpoint!");
-			
 			soundData = loadSound("loop01-short.ogg");
 			
 			logDebug("frame size: %d", I2S_1CH_8_FRAME_COUNT * sizeof(int8_t));
 			
-			while (wantsToStop.load() == false)
+			while (tcpConnection.wantsToStop.load() == false)
 			{
 				// todo : detect if disconnected, and attempt to reconnect
 				// todo : avoid high CPU on disconnect
@@ -491,18 +509,15 @@ struct Test_TcpToI2SMono8
 					}
 				}
 				
-				send(sock, (const char*)data, sizeof(data), 0);
+				if (send(tcpConnection.sock, (const char*)data, sizeof(data), 0) < (ssize_t)sizeof(data))
+				{
+					logError("failed to send data");
+					tcpConnection.wantsToStop = true;
+				}
 			}
 			
-		error:
 			delete soundData;
 			soundData = nullptr;
-			
-			if (sock != -1)
-			{
-				closesocket(sock);
-				sock = -1;
-			}
 		});
 		
 		return true;
@@ -510,16 +525,13 @@ struct Test_TcpToI2SMono8
 	
 	void shut()
 	{
-		if (isActive)
-		{
-			wantsToStop = true;
-			{
-				thread.join();
-			}
-			wantsToStop = false;
-			
-			isActive = false;
-		}
+		logDebug("shutting down TCP connection");
+		
+		tcpConnection.beginShutdown();
+		
+		tcpConnection.waitForShutdown();
+		
+		logDebug("shutting down TCP connection [done]");
 	}
 };
 
@@ -920,9 +932,85 @@ static NodeState & findOrCreateNodeState(const uint64_t id)
 	return nodeState;
 }
 
+#include "Log.h"
+
+static void testDummyTcpReceiver()
+{
+	Test_DummyTcpReceiver tcpReceiver;
+	
+	IpEndpointName endpointName(IpEndpointName::ANY_ADDRESS, 4000);
+	tcpReceiver.init(endpointName);
+	
+#if 1
+	Test_TcpToI2S tcpToI2S;
+	
+	tcpToI2S.init(IpEndpointName("127.0.0.1", 4000));
+	
+	sleep(3);
+	
+	logInfo("shutting down dummy TCP receiver");
+	
+	tcpReceiver.beginShutdown();
+	
+	logInfo("shutting down I2S streamer");
+	
+	tcpToI2S.shut();
+	//tcpConnection.beginShutdown();
+	
+	logInfo("waiting for I2S streamer shutdown to complete");
+	
+	// todo : add shutdown methods to I2S streamer : tcpConnection.waitForShutdown();
+	
+	logInfo("waiting for dummy TCP receiver shutdown to complete");
+	
+	tcpReceiver.waitForShutdown();
+#else
+	ThreadedTcpConnection tcpConnection;
+	
+	ThreadedTcpConnection::Options options;
+	options.noDelay = true;
+	tcpConnection.init(IpEndpointName("127.0.0.1", 4000), options, [&]()
+		{
+			for (int i = 0; i < 26; ++i)
+			{
+				char c = 'a' + i;
+			
+				if (send(tcpConnection.sock, &c, 1, 0) < 1)
+				{
+					logError("failed to send data");
+					tcpConnection.wantsToStop = true;
+				}
+			}
+		});
+	
+	sleep(1);
+	
+	logInfo("shutting down dummy TCP receiver");
+	
+	tcpReceiver.beginShutdown();
+	
+	logInfo("shutting down client connection");
+	
+	tcpConnection.beginShutdown();
+	
+	logInfo("waiting for connection shutdown to complete");
+	
+	tcpConnection.waitForShutdown();
+	
+	logInfo("waiting for dummy TCP receiver shutdown to complete");
+	
+	tcpReceiver.waitForShutdown();
+	
+	logInfo("dummy TCP receiver test completed");
+#endif
+}
+
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+	//testDummyTcpReceiver(); // todo : remove once done testing TCP connection refactor
+	//return 0;
 	
 	if (!framework.init(800, 600))
 		return -1;
@@ -974,7 +1062,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SQuad.init(record.endpointName.address, I2S_4CH_PORT);
+						nodeState.test_tcpToI2SQuad.init(IpEndpointName(record.endpointName.address, I2S_4CH_PORT));
 					}
 				}
 			}
@@ -992,7 +1080,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2S.init(record.endpointName.address, I2S_2CH_PORT);
+						nodeState.test_tcpToI2S.init(IpEndpointName(record.endpointName.address, I2S_2CH_PORT));
 					}
 				}
 			}
@@ -1010,7 +1098,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SMono8.init(record.endpointName.address, I2S_1CH_8_PORT);
+						nodeState.test_tcpToI2SMono8.init(IpEndpointName(record.endpointName.address, I2S_1CH_8_PORT));
 					}
 				}
 			}
@@ -1091,25 +1179,28 @@ int main(int argc, char * argv[])
 					
 					ImGui::TextColored(ImVec4(0, 255, 0, 255), "%s", endpointName);
 					ImGui::SameLine();
-					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%" PRIx64, record.id);
+					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%016" PRIx64, record.id);
 					ImGui::SameLine();
 					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%s", record.description);
 					ImGui::SameLine();
 					
-					if (ImGui::Button("Open webpage"))
+					if (record.capabilities & kNodeCapability_Webpage)
 					{
-						char command[128];
-						sprintf_s(command, sizeof(command), "open http://%s", endpointName);
-						if (system(command) != 0)
-							logDebug("failed to open webpage using shell command");
-					}
-					ImGui::SameLine();
+						if (ImGui::Button("Open webpage"))
+						{
+							char command[128];
+							sprintf_s(command, sizeof(command), "open http://%s", endpointName);
+							if (system(command) != 0)
+								logDebug("failed to open webpage using shell command");
+						}
+						ImGui::SameLine();
 					
-					if (ImGui::Button("Fetch json"))
-					{
-						nodeState.beginFetchParameterJson(endpointName);
+						if (ImGui::Button("Fetch json"))
+						{
+							nodeState.beginFetchParameterJson(endpointName);
+						}
+						ImGui::SameLine();
 					}
-					ImGui::SameLine();
 					
 					ImGui::PushStyleColor(ImGuiCol_Text, (uint32_t)ImColor(255, 255, 0));
 					{
@@ -1268,8 +1359,8 @@ int main(int argc, char * argv[])
 				x += 100;
 				
 				setColor(colorWhite);
-				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%" PRIx64, record.id);
-				x += 100;
+				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%016" PRIx64, record.id);
+				x += 130;
 				
 				setColor(colorWhite);
 				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%s", record.description);
@@ -1279,21 +1370,21 @@ int main(int argc, char * argv[])
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2DMX");
-					x += 100;
+					x += 80;
 				}
 				
 				if (record.capabilities & kNodeCapability_ArtnetToLedstrip)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2LED");
-					x += 100;
+					x += 80;
 				}
 				
 				if (record.capabilities & kNodeCapability_ArtnetToAnalogPin)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2Pin");
-					x += 100;
+					x += 80;
 				}
 				
 				if (record.capabilities & kNodeCapability_TcpToI2SMono8)
@@ -1317,9 +1408,9 @@ int main(int argc, char * argv[])
 					x += 100;
 				}
 				
-				if (nodeState.test_tcpToI2SMono8.isActive ||
-					nodeState.test_tcpToI2S.isActive ||
-					nodeState.test_tcpToI2SQuad.isActive)
+				if (nodeState.test_tcpToI2SMono8.tcpConnection.isActive ||
+					nodeState.test_tcpToI2S.tcpConnection.isActive ||
+					nodeState.test_tcpToI2SQuad.tcpConnection.isActive)
 				{
 					setColor(colorGreen);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "(Playing)");
