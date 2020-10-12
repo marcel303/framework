@@ -54,11 +54,11 @@ public:
 #define LOG_NA(level, text, ...)
 #endif
 
-#define LOG_ERR(text, ...) LOG(LogLevel_Error, text, __VA_ARGS__)
-#define LOG_WRN(text, ...) LOG(LogLevel_Warning, text, __VA_ARGS__)
-#define LOG_WRN(text, ...) LOG(LogLevel_Warning, text, __VA_ARGS__)
-#define LOG_INF(text, ...) LOG(LogLevel_Info, text, __VA_ARGS__)
-#define LOG_DBG(text, ...) LOG(LogLevel_Debug, text, __VA_ARGS__)
+#define LOG_ERR(text, ...) LOG(LogLevel_Error, text, ##__VA_ARGS__)
+#define LOG_WRN(text, ...) LOG(LogLevel_Warning, text, ##__VA_ARGS__)
+#define LOG_WRN(text, ...) LOG(LogLevel_Warning, text, ##__VA_ARGS__)
+#define LOG_INF(text, ...) LOG(LogLevel_Info, text, ##__VA_ARGS__)
+#define LOG_DBG(text, ...) LOG(LogLevel_Debug, text, ##__VA_ARGS__)
 
 class LogCtx
 {
