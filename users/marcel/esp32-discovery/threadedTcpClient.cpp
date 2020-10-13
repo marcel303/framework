@@ -3,6 +3,8 @@
 #include "Debugging.h"
 #include "Log.h"
 
+#include <signal.h>
+
 #if defined(WINDOWS)
 	#include <winsock2.h>
 #else

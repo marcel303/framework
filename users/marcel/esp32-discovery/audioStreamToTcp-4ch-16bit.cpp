@@ -1,97 +1,62 @@
 #include "audioStreamToTcp-4ch-16bit.h"
 
 #include "nodeDiscovery.h"
-
+#include "framework.h"
 #include "Log.h"
-
-#if defined(WINDOWS)
-	#include <winsock2.h>
-#else
-	#include <sys/socket.h>
-#endif
 
 bool Test_TcpToI2SQuad::init(const uint32_t ipAddress, const uint16_t tcpPort, const char * filename)
 {
 	audioStream.Open(filename, true);
-	
-	ThreadedTcpConnection::Options options;
-	options.noDelay = true;
-	
-	return tcpConnection.init(ipAddress, tcpPort, options, [=]()
-	{
-		// tell the TCP stack to use a specific buffer size. usually the TCP stack is
-		// configured to use a rather large buffer size to increase bandwidth. we want
-		// to keep latency down however, so we reduce the buffer size here
-		
-		const int sock_value =
-			I2S_4CH_BUFFER_COUNT  * /* N times buffered */
-			I2S_4CH_FRAME_COUNT   * /* frame count */
-			I2S_4CH_CHANNEL_COUNT * /* stereo */
-			sizeof(int16_t) /* sample size */;
-		setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 
-	// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
-		
-		LOG_DBG("frame size: %d", I2S_4CH_FRAME_COUNT * 4 * sizeof(int16_t));
-		
-		while (tcpConnection.wantsToStop.load() == false)
+	audioStreamToTcp.init(
+		ipAddress, tcpPort,
+		I2S_4CH_BUFFER_COUNT,
+		I2S_4CH_FRAME_COUNT,
+		I2S_4CH_CHANNEL_COUNT,
+		AudioStreamToTcp::kSampleFormat_S16,
+		[this](void * __restrict out_samples, const int numFrames, const int numChannels)
 		{
-			// todo : perform disconnection test
-			
 			// generate some audio data
-			
-			int16_t data[I2S_4CH_FRAME_COUNT][4];
 			
 			// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
 			if (audioStream.IsOpen_get() == false)
 			{
-				memset(data, 0, sizeof(data));
+				memset(out_samples, 0, numFrames * numChannels * sizeof(int16_t));
 			}
 			else
 			{
 				AudioSample samples[I2S_4CH_FRAME_COUNT];
 				
-				for (int i = audioStream.Provide(I2S_4CH_FRAME_COUNT, samples); i < I2S_4CH_FRAME_COUNT; ++i)
+				for (int i = audioStream.Provide(numFrames, samples); i < numFrames; ++i)
 				{
 					samples[i].channel[0] = 0;
 					samples[i].channel[1] = 0;
 				}
 				
-				const int volume14 = volume.load() * (1 << 14);
+				int16_t * __restrict out_samples16 = (int16_t*)out_samples;
 				
-				for (int i = 0; i < I2S_4CH_FRAME_COUNT; ++i)
+				for (int i = 0; i < numFrames; ++i)
 				{
-					data[i][0] = (samples[i].channel[0] * volume14) >> 14;
-					data[i][1] = (samples[i].channel[1] * volume14) >> 14;
-					data[i][2] = (samples[i].channel[0] * volume14) >> 14;
-					data[i][3] = (samples[i].channel[1] * volume14) >> 14;
+					out_samples16[i * 4 + 0] = samples[i].channel[0];
+					out_samples16[i * 4 + 1] = samples[i].channel[1];
+					out_samples16[i * 4 + 2] = samples[i].channel[0];
+					out_samples16[i * 4 + 3] = samples[i].channel[1];
 				}
 			}
-			
-			if (send(tcpConnection.sock, (const char*)data, sizeof(data), 0) < (ssize_t)sizeof(data))
-			{
-				LOG_ERR("failed to send data");
-				tcpConnection.wantsToStop = true;
-			}
-		}
-	});
+		});
 	
 	return true;
 }
 
 void Test_TcpToI2SQuad::shut()
 {
-	LOG_DBG("shutting down TCP connection");
-	
-	tcpConnection.beginShutdown();
-	
-	//
+	audioStreamToTcp.beginShutdown();
+	audioStreamToTcp.waitForShutdown();
 	
 	audioStream.Close();
-	
-	//
-	
-	tcpConnection.waitForShutdown();
-	
-	LOG_DBG("shutting down TCP connection [done]");
+}
+
+void Test_TcpToI2SQuad::tick()
+{
+	audioStreamToTcp.volume.store(mouse.x / 800.f);
 }

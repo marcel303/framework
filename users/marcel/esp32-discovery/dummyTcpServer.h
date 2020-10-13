@@ -6,7 +6,7 @@
 #include <vector>
 
 // a TCP data receiver that will just receive data, discard it, and nothing else
-struct Test_DummyTcpReceiver
+struct Test_DummyTcpServer
 {
 	struct Client
 	{

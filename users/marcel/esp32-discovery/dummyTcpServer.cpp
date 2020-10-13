@@ -18,7 +18,7 @@
 	#define closesocket close
 #endif
 
-void Test_DummyTcpReceiver::Client::run(const int in_sock)
+void Test_DummyTcpServer::Client::run(const int in_sock)
 {
 	sock = in_sock;
 	
@@ -45,7 +45,7 @@ void Test_DummyTcpReceiver::Client::run(const int in_sock)
 	});
 }
 
-void Test_DummyTcpReceiver::Client::beginShutdown()
+void Test_DummyTcpServer::Client::beginShutdown()
 {
 	shutdown(sock, SHUT_RDWR);
 	
@@ -54,7 +54,7 @@ void Test_DummyTcpReceiver::Client::beginShutdown()
 	thread.join();
 }
 
-void Test_DummyTcpReceiver::Client::waitForShutdown()
+void Test_DummyTcpServer::Client::waitForShutdown()
 {
 	if (sock != -1)
 	{
@@ -69,7 +69,7 @@ void Test_DummyTcpReceiver::Client::waitForShutdown()
 
 //
 
-bool Test_DummyTcpReceiver::init(const IpEndpointName & endpointName)
+bool Test_DummyTcpServer::init(const IpEndpointName & endpointName)
 {
 	bool success = true;
 	
@@ -180,7 +180,7 @@ bool Test_DummyTcpReceiver::init(const IpEndpointName & endpointName)
 	return success;
 }
 
-void Test_DummyTcpReceiver::beginShutdown()
+void Test_DummyTcpServer::beginShutdown()
 {
 	closesocket(sock);
 	sock = -1;
@@ -195,7 +195,7 @@ void Test_DummyTcpReceiver::beginShutdown()
 	}
 }
 
-void Test_DummyTcpReceiver::waitForShutdown()
+void Test_DummyTcpServer::waitForShutdown()
 {
 	// wait for graceful TCP shutdown to complete for all clients
 	

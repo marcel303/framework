@@ -16,7 +16,7 @@
 #define I2S_2CH_PORT          6458
 
 #define I2S_4CH_FRAME_COUNT   128
-#define I2S_4CH_CHANNEL_COUNT 2
+#define I2S_4CH_CHANNEL_COUNT 4
 #define I2S_4CH_BUFFER_COUNT  2
 #define I2S_4CH_PORT          6459
 

@@ -6,6 +6,7 @@ library nodeDiscovery
 	header_path . expose
 
 app marcel-esp32-discovery
+	add_files audioStreamToTcp.cpp  audioStreamToTcp.h
 	add_files audioStreamToTcp-2ch-16bit.cpp audioStreamToTcp-2ch-16bit.h
 	add_files audioStreamToTcp-4ch-16bit.cpp audioStreamToTcp-4ch-16bit.h
 	add_files audioStreamToTcp-1ch-8bit.cpp  audioStreamToTcp-1ch-8bit.h

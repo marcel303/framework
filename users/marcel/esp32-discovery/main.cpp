@@ -24,30 +24,8 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #include "audioStreamToTcp-2ch-16bit.h"
 #include "audioStreamToTcp-4ch-16bit.h"
 #include "audioStreamToTcp-1ch-8bit.h"
-#include "dummyTcpServer.h"
-#include "threadedTcpClient.h"
-#include <signal.h>
 
-//
-
-#include "audiostream/AudioIO.h"
-#include "audiostream/AudioStreamVorbis.h"
-
-#include <stdio.h>
-#include <thread>
-
-#if defined(WINDOWS)
-	#include <winsock2.h>
-
-	#undef GetObject // defined in Windows.h
-#else
-	#include <netinet/in.h>
-	#include <netinet/tcp.h>
-	#include <sys/socket.h>
-	#include <unistd.h>
-#endif
-
-//
+// -- NodeState
 
 #include <list>
 
@@ -444,25 +422,28 @@ static NodeState & findOrCreateNodeState(const uint64_t id)
 	return nodeState;
 }
 
-#include "Log.h"
+// -- testDummyTcpServer
 
-static void testDummyTcpReceiver()
+#include "dummyTcpServer.h"
+#include "threadedTcpClient.h"
+
+static void testDummyTcpServer()
 {
-	Test_DummyTcpReceiver tcpReceiver;
+	Test_DummyTcpServer tcpServer;
 	
 	IpEndpointName endpointName(IpEndpointName::ANY_ADDRESS, 4000);
-	tcpReceiver.init(endpointName);
+	tcpServer.init(endpointName);
 	
 #if 1
 	Test_TcpToI2S tcpToI2S;
 	
 	tcpToI2S.init(IpEndpointName("127.0.0.1", -1).address, 4000, "loop01-short.ogg");
 	
-	sleep(3);
+	SDL_Delay(3000);
 	
-	logInfo("shutting down dummy TCP receiver");
+	logInfo("shutting down dummy TCP server");
 	
-	tcpReceiver.beginShutdown();
+	tcpServer.beginShutdown();
 	
 	logInfo("shutting down I2S streamer");
 	
@@ -473,9 +454,9 @@ static void testDummyTcpReceiver()
 	
 	// todo : add shutdown methods to I2S streamer : tcpConnection.waitForShutdown();
 	
-	logInfo("waiting for dummy TCP receiver shutdown to complete");
+	logInfo("waiting for dummy TCP server shutdown to complete");
 	
-	tcpReceiver.waitForShutdown();
+	tcpServer.waitForShutdown();
 #else
 	ThreadedTcpConnection tcpConnection;
 	
@@ -497,9 +478,9 @@ static void testDummyTcpReceiver()
 	
 	sleep(1);
 	
-	logInfo("shutting down dummy TCP receiver");
+	logInfo("shutting down dummy TCP server");
 	
-	tcpReceiver.beginShutdown();
+	tcpServer.beginShutdown();
 	
 	logInfo("shutting down client connection");
 	
@@ -509,11 +490,11 @@ static void testDummyTcpReceiver()
 	
 	tcpConnection.waitForShutdown();
 	
-	logInfo("waiting for dummy TCP receiver shutdown to complete");
+	logInfo("waiting for dummy TCP server shutdown to complete");
 	
-	tcpReceiver.waitForShutdown();
+	tcpServer.waitForShutdown();
 	
-	logInfo("dummy TCP receiver test completed");
+	logInfo("dummy TCP server test completed");
 #endif
 }
 
@@ -521,7 +502,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	//testDummyTcpReceiver(); // todo : remove once done testing TCP connection refactor
+	//testDummyTcpServer(); // todo : remove once done testing TCP connection refactor
 	//return 0;
 	
 	if (!framework.init(800, 600))
@@ -578,8 +559,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				
-				const float volume = mouse.x / 800.f;
-				nodeState.test_tcpToI2SQuad.volume.store(volume);
+				nodeState.test_tcpToI2SQuad.tick();
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2S)
 			{
@@ -599,8 +579,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				
-				const float volume = mouse.x / 800.f;
-				nodeState.test_tcpToI2S.volume.store(volume);
+				nodeState.test_tcpToI2S.tick();
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2SMono8)
 			{
@@ -930,8 +909,8 @@ int main(int argc, char * argv[])
 				}
 				
 				if (nodeState.test_tcpToI2SMono8.tcpConnection.isActive ||
-					nodeState.test_tcpToI2S.tcpConnection.isActive ||
-					nodeState.test_tcpToI2SQuad.tcpConnection.isActive)
+					nodeState.test_tcpToI2S.audioStreamToTcp.tcpConnection.isActive ||
+					nodeState.test_tcpToI2SQuad.audioStreamToTcp.tcpConnection.isActive)
 				{
 					setColor(colorGreen);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "(Playing)");
