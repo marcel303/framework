@@ -19,7 +19,6 @@ bool Test_TcpToI2SMono8::init(const uint32_t ipAddress, const uint16_t tcpPort, 
 	
 	return tcpConnection.init(ipAddress, tcpPort, options, [=]()
 	{
-	#if 1
 		// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 		// configured to use a rather large buffer size to increase bandwidth. we want
 		// to keep latency down however, so we reduce the buffer size here
@@ -30,9 +29,6 @@ bool Test_TcpToI2SMono8::init(const uint32_t ipAddress, const uint16_t tcpPort, 
 			I2S_1CH_8_CHANNEL_COUNT * /* stereo */
 			sizeof(int8_t) /* sample size */;
 		setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
-	#endif
-
-	// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 	
 		LOG_DBG("frame size: %d", I2S_1CH_8_FRAME_COUNT * sizeof(int8_t));
 		

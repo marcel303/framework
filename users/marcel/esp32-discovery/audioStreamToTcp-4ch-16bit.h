@@ -14,6 +14,11 @@ struct Test_TcpToI2SQuad
 	
 	AudioStream_Vorbis audioStream;
 	
+	Test_TcpToI2SQuad()
+		: volume(1.f)
+	{
+	}
+	
 	bool init(const uint32_t ipAddress, const uint16_t tcpPort, const char * filename);
 	void shut();
 };
