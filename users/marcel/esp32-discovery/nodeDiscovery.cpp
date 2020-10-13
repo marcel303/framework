@@ -157,13 +157,13 @@ int NodeDiscoveryProcess::threadMain(void * obj)
 
 void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEndpointName & remoteEndpoint)
 {
-	LOG_DBG("received UDP packet!", 0);
+	LOG_DBG("received UDP packet!");
 	
 	// decode the discovery message
 	
 	if (size < sizeof(NodeDiscoveryPacket))
 	{
-		LOG_WRN("received invalid discovery message", 0);
+		LOG_WRN("received invalid discovery message");
 		return;
 	}
 	
@@ -171,7 +171,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	if (memcmp(discoveryPacket->version, "v100", 4) != 0)
 	{
-		LOG_WRN("received discovery message with unknown version string", 0);
+		LOG_WRN("received discovery message with unknown version string");
 		return;
 	}
 	

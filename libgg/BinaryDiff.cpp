@@ -98,7 +98,7 @@ bool BinaryDiffValidate(const void * bytes1, const void * bytes2, uint32_t byteC
 	{
 		if (entry->m_size == 0)
 		{
-			LOG_ERR("diff entry size is 0", 0);
+			LOG_ERR("diff entry size is 0");
 			result = false;
 		}
 		const uint32_t idx1 = entry->m_offset;

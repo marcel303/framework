@@ -186,7 +186,7 @@ static SoundData * loadSound_WAV(const char * filename)
 				}
 				else
 				{
-					LOG_ERR("unknown format found in WAVEFORMATEXTENSIBLE", 0);
+					LOG_ERR("unknown format found in WAVEFORMATEXTENSIBLE");
 					ok = false;
 				}
 			}
@@ -197,7 +197,7 @@ static SoundData * loadSound_WAV(const char * filename)
 			
 			if (!ok)
 			{
-				LOG_ERR("failed to read FMT chunk", 0);
+				LOG_ERR("failed to read FMT chunk");
 				return nullptr;
 			}
 			
@@ -227,7 +227,8 @@ static SoundData * loadSound_WAV(const char * filename)
 		{
 			if (hasFmt == false)
 			{
-				LOG_ERR("DATA chunk precedes FMT chunk. cannot load WAVE data when we don't know the format yet", 0);
+				LOG_ERR("DATA chunk precedes FMT chunk. cannot load WAVE data when we don't know the format yet");
+				
 				return nullptr;
 			}
 			
@@ -235,7 +236,7 @@ static SoundData * loadSound_WAV(const char * filename)
 			
 			if (!r.read(bytes, byteCount))
 			{
-				LOG_ERR("failed to load WAVE data", 0);
+				LOG_ERR("failed to load WAVE data");
 				delete [] bytes;
 				return nullptr;
 			}
@@ -309,14 +310,14 @@ static SoundData * loadSound_WAV(const char * filename)
 				}
 				else
 				{
-					LOG_ERR("only 32 bit IEEE float is supported", 0);
+					LOG_ERR("only 32 bit IEEE float is supported");
 					delete [] bytes;
 					return nullptr;
 				}
 			}
 			else
 			{
-				LOG_ERR("unknown WAVE data format", 0);
+				LOG_ERR("unknown WAVE data format");
 				delete [] bytes;
 				return nullptr;
 			}
