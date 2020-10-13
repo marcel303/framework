@@ -16,7 +16,7 @@ private:
 };
 
 #ifdef _MSC_VER
-	#define ExceptionVA(x, ...) Exception(__FUNCTION__, __LINE__, x, __VA_ARGS__)
+	#define ExceptionVA(x, ...) Exception(__FUNCTION__, __LINE__, x, ##__VA_ARGS__)
 #else
 	#define ExceptionVA(x...) Exception(__FUNCTION__, __LINE__, x)
 #endif
