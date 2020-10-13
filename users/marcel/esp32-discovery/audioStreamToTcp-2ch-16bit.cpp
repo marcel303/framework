@@ -1,4 +1,4 @@
-#include "audioStreamToTcp.h"
+#include "audioStreamToTcp-2ch-16bit.h"
 
 #include "nodeDiscovery.h"
 

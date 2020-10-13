@@ -21,9 +21,9 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 #include "nodeDiscovery.h"
 
-#include "audioStreamToTcp.h"
-#include "audioStreamToTcp-4ch.h"
-#include "audioStreamToTcp-8ch-8bit.h"
+#include "audioStreamToTcp-2ch-16bit.h"
+#include "audioStreamToTcp-4ch-16bit.h"
+#include "audioStreamToTcp-1ch-8bit.h"
 #include "dummyTcpServer.h"
 #include "threadedTcpClient.h"
 #include <signal.h>
