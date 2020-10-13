@@ -199,7 +199,15 @@ bool PortAudioObject::isSupported(const int numInputChannels, const int numOutpu
 	return findSupportedDevices(numInputChannels, numOutputChannels, inputDeviceIndex, outputDeviceIndex) == true;
 }
 
-bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * handler, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat)
+bool PortAudioObject::init(
+	const int sampleRate,
+	const int numOutputChannels,
+	const int numInputChannels,
+	const int bufferSize,
+	PortAudioHandler * handler,
+	const int inputDeviceIndex,
+	const int outputDeviceIndex,
+	const bool useFloatFormat)
 {
 	if (initImpl(sampleRate, numOutputChannels, numInputChannels, bufferSize, handler, inputDeviceIndex, outputDeviceIndex, useFloatFormat) == false)
 	{
@@ -213,7 +221,15 @@ bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, co
 	}
 }
 
-bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannels, const int _numInputChannels, const int bufferSize, PortAudioHandler * _handler, const int _inputDeviceIndex, const int _outputDeviceIndex, const bool useFloatFormat)
+bool PortAudioObject::initImpl(
+	const int sampleRate,
+	const int _numOutputChannels,
+	const int _numInputChannels,
+	const int bufferSize,
+	PortAudioHandler * _handler,
+	const int _inputDeviceIndex,
+	const int _outputDeviceIndex,
+	const bool useFloatFormat)
 {
 	handler = _handler;
 	numOutputChannels = _numOutputChannels;
@@ -348,7 +364,15 @@ bool PortAudioObject::isSupported(const int numInputChannels, const int numOutpu
 	return true;
 }
 
-bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat)
+bool PortAudioObject::init(
+	const int sampleRate,
+	const int numOutputChannels,
+	const int numInputChannels,
+	const int bufferSize,
+	PortAudioHandler * audioSource,
+	const int inputDeviceIndex,
+	const int outputDeviceIndex,
+	const bool useFloatFormat)
 {
 	return true;
 }

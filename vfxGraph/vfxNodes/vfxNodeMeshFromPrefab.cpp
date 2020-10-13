@@ -200,6 +200,7 @@ VfxNodeDrawMesh::VfxNodeDrawMesh()
 
 VfxNodeDrawMesh::~VfxNodeDrawMesh()
 {
+	shaderBuffer.free();
 }
 
 void VfxNodeDrawMesh::tick(const float dt)

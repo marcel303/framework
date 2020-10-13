@@ -640,19 +640,16 @@ bool Framework::init(int sx, int sy)
 	
 	// initialize sound player
 	
-#if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
 	if (enableSound)
 	{
 		if (!g_soundPlayer.init(numSoundSources))
 		{
-		// todo : check if this now works on Linux
 			logError("failed to initialize sound player");
 			if (initErrorHandler)
 				initErrorHandler(INIT_ERROR_SOUND);
 			return false;
 		}
 	}
-#endif
 
 	// initialize real time editing
 
