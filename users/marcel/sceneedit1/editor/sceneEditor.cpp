@@ -198,7 +198,7 @@ void SceneEditor::deferredEnd()
 
 void SceneEditor::removeNodeSubTree(const int nodeId)
 {
-	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!");
 	
 	std::vector<int> removedNodeIds;
 	scene.removeNodeSubTree(nodeId, &removedNodeIds);
@@ -219,7 +219,7 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 
 void SceneEditor::addNodesToAdd()
 {
-	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!");
 	
 	for (SceneNode * node : deferred.nodesToAdd)
 	{
@@ -244,7 +244,7 @@ void SceneEditor::addNodesToAdd()
 
 void SceneEditor::removeNodesToRemove()
 {
-	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!");
 	
 	while (!deferred.nodesToRemove.empty())
 	{
@@ -257,7 +257,7 @@ void SceneEditor::removeNodesToRemove()
 
 void SceneEditor::selectNodesToSelect(const bool append)
 {
-	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!");
 	
 	if (!deferred.nodesToSelect.empty())
 	{

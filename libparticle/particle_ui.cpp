@@ -45,7 +45,7 @@ static ParticleCurve::Key * findNearestKey(ParticleCurve & curve, const float t,
 
 void doParticleCurve(ParticleCurve & curve, const char * name)
 {
-	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!");
 	
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -254,7 +254,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 
 void doParticleColor(ParticleColor & color, const char * name)
 {
-	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!");
 	
 	UiElem & elem = g_menu->getElem(name);
 	
@@ -348,7 +348,7 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, cons
 
 void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 {
-	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!");
 	
 	pushMenu(name);
 	

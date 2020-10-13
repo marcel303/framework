@@ -66,7 +66,7 @@ void ResourceDatabase::remove(ResourceBase * resource)
 		}
 	}
 	
-	AssertMsg(false, "failed to find resource to remove", 0);
+	AssertMsg(false, "failed to find resource to remove");
 }
 
 ResourceBase * ResourceDatabase::find(const std::type_index & typeIndex, const char * name)
