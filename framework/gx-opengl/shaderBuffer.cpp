@@ -124,7 +124,7 @@ ShaderBufferRw::~ShaderBufferRw()
 void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 {
 #if ENABLE_DESKTOP_OPENGL == 0
-	AssertMsg(false, "not supported", 0);
+	AssertMsg(false, "not supported");
 #else
 	fassert(m_buffer);
 

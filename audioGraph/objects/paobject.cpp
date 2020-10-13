@@ -111,7 +111,7 @@ bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int
 			
 			if (deviceInfo == nullptr)
 			{
-				LOG_ERR("Pa_GetDeviceInfo returned null", 0);
+				LOG_ERR("Pa_GetDeviceInfo returned null");
 			}
 			else
 			{
@@ -172,7 +172,7 @@ bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int
 			
 			if (deviceInfo == nullptr)
 			{
-				LOG_ERR("Pa_GetDeviceInfo returned null", 0);
+				LOG_ERR("Pa_GetDeviceInfo returned null");
 			}
 			else
 			{
@@ -241,7 +241,7 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 		
 		if (findSupportedDevices(numInputChannels, numOutputChannels, supportedInputDeviceIndex, supportedOutputDeviceIndex) == false)
 		{
-			LOG_ERR("portaudio: failed to find input/output device", 0);
+			LOG_ERR("portaudio: failed to find input/output device");
 			return false;
 		}
 		

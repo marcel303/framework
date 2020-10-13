@@ -440,7 +440,7 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				}
 				break;
 			default:
-				AssertMsg(false, "unknown MTLDataType", 0);
+				AssertMsg(false, "unknown MTLDataType");
 				break;
 			}
 		}

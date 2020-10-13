@@ -62,7 +62,7 @@ bool NetSocketUDP::Bind(uint16_t port, bool broadcast)
 		
 	if (error == SOCKET_ERROR)
 	{
-		LOG_ERR("socket bind failed", 0);
+		LOG_ERR("socket bind failed");
 		return false;
 	}
 
@@ -79,7 +79,7 @@ bool NetSocketUDP::Bind(uint16_t port, bool broadcast)
 		setsockopt(m_socket, SOL_SOCKET, SO_SNDBUF, (char*)&receiveBufferSize, sizeof(int));
 	}
 
-	LOG_DBG("NetSocket::Bind [done]", 0);
+	LOG_DBG("NetSocket::Bind [done]");
 
 	return true;
 }
@@ -97,13 +97,13 @@ bool NetSocketUDP::Send(const void * data, uint32_t size, NetAddress * address)
 
 	if (size2 == SOCKET_ERROR)
 	{
-		LOG_ERR("send failed", 0);
+		LOG_ERR("send failed");
 		return false;
 	}
 
 	if (size2 < (int)size)
 	{
-		LOG_ERR("not all data was sent", 0);
+		LOG_ERR("not all data was sent");
 		return false;
 	}
 
@@ -146,7 +146,7 @@ bool NetSocketUDP::CreateSocket()
 
 	if (m_socket == INVALID_SOCKET)
 	{
-		LOG_ERR("failed to create socket", 0);
+		LOG_ERR("failed to create socket");
 		return false;
 	}
 
@@ -183,12 +183,12 @@ bool NetSocketUDP::WinSockInitialize()
 
 	if (error != 0)
 	{
-		LOG_ERR("unable to startup WinSock", 0);
+		LOG_ERR("unable to startup WinSock");
 		return false;
 	}
 	if (wsaData.wVersion != version)
 	{	
-		LOG_ERR("WinSock version mismatch", 0);
+		LOG_ERR("WinSock version mismatch");
 		return false;
 	}
 

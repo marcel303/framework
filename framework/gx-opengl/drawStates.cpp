@@ -201,7 +201,7 @@ static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 		return GL_ALWAYS;
 	}
 	
-	AssertMsg(false, "unknown DEPTH_TEST", 0);
+	AssertMsg(false, "unknown DEPTH_TEST");
 	return GL_ALWAYS;
 }
 
@@ -280,7 +280,7 @@ static GLenum translateStencilOp(const GX_STENCIL_OP op)
 		return GL_DECR_WRAP;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_OP", 0);
+	AssertMsg(false, "unknown GX_STENCIL_OP");
 	return GL_KEEP;
 }
 
@@ -306,7 +306,7 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 		return GL_ALWAYS;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
+	AssertMsg(false, "unknown GX_STENCIL_FUNC");
 	return GL_ALWAYS;
 }
 

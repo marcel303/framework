@@ -45,7 +45,7 @@ struct TTY
 			
 			if (tcgetattr(port, &settings) != 0)
 			{
-				LOG_ERR("failed to get terminal io settings", 0);
+				LOG_ERR("failed to get terminal io settings");
 			}
 			else
 			{
@@ -61,9 +61,9 @@ struct TTY
 				//CRTS_IFLOW; // disable
 				
 				if (tcsetattr(port, TCSANOW, &settings) != 0)
-					LOG_ERR("failed to apply terminal io settings", 0);
+					LOG_ERR("failed to apply terminal io settings");
 				else
-					LOG_INF("succesfully applied terminal io settings", 0);
+					LOG_INF("succesfully applied terminal io settings");
 				
 				tcflush(port, TCIOFLUSH);
 			}
@@ -96,7 +96,7 @@ int main(int argc, char * argv[])
 	const char * ipAddress = "127.0.0.1";
 	const int udpPort = { OSC_PORT };
 	
-	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
+	LOG_DBG("setting up UDP transmit sockets for OSC messaging");
 
 	try
 	{

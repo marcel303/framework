@@ -440,7 +440,7 @@ void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 {
 #if ENABLE_DESKTOP_OPENGL == 0
-	AssertMsg(false, "not supported", 0);
+	AssertMsg(false, "not supported");
 #else
 	const GLuint program = getProgram();
 	if (!program)
@@ -458,7 +458,7 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 #if ENABLE_DESKTOP_OPENGL == 0
-	AssertMsg(false, "not supported", 0);
+	AssertMsg(false, "not supported");
 #else
 	fassert(globals.shader == this);
 

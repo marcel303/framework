@@ -255,7 +255,7 @@ int main(int argc, char * argv[])
 						if (send(master.m_clientSocket, (const char*)header, 3 * sizeof(int), flags) < 0 ||
 							send(master.m_clientSocket, (const char*)compressed, compressedSize, flags) < 0)
 						{
-							LOG_ERR("master: failed to send data to slave", 0);
+							LOG_ERR("master: failed to send data to slave");
 							
 							master.disconnect();
 							

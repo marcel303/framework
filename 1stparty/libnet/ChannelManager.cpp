@@ -49,7 +49,7 @@ bool ChannelManager::Initialize(PacketDispatcher * packetDispatcher, ChannelHand
 
 	m_serverVersion = serverVersion;
 
-	LOG_DBG("ChannelManager::Initialize: done", 0);
+	LOG_DBG("ChannelManager::Initialize: done");
 
 	return true;
 }
@@ -85,7 +85,7 @@ void ChannelManager::Shutdown(bool sendDisconnectNotification)
 	SharedNetSocket nullSocket;
 	m_socket = nullSocket;
 
-	LOG_DBG("ChannelManager::Shutdown [done]", 0);
+	LOG_DBG("ChannelManager::Shutdown [done]");
 }
 
 bool ChannelManager::IsInitialized()
@@ -231,7 +231,7 @@ void ChannelManager::OnReceive(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: message: failed to read from packet", 0);
+		LOG_ERR("chanmgr: message: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -257,7 +257,7 @@ void ChannelManager::HandleTrunk(Packet & packet, Channel * channel)
 			}
 			else
 			{
-				LOG_ERR("failed to extract packet", 0);
+				LOG_ERR("failed to extract packet");
 				NetAssert(false);
 			}
 		}
@@ -271,7 +271,7 @@ void ChannelManager::HandleTrunk(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: trunk: failed to read from packet", 0);
+		LOG_ERR("chanmgr: trunk: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -296,7 +296,7 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 
 		if (!packet.Read32(&serverVersion))
 		{
-			LOG_ERR("chanmgr: connect: failed to read from packet", 0);
+			LOG_ERR("chanmgr: connect: failed to read from packet");
 			NetAssert(false);
 		}
 		else if (serverVersion != m_serverVersion)
@@ -356,7 +356,7 @@ void ChannelManager::HandleConnect(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: connect: failed to read from packet", 0);
+		LOG_ERR("chanmgr: connect: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -420,7 +420,7 @@ void ChannelManager::HandleConnectOK(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: connect-ok: failed to read from packet", 0);
+		LOG_ERR("chanmgr: connect-ok: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -456,7 +456,7 @@ void ChannelManager::HandleConnectError(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: connect-error: failed to read from packet", 0);
+		LOG_ERR("chanmgr: connect-error: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -491,7 +491,7 @@ void ChannelManager::HandleConnectAck(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: connect-ack: failed to read from packet", 0);
+		LOG_ERR("chanmgr: connect-ack: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -541,7 +541,7 @@ void ChannelManager::HandleDisconnect(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: disconnect: failed to read from packet", 0);
+		LOG_ERR("chanmgr: disconnect: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -570,7 +570,7 @@ void ChannelManager::HandleDisconnectAck(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: disconnect-ack: failed to read from packet", 0);
+		LOG_ERR("chanmgr: disconnect-ack: failed to read from packet");
 		NetAssert(false);
 	}
 }
@@ -591,7 +591,7 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 					size -= 2;
 				else
 				{
-					LOG_ERR("chanmgr: unpack: invalid packet size", 0);
+					LOG_ERR("chanmgr: unpack: invalid packet size");
 					NetAssert(false);
 					break;
 				}
@@ -604,7 +604,7 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 						size -= size2;
 					else
 					{
-						LOG_ERR("chanmgr: unpack: invalid packet size", 0);
+						LOG_ERR("chanmgr: unpack: invalid packet size");
 						NetAssert(false);
 						break;
 					}
@@ -613,14 +613,14 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 				}
 				else
 				{
-					LOG_ERR("chanmgr: unpack: failed to read from packet", 0);
+					LOG_ERR("chanmgr: unpack: failed to read from packet");
 					NetAssert(false);
 					break;
 				}
 			}
 			else
 			{
-				LOG_ERR("chanmgr: unpack: failed to read from packet", 0);
+				LOG_ERR("chanmgr: unpack: failed to read from packet");
 				NetAssert(false);
 				break;
 			}
@@ -628,7 +628,7 @@ void ChannelManager::HandleUnpack(Packet & packet, Channel * channel)
 	}
 	else
 	{
-		LOG_ERR("chanmgr: unpack: failed to read from packet", 0);
+		LOG_ERR("chanmgr: unpack: failed to read from packet");
 		NetAssert(false);
 	}
 }

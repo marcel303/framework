@@ -15,7 +15,7 @@ void Mask::addSegment(const float in_begin, const float in_end)
 	}
 	else
 	{
-		LOG_DBG("the number of segments exceeds the maximum number of segments!", 0);
+		LOG_DBG("the number of segments exceeds the maximum number of segments!");
 	}
 }
 
@@ -72,7 +72,7 @@ void Mask::finalize()
 				}
 				else
 				{
-					LOG_DBG("the number of merged segments exceeds the maximum number of segments!", 0);
+					LOG_DBG("the number of merged segments exceeds the maximum number of segments!");
 				}
 			}
 			

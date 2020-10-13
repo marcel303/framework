@@ -504,7 +504,7 @@ void AudioPlug::connectTo(AudioPlug & dst)
 {
 	if (dst.type != type)
 	{
-		LOG_ERR("node connection failed. type mismatch", 0);
+		LOG_ERR("node connection failed. type mismatch");
 	}
 	else if (dst.type == kAudioPlugType_FloatVec)
 	{
@@ -523,7 +523,7 @@ void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 {
 	if (dstType != type)
 	{
-		LOG_ERR("node connection failed. type mismatch", 0);
+		LOG_ERR("node connection failed. type mismatch");
 	}
 	else
 	{

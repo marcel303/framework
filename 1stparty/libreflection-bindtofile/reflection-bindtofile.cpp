@@ -117,7 +117,7 @@ static bool saveObjectToJsonFile(const TypeDB & typeDB, const Type * type, const
 
 	if (object_tojson_recursive(typeDB, type, object, writer) == false)
 	{
-		LOG_WRN("failed to serialize object to json", 0);
+		LOG_WRN("failed to serialize object to json");
 		result = false;
 	}
 	else
@@ -159,7 +159,7 @@ static bool saveObjectToTextFile(const TypeDB & typeDB, const Type * type, const
 			typeDB, type, object,
 			line_writer, 0) == false)
 		{
-			LOG_WRN("failed to serialize object to lines", 0);
+			LOG_WRN("failed to serialize object to lines");
 			result = false;
 		}
 		else
@@ -231,7 +231,7 @@ static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, voi
 	
 		if (object_fromlines_recursive(typeDB, type, object, line_reader) == false)
 		{
-			LOG_ERR("failed to read object from lines", 0);
+			LOG_ERR("failed to read object from lines");
 			return false;
 		}
 		

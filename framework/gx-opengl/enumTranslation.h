@@ -43,7 +43,7 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 		break;
 	}
 	
-	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE", 0);
+	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE");
 	return GL_INVALID_ENUM;
 }
 

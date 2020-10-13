@@ -117,7 +117,7 @@ bool parseSceneFromLines(
 
 		if (!eat_word_v2(line, word))
 		{
-			LOG_ERR("failed to eat word", 0);
+			LOG_ERR("failed to eat word");
 			return false;
 		}
 		
@@ -127,7 +127,7 @@ bool parseSceneFromLines(
 			
 			if (!eat_word_v2(line, name))
 			{
-				LOG_ERR("missing template name", 0);
+				LOG_ERR("missing template name");
 				return false;
 			}
 			
@@ -139,7 +139,7 @@ bool parseSceneFromLines(
 			{
 				if (!parseTemplateFromLines(line_reader, name, t))
 				{
-					LOG_ERR("failed to parse template", 0);
+					LOG_ERR("failed to parse template");
 					line_reader.pop_indent();
 					return false;
 				}
@@ -156,7 +156,7 @@ bool parseSceneFromLines(
 			
 			if (!eat_word_v2(line, name))
 			{
-				LOG_ERR("missing entity name", 0);
+				LOG_ERR("missing entity name");
 				return false;
 			}
 			
@@ -168,7 +168,7 @@ bool parseSceneFromLines(
 			{
 				if (!parseTemplateFromLines(line_reader, nullptr, t))
 				{
-					LOG_ERR("failed to parse template (entity)", 0);
+					LOG_ERR("failed to parse template (entity)");
 					line_reader.pop_indent();
 					return false;
 				}
@@ -225,7 +225,7 @@ bool parseSceneFromLines(
 				fetchTemplate,
 				&context))
 			{
-				LOG_ERR("failed to parse template (entity)", 0);
+				LOG_ERR("failed to parse template (entity)");
 				return false;
 			}
 			
@@ -327,7 +327,7 @@ bool parseSceneObjectFromLines(
 	
 		if (!eat_word_v2(line, word))
 		{
-			LOG_ERR("failed to eat word", 0);
+			LOG_ERR("failed to eat word");
 			return false;
 		}
 		
@@ -394,7 +394,7 @@ bool parseSceneObjectStructureFromLines(
 		
 		if (!eat_word_v2(line, name))
 		{
-			LOG_ERR("failed to eat word", 0);
+			LOG_ERR("failed to eat word");
 			return false;
 		}
 		
@@ -415,7 +415,7 @@ bool parseSceneObjectStructureFromLines(
 		
 		if (!instantiateComponentsFromTemplate(typeDB, t, node->components))
 		{
-			LOG_ERR("failed to instantiate components from template", 0);
+			LOG_ERR("failed to instantiate components from template");
 			
 			node->freeComponents();
 			

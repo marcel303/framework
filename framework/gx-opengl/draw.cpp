@@ -939,7 +939,7 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 		checkErrorGL();
 	#else
 		// todo : gles : implement gxGetTextureSize
-		AssertMsg(false, "not implemented. fetch of GL_TEXTURE_WIDTH/_HEIGHT is not available in non-desktop OpenGL", 0);
+		AssertMsg(false, "not implemented. fetch of GL_TEXTURE_WIDTH/_HEIGHT is not available in non-desktop OpenGL");
 	#endif
 		
 		glBindTexture(GL_TEXTURE_2D, restoreTexture);
@@ -962,7 +962,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	checkErrorGL();
 #else
 	// todo : gles : implement gxGetTextureFormat
-	AssertMsg(false, "not implemented. fetch of GL_TEXTURE_INTERNAL_FORMAT is not available in non-desktop OpenGL", 0);
+	AssertMsg(false, "not implemented. fetch of GL_TEXTURE_INTERNAL_FORMAT is not available in non-desktop OpenGL");
 #endif
 
 	// restore previous OpenGL states
@@ -1215,37 +1215,37 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	AssertMsg(false, "todo : implement gxDrawIndexedPrimitives using vertex attrib arrays", 0);
+	AssertMsg(false, "todo : implement gxDrawIndexedPrimitives using vertex attrib arrays");
 }
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	AssertMsg(false, "todo : implement gxDrawPrimitives using vertex attrib arrays", 0);
+	AssertMsg(false, "todo : implement gxDrawPrimitives using vertex attrib arrays");
 }
 
 void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	AssertMsg(false, "todo : implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays", 0);
+	AssertMsg(false, "todo : implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays");
 }
 
 void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	AssertMsg(false, "todo : implement gxDrawInstancedPrimitives using vertex attrib arrays", 0);
+	AssertMsg(false, "todo : implement gxDrawInstancedPrimitives using vertex attrib arrays");
 }
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays", 0);
+	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays");
 }
 
 void gxSetCaptureCallback(GxCaptureCallback callback)
 {
-	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL", 0);
+	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL");
 }
 
 void gxClearCaptureCallback()
 {
-	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL", 0);
+	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL");
 }
 
 #else

@@ -51,14 +51,14 @@ namespace Videosync
 		
 		if ((bind(m_socket, (struct sockaddr *)&m_socketAddress, sizeof(m_socketAddress))) < 0)
 		{
-			LOG_ERR("server bind failed", 0);
+			LOG_ERR("server bind failed");
 			result = false;
 		}
 		else
 		{
 			if (listen(m_socket, 1) < 0)
 			{
-				LOG_ERR("server listen failed", 0);
+				LOG_ERR("server listen failed");
 				result = false;
 			}
 			else
@@ -148,7 +148,7 @@ namespace Videosync
 			
 			if (self->accept(clientSocket) == false)
 			{
-				LOG_ERR("server accept: failed to accept connection", 0);
+				LOG_ERR("server accept: failed to accept connection");
 			}
 			else
 			{
@@ -189,7 +189,7 @@ namespace Videosync
 						
 						if (numBytes <= 0)
 						{
-							LOG_DBG("server: client socket disconnected", 0);
+							LOG_DBG("server: client socket disconnected");
 							break;
 						}
 						
@@ -224,7 +224,7 @@ namespace Videosync
 						
 						if (numBytes <= 0)
 						{
-							LOG_DBG("server: client socket disconnected", 0);
+							LOG_DBG("server: client socket disconnected");
 							break;
 						}
 						
@@ -271,7 +271,7 @@ namespace Videosync
 				if (clientSocket >= 0)
 				{
 				#if 0
-					LOG_DBG("slave: disconnecting..", 0);
+					LOG_DBG("slave: disconnecting..");
 					if (shutdown(clientSocket, 1) >= 0)
 					{
 					#if 1
@@ -281,11 +281,11 @@ namespace Videosync
 							// not done yet
 						}
 					#endif
-						LOG_DBG("slave: disconnecting.. done", 0);
+						LOG_DBG("slave: disconnecting.. done");
 					}
 					else
 					{
-						LOG_DBG("slave: disconnecting.. failure", 0);
+						LOG_DBG("slave: disconnecting.. failure");
 					}
 				#endif
 					

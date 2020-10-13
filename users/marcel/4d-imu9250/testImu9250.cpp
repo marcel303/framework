@@ -96,7 +96,7 @@ struct MyIMU9250 : IMU9250
             for (int i = 0; i < 5; ++i)
             {
                 if (write(port, bytes, numBytes) == -1)
-                	LOG_DBG("failed to write to IMU", 0);
+                	LOG_DBG("failed to write to IMU");
             }
         }
 	}
@@ -149,7 +149,7 @@ struct MyIMU9250 : IMU9250
 	
 		if (read(port, &c, 1) != 1)
 		{
-			LOG_WRN("read error", 0);
+			LOG_WRN("read error");
 			SDL_Delay(1); // avoid getting into a 100% CPU situation if shit really hit the fan
 			return;
 		}
@@ -276,7 +276,7 @@ struct TTY
 			
 			if (tcgetattr(port, &settings) != 0)
 			{
-				LOG_ERR("failed to get terminal io settings", 0);
+				LOG_ERR("failed to get terminal io settings");
 			}
 			else
 			{
@@ -292,9 +292,9 @@ struct TTY
 				//CRTS_IFLOW; // disable
 				
 				if (tcsetattr(port, TCSANOW, &settings) != 0)
-					LOG_ERR("failed to apply terminal io settings", 0);
+					LOG_ERR("failed to apply terminal io settings");
 				else
-					LOG_INF("succesfully applied terminal io settings", 0);
+					LOG_INF("succesfully applied terminal io settings");
 				
 				tcflush(port, TCIOFLUSH);
 			}
@@ -376,7 +376,7 @@ static int updateThreadProc(void * obj)
 	//const int udpPorts[2] = { 2002, 2018 };
 	const int udpPorts[2] = { 2000, 2018 };
 	
-	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
+	LOG_DBG("setting up UDP transmit sockets for OSC messaging");
 
 	try
 	{

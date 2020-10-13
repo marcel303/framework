@@ -821,7 +821,7 @@ static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
 		return MTLStencilOperationDecrementWrap;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_OP", 0);
+	AssertMsg(false, "unknown GX_STENCIL_OP");
 	return MTLStencilOperationKeep;
 }
 
@@ -847,7 +847,7 @@ static MTLCompareFunction translateCompareFunction(const GX_STENCIL_FUNC func)
 		return MTLCompareFunctionAlways;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
+	AssertMsg(false, "unknown GX_STENCIL_FUNC");
 	return MTLCompareFunctionAlways;
 }
 

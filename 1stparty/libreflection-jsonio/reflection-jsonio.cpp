@@ -372,7 +372,7 @@ bool object_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 		
 		if (plain_type_fromjson(plain_type, object, json) == false)
 		{
-			LOG_ERR("failed to deserialize plain type from json", 0);
+			LOG_ERR("failed to deserialize plain type from json");
 			
 			return false;
 		}
@@ -505,7 +505,7 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Member * member, const
 	
 	if (member->isVector)
 	{
-		LOG_ERR("vector types aren't supported yet", 0);
+		LOG_ERR("vector types aren't supported yet");
 		Assert(false);
 		//result &= false;
 	}
@@ -523,7 +523,7 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Member * member, const
 		}
 		else if (member->hasFlag<MemberFlag_CustomJsonSerialization>())
 		{
-			AssertMsg(false, "not yet implemented", 0);
+			AssertMsg(false, "not yet implemented");
 			
 			//auto * customJsonSerialization = member->findFlag<MemberFlag_CustomJsonSerialization>();
 			

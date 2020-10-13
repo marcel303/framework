@@ -187,7 +187,7 @@
 
 - (void)shut
 {
-	LOG_DBG("shut", 0);
+	LOG_DBG("shut");
 	
 	[self shutSession];
 	
@@ -201,7 +201,7 @@
 
 - (void)shutSession
 {
-	LOG_DBG("shutSession", 0);
+	LOG_DBG("shutSession");
 	
 	if (session != nullptr)
 	{
@@ -233,7 +233,7 @@
 
 - (void)shutContext
 {
-	LOG_DBG("shutContext", 0);
+	LOG_DBG("shutContext");
 	
     if (queue != 0)
     {
@@ -260,7 +260,7 @@ static __m128i swizzle(const __m128i src)
      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
      fromConnection:(AVCaptureConnection *)connection
 {
-	//LOG_DBG("captureOutput", 0);
+	//LOG_DBG("captureOutput");
 	
 	CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 	
@@ -433,7 +433,7 @@ static int MacWebcamThreadMain(void * obj)
 
 	if ([webcamImpl initWebcam:context] == false)
 	{
-		LOG_DBG("failed to init webcam", 0);
+		LOG_DBG("failed to init webcam");
 		
 		[webcamImpl release];
 		webcamImpl = nullptr;
@@ -505,7 +505,7 @@ bool MacWebcam::init()
 
 		if ([webcamImpl initWebcam:context] == false)
 		{
-			LOG_DBG("failed to init webcam", 0);
+			LOG_DBG("failed to init webcam");
 			
 			[webcamImpl release];
 			webcamImpl = nullptr;

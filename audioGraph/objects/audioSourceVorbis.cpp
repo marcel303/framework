@@ -186,7 +186,7 @@ void AudioSourceVorbis::open(const char * _filename, bool _loop)
 		return;
 	}
 	
-	LOG_DBG("Vorbis Audio Stream: created vorbis decoder", 0);
+	LOG_DBG("Vorbis Audio Stream: created vorbis decoder");
 	
 	const vorbis_info * info = ov_info(&vorbisFile, -1);
 	
@@ -208,11 +208,11 @@ void AudioSourceVorbis::close()
 	if (file != nullptr)
 	{
 		ov_clear(&vorbisFile);
-		LOG_DBG("Vorbis Audio Stream: destroyed vorbis decoder", 0);
+		LOG_DBG("Vorbis Audio Stream: destroyed vorbis decoder");
 		
 		fclose(file);
 		file = 0;
-		LOG_DBG("Vorbis Audio Stream: closed file", 0);
+		LOG_DBG("Vorbis Audio Stream: closed file");
 	}
 }
 

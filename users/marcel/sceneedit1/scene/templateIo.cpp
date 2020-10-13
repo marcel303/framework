@@ -49,7 +49,7 @@ bool parseTemplateFromLines(
 			
 			if (base[0] == 0)
 			{
-				LOG_ERR("missing base name", 0);
+				LOG_ERR("missing base name");
 				return false;
 			}
 			
@@ -88,7 +88,7 @@ bool parseTemplateFromLines(
 		
 		if (current_component_element.typeName.empty())
 		{
-			LOG_ERR("found property outside the context of a component", 0);
+			LOG_ERR("found property outside the context of a component");
 			return false;
 		}
 	
@@ -147,7 +147,7 @@ bool parseTemplateFromFile(const char * path, Template & out_template)
 	
 	if (!TextIO::load(path, lines, lineEndings))
 	{
-		LOG_ERR("failed to load text file", 0);
+		LOG_ERR("failed to load text file");
 		return false;
 	}
 	
@@ -155,7 +155,7 @@ bool parseTemplateFromFile(const char * path, Template & out_template)
 	
 	if (!parseTemplateFromLines(lineReader, path, out_template))
 	{
-		LOG_ERR("failed to parse template from lines", 0);
+		LOG_ERR("failed to parse template from lines");
 		return false;
 	}
 	
@@ -298,7 +298,7 @@ bool recursivelyOverlayBaseTemplates(
 			allowAddingComponents,
 			allowAddingProperties))
 		{
-			LOG_ERR("failed to overlay template", 0);
+			LOG_ERR("failed to overlay template");
 			return false;
 		}
 	}
@@ -425,7 +425,7 @@ bool expandComponentTypeName(const char * typeName, char * out_typeName, const i
 
 	if (length == out_typeNameSize)
 	{
-		LOG_ERR("type name is too long", 0);
+		LOG_ERR("type name is too long");
 		return false;
 	}
 	
@@ -483,7 +483,7 @@ bool shrinkComponentTypeName(const char * typeName, char * out_typeName, const i
 
 	if (length == out_typeNameSize)
 	{
-		LOG_ERR("type name is too long", 0);
+		LOG_ERR("type name is too long");
 		return false;
 	}
 	

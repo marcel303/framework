@@ -4,7 +4,7 @@
 
 Mutex::~Mutex()
 {
-	AssertMsg(opaque == nullptr, "free() not called before object was destroyed", 0);
+	AssertMsg(opaque == nullptr, "free() not called before object was destroyed");
 }
 
 void Mutex::alloc()

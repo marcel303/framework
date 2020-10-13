@@ -272,7 +272,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("nodeAdd", 0);
+	//LOG_DBG("nodeAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -317,7 +317,7 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("nodeRemove", 0);
+	//LOG_DBG("nodeRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -390,7 +390,7 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("linkAdd", 0);
+	//LOG_DBG("linkAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -403,9 +403,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 	{
 		if (srcNodeItr == audioGraph->nodes.end())
-			LOG_ERR("source node doesn't exist", 0);
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == audioGraph->nodes.end())
-			LOG_ERR("destination node doesn't exist", 0);
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}
@@ -420,9 +420,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (input == nullptr || output == nullptr)
 	{
 		if (input == nullptr)
-			LOG_ERR("input node socket doesn't exist", 0);
+			LOG_ERR("input node socket doesn't exist");
 		if (output == nullptr)
-			LOG_ERR("output node socket doesn't exist", 0);
+			LOG_ERR("output node socket doesn't exist");
 		
 		return;
 	}
@@ -454,7 +454,7 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("linkRemove", 0);
+	//LOG_DBG("linkRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -467,9 +467,9 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 	{
 		if (srcNodeItr == audioGraph->nodes.end())
-			LOG_ERR("source node doesn't exist", 0);
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == audioGraph->nodes.end())
-			LOG_ERR("destination node doesn't exist", 0);
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}

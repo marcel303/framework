@@ -290,9 +290,9 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	if (globals.currentWindow->getWindow())
 		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 	else
-		AssertMsg(false, "beginBackbufferRenderPass called when no SDL window set", 0);
+		AssertMsg(false, "beginBackbufferRenderPass called when no SDL window set");
 #else
-	AssertMsg(false, "beginBackbufferRenderPass called when no backbuffer is available", 0);
+	AssertMsg(false, "beginBackbufferRenderPass called when no backbuffer is available");
 #endif
 
 	// update viewport

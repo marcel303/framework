@@ -72,7 +72,7 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	
 	if (parameters.device == paNoDevice)
 	{
-		LOG_ERR("portaudio: failed to find output device", 0);
+		LOG_ERR("portaudio: failed to find output device");
 		shutdown();
 		return false;
 	}
