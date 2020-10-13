@@ -139,7 +139,7 @@ bool Test_DummyTcpReceiver::init(const IpEndpointName & endpointName)
 	{
 		thread = std::thread([=]()
 		{
-			while (true) // todo : check stop condition
+			for (;;)
 			{
 				const int client_sock = accept(sock, nullptr, nullptr);
 				
