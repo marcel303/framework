@@ -22,6 +22,7 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #include "nodeDiscovery.h"
 
 #include "dummyTcpServer.h"
+#include <signal.h>
 
 //
 
