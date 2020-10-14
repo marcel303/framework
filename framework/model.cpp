@@ -1186,8 +1186,6 @@ void Model::calculateTransform(Vec3Arg position, Vec3Arg axis, const float angle
 {
 	Quat rotation;
 	rotation.fromAxisAngle(axis, angle);
-
-	//Mat4x4 matrix;
 	rotation.toMatrix3x3(matrix);
 
 	matrix(0, 3) = 0.f;

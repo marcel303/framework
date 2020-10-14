@@ -528,7 +528,7 @@ static void gxFlush(bool endOfBatch)
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 		#endif
 			
-			// todo: use triangle strip + compute index buffer once at init time
+			// todo : use triangle strip + compute index buffer once at init time
 			
 			const int numQuads = s_gxVertexCount / 4;
 			numIndices = numQuads * 6;
@@ -1215,27 +1215,27 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	AssertMsg(false, "todo : implement gxDrawIndexedPrimitives using vertex attrib arrays");
+	AssertMsg(false, "todo - implement gxDrawIndexedPrimitives using vertex attrib arrays");
 }
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	AssertMsg(false, "todo : implement gxDrawPrimitives using vertex attrib arrays");
+	AssertMsg(false, "todo - implement gxDrawPrimitives using vertex attrib arrays");
 }
 
 void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	AssertMsg(false, "todo : implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays");
+	AssertMsg(false, "todo - implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays");
 }
 
 void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	AssertMsg(false, "todo : implement gxDrawInstancedPrimitives using vertex attrib arrays");
+	AssertMsg(false, "todo - implement gxDrawInstancedPrimitives using vertex attrib arrays");
 }
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays");
+	AssertMsg(false, "todo - implement gxSetVertexBuffer using vertex attrib arrays");
 }
 
 void gxSetCaptureCallback(GxCaptureCallback callback)
