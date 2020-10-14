@@ -171,8 +171,8 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_SubBoost, kAudioPlugType_Int);
 	addInput(kInput_RampUp, kAudioPlugType_Trigger);
 	addInput(kInput_RampDown, kAudioPlugType_Trigger);
-	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, this);
-	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, nullptr);
 	
 	source.voiceNode = this;
 }

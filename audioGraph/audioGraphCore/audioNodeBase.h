@@ -113,8 +113,13 @@ struct AudioNodeBase
 	void addOutput(const int index, AudioPlugType type, void * mem)
 	{
 		Assert(index >= 0 && index < (int)outputs.size());
+		Assert(type == kAudioPlugType_Trigger || mem != nullptr); // other type must have mem set to non-null
+		Assert(type != kAudioPlugType_Trigger || mem == nullptr); // trigger type must have mem set to null
 		if (index >= 0 && index < (int)outputs.size())
 		{
+			if (type == kAudioPlugType_Trigger)
+				mem = this;
+				
 			outputs[index].type = type;
 			outputs[index].mem = mem;
 		}

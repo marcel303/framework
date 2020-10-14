@@ -128,7 +128,7 @@ int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 	
 	Assert((bytesRead % sizeof(AudioSample)) == 0);
 	
-	int numReadSamples = bytesRead / sizeof(AudioSample);
+	const int numReadSamples = bytesRead / sizeof(AudioSample);
 	
 	mPosition += numReadSamples;
 	
@@ -207,12 +207,12 @@ bool AudioStream_Vorbis::HasLooped_get() const
 
 //
 
-static void DuplicateInPlace(short * buffer, int numSamples)
+static void DuplicateInPlace(short * buffer, int numFrames)
 {
-	short * src = buffer + (numSamples - 1) * 1;
-	short * dst = buffer + (numSamples - 1) * 2;
+	short * src = buffer + (numFrames - 1) * 1;
+	short * dst = buffer + (numFrames - 1) * 2;
 	
-	for (int i = 0; i < numSamples; ++i)
+	for (int i = 0; i < numFrames; ++i)
 	{
 		const short value = src[0];
 		dst[0] = value;
