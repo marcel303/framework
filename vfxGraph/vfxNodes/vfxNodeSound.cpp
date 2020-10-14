@@ -57,8 +57,6 @@ int VfxNodeSound_AudioStream::Provide(int numSamples, AudioSample * __restrict b
 	return result;
 }
 
-// todo : trigger on start to send beat 0
-
 VFX_NODE_TYPE(VfxNodeSound)
 {
 	typeName = "sound";
@@ -165,9 +163,6 @@ void VfxNodeSound::tick(const float dt)
 		Assert(audioStream == nullptr);
 		audioStream = new AudioStream_Vorbis();
 		
-		if (autoPlay)
-			audioStream->Open(source, loop);
-		
 		Assert(mixingAudioStream.timeInSamples == 0);
 		Assert(mixingAudioStream.hasLooped == false);
 		
@@ -203,17 +198,37 @@ void VfxNodeSound::tick(const float dt)
 		{
 			if (strcmp(source, audioStream->FileName_get()) != 0 || loop != audioStream->Loop_get())
 			{
-				SDL_LockMutex(mutex);
+				if (FileStream::Exists(source))
 				{
-					if (FileStream::Exists(source))
+					SDL_LockMutex(mutex);
+					{
 						audioStream->Open(source, loop);
-					else
-						audioStream->Close();
+						
+						mixingAudioStream.timeInSamples = 0;
+						mixingAudioStream.hasLooped = false;
+					}
+					SDL_UnlockMutex(mutex);
 					
-					mixingAudioStream.timeInSamples = 0;
-					mixingAudioStream.hasLooped = false;
+					if (audioStream->IsOpen_get())
+					{
+						trigger(kOutput_Play);
+					}
 				}
-				SDL_UnlockMutex(mutex);
+				else
+				{
+					SDL_LockMutex(mutex);
+					{
+						audioStream->Close();
+						
+						mixingAudioStream.timeInSamples = 0;
+						mixingAudioStream.hasLooped = false;
+					}
+					SDL_UnlockMutex(mutex);
+				}
+				
+				timeOutput = 0.f;
+		
+				beatCountOutput = 0;
 			}
 		}
 		
@@ -355,14 +370,20 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 	}
 	else if (inputSocketIndex == kInput_Pause)
 	{
-		isPaused = true;
-		
-		trigger(kOutput_Pause);
+		if (!isPaused)
+		{
+			isPaused = true;
+			
+			trigger(kOutput_Pause);
+		}
 	}
 	else if (inputSocketIndex == kInput_Resume)
 	{
-		isPaused = false;
-		
-		trigger(kOutput_Play);
+		if (isPaused)
+		{
+			isPaused = false;
+			
+			trigger(kOutput_Play);
+		}
 	}
 }
