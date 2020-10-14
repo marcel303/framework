@@ -64,7 +64,7 @@ class VrPointer : public VrPointerBase
 private:
 	VrSide side = VrSide_Undefined;
 	
-	ovrDeviceID DeviceID = -1; // cached by updateInputState. todo : remove (?)
+	ovrDeviceID DeviceID = -1; // cached by updateInputState. used by updateHaptics()
 
 public:
 	virtual void init(VrSide side) override final;
