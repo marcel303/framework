@@ -1296,7 +1296,7 @@ void Scene::tick(const float dt)
 #endif
 
 	// Update the virtual desktop.
-	framework.tickVirtualDesktop(viewToWorld, buttonMask, isHand);
+	framework.tickVirtualDesktop(viewToWorld, true, buttonMask, isHand);
 
 	controlPanel->tick(dt);
 
