@@ -204,10 +204,43 @@ void VrHand::updateInputState()
 			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) != ovrSuccess)
 				break;
 
-			// todo : pinching state for all five fingers
-			if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
-				fingers[VrFinger_Index].isPinching = true;
-
+			// Update pinching state for all five fingers.
+			
+			const int ovrHandStatus[] =
+			{
+				//ovrInputStateHandStatus_ThumbPinching,
+				ovrInputStateHandStatus_IndexPinching,
+				ovrInputStateHandStatus_MiddlePinching,
+				ovrInputStateHandStatus_RingPinching,
+				ovrInputStateHandStatus_PinkyPinching
+			};
+			
+			const int ovrPinchStrength[] =
+			{
+				//ovrHandPinchStrength_Thumb,
+				ovrHandPinchStrength_Index,
+				ovrHandPinchStrength_Middle,
+				ovrHandPinchStrength_Ring,
+				ovrHandPinchStrength_Pinky
+			};
+			
+			const VrFingers vrFinger[] =
+			{
+				//VrFinger_Thumb,
+				VrFinger_Index,
+				VrFinger_Middle,
+				VrFinger_Ring,
+				VrFinger_Pinky
+			};
+	
+			for (int i = 0; i < sizeof(ovrHandStatus) / sizeof(ovrHandStatus[0]); ++i)
+			{
+				if ((hand.InputStateStatus & ovrHandStatus[i]) && hand.PinchStrength[ovrPinchStrength[i]] >= .5f)
+				{
+					fingers[vrFinger[i]].isPinching = true;
+				}
+			}
+			
 			break;
 		}
 

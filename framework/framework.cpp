@@ -1500,9 +1500,11 @@ void Framework::process()
 				int(pointer.isDown(VrButton_GripTrigger) << 1);
 		}
 
-		// todo : use controller as a pointing device, not the direction of the head pose
-		// todo : let virtual desktop know if the transform is valid or not
-		framework.tickVirtualDesktop(pointerTransform[activeController], buttonMasks[activeController], false);
+		framework.tickVirtualDesktop(
+			pointerTransform[activeController],
+			pointerTransformIsValid[activeController],
+			buttonMasks[activeController],
+			false);
 
 		globals.currentWindow->getWindowData()->makeActive();
 	}
@@ -2025,17 +2027,23 @@ Mat4x4 Framework::getHeadTransform() const
 	return result;
 }
 
-bool Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
+bool Framework::tickVirtualDesktop(
+	const Mat4x4 & transform,
+	const bool transformIsValid,
+	const int in_buttonMask,
+	const bool isHand)
 {
 #if WINDOW_IS_3D
-	const Vec3 pointerOrigin = transform.GetTranslation();
-	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
-
-	const float depthThreshold = .1f;
-
 	Window * hoverWindow = nullptr;
 	Vec2 hoverPos;
 	float hoverDistance = FLT_MAX;
+
+	if (transformIsValid)
+	{
+		const float depthThreshold = .1f;
+		
+		const Vec3 pointerOrigin = transform.GetTranslation();
+		const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 	{
@@ -2053,6 +2061,7 @@ bool Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 				hoverDistance = distance;
 			}
 		}
+	}
 	}
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)

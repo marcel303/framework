@@ -483,7 +483,7 @@ public:
 	
 	void blinkTaskbarIcon(int count);
 
-	bool tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask, const bool isHand);
+	bool tickVirtualDesktop(const Mat4x4 & pointerTransform, const bool pointerTransformIsValid, const int buttonMask, const bool isHand);
 	void drawVirtualDesktop();
 	void drawVrPointers();
 	
