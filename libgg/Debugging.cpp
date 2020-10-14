@@ -19,7 +19,7 @@ void HandleAssert(const char * func, int line, const char * expr, ...)
 	va_end(args);
 
 	LOG_ERR("assertion failed: %s: %d: %s", func, line, text);
-	//assert(false);
+	assert(false);
 }
 
 #endif
