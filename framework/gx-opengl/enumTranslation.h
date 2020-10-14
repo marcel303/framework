@@ -47,6 +47,27 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 	return GL_INVALID_ENUM;
 }
 
+static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
+{
+#define C(src, dst) if (format == src) return dst
+	C(GX_UNKNOWN_FORMAT, GL_INVALID_ENUM);
+	C(GX_R8_UNORM, GL_R8);
+	C(GX_RG8_UNORM, GL_RG8);
+	C(GX_RGB8_UNORM, GL_RGB8);
+	C(GX_RGBA8_UNORM, GL_RGBA8);
+#if ENABLE_DESKTOP_OPENGL
+	C(GX_R16_UNORM, GL_R16);
+#endif
+	C(GX_R16_FLOAT, GL_R16F);
+	C(GX_RGBA16_FLOAT, GL_RGBA16F);
+	C(GX_R32_FLOAT, GL_R32F);
+	C(GX_RGB32_FLOAT, GL_RGB32F);
+	C(GX_RGBA32_FLOAT, GL_RGBA32F);
+#undef C
+
+	return GL_INVALID_ENUM;
+}
+
 static GLint toOpenGLTextureSwizzle(const int value)
 {
 	if (value == GX_SWIZZLE_ZERO)

@@ -974,7 +974,7 @@ public:
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureRw(const char * name, int unit, GxTextureId texture, uint32_t format, bool filtered, bool clamp = true); // todo : add enum for graphics api independent buffer formats
+	void setTextureRw(const char * name, int unit, GxTextureId texture, GX_TEXTURE_FORMAT format, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
