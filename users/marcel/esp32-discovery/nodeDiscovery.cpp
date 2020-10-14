@@ -107,17 +107,14 @@ void NodeDiscoveryProcess::beginThread()
 	
 	mutex = new std::mutex();
 	
-	thread = new std::thread(threadMain, this); // todo : set thread name to "Node Discovery Process"
+	thread = new std::thread(threadMain, this);
 }
 
 void NodeDiscoveryProcess::endThread()
 {
 	if (receiveSocket != nullptr)
 	{
-		receiveSocket->Break();
-		
-		delete receiveSocket;
-		receiveSocket = nullptr;
+		receiveSocket->Break(); // todo : check Break calls inside entire code base, ensure join is performed before delete of the receiver
 	}
 	
 	if (thread != nullptr)
@@ -125,6 +122,12 @@ void NodeDiscoveryProcess::endThread()
 		thread->join();
 		delete thread;
 		thread = nullptr;
+	}
+	
+	if (receiveSocket != nullptr)
+	{
+		delete receiveSocket;
+		receiveSocket = nullptr;
 	}
 	
 	if (mutex != nullptr)
@@ -179,13 +182,13 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	for (auto & record : discoveryRecords)
 	{
-		if (record.id == discoveryPacket->id)
+		if (record.id == ntohll(discoveryPacket->id))
 			existingRecord = &record;
 	}
 	
 	NodeDiscoveryRecord record;
 	memset(&record, 0, sizeof(record));
-	record.id = discoveryPacket->id;
+	record.id = ntohll(discoveryPacket->id);
 	record.capabilities = discoveryPacket->capabilities;
 	strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
 	record.endpointName = remoteEndpoint;

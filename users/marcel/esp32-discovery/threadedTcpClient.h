@@ -12,8 +12,6 @@ struct ThreadedTcpConnection
 		bool noDelay = false;
 	};
 	
-	bool isActive = false;
-	
 	std::atomic<bool> wantsToStop;
 	
 	std::thread thread;

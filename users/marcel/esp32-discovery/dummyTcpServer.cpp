@@ -47,9 +47,7 @@ void Test_DummyTcpServer::Client::run(const int in_sock)
 
 void Test_DummyTcpServer::Client::beginShutdown()
 {
-	shutdown(sock, SHUT_RDWR);
-	
-	// todo : signal socket so recv is interrupted
+	shutdown(sock, SHUT_RDWR); // note : this will interrupt recv on the socket and cause it to fail
 	
 	thread.join();
 }

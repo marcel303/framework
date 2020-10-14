@@ -102,3 +102,8 @@ void Test_TcpToI2SMono8::shut()
 	
 	LOG_DBG("shutting down TCP connection [done]");
 }
+
+bool Test_TcpToI2SMono8::isActive() const
+{
+	return tcpConnection.sock != -1;
+}

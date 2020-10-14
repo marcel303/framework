@@ -4,7 +4,7 @@
 #include <atomic>
 #include <stdint.h>
 
-#include "audiostream/AudioStreamVorbis.h" // todo : move to cpp
+#include "audiostream/AudioStreamVorbis.h"
 
 struct Test_TcpToI2SMono8
 {
@@ -21,4 +21,6 @@ struct Test_TcpToI2SMono8
 	
 	bool init(const uint32_t ipAddress, const uint16_t tcpPort, const char * filename);
 	void shut();
+	
+	bool isActive() const;
 };

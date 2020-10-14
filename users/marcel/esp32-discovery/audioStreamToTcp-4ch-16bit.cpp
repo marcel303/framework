@@ -60,3 +60,8 @@ void Test_TcpToI2SQuad::tick()
 {
 	audioStreamToTcp.volume.store(mouse.x / 800.f);
 }
+
+bool Test_TcpToI2SQuad::isActive() const
+{
+	return audioStreamToTcp.tcpConnection.sock != -1;
+}

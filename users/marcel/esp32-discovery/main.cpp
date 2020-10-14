@@ -441,18 +441,13 @@ static void testDummyTcpServer()
 	
 	SDL_Delay(3000);
 	
-	logInfo("shutting down dummy TCP server");
+	logInfo("begin dummy TCP server shutdown");
 	
 	tcpServer.beginShutdown();
 	
 	logInfo("shutting down I2S streamer");
 	
 	tcpToI2S.shut();
-	//tcpConnection.beginShutdown();
-	
-	logInfo("waiting for I2S streamer shutdown to complete");
-	
-	// todo : add shutdown methods to I2S streamer : tcpConnection.waitForShutdown();
 	
 	logInfo("waiting for dummy TCP server shutdown to complete");
 	
@@ -555,6 +550,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
+						nodeState.test_tcpToI2SQuad.shut();
 						nodeState.test_tcpToI2SQuad.init(record.endpointName.address, I2S_4CH_PORT, "loop01-short.ogg");
 					}
 				}
@@ -908,9 +904,9 @@ int main(int argc, char * argv[])
 					x += 100;
 				}
 				
-				if (nodeState.test_tcpToI2SMono8.tcpConnection.isActive ||
-					nodeState.test_tcpToI2S.audioStreamToTcp.tcpConnection.isActive ||
-					nodeState.test_tcpToI2SQuad.audioStreamToTcp.tcpConnection.isActive)
+				if (nodeState.test_tcpToI2SMono8.isActive() ||
+					nodeState.test_tcpToI2S.isActive() ||
+					nodeState.test_tcpToI2SQuad.isActive())
 				{
 					setColor(colorGreen);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "(Playing)");

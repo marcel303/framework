@@ -27,20 +27,9 @@ bool ThreadedTcpConnection::init(
 	const Options & options,
 	const std::function<void()> threadFunction)
 {
-	Assert(isActive == false);
-	
-	if (isActive)
-	{
-		beginShutdown();
-		
-		waitForShutdown();
-	}
-	
-	//
+	Assert(sock == -1);
 	
 	bool success = true;
-	
-	isActive = true;
 	
 	struct sockaddr_in addr;
 
@@ -48,7 +37,7 @@ bool ThreadedTcpConnection::init(
 
 	if (sock == -1)
 	{
-		LOG_ERR("failed opening socket");
+		LOG_ERR("failed to open socket");
 		success = false;
 	}
 	
@@ -77,14 +66,10 @@ bool ThreadedTcpConnection::init(
 			signal(SIGPIPE, SIG_IGN);
 			
 			LOG_DBG("connecting socket to remote endpoint");
-		
-		// todo : connect from the main thread ?
+			
 			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
 			{
 				LOG_ERR("failed to connect socket");
-				
-				closesocket(sock);
-				sock = -1;
 			}
 			else
 			{
@@ -93,17 +78,6 @@ bool ThreadedTcpConnection::init(
 				LOG_DBG("invoking thread function");
 				
 				threadFunction();
-				
-				LOG_DBG("begin graceful shutdown TCP layer");
-				
-				if (shutdown(sock, SHUT_WR) == -1)
-				{
-					LOG_ERR("failed to shutdown socket. closing socket NOW");
-				
-					// close the socket
-					closesocket(sock);
-					sock = -1;
-				}
 			}
 		});
 	}
@@ -113,34 +87,43 @@ bool ThreadedTcpConnection::init(
 
 void ThreadedTcpConnection::beginShutdown()
 {
-	if (isActive)
+	if (sock != -1)
 	{
-		wantsToStop = true;
+		LOG_DBG("begin graceful shutdown TCP layer");
 		
-	// todo : signal socket so recv is interrupted
-	// fixme : socket is created on another thread. if we want to signal: we need a mutex. or create/close the socket on the main thread
-		
-		thread.join();
-		
-		wantsToStop = false;
-		
-		isActive = false;
+		if (shutdown(sock, SHUT_WR) == -1) // todo : SHUT_RDWR ?
+		{
+			LOG_ERR("failed to shutdown TCP layer");
+			Assert(false);
+		}
 	}
+	
+	wantsToStop = true;
 }
 
 void ThreadedTcpConnection::waitForShutdown()
 {
-// todo : set TCP_CONNECTIONTIMEOUT (initial connection timeout)
-// todo : set TCP_RXT_CONNDROPTIME (drop/retransmission timeout)
-// todo : set TCP_SENDMOREACKS for audio streamers (requires sender to hold less data)
+	if (thread.joinable())
+	{
+		thread.join();
+	}
+	
+	wantsToStop = false;
 
 	if (sock != -1)
 	{
+		LOG_DBG("waiting for graceful shutdown TCP layer");
+		
 		// perform recv on the socket. a recv of zero bytes means the underlying TCP
-		// layer has completed the shutdown sequence
+		// layer has completed the shutdown sequence. a recv of -1 means an error
+		// has occurred. we want to keep recv'ing until either condition occurred
 		char c;
-		while (recv(sock, &c, 1, 0) != 0)
+		while (recv(sock, &c, 1, 0) == 1)
 			sleep(0);
+		
+		LOG_DBG("waiting for graceful shutdown TCP layer [done]");
+		
+		LOG_DBG("closing socket");
 		
 		// close the socket
 		closesocket(sock);

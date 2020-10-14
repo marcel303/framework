@@ -8,6 +8,8 @@
 #if defined(WINDOWS)
 	#include <winsock2.h>
 #else
+	#include <netinet/ip.h>
+	#include <netinet/tcp.h>
 	#include <sys/socket.h>
 #endif
 
@@ -36,16 +38,24 @@ bool AudioStreamToTcp::init(
 	
 	return tcpConnection.init(ipAddress, tcpPort, options, [this]()
 	{
-		// tell the TCP stack to use a specific buffer size. usually the TCP stack is
-		// configured to use a rather large buffer size to increase bandwidth. we want
-		// to keep latency down however, so we reduce the buffer size here
+		{
+			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
+			// configured to use a rather large buffer size to increase bandwidth. we want
+			// to keep latency down however, so we reduce the buffer size here
+			
+			const int sock_value =
+				numBuffers  *         /* N times buffered */
+				numFramesPerBuffer  * /* frame count */
+				numChannelsPerFrame * /* stereo */
+				sizeof(int16_t)       /* sample size */;
+			setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
+		}
 		
-		const int sock_value =
-			numBuffers  *         /* N times buffered */
-			numFramesPerBuffer  * /* frame count */
-			numChannelsPerFrame * /* stereo */
-			sizeof(int16_t)       /* sample size */;
-		setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
+		{
+			// set TCP_SENDMOREACKS for audio streamers, as this requires the other side to hold less data for (potential) retransmission
+			const int sock_value = 1;
+			setsockopt(tcpConnection.sock, IPPROTO_TCP, TCP_SENDMOREACKS, (const char*)&sock_value, sizeof(sock_value));
+		}
 
 		LOG_DBG("frame size: %d", numFramesPerBuffer * numChannelsPerFrame * sizeof(int16_t));
 		
@@ -59,8 +69,6 @@ bool AudioStreamToTcp::init(
 		
 		while (tcpConnection.wantsToStop.load() == false)
 		{
-			// todo : perform disconnection test
-			
 			// generate some audio data
 			
 			provideFunction(samples, numFramesPerBuffer, numChannelsPerFrame);

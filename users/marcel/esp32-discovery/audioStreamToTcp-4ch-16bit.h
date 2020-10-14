@@ -14,4 +14,6 @@ struct Test_TcpToI2SQuad
 	void shut();
 	
 	void tick();
+	
+	bool isActive() const;
 };
