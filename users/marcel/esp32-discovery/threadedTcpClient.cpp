@@ -94,7 +94,6 @@ void ThreadedTcpConnection::beginShutdown()
 		if (shutdown(sock, SHUT_WR) == -1) // todo : SHUT_RDWR ?
 		{
 			LOG_ERR("failed to shutdown TCP layer");
-			Assert(false);
 		}
 	}
 	

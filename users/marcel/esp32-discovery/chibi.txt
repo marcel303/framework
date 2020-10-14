@@ -2,16 +2,15 @@ library nodeDiscovery
 	depend_library libgg
 	depend_library liboscpack
 	add_files nodeDiscovery.cpp nodeDiscovery.h
-	add_files dummyTcpServer.cpp dummyTcpServer.h
 	header_path . expose
 
-app marcel-esp32-discovery
+library nodeServices-audioStreamToTcp
+	depend_library libgg
 	add_files audioStreamToTcp.cpp  audioStreamToTcp.h
-	add_files audioStreamToTcp-2ch-16bit.cpp audioStreamToTcp-2ch-16bit.h
-	add_files audioStreamToTcp-4ch-16bit.cpp audioStreamToTcp-4ch-16bit.h
-	add_files audioStreamToTcp-1ch-8bit.cpp  audioStreamToTcp-1ch-8bit.h
-	add_files main.cpp
 	add_files threadedTcpClient.cpp threadedTcpClient.h
+
+app marcel-esp32-discovery
+	depend_library nodeServices-audioStreamToTcp
 	depend_library artnet
 	depend_library framework
 	depend_library ecs-parameter
@@ -20,4 +19,7 @@ app marcel-esp32-discovery
 	depend_library imgui-framework
 	depend_library nodeDiscovery
 	depend_library rapidjson
+	add_files dummyTcpServer.cpp dummyTcpServer.h
+	add_files main.cpp
+	add_files test_audioStreamToTcp.cpp test_audioStreamToTcp.h
 	resource_path data

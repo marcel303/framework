@@ -1,19 +1,29 @@
-#include "audioStreamToTcp-4ch-16bit.h"
+#include "test_audioStreamToTcp.h"
 
 #include "nodeDiscovery.h"
 #include "framework.h"
 #include "Log.h"
 
-bool Test_TcpToI2SQuad::init(const uint32_t ipAddress, const uint16_t tcpPort, const char * filename)
+bool Test_AudioStreamToTcp::init(
+	const uint32_t ipAddress,
+	const uint16_t tcpPort,
+	const int numBuffers,
+	const int numFramesPerBuffer,
+	const int numChannelsPerFrame,
+	const bool lowQualityMode,
+	const char * filename)
 {
 	audioStream.Open(filename, true);
 
 	audioStreamToTcp.init(
 		ipAddress, tcpPort,
-		I2S_4CH_BUFFER_COUNT,
-		I2S_4CH_FRAME_COUNT,
-		I2S_4CH_CHANNEL_COUNT,
+		numBuffers,
+		numFramesPerBuffer,
+		numChannelsPerFrame,
 		AudioStreamToTcp::kSampleFormat_S16,
+		lowQualityMode
+			? AudioStreamToTcp::kSampleFormat_S8
+			: AudioStreamToTcp::kSampleFormat_S16,
 		[this](void * __restrict out_samples, const int numFrames, const int numChannels)
 		{
 			// generate some audio data
@@ -37,10 +47,10 @@ bool Test_TcpToI2SQuad::init(const uint32_t ipAddress, const uint16_t tcpPort, c
 				
 				for (int i = 0; i < numFrames; ++i)
 				{
-					out_samples16[i * 4 + 0] = samples[i].channel[0];
-					out_samples16[i * 4 + 1] = samples[i].channel[1];
-					out_samples16[i * 4 + 2] = samples[i].channel[0];
-					out_samples16[i * 4 + 3] = samples[i].channel[1];
+					for (int c = 0; c < numChannels; ++c)
+					{
+						*out_samples16++ = samples[i].channel[c & 1];
+					}
 				}
 			}
 		});
@@ -48,7 +58,7 @@ bool Test_TcpToI2SQuad::init(const uint32_t ipAddress, const uint16_t tcpPort, c
 	return true;
 }
 
-void Test_TcpToI2SQuad::shut()
+void Test_AudioStreamToTcp::shut()
 {
 	audioStreamToTcp.beginShutdown();
 	audioStreamToTcp.waitForShutdown();
@@ -56,12 +66,12 @@ void Test_TcpToI2SQuad::shut()
 	audioStream.Close();
 }
 
-void Test_TcpToI2SQuad::tick()
+void Test_AudioStreamToTcp::tick()
 {
 	audioStreamToTcp.volume.store(mouse.x / 800.f);
 }
 
-bool Test_TcpToI2SQuad::isActive() const
+bool Test_AudioStreamToTcp::isActive() const
 {
 	return audioStreamToTcp.tcpConnection.sock != -1;
 }

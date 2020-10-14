@@ -2,12 +2,20 @@
 #include "Log.h"
 #include "nodeDiscovery.h"
 #include "StringEx.h"
+
 #include <chrono>
 #include <inttypes.h> // PRIx64
 #include <mutex>
 #include <string>
 #include <string.h>
 #include <thread>
+
+#if defined(WINDOWS)
+	#include <winsock2.h>
+#else
+	#include <arpa/inet.h> // ntohll
+	#include <unistd.h>
+#endif
 
 #define DISCOVERY_RECEIVE_PORT 2400
 
@@ -114,7 +122,7 @@ void NodeDiscoveryProcess::endThread()
 {
 	if (receiveSocket != nullptr)
 	{
-		receiveSocket->Break(); // todo : check Break calls inside entire code base, ensure join is performed before delete of the receiver
+		receiveSocket->AsynchronousBreak();
 	}
 	
 	if (thread != nullptr)
@@ -122,12 +130,6 @@ void NodeDiscoveryProcess::endThread()
 		thread->join();
 		delete thread;
 		thread = nullptr;
-	}
-	
-	if (receiveSocket != nullptr)
-	{
-		delete receiveSocket;
-		receiveSocket = nullptr;
 	}
 	
 	if (mutex != nullptr)

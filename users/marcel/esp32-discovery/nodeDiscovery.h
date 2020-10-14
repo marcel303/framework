@@ -46,11 +46,16 @@ struct NodeDiscoveryPacket
 
 struct NodeDiscoveryRecord
 {
-	uint64_t id;
-	uint32_t capabilities;
-	char description[32];
+	uint64_t id = 0;
+	uint32_t capabilities = 0;
+	char description[32] = { };
 	IpEndpointName endpointName;
 	int64_t receiveTime = 0; // the time (in miliseconds) at which a discovery message for this node was last received
+	
+	bool isValid() const
+	{
+		return id != 0;
+	}
 };
 
 class NodeDiscoveryProcess : public PacketListener

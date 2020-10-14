@@ -21,9 +21,7 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 #include "nodeDiscovery.h"
 
-#include "audioStreamToTcp-2ch-16bit.h"
-#include "audioStreamToTcp-4ch-16bit.h"
-#include "audioStreamToTcp-1ch-8bit.h"
+#include "test_audioStreamToTcp.h"
 
 // -- NodeState
 
@@ -35,9 +33,9 @@ struct NodeState
 	
 	bool showTests = false;
 	
-	Test_TcpToI2S test_tcpToI2S;
-	Test_TcpToI2SQuad test_tcpToI2SQuad;
-	Test_TcpToI2SMono8 test_tcpToI2SMono8;
+	Test_AudioStreamToTcp test_tcpToI2S;
+	Test_AudioStreamToTcp test_tcpToI2SQuad;
+	Test_AudioStreamToTcp test_tcpToI2SMono8;
 	
 	struct
 	{
@@ -435,9 +433,16 @@ static void testDummyTcpServer()
 	tcpServer.init(endpointName);
 	
 #if 1
-	Test_TcpToI2S tcpToI2S;
+	Test_AudioStreamToTcp audioStreamToTcp;
 	
-	tcpToI2S.init(IpEndpointName("127.0.0.1", -1).address, 4000, "loop01-short.ogg");
+	audioStreamToTcp.init(
+		IpEndpointName("127.0.0.1", -1).address,
+		4000,
+		2,
+		128,
+		1,
+		true,
+		"loop01-short.ogg");
 	
 	SDL_Delay(3000);
 	
@@ -445,9 +450,9 @@ static void testDummyTcpServer()
 	
 	tcpServer.beginShutdown();
 	
-	logInfo("shutting down I2S streamer");
+	logInfo("shutting down audio streamer");
 	
-	tcpToI2S.shut();
+	audioStreamToTcp.shut();
 	
 	logInfo("waiting for dummy TCP server shutdown to complete");
 	
@@ -497,7 +502,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	//testDummyTcpServer(); // todo : remove once done testing TCP connection refactor
+	//testDummyTcpServer(); // todo : remove once done testing TCP connection refactor. or move to a separate test app
 	//return 0;
 	
 	if (!framework.init(800, 600))
@@ -551,7 +556,14 @@ int main(int argc, char * argv[])
 					else
 					{
 						nodeState.test_tcpToI2SQuad.shut();
-						nodeState.test_tcpToI2SQuad.init(record.endpointName.address, I2S_4CH_PORT, "loop01-short.ogg");
+						nodeState.test_tcpToI2SQuad.init(
+							record.endpointName.address,
+							I2S_4CH_PORT,
+							I2S_4CH_BUFFER_COUNT,
+							I2S_4CH_FRAME_COUNT,
+							I2S_4CH_CHANNEL_COUNT,
+							false,
+							"loop01-short.ogg");
 					}
 				}
 				
@@ -571,7 +583,15 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2S.init(record.endpointName.address, I2S_2CH_PORT, "loop01-short.ogg");
+						nodeState.test_tcpToI2S.shut();
+						nodeState.test_tcpToI2S.init(
+							record.endpointName.address,
+							I2S_2CH_PORT,
+							I2S_2CH_BUFFER_COUNT,
+							I2S_2CH_FRAME_COUNT,
+							I2S_2CH_CHANNEL_COUNT,
+							false,
+							"loop01-short.ogg");
 					}
 				}
 				
@@ -591,12 +611,19 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SMono8.init(record.endpointName.address, I2S_1CH_8_PORT, "loop01-short.ogg");
+						nodeState.test_tcpToI2SMono8.shut();
+						nodeState.test_tcpToI2SMono8.init(
+							record.endpointName.address,
+							I2S_1CH_8_PORT,
+							I2S_1CH_8_BUFFER_COUNT,
+							I2S_1CH_8_FRAME_COUNT,
+							I2S_1CH_8_CHANNEL_COUNT,
+							true,
+							"loop01-short.ogg");
 					}
 				}
 				
-				const float volume = mouse.x / 800.f;
-				nodeState.test_tcpToI2SMono8.volume.store(volume);
+				nodeState.test_tcpToI2SMono8.tick();
 			}
 		
 			// send some artnet data to discovered nodes

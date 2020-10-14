@@ -20,6 +20,7 @@ struct AudioStreamToTcp
 	
 	enum SampleFormat
 	{
+		kSampleFormat_S8,
 		kSampleFormat_S16,
 		kSampleFormat_Float
 	};
@@ -31,7 +32,8 @@ struct AudioStreamToTcp
 	int numBuffers = 0;
 	int numFramesPerBuffer = 0;
 	int numChannelsPerFrame = 0;
-	SampleFormat sampleFormat = kSampleFormat_Float;
+	SampleFormat provideSampleFormat = kSampleFormat_Float;
+	SampleFormat networkSampleFormat = kSampleFormat_Float;
 	ProvideFunction provideFunction;
 	
 	AudioStreamToTcp();
@@ -42,7 +44,8 @@ struct AudioStreamToTcp
 		const int numBuffers,
 		const int numFramesPerBuffer,
 		const int numChannelsPerFrame,
-		const SampleFormat sampleFormat,
+		const SampleFormat provideSampleFormat,
+		const SampleFormat networkSampleFormat,
 		const ProvideFunction & provideFunction);
 	void beginShutdown();
 	void waitForShutdown();

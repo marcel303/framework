@@ -1,7 +1,5 @@
 #include "audioStreamToTcp.h"
 
-#include "nodeDiscovery.h"
-
 #include "Debugging.h"
 #include "Log.h"
 
@@ -12,6 +10,44 @@
 	#include <netinet/tcp.h>
 	#include <sys/socket.h>
 #endif
+
+static void floatToInt8(const float * __restrict src, int8_t * __restrict dst, const int numSamples)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float value = src[i];
+		
+		if (value < 0.f)
+			value = 0.f;
+		else if (value > 1.f)
+			value = 1.f;
+
+		dst[i] = int8_t(value * float((1 << 7) - 1));
+	}
+}
+
+static void floatToInt16(const float * __restrict src, int16_t * __restrict dst, const int numSamples)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float value = src[i];
+		
+		if (value < 0.f)
+			value = 0.f;
+		else if (value > 1.f)
+			value = 1.f;
+
+		dst[i] = int16_t(value * float((1 << 15) - 1));
+	}
+}
+
+static void int16ToInt8(const int16_t * __restrict src, int8_t * __restrict dst, const int numSamples)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		dst[i] = src[i] >> 8;
+	}
+}
 
 AudioStreamToTcp::AudioStreamToTcp()
 	: volume(1.f)
@@ -24,14 +60,16 @@ bool AudioStreamToTcp::init(
 	const int in_numBuffers,
 	const int in_numFramesPerBuffer,
 	const int in_numChannelsPerFrame,
-	const SampleFormat in_sampleFormat,
+	const SampleFormat in_provideSampleFormat,
+	const SampleFormat in_networkSampleFormat,
 	const ProvideFunction & in_provideFunction)
 {
 	provideFunction = in_provideFunction;
 	numBuffers = in_numBuffers;
 	numFramesPerBuffer = in_numFramesPerBuffer;
 	numChannelsPerFrame = in_numChannelsPerFrame;
-	sampleFormat = in_sampleFormat;
+	provideSampleFormat = in_provideSampleFormat;
+	networkSampleFormat = in_networkSampleFormat;
 	
 	ThreadedTcpConnection::Options options;
 	options.noDelay = true;
@@ -60,58 +98,96 @@ bool AudioStreamToTcp::init(
 		LOG_DBG("frame size: %d", numFramesPerBuffer * numChannelsPerFrame * sizeof(int16_t));
 		
 		const int numSamplesPerBuffer = numFramesPerBuffer * numChannelsPerFrame;
-		const int sampleSize =
-			sampleFormat == kSampleFormat_S16 ? 2 :
-			sampleFormat == kSampleFormat_Float ? 4 :
+		const int provideSampleSize =
+			provideSampleFormat == kSampleFormat_S8 ? 1 :
+			provideSampleFormat == kSampleFormat_S16 ? 2 :
+			provideSampleFormat == kSampleFormat_Float ? 4 :
 			-1;
-		const int bufferSize = numSamplesPerBuffer * sampleSize;
-		void * __restrict samples = alloca(bufferSize);
+		const int networkSampleSize =
+			networkSampleFormat == kSampleFormat_S8 ? 1 :
+			networkSampleFormat == kSampleFormat_S16 ? 2 :
+			-1;
+		const int provideBufferSize = numSamplesPerBuffer * provideSampleSize;
+		const int networkBufferSize = numSamplesPerBuffer * networkSampleSize;
+		
+		void * __restrict provideBuffer = alloca(provideBufferSize);
+		void * __restrict networkBuffer = alloca(networkBufferSize);
 		
 		while (tcpConnection.wantsToStop.load() == false)
 		{
 			// generate some audio data
 			
-			provideFunction(samples, numFramesPerBuffer, numChannelsPerFrame);
+			provideFunction(provideBuffer, numFramesPerBuffer, numChannelsPerFrame);
 			
-			int16_t * __restrict data = nullptr;
+			void * __restrict data = nullptr;
 			
-			if (sampleFormat == kSampleFormat_S16)
+			if (networkSampleFormat == provideSampleFormat)
 			{
-				data = (int16_t*)samples;
-			}
-			else if (sampleFormat == kSampleFormat_Float)
-			{
-				data = (int16_t*)alloca(numSamplesPerBuffer * sizeof(int16_t));
-				
-				const float * __restrict src = (float*)samples;
-				int16_t * __restrict dst = data;
-				
-				for (int i = 0; i < numSamplesPerBuffer; ++i)
-				{
-					float value = *src++;
-					if (value < 0.f)
-						value = 0.f;
-					else if (value > 1.f)
-						value = 1.f;
-					
-					*dst++ = int16_t(value * float((1 << 15) - 1));
-				}
+				data = provideBuffer;
 			}
 			else
 			{
-				Assert(false);
+				data = networkBuffer;
+				
+				if (provideSampleFormat == kSampleFormat_Float)
+				{
+					if (networkSampleFormat == kSampleFormat_S8)
+					{
+						floatToInt8((float*)provideBuffer, (int8_t*)networkBuffer, numSamplesPerBuffer);
+					}
+					else if (networkSampleFormat == kSampleFormat_S16)
+					{
+						floatToInt16((float*)provideBuffer, (int16_t*)networkBuffer, numSamplesPerBuffer);
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else if (provideSampleFormat == kSampleFormat_S16)
+				{
+					if (networkSampleFormat == kSampleFormat_S8)
+					{
+						int16ToInt8((int16_t*)provideBuffer, (int8_t*)networkBuffer, numSamplesPerBuffer);
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+				else
+				{
+					Assert(false);
+				}
 			}
 			
 			// perform volume mixing
 			
-			const int volume14 = volume.load() * (1 << 14);
-			
-			for (int i = 0; i < numSamplesPerBuffer; ++i)
-				data[i] = (data[i] * volume14) >> 14;
+			if (networkSampleFormat == kSampleFormat_S8)
+			{
+				const int volume14 = int(volume.load() * (1 << 14));
+				int8_t * data_int = (int8_t*)data;
+				for (int i = 0; i < numSamplesPerBuffer; ++i)
+					data_int[i] = (data_int[i] * volume14) >> 14;
+			}
+			else if (networkSampleFormat == kSampleFormat_S16)
+			{
+				const int volume14 = int(volume.load() * (1 << 14));
+				int16_t * data_int = (int16_t*)data;
+				for (int i = 0; i < numSamplesPerBuffer; ++i)
+					data_int[i] = (data_int[i] * volume14) >> 14;
+			}
+			else if (networkSampleFormat == kSampleFormat_S8)
+			{
+				const float volume_value = volume.load();
+				float * data_float = (float*)data;
+				for (int i = 0; i < numSamplesPerBuffer; ++i)
+					data_float[i] = data_float[i] * volume_value;
+			}
 			
 			// send data
 			
-			if (send(tcpConnection.sock, (const char*)data, bufferSize, 0) < bufferSize)
+			if (send(tcpConnection.sock, (const char*)data, networkBufferSize, 0) < networkBufferSize)
 			{
 				LOG_ERR("failed to send data");
 				tcpConnection.wantsToStop = true;
