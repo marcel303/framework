@@ -29,6 +29,7 @@
 #include "graph.h"
 #include "graph_typeDefinitionLibrary.h"
 #include "Parse.h"
+#include "Log.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include <algorithm>
@@ -392,7 +393,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 				{
 					if (inputSocket.name == link.srcNodeSocketName)
 					{
-						//printf("srcNodeSocketIndex: %d -> %d\n", link.srcNodeSocketIndex, inputSocket.index);
+						//LOG_DBG("srcNodeSocketIndex: %d -> %d\n", link.srcNodeSocketIndex, inputSocket.index);
 						link.srcNodeSocketIndex = inputSocket.index;
 						break;
 					}
@@ -402,7 +403,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 		
 		if (link.srcNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find srcSocketIndex. linkId=%d, srcNodeId=%d, srcSocketName=%s\n", link.id, link.srcNodeId, link.srcNodeSocketName.c_str());
+			LOG_ERR("failed to find srcSocketIndex. linkId=%d, srcNodeId=%d, srcSocketName=%s", link.id, link.srcNodeId, link.srcNodeSocketName.c_str());
 		}
 		
 		auto dstNode = tryGetNode(link.dstNodeId);
@@ -417,17 +418,17 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 				{
 					if (outputSocket.name == link.dstNodeSocketName)
 					{
-						//printf("dstNodeSocketIndex: %d -> %d\n", link.dstNodeSocketIndex, outputSocket.index);
+						//LOG_DBG("dstNodeSocketIndex: %d -> %d\n", link.dstNodeSocketIndex, outputSocket.index);
 						link.dstNodeSocketIndex = outputSocket.index;
 						break;
 					}
 				}
-			}
+		}
 		}
 		
 		if (link.dstNodeSocketIndex == -1 && !link.isDynamic)
 		{
-			printf("failed to find dstSocketIndex. linkId=%d, dstNodeId=%d, dstSocketName=%s\n", link.id, link.dstNodeId, link.dstNodeSocketName.c_str());
+			LOG_ERR("failed to find dstSocketIndex. linkId=%d, dstNodeId=%d, dstSocketName=%s", link.id, link.dstNodeId, link.dstNodeSocketName.c_str());
 		}
 	}
 
