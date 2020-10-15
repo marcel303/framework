@@ -1943,6 +1943,12 @@ inline T lerp(T v1, T v2, double t)
 }
 
 template <typename T>
+inline float inverseLerp(T v1, T v2, T v)
+{
+	return float(v - v1) / float(v2 - v1);
+}
+
+template <typename T>
 inline T sine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
