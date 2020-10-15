@@ -286,6 +286,9 @@ GraphLink * Graph::tryGetLink(const GraphLinkId linkId)
 
 bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
+	Assert(nodes.empty());
+	Assert(links.empty());
+	
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
 	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
 	
