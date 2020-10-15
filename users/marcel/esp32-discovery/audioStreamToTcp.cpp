@@ -17,12 +17,15 @@ static void floatToInt8(const float * __restrict src, int8_t * __restrict dst, c
 	{
 		float value = src[i];
 		
-		if (value < 0.f)
-			value = 0.f;
+		if (value < -1.f)
+			value = -1.f;
 		else if (value > 1.f)
 			value = 1.f;
 
-		dst[i] = int8_t(value * float((1 << 7) - 1));
+		const int value_int = int(value * float((1 << 7) - 1));
+		//Assert(value_int >= INT8_MIN && value_int <= INT8_MAX);
+		
+		dst[i] = int8_t(value_int);
 	}
 }
 
@@ -32,12 +35,15 @@ static void floatToInt16(const float * __restrict src, int16_t * __restrict dst,
 	{
 		float value = src[i];
 		
-		if (value < 0.f)
-			value = 0.f;
+		if (value < -1.f)
+			value = -1.f;
 		else if (value > 1.f)
 			value = 1.f;
 
-		dst[i] = int16_t(value * float((1 << 15) - 1));
+		const int value_int = int(value * float((1 << 15) - 1));
+		//Assert(value_int >= INT16_MIN && value_int <= INT16_MAX);
+		
+		dst[i] = int16_t(value_int);
 	}
 }
 
@@ -90,9 +96,14 @@ bool AudioStreamToTcp::init(
 		}
 		
 		{
-			// set TCP_SENDMOREACKS for audio streamers, as this requires the other side to hold less data for (potential) retransmission
+			// set TCP_SENDMOREACKS/TCP_QUICKACK for audio streamers, as this requires the other side to hold less data for (potential) retransmission
+		#if defined(MACOS)
+			const int sock_opt = TCP_SENDMOREACKS;
+		#else
+			const int sock_opt = TCP_QUICKACK;
+		#endif
 			const int sock_value = 1;
-			setsockopt(tcpConnection.sock, IPPROTO_TCP, TCP_SENDMOREACKS, (const char*)&sock_value, sizeof(sock_value));
+			setsockopt(tcpConnection.sock, IPPROTO_TCP, sock_opt, (const char*)&sock_value, sizeof(sock_value));
 		}
 
 		LOG_DBG("frame size: %d", numFramesPerBuffer * numChannelsPerFrame * sizeof(int16_t));
