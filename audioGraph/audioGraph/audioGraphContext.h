@@ -33,7 +33,6 @@
 #include <typeindex>
 #include <vector>
 
-struct AudioGraphManager;
 struct AudioVoiceManager;
 
 struct AudioGraphContext
