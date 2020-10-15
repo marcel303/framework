@@ -11,6 +11,7 @@ app nodeDiscovery-400-audiograph
 	depend_library nodeDiscovery
 	depend_library nodeServices-audioStreamToTcp
 	add_files 400-audiograph.cpp
+	resource_path data
 	
 #app nodeDiscovery-600-vfxgraph
 

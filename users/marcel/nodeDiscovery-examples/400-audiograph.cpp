@@ -27,7 +27,7 @@ int main()
 	
 	auto * types = createAudioTypeDefinitionLibrary();
 	
-	const char * filename = "test.xml";
+	const char * filename = "400-audiograph.xml";
 	
 	Graph graph;
 	graph.load(filename, types);
@@ -74,8 +74,8 @@ int main()
 	
 	for (int i = 0; i < kNumChannels; ++i)
 	{
-		audioChannelState[i].audioVoiceMgr.init(&audioMutex, 8);
-		audioChannelState[i].audioGraphContext.init(&audioMutex, &audioChannelState[i].audioVoiceMgr, nullptr);
+		audioChannelState[i].audioVoiceMgr.init(&audioMutex, kNumSteps);
+		audioChannelState[i].audioGraphContext.init(&audioMutex, &audioChannelState[i].audioVoiceMgr);
 		audioChannelState[i].load(graph, types);
 	}
 	
@@ -102,29 +102,47 @@ int main()
 				for (int s = 0; s < kNumSteps; ++s)
 					audioChannelState[c].audioGraph[s]->tickAudio(numFrames / 48000.f, true);
 			
-			float voice[4][128];
+			float voice[kNumChannels][AUDIO_UPDATE_SIZE];
 			for (int c = 0; c < numChannels; ++c)
 				audioChannelState[c].audioVoiceMgr.generateAudio(voice[c], numFrames, 1);
 			
+		#if 1
 			float * __restrict samples_float = (float*)samples;
-			for (int c = 0; c < numChannels; ++c) // todo : move into inner loop
-			{
-			#if 1
-				float value = 0.f;
+			
+			for (int i = 0; i < numFrames; ++i)
+				for (int c = 0; c < numChannels; ++c)
+					samples_float[i * numChannels + c] = voice[c][i];
+		#else
+			static float phase = 0.f;
+			const float pitch = lerp(10.f, 1000.f, inverseLerp(0, 800, mouse.x));
+			const float phaseStep = pitch / 44100.f;
+			
+			float value[kNumChannels] = { };
+			for (int c = 0; c < numChannels; ++c)
 				for (int s = 0; s < kNumSteps; ++s)
-					value = fmaxf(value, grid[c][s].triggerTimer);
-				for (int i = 0; i < numFrames; ++i)
+					value[c] = fmaxf(value[c], grid[c][s].triggerTimer);
+			
+			float * __restrict samples_float = (float*)samples;
+			
+			for (int i = 0; i < numFrames; ++i)
+			{
+			#if 0
+				for (int c = 0; c < numChannels; ++c)
 					samples_float[i * numChannels + c] = value;
 			#elif 1
-				const float phase = fmodf(framework.time * (c + 1), 1.f);
-				const float value = sinf(phase * float(M_PI));
-				for (int i = 0; i < numFrames; ++i)
-					samples_float[i * numChannels + c] = value;//voice[c][i];
+				const float wave = sinf(phase * float(M_PI));
+				phase += phaseStep;
+				if (phase > 1.f)
+					phase -= 1.f;
+				
+				for (int c = 0; c < numChannels; ++c)
+					samples_float[i * numChannels + c] = value[c] * wave;
 			#else
-				for (int i = 0; i < numFrames; ++i)
+				for (int c = 0; c < numChannels; ++c)
 					samples_float[i * numChannels + c] = voice[c][i];
 			#endif
 			}
+		#endif
 		};
 	
 	NodeDiscoveryRecord record;
@@ -160,7 +178,9 @@ int main()
 						r.endpointName.address,
 						I2S_4CH_PORT,
 						I2S_4CH_BUFFER_COUNT,
-						I2S_4CH_FRAME_COUNT,
+						AUDIO_UPDATE_SIZE > I2S_4CH_CHANNEL_COUNT
+							? AUDIO_UPDATE_SIZE
+							: I2S_4CH_CHANNEL_COUNT,
 						I2S_4CH_CHANNEL_COUNT,
 						AudioStreamToTcp::kSampleFormat_Float,
 						AudioStreamToTcp::kSampleFormat_S16,
@@ -200,6 +220,9 @@ int main()
 				if (grid[c][nextStep].active)
 				{
 					grid[c][nextStep].triggerTimer = 1.f;
+					
+					audioChannelState[c].audioGraph[nextStep]->setMemf("freq", 200);
+					audioChannelState[c].audioGraph[nextStep]->triggerEvent("begin");
 				}
 			}
 			
@@ -218,7 +241,7 @@ int main()
 			// click: toggle note
 			
 			setColor(100, 255, 100);
-			const int x = 800 / kNumSteps * (nextStep + .5f);
+			const int x = 800 / kNumSteps * (((nextStep + kNumSteps - 1) % kNumSteps) + .5f);
 			const int y = 40;
 			fillCircle(x, y, 12, 10);
 			
