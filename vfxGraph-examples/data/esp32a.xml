@@ -1,0 +1,42 @@
+<graph nextNodeId="38" nextLinkId="46">
+    <node id="28" typeName="osc.sheet">
+        <input socket="ledstrip_X_loudness/allChannels" value="1"/>
+        <input socket="oscPrefix" value="/modulation"/>
+        <input socket="oscSheet" value="esp32.csv"/>
+        <input socket="synOnInit" value="1"/>
+    </node>
+    <node id="29" typeName="osc.endpoint">
+        <input socket="sendIpAddress" value="192.168.10.4"/>
+        <input socket="sendPort" value="2000"/>
+    </node>
+    <node id="31" typeName="osc.sheet">
+        <input socket="ledStrip/channel2Brightness" value="0.600000"/>
+        <input socket="ledStrip/channel3Brightness" value="0.300000"/>
+        <input socket="ledStrip/testMode" value="6"/>
+        <input socket="oscPrefix" value="/Artnet to Ledstrip"/>
+        <input socket="oscSheet" value="esp32.csv"/>
+        <input socket="synOnInit" value="1"/>
+    </node>
+    <node id="33" typeName="gen.saw"/>
+    <link id="45" srcNodeId="28" srcNodeSocketName="ledstrip_X_loudness/dryWet" dstNodeId="33" dstNodeSocketName="value" dynamic="1"/>
+    <editor nextZKey="305">
+        <dragAndZoom x="-509.71636962890625" y="-103.52737426757812" zoom="1.3981587886810303"/>
+        <nodeDatas>
+            <nodeData nodeId="28" x="-832" y="-304" zKey="303"/>
+            <nodeData nodeId="29" x="-512" y="-288" zKey="294"/>
+            <nodeData nodeId="31" x="-384" y="-288" zKey="304"/>
+            <nodeData nodeId="33" x="-1040" y="-208" zKey="301"/>
+        </nodeDatas>
+        <visualizers/>
+        <comments>
+            <comment id="36" x="-1072" y="-336" caption="Modulations" sx="487.88958740234375" sy="383.2274169921875" color.r="0.19624465703964233" color.g="0.19624465703964233" color.b="0.19624465703964233" color.a="0.89999997615814209"/>
+            <comment id="37" x="-544" y="-336" caption="Ledstrip" sx="315.00006103515625" sy="488.00009155273438" color.r="0.28768393397331238" color.g="0.28768393397331238" color.b="0.28768393397331238" color.a="0.89999997615814209"/>
+        </comments>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="3434349a" gridColor="ffffff0b">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="0.31999999284744263" r="0.38908833265304565" g="0.1291666179895401" b="0.87083327770233154" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>
