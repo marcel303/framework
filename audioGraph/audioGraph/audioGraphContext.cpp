@@ -34,7 +34,6 @@
 AudioGraphContext::AudioGraphContext()
 	: audioMutex(nullptr)
 	, voiceMgr(nullptr)
-	, audioGraphMgr(nullptr)
 	, mainThreadId()
 	, controlValues()
 	, memf()
@@ -42,13 +41,11 @@ AudioGraphContext::AudioGraphContext()
 {
 }
 
-void AudioGraphContext::init(AudioMutexBase * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
+void AudioGraphContext::init(AudioMutexBase * mutex, AudioVoiceManager * _voiceMgr)
 {
 	audioMutex = mutex;
 	
 	voiceMgr = _voiceMgr;
-	
-	audioGraphMgr = _audioGraphMgr;
 	
 	mainThreadId.setThreadId();
 }
@@ -56,8 +53,6 @@ void AudioGraphContext::init(AudioMutexBase * mutex, AudioVoiceManager * _voiceM
 void AudioGraphContext::shut()
 {
 	mainThreadId.clearThreadId();
-
-	audioGraphMgr = nullptr;
 	
 	audioMutex = nullptr;
 }

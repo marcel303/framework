@@ -343,7 +343,7 @@ AudioGraphContext * AudioGraphManager_Basic::createContext(AudioMutexBase * mute
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr, this);
+	context->init(mutex, voiceMgr);
 	
 	audioMutex->lock();
 	{
@@ -682,7 +682,7 @@ AudioGraphContext * AudioGraphManager_RTE::createContext(AudioMutexBase * mutex,
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr, this);
+	context->init(mutex, voiceMgr);
 	
 	audioMutex->lock();
 	{
@@ -1130,7 +1130,7 @@ AudioGraphContext * AudioGraphManager_MultiRTE::createContext(AudioMutexBase * m
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr, this);
+	context->init(mutex, voiceMgr);
 	
 	audioMutex->lock();
 	{

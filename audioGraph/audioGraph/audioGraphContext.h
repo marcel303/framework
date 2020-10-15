@@ -73,8 +73,6 @@ struct AudioGraphContext
 	
 	AudioVoiceManager * voiceMgr;
 	
-	AudioGraphManager * audioGraphMgr;
-	
 	AudioThreadId mainThreadId;
 
 	std::vector<ObjectRegistration> objects;
@@ -88,7 +86,7 @@ struct AudioGraphContext
 	AudioGraphContext();
 	
 	// called from the app thread
-	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the audio thread
