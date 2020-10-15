@@ -297,7 +297,7 @@ void AudioVoiceManager::generateAudio(
 				{
 					if (voice.channelIndex >= 0 && voice.channelIndex < numChannels)
 					{
-						if (interleaved)
+						if (interleaved && numChannels > 1)
 						{
 							// interleave voice samples into destination buffer
 							
@@ -305,7 +305,7 @@ void AudioVoiceManager::generateAudio(
 							
 							for (int i = 0; i < numSamples; ++i)
 							{
-								*dstPtr = voiceSamples[i];
+								*dstPtr += voiceSamples[i];
 								
 								dstPtr += numChannels;
 							}
