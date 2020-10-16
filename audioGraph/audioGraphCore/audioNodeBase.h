@@ -95,6 +95,8 @@ struct AudioNodeBase
 	
 	void trigger(const int outputSocketIndex);
 	
+	// -- input and output sockets
+	
 	void resizeSockets(const int numInputs, const int numOutputs)
 	{
 		inputs.resize(numInputs);
@@ -230,6 +232,8 @@ struct AudioNodeBase
 	}
 	
 	ALIGNED_AUDIO_NEW_AND_DELETE();
+	
+	// -- implementation
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }

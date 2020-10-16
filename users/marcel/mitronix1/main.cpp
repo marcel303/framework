@@ -1,4 +1,5 @@
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
@@ -879,7 +880,8 @@ int main(int argc, char * argv[])
 		framework.fillCaches(true);
 	#endif
 		
-		fillHrirSampleSetCache("cipic.147", "cipic.147", kHRIRSampleSetType_Cipic);
+		HRIRSampleSetCache sampleSetCache;
+		sampleSetCache.add("cipic.147", "cipic.147", kHRIRSampleSetType_Cipic);
 		
 		handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
@@ -894,12 +896,11 @@ int main(int argc, char * argv[])
 		
 		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
 		audioGraphMgr->init(audioMutex, audioVoiceMgr);
+		audioGraphMgr->getContext()->addObject(&sampleSetCache);
 		s_audioGraphMgr = audioGraphMgr;
 		
 		AudioUpdateHandler * audioUpdateHandler = new AudioUpdateHandler();
-		audioUpdateHandler->init(audioMutex, nullptr, 0);
-		audioUpdateHandler->voiceMgr = audioVoiceMgr;
-		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
+		audioUpdateHandler->init(audioMutex, audioVoiceMgr, audioGraphMgr);
 		
 		PortAudioObject * paObject = new PortAudioObject();
 		if (paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, audioUpdateHandler) == false)
@@ -1169,6 +1170,8 @@ int main(int argc, char * argv[])
 		
 		delete surface;
 		surface = nullptr;
+		
+		sampleSetCache.clear();
 		
 		SDL_FreeCursor(handCursor);
 		handCursor = nullptr;

@@ -27,6 +27,7 @@
 
 // todo : replace this with a decent sample set cache object and make it a global
 // todo : move binaural sample set cache to somewhere else
+// todo : register HRIR sample set cache with audio graph context(s)
 
 namespace binaural
 {
@@ -41,6 +42,15 @@ enum HRIRSampleSetType
 	kHRIRSampleSetType_Oalsoft
 };
 
-void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
-void clearHrirSampleSetCache();
-const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);
+#include <map> // todo : hide impl and remove headers
+#include <string>
+
+struct HRIRSampleSetCache
+{
+	std::map<std::string, binaural::HRIRSampleSet*> cache;
+	
+	void add(const char * path, const char * name, const HRIRSampleSetType type);
+	void clear();
+	
+	const binaural::HRIRSampleSet * find(const char * name) const;
+};

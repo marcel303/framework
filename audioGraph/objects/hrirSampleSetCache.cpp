@@ -34,9 +34,7 @@
 #include "Log.h"
 #include <map>
 
-static std::map<std::string, binaural::HRIRSampleSet*> s_hrirSampleSetCache;
-
-void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type)
+void HRIRSampleSetCache::add(const char * path, const char * name, const HRIRSampleSetType type)
 {
 	binaural::HRIRSampleSet * sampleSet = new binaural::HRIRSampleSet();
 	
@@ -69,7 +67,7 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	{
 		sampleSet->finalize();
 		
-		auto & elem = s_hrirSampleSetCache[name];
+		auto & elem = cache[name];
 		
 		delete elem;
 		elem = nullptr;
@@ -78,22 +76,22 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	}
 }
 
-void clearHrirSampleSetCache()
+void HRIRSampleSetCache::clear()
 {
-	for (auto & i : s_hrirSampleSetCache)
+	for (auto & i : cache)
 	{
 		delete i.second;
 		i.second = nullptr;
 	}
 	
-	s_hrirSampleSetCache.clear();
+	cache.clear();
 }
 
-const binaural::HRIRSampleSet * getHrirSampleSet(const char * name)
+const binaural::HRIRSampleSet * HRIRSampleSetCache::find(const char * name) const
 {
-	auto i = s_hrirSampleSetCache.find(name);
+	auto i = cache.find(name);
 	
-	if (i == s_hrirSampleSetCache.end())
+	if (i == cache.end())
 	{
 		return nullptr;
 	}
