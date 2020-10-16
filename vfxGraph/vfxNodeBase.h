@@ -538,6 +538,8 @@ struct VfxNodeBase
 	
 	void trigger(const int outputSocketIndex);
 	
+	// -- input and output sockets
+	
 	void resizeSockets(const int numInputs, const int numOutputs)
 	{
 		inputs.resize(numInputs);
@@ -698,6 +700,8 @@ struct VfxNodeBase
 			return plug->getMesh();
 	}
 	
+	// -- helper functions
+	
 	void queueTrigger(const int index)
 	{
 		VfxPlug * plug = tryGetInput(index);
@@ -715,6 +719,8 @@ struct VfxNodeBase
 	{
 		editorIssue = text;
 	}
+	
+	// -- implementation
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
