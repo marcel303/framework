@@ -12,6 +12,10 @@
 
 #if defined(WINDOWS)
 	#include <winsock2.h>
+#elif defined(LINUX)
+	#include <endian.h> // be64toh/ntohll
+	#include <unistd.h>
+	#define ntohll(x) be64toh(x)
 #else
 	#include <arpa/inet.h> // ntohll
 	#include <unistd.h>
