@@ -55,10 +55,17 @@ struct AudioGraphContext
 // todo : do the same for vfxgraph! useful for registering FsfxLibrary, ...
 /*
 
-	context.addObject(new AudioGraphMemfMgr());
-	context.addObject(new AudioGraphMemsMgr());
-	context.addObject(new AudioGraphControlValueMgr());
-	context.addObject(new JsusFxAudioGraphLibrary());
+	auto * memf = new AudioGraphMemfMgr();
+	auto * mems = new AudioGraphMemsMgr();
+ 	auto * controlValues = new AudioGraphControlValueMgr();
+ 	auto * jsusFxLibrary = new JsusFxAudioGraphLibrary();
+ 	auto * sampleSetCache = new HRIRSampleSetCache();
+ 	
+	context.addObject(memf);
+	context.addObject(mems);
+	context.addObject(controlValues);
+	context.addObject(jsusfxLibrary);
+	context.addObject(sampleSetCache);
  
 	auto * memfMgr = context.findObject<AudioGraphMemfMgr>();
  
