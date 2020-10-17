@@ -139,3 +139,10 @@ extern void audioBufferDryWet(
 extern float audioBufferSum(
 	const float * __restrict audioBuffer,
 	const int numSamples);
+
+extern void audioBufferClip_Hard(
+	float * __restrict audioBuffer,
+	const int numSamples);
+extern void audioBufferClip_FastSigmoid(
+	float * __restrict audioBuffer,
+	const int numSamples);
