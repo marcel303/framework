@@ -33,6 +33,27 @@
 #include "hrirSampleSetCache.h"
 #include "Log.h"
 #include <map>
+#include <string>
+
+typedef std::map<std::string, binaural::HRIRSampleSet*> HRIRSampleSetCacheInternal;
+
+static HRIRSampleSetCacheInternal & getInternal(void * internal)
+{
+	return *(HRIRSampleSetCacheInternal*)internal;
+}
+
+HRIRSampleSetCache::HRIRSampleSetCache()
+{
+	m_internal = new HRIRSampleSetCacheInternal();
+}
+
+HRIRSampleSetCache::~HRIRSampleSetCache()
+{
+	auto & internal = getInternal(m_internal);
+	
+	delete &internal;
+	m_internal = nullptr;
+}
 
 void HRIRSampleSetCache::add(const char * path, const char * name, const HRIRSampleSetType type)
 {
@@ -67,7 +88,7 @@ void HRIRSampleSetCache::add(const char * path, const char * name, const HRIRSam
 	{
 		sampleSet->finalize();
 		
-		auto & elem = cache[name];
+		auto & elem = getInternal(m_internal)[name];
 		
 		delete elem;
 		elem = nullptr;
@@ -78,20 +99,24 @@ void HRIRSampleSetCache::add(const char * path, const char * name, const HRIRSam
 
 void HRIRSampleSetCache::clear()
 {
-	for (auto & i : cache)
+	auto & internal = getInternal(m_internal);
+	
+	for (auto & i : internal)
 	{
 		delete i.second;
 		i.second = nullptr;
 	}
 	
-	cache.clear();
+	internal.clear();
 }
 
 const binaural::HRIRSampleSet * HRIRSampleSetCache::find(const char * name) const
 {
-	auto i = cache.find(name);
+	auto & internal = getInternal(m_internal);
 	
-	if (i == cache.end())
+	auto i = internal.find(name);
+	
+	if (i == internal.end())
 	{
 		return nullptr;
 	}
