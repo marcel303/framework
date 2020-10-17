@@ -1979,19 +1979,21 @@ int main(int argc, char * argv[])
 				2,
 				numSamples);
 
+			// perform soft clipping. since we need to go down to int16 range we need to ensure the sample range is within (-1, +1)
+			
+			audioBufferClip_FastSigmoid(outputBuffer, numSamples * 2);
+			
+			// convert from float (-1, +1) to int16
+			
+			const float scale = ((1 << 15) - 1);
+			
 			for (int i = 0; i < numSamples; ++i)
 			{
-			// todo : implement soft clipping ?
-				float valueL = outputBuffer[i * 2 + 0];
-				float valueR = outputBuffer[i * 2 + 1];
+				const float valueL = outputBuffer[i * 2 + 0];
+				const float valueR = outputBuffer[i * 2 + 1];
 
-				if (valueL < -1.f) valueL = -1.f;
-				if (valueR < -1.f) valueR = -1.f;
-				if (valueL > +1.f) valueL = +1.f;
-				if (valueR > +1.f) valueR = +1.f;
-
-				samples[i].channel[0] = valueL * 32000.f;
-				samples[i].channel[1] = valueR * 32000.f;
+				samples[i].channel[0] = valueL * scale;
+				samples[i].channel[1] = valueR * scale;
 			}
 
 			return numSamples;
