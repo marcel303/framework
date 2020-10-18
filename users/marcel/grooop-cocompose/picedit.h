@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Calc.h"
-#include "framework.h" // todo : move to cpp
 #include "Traveller.h"
 
 class PicEdit

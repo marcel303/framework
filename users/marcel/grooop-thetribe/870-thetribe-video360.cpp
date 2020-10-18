@@ -289,7 +289,8 @@ struct Videoclip
 	{
 		EvalMode_Floating,
 		EvalMode_Line,
-		EvalMode_Circle
+		EvalMode_Circle,
+		EvalMode_COUNT
 	};
 	
 	Mat4x4 transform;
@@ -404,7 +405,7 @@ struct Videoclip
 		float totalOpacity = 0.f;
 		float totalBlend = 0.f;
 		
-		for (int i = 0; i < 3; ++i) // todo : count
+		for (int i = 0; i < kEvalMode_COUNT; ++i)
 		{
 			const EvalMode evalMode = (EvalMode)i;
 			const float blend = videoClipBlend[i];
