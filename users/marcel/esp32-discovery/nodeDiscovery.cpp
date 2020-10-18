@@ -1,8 +1,12 @@
+#include "nodeDiscovery.h"
+
+// libgg includes
 #include "Debugging.h"
 #include "Log.h"
-#include "nodeDiscovery.h"
+#include "Multicore/ThreadName.h"
 #include "StringEx.h"
 
+// system includes
 #include <chrono>
 #include <inttypes.h> // PRIx64
 #include <mutex>
@@ -156,6 +160,8 @@ void NodeDiscoveryProcess::unlock() const
 int NodeDiscoveryProcess::threadMain(void * obj)
 {
 	NodeDiscoveryProcess * self = (NodeDiscoveryProcess*)obj;
+	
+	SetCurrentThreadName("Node Discovery Process");
 	
 	self->receiveSocket->Run();
 	
