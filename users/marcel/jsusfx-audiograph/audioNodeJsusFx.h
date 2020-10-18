@@ -57,7 +57,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	struct SliderInput
 	{
 		std::string name;
-		float defaultValue; // todo : honour default value when fetching slider values
+		float defaultValue;
 		int sliderIndex;
 		int socketIndex;
 	};
