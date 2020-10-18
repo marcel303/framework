@@ -308,6 +308,18 @@ struct SoundSystem : AudioDeviceCallback
 	
 	float masterGain = 0.f;
 	
+	// -- channel data (managed on the audio thread)
+	
+	struct ChannelData
+	{
+		float * buffer = nullptr;
+		int bufferSize = 0;
+		float ** channel = nullptr;
+		int numChannels = 0;
+	};
+	
+	ChannelData channelData;
+	
 	~SoundSystem()
 	{
 		Assert(mixers.empty());
@@ -328,6 +340,10 @@ struct SoundSystem : AudioDeviceCallback
 	
 	void shut()
 	{
+		delete [] channelData.buffer;
+		delete [] channelData.channel;
+		channelData = ChannelData();
+		
 		audioDevice.shut();
 		
 		audioGraphMgr = nullptr;
@@ -406,13 +422,21 @@ struct SoundSystem : AudioDeviceCallback
 		
 		memset(outputBuffer, 0, numChannels * bufferSize * sizeof(float));
 
-	// todo : avoid memory allocations here
-		float ** channelData = new float*[numChannels];
-		for (int i = 0; i < numChannels; ++i)
+		if (bufferSize != channelData.bufferSize ||
+			numChannels != channelData.numChannels)
 		{
-			channelData[i] = new float[bufferSize];
-			memset(channelData[i], 0, bufferSize * sizeof(float));
+			delete [] channelData.buffer;
+			delete [] channelData.channel;
+			channelData.buffer = new float[bufferSize * numChannels];
+			channelData.channel = new float*[numChannels];
+			for (int i = 0; i < numChannels; ++i)
+				channelData.channel[i] = channelData.buffer + i * bufferSize;
+			channelData.bufferSize = bufferSize;
+			channelData.numChannels = numChannels;
 		}
+		
+		for (int i = 0; i < numChannels; ++i)
+			memset(channelData.channel[i], 0, bufferSize * sizeof(float));
 		
 		// apply mixing
 		
@@ -420,7 +444,7 @@ struct SoundSystem : AudioDeviceCallback
 		{
 			for (auto * mixer : mixers)
 			{
-				mixer->mix(channelData, numChannels, bufferSize);
+				mixer->mix(channelData.channel, numChannels, bufferSize);
 			}
 		}
 		audioMutex->unlock();
@@ -431,7 +455,7 @@ struct SoundSystem : AudioDeviceCallback
 			speakerTest.channelIndex >= 0 &&
 			speakerTest.channelIndex < numChannels)
 		{
-			float * __restrict channel = channelData[speakerTest.channelIndex];
+			float * __restrict channel = channelData.channel[speakerTest.channelIndex];
 			
 			const float range_rcp = 2.f / speakerTest.pinkNumber.range;
 			
@@ -447,7 +471,7 @@ struct SoundSystem : AudioDeviceCallback
 		
 		for (int i = 0; i < numChannels; ++i)
 		{
-			float * __restrict channel = channelData[i];
+			float * __restrict channel = channelData.channel[i];
 			
 			for (int j = 0; j < bufferSize; ++j)
 			{
@@ -460,12 +484,8 @@ struct SoundSystem : AudioDeviceCallback
 		for (int i = 0; i < bufferSize; ++i)
 		{
 			for (int c = 0; c < numChannels; ++c)
-				*dst++ = channelData[c][i];
+				*dst++ = channelData.channel[c][i];
 		}
-		
-		for (int i = 0; i < numChannels; ++i)
-			delete [] channelData[i];
-		delete [] channelData;
 		
 		if (audioGraphMgr != nullptr)
 		{
