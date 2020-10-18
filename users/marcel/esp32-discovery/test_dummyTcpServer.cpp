@@ -1,4 +1,4 @@
-#include "dummyTcpServer.h"
+#include "test_dummyTcpServer.h"
 
 // 1st party includes
 #include "Debugging.h"
@@ -47,7 +47,7 @@ void Test_DummyTcpServer::Client::run(const int in_sock)
 
 void Test_DummyTcpServer::Client::beginShutdown()
 {
-	shutdown(sock, SHUT_RDWR); // note : this will interrupt recv on the socket and cause it to fail
+	shutdown(sock, SHUT_WR); // note : this will interrupt recv on the socket and cause it to fail
 	
 	thread.join();
 }

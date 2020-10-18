@@ -19,7 +19,14 @@ app marcel-esp32-discovery
 	depend_library imgui-framework
 	depend_library nodeDiscovery
 	depend_library rapidjson
-	add_files dummyTcpServer.cpp dummyTcpServer.h
 	add_files main.cpp
 	add_files test_audioStreamToTcp.cpp test_audioStreamToTcp.h
 	resource_path data
+
+app nodeDiscoveryTests-900-dummyTcpServer
+	depend_library framework
+	depend_library liboscpack
+	depend_library nodeServices-audioStreamToTcp
+	add_files 900-dummyTcpServer.cpp
+	add_files test_audioStreamToTcp.cpp test_audioStreamToTcp.h
+	add_files test_dummyTcpServer.cpp test_dummyTcpServer.h
