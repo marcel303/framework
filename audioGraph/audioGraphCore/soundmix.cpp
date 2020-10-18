@@ -25,11 +25,13 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiostream/AudioIO.h"
+#include "soundfile/SoundIO.h"
+#include "soundmix.h"
+
 #include "Debugging.h"
 #include "Log.h"
 #include "Path.h"
-#include "soundmix.h"
+
 #include <math.h>
 #include <string.h>
 

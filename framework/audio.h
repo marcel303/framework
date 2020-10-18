@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "audiostream/AudioIO.h"
+#include "soundfile/SoundIO.h"
 
 #define FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT 1
 

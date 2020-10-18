@@ -36,7 +36,7 @@
 #define USE_FRAMEWORK 1
 
 #if USE_FRAMEWORK
-	#include "audiostream/AudioIO.h" // loadSound
+	#include "soundfile/SoundIO.h" // loadSound
 	#include "Parse.h"
 	#include "StringEx.h" // sprintf_s
 	#include "Timer.h"

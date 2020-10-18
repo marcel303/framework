@@ -26,12 +26,12 @@
 */
 
 #include "../internal_filereader.h"
-#include "AudioIO.h"
-#include "AudioStream.h"
-#include "AudioStreamVorbis.h"
+#include "audiostream/AudioStream.h"
+#include "audiostream/AudioStreamVorbis.h"
 #include "Debugging.h"
 #include "Log.h"
 #include "Path.h"
+#include "SoundIO.h"
 #include <stdlib.h>
 #include <string.h>
 #include <vector>

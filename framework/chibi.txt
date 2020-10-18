@@ -21,17 +21,15 @@ library audiostream-vorbis
 
 	header_path . expose
 
-library audioio
+library soundfile
 
 # todo : add WAVE audio stream library and depend on it here
 
 	depend_library audiostream
 	depend_library audiostream-vorbis
 
-# todo : move AudioIO file to its own directory
-
-	add_files audiostream/AudioIO.cpp
-	add_files audiostream/AudioIO.h
+	add_files soundfile/SoundIO.cpp
+	add_files soundfile/SoundIO.h
 
 	header_path . expose
 
@@ -53,11 +51,11 @@ library framework
 	with_platform android  compile_definition FRAMEWORK_USE_SDL 0 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_SDL 1 expose
 
-	depend_library audioio
 	depend_library audiostream
 	depend_library audiostream-vorbis
 	depend_library glew
 	depend_library msdfgen
+	depend_library soundfile
 	
 	with_platform macos   depend_library portaudio
 	with_platform linux   depend_library portaudio

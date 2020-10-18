@@ -2,9 +2,13 @@ push_group audiograph
 
 library audiograph-core
 
-	depend_library audioio
+	# description : provides AudioNodeBase, a few simple types, threading primitives, and audio buffer routines
+
 	depend_library libavgraph-core
 	depend_library libgg
+
+	# PcmData::load
+	depend_library soundfile
 
 	header_path audioGraphCore expose
 
@@ -12,6 +16,8 @@ library audiograph-core
 	scan_files h   path audioGraphCore
 
 library audiograph-voice
+
+	# description : provides the AudioVoiceMgr base object and a basic implementation
 
 	depend_library audiograph-core
 
@@ -22,6 +28,8 @@ library audiograph-voice
 
 library audiograph-graph
 
+	# description : provides AudioGraph and AudioGraphContext and integrates core and voice types
+	
 	depend_library audiograph-core
 	depend_library audiograph-voice
 
@@ -43,6 +51,7 @@ library audiograph-graphMgr
 library audiograph-nodes
 
 	# todo : remove framework dependency
+	#        used by resource editors
 	depend_library framework
 
 	# todo : remove libavgraph dependency. depending on it here due to resource editors
@@ -62,7 +71,7 @@ library audiograph-nodes
 	scan_files cpp path audioNodes conglomerate conglomerates/audioNodes_all.h
 	scan_files h   path audioNodes
 
-#todo : remove portaudio dependency
+# todo : remove portaudio dependency
 	with_platform android compile_definition STUB_PAOBJECT * expose
 
 	link_translation_unit_using_function_call linkAudioNodes
