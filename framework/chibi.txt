@@ -215,4 +215,9 @@ push_group framework-examples
 		add_files examples/sprites.cpp
 		resource_path examples/data
 		depend_library framework
+
+	app framework-examples-primitives
+		add_files examples/primitives.cpp
+		resource_path examples/data
+		depend_library framework
 pop_group
