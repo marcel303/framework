@@ -5,12 +5,27 @@ library marcel-geo
 	scan_files inl
 	header_path . expose
 
-app marcel-geo-example-000
+app marcel-geo-example-000-boneInfluence
 	depend_library framework
 	depend_library marcel-geo
-	add_files example/main.cpp
+	add_files example/000-boneInfluence.cpp
 
-app marcel-geo-example-100
+app marcel-geo-example-100-meshCsg
 	depend_library framework
 	depend_library marcel-geo
-	add_files example/main2.cpp
+	add_files example/100-meshCsg.cpp
+
+app marcel-geo-example-110-blendMatrices
+	depend_library framework
+	depend_library marcel-geo
+	add_files example/110-blendMatrices.cpp
+
+app marcel-geo-example-120-blendSkin
+	depend_library framework
+	depend_library marcel-geo
+	add_files example/120-blendSkin.cpp
+
+app marcel-geo-example-130-cubes
+	depend_library framework
+	depend_library marcel-geo
+	add_files example/130-cubes.cpp

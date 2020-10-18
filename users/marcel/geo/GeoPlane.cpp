@@ -4,7 +4,7 @@
 namespace Geo
 {
 
-	float epsilon = 1e-6f;
+	float epsilon = 1e-3f;
 
 	Plane::Plane()
 	{
