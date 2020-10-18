@@ -522,7 +522,11 @@ namespace parameterUi
 			
 			if (isOpen)
 			{
-				doParameterUi_recursive(stack, stackSize, *child, child_filter);
+				ImGui::Indent();
+				{
+					doParameterUi_recursive(stack, stackSize, *child, child_filter);
+				}
+				ImGui::Unindent();
 				
 				ImGui::TreePop();
 			}
