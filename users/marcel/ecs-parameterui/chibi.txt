@@ -3,3 +3,10 @@ library ecs-parameterui
 	depend_library imgui
 	add_files parameterUi.cpp parameterUi.h
 	header_path . expose
+
+app ecs-parameterui-test
+	depend_library ecs-parameterui
+	depend_library framework
+	depend_library imgui-framework
+	add_files test.cpp
+
