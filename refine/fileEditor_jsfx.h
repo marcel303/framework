@@ -7,6 +7,8 @@
 #include "paobject.h"
 #include "Random.h"
 #include <atomic>
+#include <string>
+#include <vector>
 
 class RtMidiIn;
 
@@ -125,6 +127,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	JsusFxGfx_Framework gfx;
 	JsusFxFileAPI_Basic fileApi;
 	JsusFxPathLibrary_Basic pathLibary;
+	std::vector<std::string> paths;
 
 	Surface * surface = nullptr;
 
