@@ -405,7 +405,7 @@ struct Videoclip
 		float totalOpacity = 0.f;
 		float totalBlend = 0.f;
 		
-		for (int i = 0; i < kEvalMode_COUNT; ++i)
+		for (int i = 0; i < EvalMode_COUNT; ++i)
 		{
 			const EvalMode evalMode = (EvalMode)i;
 			const float blend = videoClipBlend[i];
