@@ -184,7 +184,9 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 
 void GxTexture::setSampling(const bool _filter, const bool _clamp)
 {
-	// todo : implement GxTexture::setSampling
+	// todo : implement setting texture sampling when the texture is set
+	filter = _filter;
+	clamp = _clamp;
 }
 
 void GxTexture::clearf(const float r, const float g, const float b, const float a)
