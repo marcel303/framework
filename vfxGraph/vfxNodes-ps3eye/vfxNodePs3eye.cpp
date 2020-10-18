@@ -27,8 +27,11 @@
 
 #if ENABLE_PS3EYE
 
-#include "Log.h"
 #include "vfxNodePs3eye.h"
+
+#include "Log.h"
+#include "Multicore/ThreadName.h"
+
 #include <SDL2/SDL.h>
 
 // todo : add mutex and copy captured frame data
@@ -297,6 +300,8 @@ void VfxNodePs3eye::allocateImage(const int sx, const int sy, const GX_TEXTURE_F
 int VfxNodePs3eye::captureThreadProc(void * obj)
 {
 	VfxNodePs3eye * self = (VfxNodePs3eye*)obj;
+	
+	SetCurrentThreadName("VfxNodePs3eye");
 	
 	auto ps3eye = self->ps3eye.get();
 	
