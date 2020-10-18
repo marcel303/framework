@@ -4,11 +4,12 @@ top priority items:
 
 - add node which generates a trigger signal once when a graph is created
 
-- add ability for nodes to report warnings and errors
++ add ability for nodes to report warnings and errors -> RealTimeConnection::getNodeIssues
 
 - make it possible to have voice nodes in audio graph which do not generate audible sound ?
 
 - add an option to audio graph and poly audio graph nodes to output audio or not
+	- complication : the voice mgr is set outside of our scope. perhaps.. add voice or not to the voice mgr depending on option ? generateAudio using our own voice list only
 
 - add options to poly and regular audio graph nodes to output mono, stereo, or multi-channel
 	- requires an extra mixing level ? perhaps add a voice manager interface. or store voices in audio graph ? let voice manager allocate channel indices, but do mixing itself differently ? or perhaps add voice groups or something ..
@@ -28,7 +29,7 @@ top priority items:
 
 - add DC blocker node
 
-- add ability to add a note to a node
+# add ability to add a note to a node -> adding comment boxes instead
 
 todo :
 - add undo/redo support. just serialize/deserialize graph for every action?
@@ -84,10 +85,7 @@ todo : nodes :
 	- output value as float
 	- output value as channel
 - add sample.image node
-	+ output rgba as floats
-	+ output rgba as channels
 	- specify normalized vs screen coords?
-	+ add filter and clamp options
 - add sample.channel node
 	- filter is enum: auto, linear or off. auto will look at continuous flag of channels input
 - add doValuePlotter to ui framework
@@ -100,7 +98,6 @@ todo : nodes :
 	- add time! input trigger. performs seek operation
 - add pitch control to oscillators ?
 - add pulse size to square oscillator
-- sound node : fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
 - add note (like C1) to MIDI note
 - add adsr node
 - perhaps add string names to channels, for more convenient selection ? would reduce remixing capability I fear .. maybe let nodes which produce channels to document in their node description what those channels represent, semantically .. but not let the user use those semantics to select channels
@@ -112,7 +109,6 @@ todo : nodes :
 		- has a filter option?
 		- has a normalized coords option
 		- has an option to fix coords so it always specified min/max for box or not ?
-- add jpeg glitch node. in combination with capturing from image would be awesome!
 - add yuvToRgb node
 	+ add node and shader
 	+ let user select colour space
@@ -152,13 +148,8 @@ todo : documentation
 - write about design philosophy
 
 todo : framework
-- add scoped** objects ? or prefer explicit push/pop ?
-- add drawCube and drawSphere?
-- add hq shaded triangle to framework
-- rewrite audio to use port audio instead of OpenAL
-	- rewrite sound effects
-	- rewrite music
-	- add API for custom sound processing and voices
+- add drawSphere function
+- add API for custom sound processing and voices. hook into the global audio output
 - check ShaderUtil.txt. add functions
 
 
@@ -498,6 +489,12 @@ done : nodes :
 	+ add restart on loop change
 	+ add BPM and beat output trigger
 	+ fix issue with output time not stable when paused
++ add sample.image node
+	+ output rgba as floats
+	+ output rgba as channels
+	+ add filter and clamp options
++ sound node : fix issue with output time not reset on filename change or looping. remember start time? -> capture time on next provide
++ add jpeg glitch node. in combination with capturing from image would be awesome!
 
 
 done : fsfx :
@@ -523,7 +520,13 @@ done : framework :
 + add a generic way to shade and texture hq primitives. perhaps use texture and shading matrices ?
 + remove stage and UI classes
 + add multiple window support to framework. would help with managing lists of audio and vfx graphs. just open a window and show the lists over there
-
+# add scoped** objects ? or prefer explicit push/pop ? -> push/pop
++ add drawCube function
++ add hq shaded triangle to framework
++ rewrite audio to use port audio instead of OpenAL
+	+ rewrite sound effects
+	+ rewrite music
+ 
 done : media player
 + for image analysis we often only need luminance. make it an option to output YUV Y-channel only?
 	+ outputting Y+UV is just as cheap as Y only. added planar YUV support.
