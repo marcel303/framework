@@ -24,11 +24,12 @@ static std::string demangle(const char * name)
 static void addTypes(TypeDB & typeDB)
 {
 	typeDB.addPlain<bool>("bool", kDataType_Bool);
-	typeDB.addPlain<int>("bool", kDataType_Int);
-	typeDB.addPlain<float>("bool", kDataType_Float);
-	typeDB.addPlain<Vec2>("bool", kDataType_Float2);
-	typeDB.addPlain<Vec3>("bool", kDataType_Float3);
-	typeDB.addPlain<Vec4>("bool", kDataType_Float4);
+	typeDB.addPlain<int>("int", kDataType_Int);
+	typeDB.addPlain<float>("float", kDataType_Float);
+	typeDB.addPlain<Vec2>("vec2", kDataType_Float2);
+	typeDB.addPlain<Vec3>("vec3", kDataType_Float3);
+	typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
+	typeDB.addPlain<std::string>("string", kDataType_String);
 }
 
 void saveEditorSettings(FileEditor * editor)
