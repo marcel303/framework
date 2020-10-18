@@ -10,7 +10,7 @@ https://www.youtube.com/watch?v=alhpH6ECFvQ
 
 /*
 
-todo : experiment with the following boundary modes, and external forces,
+idea : experiment with the following boundary modes, and external forces,
 from: http://karlsims.com/fluid-flow.html,
 
 Zero: using a value of zero beyond the grid will avoid flow toward or away from the boundary, as if the fluid is contained in a box, because any edge cell's component of flow normal to the boundary would typically create a non-zero divergence and be removed. The divergence-removal examples above used this mode.
