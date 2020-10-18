@@ -14,7 +14,7 @@ public:
 	static bool Double(const char * text, double & result);
 	static bool Bool(const char * text, bool & result);
 	
-	// conversion without error checking
+	// conversion without error checking. return 0/false on failure
 	
 	static int32_t Int32(const char * text);
 	static uint32_t UInt32(const char * text);
