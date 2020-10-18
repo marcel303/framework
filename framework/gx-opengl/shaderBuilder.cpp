@@ -172,9 +172,8 @@ R"HEADER(
 	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
-			bool * usedOutputs = (bool*)alloca(g_shaderOutputs.size() * sizeof(bool));
-			memset(usedOutputs, 0, g_shaderOutputs.size() * sizeof(bool));
-			
+			// write render target layout
+
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
 				const ShaderOutput * output = findShaderOutput(outputs[i]);
@@ -185,31 +184,16 @@ R"HEADER(
 					return false;
 				}
 				
-			#if defined(DEBUG)
-				// detect if a pass is added more than once
-				for (int j = 0; j < i; ++j)
-					Assert(outputs[j] != outputs[i]);
-			#endif
-				
-				sb.AppendFormat("layout(location = %d) out %s %s;\n",
+				sb.AppendFormat("layout(location = %d) out %s shaderOutput_%d;\n",
 					i,
 					output->outputType.c_str(),
-					output->outputName.c_str(),
-					output->outputType.c_str());
-				
-				const int passIndex = output - g_shaderOutputs.data();
-				usedOutputs[passIndex] = true;
+					i);
 			}
 			
-			// use regular variables for unused outputs
+			// add global variables for shader outputs
 			
-			for (size_t i = 0; i < g_shaderOutputs.size(); ++i)
+			for (auto & output : g_shaderOutputs)
 			{
-				if (usedOutputs[i])
-					continue;
-				
-				auto & output = g_shaderOutputs[i];
-				
 				sb.AppendFormat("%s %s;\n", output.outputType.c_str(), output.outputName.c_str());
 			}
 		}
@@ -381,6 +365,26 @@ R"HEADER(
 		#if !USE_LEGACY_OPENGL
 			if (shaderType == 'p')
 			{
+				// initialize shader outputs
+				
+				for (auto & output : g_shaderOutputs)
+				{
+					sb.AppendFormat("\t%s = %s(0.0);\n",
+						output.outputName.c_str(),
+						output.outputType.c_str());
+				}
+				
+				sb.Append("\n");
+			}
+		#endif
+		
+			sb.Append("\tshaderMain();\n");
+			
+		#if !USE_LEGACY_OPENGL
+			if (shaderType == 'p')
+			{
+				// assign shader outputs to render target outputs
+
 				for (int i = 0; outputs[i] != 0; ++i)
 				{
 					const ShaderOutput * output = findShaderOutput(outputs[i]);
@@ -391,16 +395,12 @@ R"HEADER(
 						return false;
 					}
 					
-					sb.AppendFormat("\t%s = %s(0.0);\n",
-						output->outputName.c_str(),
-						output->outputType.c_str());
+					sb.AppendFormat("shaderOutput_%d = %s;\n",
+						i,
+						output->outputName.c_str());
 				}
-				
-				sb.Append("\n");
 			}
 		#endif
-		
-			sb.Append("\tshaderMain();\n");
 		}
 		sb.Append("}\n");
 		sb.Append('\n');

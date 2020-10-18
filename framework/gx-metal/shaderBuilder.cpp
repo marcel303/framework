@@ -686,15 +686,9 @@ float atan(float x, float y) { return atan2(x, y); }
 						return false;
 					}
 					
-				#if defined(DEBUG)
-					// detect if a pass is added more than once
-					for (int j = 0; j < i; ++j)
-						Assert(outputs[j] != outputs[i]);
-				#endif
-					
-					sb.AppendFormat("\t%s %s [[color(%d)]];\n",
+					sb.AppendFormat("\t%s shaderOutput_%d [[color(%d)]];\n",
 						output->outputType.c_str(),
-						output->outputName.c_str(),
+						i,
 						i);
 				}
 			}
@@ -758,8 +752,8 @@ float atan(float x, float y) { return atan2(x, y); }
 					return false;
 				}
 				
-				sb.AppendFormat("\toutputs.%s = m.%s;\n",
-					output->outputName.c_str(),
+				sb.AppendFormat("\toutputs.shaderOutput_%d = m.%s;\n",
+					i,
 					output->outputName.c_str());
 			}
 			sb.Append("\treturn outputs;\n");
