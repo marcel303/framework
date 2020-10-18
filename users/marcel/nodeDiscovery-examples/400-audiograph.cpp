@@ -9,7 +9,14 @@
 #include "audioStreamToTcp.h"
 #include "nodeDiscovery.h"
 
-// todo : create a little step sequencer.. one for each of four audio channels
+/*
+
+This code demoes a little step sequencer. There are four timelines, one for each audio channel.
+Audio is generated through audio graphs. The sequencer automatically connects to the first node
+it discovers with quad-channel audio support. The user can click on one of the boxes to
+activate/inactivate notes.
+
+*/
 
 int main()
 {
@@ -50,8 +57,6 @@ int main()
 			for (int i = 0; i < kNumSteps; ++i)
 			{
 				audioGraph[i] = constructAudioGraph(graph, types, &audioGraphContext, false);
-				
-				audioGraph[i]->triggerEvent("makeSomeNoise"); // todo : remove
 			}
 		}
 		
@@ -221,7 +226,8 @@ int main()
 				{
 					grid[c][nextStep].triggerTimer = 1.f;
 					
-					audioChannelState[c].audioGraph[nextStep]->setMemf("freq", 200);
+					const float pitch = lerp(10.f, 1000.f, inverseLerp(0, 800, mouse.x));
+					audioChannelState[c].audioGraph[nextStep]->setMemf("freq", pitch);
 					audioChannelState[c].audioGraph[nextStep]->triggerEvent("begin");
 				}
 			}
