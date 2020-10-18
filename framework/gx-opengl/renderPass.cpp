@@ -40,6 +40,7 @@
 #endif
 
 #include "renderTarget.h"
+#include "StringEx.h" // strcpy_s
 
 // -- render passes --
 
@@ -380,6 +381,7 @@ struct RenderPassData
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
+	char passName[32] = { };
 	int backingScale = 0;
 };
 
@@ -426,12 +428,10 @@ void pushRenderPass(
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
-	
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		pd.target[pd.numTargets++] = targets[i];
-	
 	pd.depthTarget = depthTarget;
-	
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
@@ -458,9 +458,8 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
-	
 	pd.isBackbufferPass = true;
-	
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
@@ -486,11 +485,11 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)", new_pd.backingScale); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)", new_pd.backingScale); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
 		}
 	}
 	
