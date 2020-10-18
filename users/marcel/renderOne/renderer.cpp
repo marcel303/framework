@@ -1007,7 +1007,10 @@ namespace rOne
 				buffers.emissive
 			};
 		pushRenderPass(targets, 5, true, buffers.depth, true, "Normals + Colors + Specular + Emissive & Depth");
-		pushShaderOutputs("ncSse"); // todo : drawNormals -> "nn". currently bugs when generating shader
+		pushShaderOutputs(
+			renderOptions.drawNormals
+				? "nnSse"
+				: "ncSse");
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
@@ -1224,7 +1227,7 @@ namespace rOne
 			};
 		
 		pushRenderPass(targets, 2, true, buffers.depth, true, "Normals + Colors & Depth");
-		pushShaderOutputs("nc"); // todo : drawNormals -> "nn". currently bugs when generating shader
+		pushShaderOutputs(renderOptions.drawNormals ? "nn" : "nc");
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
