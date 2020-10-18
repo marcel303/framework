@@ -9,6 +9,7 @@
 	#include <WS2tcpip.h>
 #else
 	#include <netinet/tcp.h>
+	#include <unistd.h>
 #endif
 
 #if defined(WINDOWS)
@@ -34,20 +35,20 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+		// disable SIGPIPE (and handle broken connections ourselves)
+		signal(SIGPIPE, SIG_IGN);
+		
 	#if defined(WINDOWS)
+		// disable nagle & linger
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
 	#else
-	#if defined(MACOS)
-		setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
-	#endif
-		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
-		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
+		// disable nagle & linger
+		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, &set_false, sizeof(set_false));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
+		// enable address/port reuse
+		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, &set_true, sizeof(set_true));
 	#endif
-
-	// todo : disable nagle
-	// todo : disable linger
 		
 		if ((bind(m_socket, (struct sockaddr *)&m_socketAddress, sizeof(m_socketAddress))) < 0)
 		{
