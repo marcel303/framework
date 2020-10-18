@@ -196,18 +196,26 @@ int main(int argc, char * argv[])
 				Mat4x4 viewMatrix;
 				gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
 				
-			// todo : draw a z-prepass to avoid overdraw
-			
-				for (int i = 0; i < 2; ++i)
+				// render passes:
+				// 0: depth pre-pass (to avoid overdraw)
+				// 1: opaque pass
+				// 2: translucent pass
+				for (int i = 0; i < 3; ++i)
 				{
-					const bool isOpaquePass = (i == 0);
+					const bool isDepthPrePass = (i == 0);
+					const bool isOpaquePass = (i == 0 || i == 1);
 					
 					const BLEND_MODE blendMode =
 						useAlphaToCoverage
 							? BLEND_OPAQUE
 							: (isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
 					
-					pushDepthWrite(blendMode == BLEND_OPAQUE);
+					pushShaderOutputs(isDepthPrePass ? "" : "c");
+					pushDepthTest(true,
+						isDepthPrePass ? DEPTH_LESS :
+						isOpaquePass ? DEPTH_LEQUAL :
+							DEPTH_LESS,
+						blendMode == BLEND_OPAQUE);
 					pushBlend(blendMode);
 					{
 						Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
@@ -292,7 +300,8 @@ int main(int argc, char * argv[])
 							&drawOptions);
 					}
 					popBlend();
-					popDepthWrite();
+					popDepthTest();
+					popShaderOutputs();
 				}
 				
 				if (keyboard.isDown(SDLK_b))
