@@ -1,6 +1,17 @@
 #include "cube.h"
+#include "fft.h"
 #include "framework.h"
 #include "StringEx.h"
+
+float EffectCtxImpl::fftBucketValue(int index) const
+{
+	return s_fftBuckets[index];
+}
+
+int EffectCtxImpl::fftBucketCount() const
+{
+	return kFFTBucketCount;
+}
 
 bool EffectCtxImpl::keyIsDown(const int key) const
 {

@@ -1,7 +1,7 @@
-#include "AudioFFT.h"
 #include "Calc.h"
 #include "config.h"
 #include "cube.h"
+#include "fft.h"
 #include "framework.h"
 #include "Path.h"
 #include "script.h"
@@ -16,78 +16,6 @@
 #if !ENABLE_SCRIPT_EFFECT
 	#include "script.cpp"
 #endif
-
-// todo # move FFT code to somewhere else
-
-static const int kFFTBufferSize = 4096;
-static const int kFFTSize = 1024;
-static const int kFFTComplexSize = 513; // n/2+1
-static const int kFFTBucketCount = 32;
-static audiofft::AudioFFT s_fft;
-
-static float s_fftInputBuffer[4096];
-static float s_fftReal[kFFTComplexSize] = { };
-static float s_fftImaginary[kFFTComplexSize] = { };
-static float s_fftBuckets[kFFTBucketCount] = { };
-
-static float s_fftProvideTime = 0.f;
-
-static void fftInit()
-{
-	s_fft.init(kFFTSize);
-}
-
-static float fftPowerValue(int i)
-{
-	float p = s_fftReal[i] * s_fftReal[i] + s_fftImaginary[i] * s_fftImaginary[i];
-#if 1
-	p = sqrtf(p);
-#else
-	p = 10.f * std::log10f(p);
-#endif
-	return p;
-}
-
-static void fftProcess()
-{
-	const float dt = framework.time - s_fftProvideTime;
-	int sampleStart = dt * 44100.f; // fixme
-	if (sampleStart + kFFTSize > kFFTBufferSize)
-		sampleStart = kFFTBufferSize - kFFTSize;
-
-	//sampleStart = 0;
-
-	s_fft.fft(s_fftInputBuffer + sampleStart, s_fftReal, s_fftImaginary);
-
-	for (int i = 0; i < kFFTBucketCount; ++i)
-	{
-		const int numSamples = kFFTComplexSize / kFFTBucketCount;
-		const int j1 = (i + 0) * numSamples;
-		const int j2 = (i + 1) * numSamples;
-		Assert(j2 <= kFFTSize);
-
-		float result = 0.f;
-
-		for (int j = j1; j < j2; ++j)
-			result += fftPowerValue(j);
-
-		s_fftBuckets[i] = result / numSamples;
-	}
-}
-
-//
-
-// todo : move these
-
-float EffectCtxImpl::fftBucketValue(int index) const
-{
-	return s_fftBuckets[index];
-}
-
-int EffectCtxImpl::fftBucketCount() const
-{
-	return kFFTBucketCount;
-}
 
 //
 
@@ -486,10 +414,13 @@ public:
 		{
 			const int result = mSource->Provide(numSamples, buffer);
 			const int copySize = Calc::Min(result, kFFTBufferSize);
-			const float scale = 2.f / 65536.f;
+			const float scale = 1.f / 65536.f;
 
 			for (int i = 0; i < copySize; ++i)
-				s_fftInputBuffer[i] = buffer[i].channel[0] * scale;
+			{
+				const int value = buffer[i].channel[0] + buffer[i].channel[1];
+				s_fftInputBuffer[i] = value * scale;
+			}
 			for (int i = copySize; i < kFFTBufferSize; ++i)
 				s_fftInputBuffer[i] = 0.f;
 
@@ -676,7 +607,8 @@ int main(int argc, char * argv[])
 		AudioOutput_Native audioOutput;
 		audioOutput.Initialize(2, audioStreamOGG.SampleRate_get(), 256);
 		audioOutput.Volume_set(1.f);
-		audioOutput.Play(&audioStreamOGG);
+		//audioOutput.Play(&audioStream);
+		audioOutput.Play(&audioStreamOGG); // note : bypass AudioStream_Capture for now, as the fft capture/proxy is a work in progress for now
 	#endif
 
 		Cube cube;
@@ -714,25 +646,25 @@ int main(int argc, char * argv[])
 			// process audio
 
 		#if USE_AUDIO_INPUT
-			short buffer[4096 * 2];
+			short buffer[kFFTBufferSize * 2];
 			int sampleCount = 0;
 			if (audioIn.provide(buffer, sampleCount))
 			{
 				const float scale = 2.f / 65536.f;
-				for (int i = 0; i < 4096; ++i)
+				for (int i = 0; i < kFFTBufferSize; ++i)
 					s_fftInputBuffer[i] = buffer[i * 2] * scale;
 				s_fftProvideTime = framework.time;
 			}
 		#else
 			audioOutput.Update();
 			
-			for (int i = 0; i < 4096; ++i)
+			for (int i = 0; i < kFFTBufferSize; ++i)
 				s_fftInputBuffer[i] = random(-.1f, +.1f);
 		#endif
 
 			// generate FFT
 
-			fftProcess();
+			fftProcess(framework.time);
 
 			// evaluate cube
 
