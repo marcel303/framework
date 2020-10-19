@@ -62,6 +62,11 @@ library audiograph-nodes
 	depend_library binaural
 	depend_library libavgraph-core
 
+	# todo : remove portaudio dependency
+	with_platform macos   depend_library portaudio
+	with_platform linux   depend_library portaudio
+	with_platform windows depend_library portaudio
+
 	header_path objects expose
 
 	add_files conglomerates/audioNodes_all.cpp conglomerates/audioNodes_all.h
