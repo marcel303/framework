@@ -98,16 +98,14 @@ int main(int argc, char * argv[])
 				
 				if (ImGui::CollapsingHeader("Search Filter Behavior"))
 				{
-				// todo : add a tooltip with expected behavior to search filter textbox
-				
 					ImGui::InputText("Search filter", searchFilter, sizeof(searchFilter) / sizeof(searchFilter[0]));
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::BeginTooltip();
 						ImGui::Text("Expected behavior,");
-						ImGui::Text("- Show original open/close state for header when filter is empty.");
-						ImGui::Text("- Show headers with one or more matches down below only.");
-						ImGui::Text("- Automatically open headers when there is one match only.");
+						ImGui::Text("- Use original open/close state for tree nodes when the filter is empty.");
+						ImGui::Text("- Only show items with one or more matches when filter is set.");
+						ImGui::Text("- Automatically open tree nodes with one or more matches when filter is set.");
 						ImGui::EndTooltip();
 					}
 				
