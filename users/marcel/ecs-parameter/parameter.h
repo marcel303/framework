@@ -602,9 +602,9 @@ public:
 		children.push_back(child);
 	}
 	
-	void addChildren(const std::initializer_list<ParameterMgr*> & children)
+	void addChildren(const std::initializer_list<ParameterMgr*> & in_children)
 	{
-		for (auto * child : children)
+		for (auto * child : in_children)
 		{
 			children.push_back(child);
 		}
