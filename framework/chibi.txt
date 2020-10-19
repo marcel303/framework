@@ -57,7 +57,6 @@ library framework
 	depend_library msdfgen
 	depend_library soundfile
 	
-	with_platform macos   depend_library portaudio
 	with_platform linux   depend_library portaudio
 	with_platform windows depend_library portaudio
 
@@ -106,7 +105,7 @@ library framework
 
 	compile_definition NO_SDL_GLEXT            * expose
 
-	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose

@@ -537,7 +537,7 @@ void SoundPlayer_AudioOutput::setMusicVolume(const float volume)
 
 #endif
 
-#if FRAMEWORK_USE_PORTAUDIO
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO
 
 #include <SDL2/SDL.h>
 
