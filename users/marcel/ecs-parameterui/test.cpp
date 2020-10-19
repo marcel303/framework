@@ -59,8 +59,11 @@ int main(int argc, char * argv[])
 	childB.addInt("x", 0);
 	childB.addInt("y", 1);
 	childB.addInt("z", 2);
-	parent.addChild(&childA);
-	parent.addChild(&childB); // todo : add addChildren method
+	parent.addChildren(
+		{
+			&childA,
+			&childB
+		});
 	
 	char searchFilter[64] = {};
 	
