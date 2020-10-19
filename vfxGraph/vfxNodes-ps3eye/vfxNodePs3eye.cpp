@@ -32,9 +32,11 @@
 #include "Log.h"
 #include "Multicore/ThreadName.h"
 
+#include <algorithm>
 #include <SDL2/SDL.h>
 
 // todo : add mutex and copy captured frame data
+// todo : use std mutex, thread. remove SDL2 dependency
 
 using namespace ps3eye;
 
