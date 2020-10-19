@@ -174,40 +174,41 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	}
 	else
 	{
-		int clearFlags = 0;
-		
 		if (clearColor)
 		{
-		// todo : for MRT support : use extended clear color function
-			Assert(false);
-			glClearColor(0, 0, 0, 0);
-			clearFlags |= GL_COLOR_BUFFER_BIT;
+			pushColorWriteMask(1, 1, 1, 1);
+			for (int i = 0; i < numTargets; ++i)
+			{
+				glDrawBuffer(GL_COLOR_ATTACHMENT0 + i);
+				glClearColor(0, 0, 0, 0);
+				glClear(GL_COLOR_BUFFER_BIT);
+				checkErrorGL();
+			}
+			popColorWriteMask();
+			
+			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			checkErrorGL();
 		}
 	
 		if (clearDepth && depthTarget != nullptr)
 		{
 		#if ENABLE_DESKTOP_OPENGL
 			glClearDepth(depthTarget->getClearDepth());
+			checkErrorGL();
 		#else
 			glClearDepthf(depthTarget->getClearDepth());
+			checkErrorGL();
 		#endif
-			clearFlags |= GL_DEPTH_BUFFER_BIT;
 			
 			//
 			
 			glClearStencil(0x00);
 			glStencilMask(0xff);
-			clearFlags |= GL_STENCIL_BUFFER_BIT;
-		}
-	
-		if (clearFlags)
-		{
-			glClear(clearFlags);
 			checkErrorGL();
-		}
-		
-		if (clearDepth && depthTarget != nullptr)
-		{
+			
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			checkErrorGL();
+			
 			glStencilMaskSeparate(GL_FRONT, globals.frontStencilState.writeMask);
 			glStencilMaskSeparate(GL_BACK, globals.backStencilState.writeMask);
 			checkErrorGL();
