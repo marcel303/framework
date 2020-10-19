@@ -606,7 +606,15 @@ int main(int argc, char * argv[])
 	
 	skyTarget.free();
 	
-	// todo : shutdown renderer
+	shadowMapDrawer.free();
+	
+	renderer.free();
+	
+	drawMesh.clear();
+	ib.free();
+	vb.free();
+	
+	world.free();
 	
 	framework.shutdown();
 
