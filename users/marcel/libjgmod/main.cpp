@@ -14,7 +14,7 @@
 
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 	AllegroTimerApi * timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
 	AllegroVoiceApi * voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
 	
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, DIGI_SAMPLERATE, 64);
 	
 	AudioStream_AllegroVoiceMixer audioStream(voiceApi, timerApi);

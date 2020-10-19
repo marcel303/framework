@@ -1,10 +1,10 @@
 #include "audio.h"
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "framework.h"
 
 static SDL_Thread * g_audioThread = nullptr;
 static volatile bool g_stopAudioThread = false;
-static AudioOutput_PortAudio * g_audioOutput = nullptr;
+static AudioOutput_Native * g_audioOutput = nullptr;
 static AudioStreamEx * g_audioStream = nullptr;
 static uint32_t g_audioUpdateEvent = -1;
 
@@ -41,7 +41,7 @@ void openAudio(AudioStreamEx * audioStream)
 	g_audioStream = audioStream;
 
 	Assert(g_audioOutput == nullptr);
-	g_audioOutput = new AudioOutput_PortAudio();
+	g_audioOutput = new AudioOutput_Native();
 	g_audioOutput->Initialize(2, g_audioStream->GetSampleRate(), 256);
 
 	Assert(g_audioThread == nullptr);

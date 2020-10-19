@@ -1,13 +1,13 @@
 #pragma once
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "fileEditor.h"
 
 class AudioStream_Vorbis;
 
 struct FileEditor_AudioStream_Vorbis : FileEditor
 {
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	AudioStream_Vorbis * audioStream = nullptr;
 	
 	FileEditor_AudioStream_Vorbis(const char * path);

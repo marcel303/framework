@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "DownloadCache.h"
 #include "framework.h"
 #include "video.h"
@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
 		openParams.desiredAudioStreamIndex = 1; // select second audio stream, if available
 		mp.openAsync(openParams);
 		
-		AudioOutput_PortAudio audioOutput;
+		AudioOutput_Native audioOutput;
 
 		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
