@@ -2,6 +2,7 @@
 #include "AudioFFT.h"
 #include "Debugging.h"
 #include <math.h>
+#include <string.h>
 
 static audiofft::AudioFFT s_fft;
 
