@@ -585,14 +585,9 @@ namespace rOne
 					Shader shader("renderOne/postprocess/chromatic-aberration");
 					setShader(shader);
 					{
-						static int frameIndex = 0; // todo : make a member of a future post-effect object
-						
 						shader.setTexture("source", 0, composite[composite_idx]->getTextureId(), true, true);
 						shader.setImmediate("strength", renderOptions.chromaticAberration.strength / 20.f); // 100% = 5% image distortion
-						shader.setImmediate("time", frameIndex);
 						drawFullscreenQuad(viewportSx, viewportSy);
-						
-						++frameIndex;
 					}
 					clearShader();
 				}
@@ -1607,6 +1602,12 @@ namespace rOne
 		framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
 	}
 
+	void Renderer::free()
+	{
+		buffers.free();
+		buffers2.free();
+	}
+	
 	void Renderer::render(
 		const RenderFunctions & renderFunctions,
 		const RenderOptions & renderOptions,

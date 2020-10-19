@@ -94,6 +94,8 @@ namespace rOne
 		
 		static void registerShaderOutputs();
 		
+		void free();
+		
 		void render(
 			const RenderFunctions & renderFunctions,
 			const RenderOptions & renderOptions,
