@@ -911,21 +911,19 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 {
-	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-
 	if (texture == 0)
 	{
 		width = 0;
 		height = 0;
 	}
-/*
+#if OPENGL_VERSION >= 450
 	else if (glGetTextureLevelParameteriv != nullptr)
 	{
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
 	}
-*/
+#endif
 	else
 	{
 		GLuint restoreTexture;
@@ -1136,21 +1134,19 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 {
-	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-
 	if (texture == 0)
 	{
 		width = 0;
 		height = 0;
 	}
-/*
+#if OPENGL_VERSION >= 450
 	else if (glGetTextureLevelParameteriv != nullptr)
 	{
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
 	}
-*/
+#endif
 	else
 	{
 		GLuint restoreTexture;
