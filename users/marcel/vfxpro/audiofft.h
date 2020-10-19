@@ -9,7 +9,7 @@ static const int kFFTSize = 1024;
 static const int kFFTComplexSize = 513; // n/2+1
 static const int kFFTBucketCount = 32;
 
-extern float s_fftInputBuffer[4096];
+extern float s_fftInputBuffer[kFFTBufferSize];
 extern float s_fftInput[kFFTSize];
 extern float s_fftReal[kFFTComplexSize];
 extern float s_fftImaginary[kFFTComplexSize];

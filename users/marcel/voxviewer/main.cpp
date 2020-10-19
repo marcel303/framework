@@ -242,9 +242,6 @@ int main(int argc, char * argv[])
 					light.intensity = .1f;
 					
 					lights.push_back(light);
-					
-				// todo : add some kind of helper for building light lists
-					//helper.addPointLight(camera.position, 0.f, 4.f, Vec3(1, 1, 1), .01f);
 				}
 				
 				if (true)

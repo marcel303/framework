@@ -4,7 +4,6 @@
 
 inline void SetCurrentThreadName(const char * name)
 {
-// todo : move this code elsewhere
 #if defined(MACOS)
 	pthread_setname_np(name);
 #elif defined(LINUX)

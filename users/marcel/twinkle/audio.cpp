@@ -3,7 +3,7 @@
 
 static audiofft::AudioFFT s_fft;
 
-float s_fftInputBuffer[4096];
+float s_fftInputBuffer[kFFTBufferSize];
 float s_fftInput[kFFTSize] = { };
 float s_fftReal[kFFTComplexSize] = { };
 float s_fftImaginary[kFFTComplexSize] = { };

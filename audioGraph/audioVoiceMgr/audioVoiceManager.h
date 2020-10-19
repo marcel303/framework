@@ -165,7 +165,7 @@ struct AudioVoice
 	
 	Limiter limiter;      ///< Limiter for protecting against loud sounds. The limiter keeps the signal within the -/+ max gain range (which is specified when applyLimiter is called), applying a dynamic scaling factor when the signal becomes too loud.
 	
-	AudioVoice * next;    ///< Next voice in the list of voices maintained by the voice manager. Note that we use a intrusive linked list implementation. This is ok since each voice is allocated by, and belongs to, a single voice manager.
+	AudioVoice * next;    ///< Next voice in the list of voices maintained by the voice manager. Note that we use an intrusive linked list implementation. This is ok since each voice is allocated by, and belongs to, a single voice manager.
 	
 	AudioVoice(const Type _type = kType_Basic)
 		: channelIndex(-1)

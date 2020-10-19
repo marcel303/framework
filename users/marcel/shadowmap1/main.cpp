@@ -252,13 +252,10 @@ public:
 		drawState.sceneNormalTexture = sceneNormalTexture;
 		
 		lightMap->clear();
-		
-		//pushSurface(lightMap); // todo : either decide to disallow surface reuse within the context of a parent surface (since all of the surfaces inside a parent will execute first, reuse and usage inside the parent context is not guaranteed to 'interleave' the results. or commit current command buffer and start a new one when a child is pushed and popped
 	}
 	
 	void drawEnd()
 	{
-		//popSurface();
 	}
 	
 	//
@@ -312,7 +309,7 @@ public:
 
 		//
 		
-		pushSurface(lightMap); // todo : remove. we want to push it only once
+		pushSurface(lightMap);
 		setColorClamp(false);
 		pushBlend(BLEND_ADD_OPAQUE);
 		{
