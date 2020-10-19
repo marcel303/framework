@@ -5,6 +5,8 @@
 #include <SDL2/SDL.h>
 #include <string.h>
 
+#include <signal.h>
+
 #if defined(WINDOWS)
 	#include <WS2tcpip.h>
 #else
