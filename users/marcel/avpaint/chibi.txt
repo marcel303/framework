@@ -11,6 +11,7 @@ app marcel-avpaint-jpegstreamer
 
 app marcel-avpaint-portaudio
 	depend_library framework
+	depend_library portaudio
 	add_files testPortaudio.cpp
 
 app marcel-avpaint-welcome
