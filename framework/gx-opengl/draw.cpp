@@ -277,15 +277,17 @@ struct GxVertex
     #define GX_USE_ELEMENT_ARRAY_BUFFER 0
 #endif
 
+#define GX_VERTEX_BUFFER_SIZE (1024*16)
+
 static GLuint s_gxVertexArrayObject = 0;
 static GLuint s_gxVertexBufferObject = 0;
-static GLuint s_gxIndexBufferObject = 0;
-static GxVertex s_gxVertexBuffer[1024*16];
+static GLuint s_gxIndexBufferObject = 0; // index buffer for drawing quads
+static GxVertex s_gxVertexBuffer[GX_VERTEX_BUFFER_SIZE];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = nullptr;
 static int s_gxVertexCount = 0;
-static int s_gxMaxVertexCount = 0;
+static const int s_gxMaxVertexCount = GX_VERTEX_BUFFER_SIZE;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
@@ -339,6 +341,32 @@ void gxInitialize()
 	{
 	#if GX_USE_ELEMENT_ARRAY_BUFFER
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+		checkErrorGL();
+		
+		// generate index buffer for drawing quads
+		
+		const int numQuads = s_gxMaxVertexCount / 4;
+		const int numIndices = numQuads * 4;
+		
+		glindex_t * indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
+
+		glindex_t * __restrict indexPtr = indices;
+		glindex_t baseIndex = 0;
+
+		for (int i = 0; i < numQuads; ++i)
+		{
+			*indexPtr++ = baseIndex + 0;
+			*indexPtr++ = baseIndex + 1;
+			*indexPtr++ = baseIndex + 2;
+		
+			*indexPtr++ = baseIndex + 0;
+			*indexPtr++ = baseIndex + 2;
+			*indexPtr++ = baseIndex + 3;
+		
+			baseIndex += 4;
+		}
+		
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
 		checkErrorGL();
 	#endif
 	
@@ -395,7 +423,6 @@ void gxShutdown()
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
 	s_gxVertexCount = 0;
-	s_gxMaxVertexCount = 0;
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
 	s_gxTextureEnabled = false;
@@ -500,23 +527,10 @@ static void gxFlush(bool endOfBatch)
 		checkErrorGL();
 		
 		bool indexed = false;
-		glindex_t * indices = nullptr;
-		int numElements = s_gxVertexCount;
-		int numIndices = 0;
-
 	#if !GX_USE_ELEMENT_ARRAY_BUFFER
-		bool needToRegenerateIndexBuffer = true;
-	#else
-		bool needToRegenerateIndexBuffer = false;
-        
-		if (s_gxPrimitiveType != s_gxLastPrimitiveType || s_gxVertexCount != s_gxLastVertexCount)
-		{
-			s_gxLastPrimitiveType = s_gxPrimitiveType;
-			s_gxLastVertexCount = s_gxVertexCount;
-
-			needToRegenerateIndexBuffer = true;
-		}
+		glindex_t * indices = nullptr;
 	#endif
+		int numElements = s_gxVertexCount;
 	
 		// convert quads to triangles
 		
@@ -526,38 +540,31 @@ static void gxFlush(bool endOfBatch)
 		
 		#if GX_USE_ELEMENT_ARRAY_BUFFER
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+			checkErrorGL();
 		#endif
 			
-			// todo : use triangle strip + compute index buffer once at init time
-			
 			const int numQuads = s_gxVertexCount / 4;
-			numIndices = numQuads * 6;
+			const int numIndices = numQuads * 6;
 
-			if (needToRegenerateIndexBuffer)
+		#if !GX_USE_ELEMENT_ARRAY_BUFFER
+			indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
+
+			glindex_t * __restrict indexPtr = indices;
+			glindex_t baseIndex = 0;
+		
+			for (int i = 0; i < numQuads; ++i)
 			{
-				indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
-
-				glindex_t * __restrict indexPtr = indices;
-				glindex_t baseIndex = 0;
+				*indexPtr++ = baseIndex + 0;
+				*indexPtr++ = baseIndex + 1;
+				*indexPtr++ = baseIndex + 2;
 			
-				for (int i = 0; i < numQuads; ++i)
-				{
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 1;
-					*indexPtr++ = baseIndex + 2;
-				
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 2;
-					*indexPtr++ = baseIndex + 3;
-				
-					baseIndex += 4;
-				}
+				*indexPtr++ = baseIndex + 0;
+				*indexPtr++ = baseIndex + 2;
+				*indexPtr++ = baseIndex + 3;
 			
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
-				checkErrorGL();
-			#endif
+				baseIndex += 4;
 			}
+		#endif
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
 			numElements = numIndices;
@@ -656,7 +663,6 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 {
 	s_gxPrimitiveType = primitiveType;
 	s_gxVertices = s_gxVertexBuffer;
-	s_gxMaxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
 	
 	switch (primitiveType)
 	{
