@@ -1240,7 +1240,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		int x2;
 		int y2;
 		
-		// todo : STBTT packing routines contain oversampling and filtering support ..
+		// note : STBTT packing routines contain oversampling and filtering support ..
 		//        but there's no way to access this functionality officially bypassing
 		//        the packing routines. copy the implementation ? or use STBTT packing
 		//        and texture atlas management ? I would rather not .. as the current
