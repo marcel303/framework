@@ -22,7 +22,7 @@ void SetCurrentThreadName(const char * name)
 {
 #if defined(MACOS)
 	pthread_setname_np(name);
-#elif defined(LINUX)
+#elif defined(LINUX) || defined(ANDROID)
 	pthread_setname_np(pthread_self(), name);
 #elif defined(WINDOWS)
 	THREADNAME_INFO info;

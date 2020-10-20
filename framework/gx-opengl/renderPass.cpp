@@ -179,14 +179,16 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 			pushColorWriteMask(1, 1, 1, 1);
 			for (int i = 0; i < numTargets; ++i)
 			{
-				glDrawBuffer(GL_COLOR_ATTACHMENT0 + i);
+				GLenum drawBuffer = GL_COLOR_ATTACHMENT0 + i;
+				glDrawBuffers(1, &drawBuffer);
+
 				glClearColor(0, 0, 0, 0);
 				glClear(GL_COLOR_BUFFER_BIT);
 				checkErrorGL();
 			}
 			popColorWriteMask();
 			
-			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			glDrawBuffers(numDrawBuffers, drawBuffers);
 			checkErrorGL();
 		}
 	
