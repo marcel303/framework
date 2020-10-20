@@ -300,6 +300,11 @@ bool String::MatchesWildcard(const char * in_text, const char * wildcard)
 	{
 		if (wildcard[0] == ';')
 		{
+			// did we match the entire element? match
+			if (text[0] == 0)
+				return true;
+			
+			// restart matching against the next element
 			text = in_text;
 			wildcard++;
 		}
@@ -318,25 +323,24 @@ bool String::MatchesWildcard(const char * in_text, const char * wildcard)
 				wildcard++;
 			}
 		}
+		else if (text[0] != wildcard[0])
+		{
+			// seek to the next element
+			while (wildcard[0] != 0 && wildcard[0] != ';')
+				wildcard++;
+		
+			// no more elements? no match
+			if (wildcard[0] == 0)
+				return false;
+		
+			// we found the next element. restart matching
+			in_text = text;
+			wildcard++;
+		}
 		else
 		{
-			if (text[0] != wildcard[0])
-			{
-				if (wildcard[0] != ';')
-					return false;
-				else
-				{
-					wildcard++;
-					
-					while (wildcard[0] != 0 && wildcard[0] != ';')
-						wildcard++;
-				}
-			}
-			else
-			{
-				text++;
-				wildcard++;
-			}
+			text++;
+			wildcard++;
 		}
 	}
 	
