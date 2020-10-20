@@ -272,9 +272,6 @@ void metal_draw_end()
 
 void metal_set_viewport(const int sx, const int sy)
 {
-	if (!s_activeRenderPass)
-		return; // todo : hack. remove
-
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
@@ -282,7 +279,14 @@ void metal_set_scissor(const int x, const int y, const int sx, const int sy)
 {
 	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
 	
-// todo : assert x/y >= 0 and x+sx/y+sy <= width/height
+	Assert(
+		x >= 0 &&
+		y >= 0 &&
+		sx >= 0 &&
+		sy >= 0 &&
+		x + sx <= s_activeRenderPass->viewportSx &&
+		y + sy <= s_activeRenderPass->viewportSy);
+
 // todo : clip coords to be within render target size
 
 	[s_activeRenderPass->encoder setScissorRect:rect];
