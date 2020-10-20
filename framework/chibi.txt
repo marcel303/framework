@@ -77,29 +77,16 @@ library framework
 	scan_files cpp path audiooutput group audiooutput
 	scan_files h   path audiooutput group audiooutput
 
-# todo : simplify ?
-# with_platform macos|linux|windows scan_files cpp path gx-opengl group gx-opengl
-# with_platform macos|linux|windows scan_files h   path gx-opengl group gx-opengl
-
-	with_platform macos   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform macos   scan_files h   path gx-opengl group gx-opengl
-	with_platform linux   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform linux   scan_files h   path gx-opengl group gx-opengl
-	with_platform windows scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform windows scan_files h   path gx-opengl group gx-opengl
+	with_platform macos|linux|windows|iphoneos|android scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
+	with_platform macos|linux|windows|iphoneos|android scan_files h   path gx-opengl group gx-opengl
 
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
 
-	with_platform iphoneos scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform iphoneos scan_files h   path gx-opengl group gx-opengl
 	#with_platform iphoneos scan_files cpp path gx-metal group gx-metal
 	#with_platform iphoneos scan_files h   path gx-metal group gx-metal
 	#with_platform iphoneos scan_files mm  path gx-metal group gx-metal
-
-	with_platform android scan_files cpp path gx-opengl group gx-opengl
-	with_platform android scan_files h   path gx-opengl group gx-opengl
 
 	header_path . expose
 
