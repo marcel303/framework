@@ -21,8 +21,9 @@ protected:
 	Mat4x4 transform = Mat4x4(true);
 	
 public:
-	bool hasTransform = false;
-	bool wantsToVibrate = false;
+	bool isPrimary = false; // read only. true when this pointer is determined to be the 'primary' controller (should be used as pointer for the virtual desktop, etc)
+	bool hasTransform = false; // read only. true if the pointer is currently tracked and getTransform() may be called
+	bool wantsToVibrate = false; // when set to true, the pointer will perform haptic vribration (if supported)
 
 public:
 	virtual void init(VrSide side) = 0;
@@ -72,6 +73,8 @@ public:
 	
 	virtual void updateInputState() override final;
 	virtual void updateHaptics() override final;
+
+	ovrDeviceID getOvrDeviceId() const { return DeviceID; }
 };
 
 #else

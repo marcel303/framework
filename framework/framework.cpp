@@ -1462,14 +1462,36 @@ void Framework::process()
 
 	for (auto & pointer : vrPointer)
 		pointer.updateInputState();
+	
+	// determine the active pointer
+
+	for (int i = 0; i < 2; ++i)
+		vrPointer[i].isPrimary = false;
+	
+	bool hasPrimaryPointer = false;
+	int activeInputDeviceId = -1;
+	if (vrapi_GetPropertyInt(&frameworkOvr.Java, VRAPI_ACTIVE_INPUT_DEVICE_ID, &activeInputDeviceId))
+	{
+		for (int i = 0; i < 2; ++i)
+		{
+			Assert(vrPointer[i].getOvrDeviceId() != -1);
+			if (vrPointer[i].getOvrDeviceId() == activeInputDeviceId)
+			{
+				vrPointer[i].isPrimary = true;
+				hasPrimaryPointer = true;
+			}
+		}
+	}
+	
+	if (hasPrimaryPointer == false)
+	{
+		vrPointer[0].isPrimary = true;
+		hasPrimaryPointer = true;
+	}
 
 	if (vrMode == false)
 	{
 		// update virtual desktop. but first, find the pointer transform to use
-
-		// todo : remove this global
-		// todo : does ovr api provide a way to determine the active hand?
-	static int activeController = 0;
 
 		Mat4x4 pointerTransform[2] =
 			{
@@ -1480,12 +1502,14 @@ void Framework::process()
 		bool pointerTransformIsValid[2] = { };
 		int buttonMasks[2] = { 0, 0 };
 
+		int activePointer = 0;
+
 		for (int i = 0; i < 2; ++i)
 		{
 			auto & pointer = vrPointer[i];
 
-			if (pointer.wentDown(VrButton_Trigger))
-				activeController = i;
+			if (pointer.isPrimary)
+				activePointer = i;
 
 			if (pointer.hasTransform)
 			{
@@ -1501,9 +1525,9 @@ void Framework::process()
 		}
 
 		framework.tickVirtualDesktop(
-			pointerTransform[activeController],
-			pointerTransformIsValid[activeController],
-			buttonMasks[activeController],
+			pointerTransform[activePointer],
+			pointerTransformIsValid[activePointer],
+			buttonMasks[activePointer],
 			false);
 
 		globals.currentWindow->getWindowData()->makeActive();
@@ -2045,23 +2069,23 @@ bool Framework::tickVirtualDesktop(
 		const Vec3 pointerOrigin = transform.GetTranslation();
 		const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
 
-	for (Window * window = m_windows; window != nullptr; window = window->m_next)
-	{
-		if (window->isHidden())
-			continue;
-
-		Vec2 pixelPos;
-		float distance;
-		if (window->intersectRay(pointerOrigin, pointerDirection, depthThreshold, pixelPos, distance))
+		for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		{
-			if (distance < hoverDistance)
+			if (window->isHidden())
+				continue;
+
+			Vec2 pixelPos;
+			float distance;
+			if (window->intersectRay(pointerOrigin, pointerDirection, depthThreshold, pixelPos, distance))
 			{
-				hoverWindow = window;
-				hoverPos = pixelPos;
-				hoverDistance = distance;
+				if (distance < hoverDistance)
+				{
+					hoverWindow = window;
+					hoverPos = pixelPos;
+					hoverDistance = distance;
+				}
 			}
 		}
-	}
 	}
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
