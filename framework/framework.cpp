@@ -1865,7 +1865,11 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 
 	#if ENABLE_METAL
 	// todo : replace with beginBackbufferRenderPass
-		metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
+		metal_draw_begin(
+			scale255(r),
+			scale255(g),
+			scale255(b),
+			scale255(a), depth);
 	#endif
 	#endif
 	}
@@ -4132,8 +4136,6 @@ void popCullMode()
 void pushCullFlip()
 {
 	globals.frontFaceWinding = -globals.frontFaceWinding;
-	
-	Assert(globals.frontFaceWinding == gxGetMatrixParity());
 
 	setCullMode(globals.cullMode, globals.cullWinding);
 }

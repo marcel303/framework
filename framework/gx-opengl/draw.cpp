@@ -346,7 +346,7 @@ void gxInitialize()
 		// generate index buffer for drawing quads
 		
 		const int numQuads = s_gxMaxVertexCount / 4;
-		const int numIndices = numQuads * 4;
+		const int numIndices = numQuads * 6;
 		
 		glindex_t * indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
 

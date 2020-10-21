@@ -226,14 +226,6 @@ void metal_draw_end()
 // todo : endRenderPass ?
 
 	[pd.encoder endEncoding];
-	
-#if 0
-	[pd.cmdbuf addCompletedHandler:
-		^(id<MTLCommandBuffer> _Nonnull)
-		{
-			NSLog(@"hello done! %@", activeWindowData);
-		}];
-#endif
 
 	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
