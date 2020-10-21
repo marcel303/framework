@@ -914,6 +914,8 @@ static void fillDepthStencilDescriptor(MTLDepthStencilDescriptor * descriptor)
 	}
 }
 
+static id <MTLDepthStencilState> s_depthStencilStates[2][8][2] = { }; // depth-stencil states for states where the stencil test is disabled, are cached using a simple array, indexed by state
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
 	globals.depthTestEnabled = enabled;
@@ -922,17 +924,45 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	
 	// update depth-stencil state
 	
-	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	fillDepthStencilDescriptor(descriptor);
+	if (globals.stencilEnabled == false)
+	{
+		// lookup cached depth-stencil state
+		
+		id <MTLDepthStencilState> & state = s_depthStencilStates
+			[globals.depthTestWriteEnabled]
+			[globals.depthTest]
+			[globals.depthTestEnabled];
+		
+		if (state == nil)
+		{
+			// create the depth-stencil state when it isn't cached yet
+			
+			MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+			fillDepthStencilDescriptor(descriptor);
 	
-	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	[s_activeRenderPass->encoder setDepthStencilState:state];
-	
-	[state release];
-	state = nullptr;
-	
-	[descriptor release];
-	descriptor = nullptr;
+			state = [device newDepthStencilStateWithDescriptor:descriptor];
+		}
+		
+		// set the depth-stencil state
+			
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+	}
+	else
+	{
+		// for stencil-enabled depth-stencil states.. we create a new depth-stencil descriptor, each and every time. caching can be implemented if we calculate the hash or a composite-key of the state and use it as the lookup key into a map
+		
+		MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+		fillDepthStencilDescriptor(descriptor);
+		
+		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+		
+		[state release];
+		state = nullptr;
+		
+		[descriptor release];
+		descriptor = nullptr;
+	}
 }
 
 void setDepthBias(float depthBias, float slopeScale)
