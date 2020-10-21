@@ -31,7 +31,7 @@ void Test_DummyTcpServer::Client::run(const int in_sock)
 		for (;;)
 		{
 			uint8_t b;
-			const int ret = recv(sock, &b, 1, 0);
+			const int ret = recv(sock, (char*)&b, 1, 0);
 			if (ret != 1)
 				break;
 			
@@ -87,13 +87,14 @@ bool Test_DummyTcpServer::init(const IpEndpointName & endpointName)
 	if (success)
 	{
 		const int sock_value = 1;
-		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &sock_value, sizeof(sock_value)) == -1)
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&sock_value, sizeof(sock_value)) == -1)
 		{
 			LOG_ERR("failed to set SO_REUSEADDR socket option");
 			success = false;
 		}
 	}
 	
+#if !defined(WINDOWS)
 	if (success)
 	{
 		const int sock_value = 1;
@@ -103,6 +104,7 @@ bool Test_DummyTcpServer::init(const IpEndpointName & endpointName)
 			success = false;
 		}
 	}
+#endif
 
 	if (success)
 	{
