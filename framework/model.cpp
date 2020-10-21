@@ -199,11 +199,9 @@ namespace AnimModel
 		result.scale += transform.scale;
 	}
 	
-	Mat4x4 BoneTransform::toMatrix() const
+	void BoneTransform::toMatrix(Mat4x4 & result) const
 	{
 		// todo : scale?
-		
-		Mat4x4 result;
 		
 		rotation.toMatrix3x3(result);
 		
@@ -215,6 +213,13 @@ namespace AnimModel
 		result(3, 1) = translation[1];
 		result(3, 2) = translation[2];
 		result(3, 3) = 1.f;
+	}
+	
+	Mat4x4 BoneTransform::toMatrix() const
+	{
+		Mat4x4 result;
+		
+		toMatrix(result);
 		
 		return result;
 	}
@@ -263,8 +268,7 @@ namespace AnimModel
 			{
 				Mat4x4 matrix;
 				
-				matrix = m_bones[boneIndex].transform.rotation.toMatrix();
-				matrix.SetTranslation(m_bones[boneIndex].transform.translation);
+				m_bones[boneIndex].transform.toMatrix(matrix);
 				
 				poseMatrix = matrix * poseMatrix;
 				
@@ -1214,23 +1218,8 @@ int Model::calculateBoneMatrices(
 {
 	if (numMatrices == 0)
 	{
-		// todo : add flag if static mesh or not ?
-		
-		if (m_model->boneSet->m_numBones == 0)
-			return 1;
-		else
-			return m_model->boneSet->m_numBones;
-	}
-	
-	if (m_model->boneSet->m_numBones == 0)
-	{
-		Assert(numMatrices == 1);
-		
-		localMatrices[0].MakeIdentity();
-		worldMatrices[0] = matrix;
-		globalMatrices[0] = worldMatrices[0];
-		
-		return 1;
+		Assert(m_model->boneSet->m_numBones >= 1);
+		return m_model->boneSet->m_numBones;
 	}
 	
 	Assert(numMatrices == m_model->boneSet->m_numBones);
@@ -1239,22 +1228,11 @@ int Model::calculateBoneMatrices(
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
-		// todo : scale?
-		
 		const BoneTransform & transform = m_boneTransforms[i];
 		
 		Mat4x4 & boneMatrix = localMatrices[i];
 		
-		transform.rotation.toMatrix3x3(boneMatrix);
-		
-		boneMatrix(0, 3) = 0.f;
-		boneMatrix(1, 3) = 0.f;
-		boneMatrix(2, 3) = 0.f;
-		
-		boneMatrix(3, 0) = transform.translation[0];
-		boneMatrix(3, 1) = transform.translation[1];
-		boneMatrix(3, 2) = transform.translation[2];
-		boneMatrix(3, 3) = 1.f;
+		transform.toMatrix(boneMatrix);
 	}
 	
 	// calculate the bone hierarchy in world space

@@ -128,6 +128,8 @@ namespace AnimModel
 		void clear();
 		static void add(BoneTransform & result, const BoneTransform & transform);
 		
+		void toMatrix(Mat4x4 & result) const;
+		
 		Mat4x4 toMatrix() const;
 	};
 
