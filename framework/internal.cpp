@@ -49,13 +49,10 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#if defined(WIN32)
-	#include <Windows.h>
-	#include <Pathcch.h>
-	#include "FileStream.h"
-	#include "StreamReader.h"
-	#include "StreamWriter.h"
-#endif
+// for resource caching
+#include "FileStream.h"
+#include "StreamReader.h"
+#include "StreamWriter.h"
 
 #if defined(DEBUG)
 	#include "Timer.h"
@@ -264,7 +261,9 @@ void TextureCacheElem::free()
 	}
 }
 
-#ifdef WIN32
+#if defined(WINDOWS)
+#include <Windows.h>
+#include <Pathcch.h>
 static std::string getCacheFilename(const char * filename, bool forRead)
 {
 	const int kPathSize = 256;
@@ -276,7 +275,7 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 		for (int i = 0; filename[i]; ++i)
 			hash = hash * 13 + filename[i];
 		char hashName[32];
-		sprintf_s(hashName, sizeof(hashName), "fwc%08x.bin", hash);
+		sprintf_s(hashName, sizeof(hashName), "fwc-%08x.bin", hash);
 		strcat_s(tempPath, sizeof(tempPath), hashName);
 
 		if (forRead)
@@ -309,6 +308,60 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 
 	return "";
 }
+#elif defined(MACOS)
+#include <sys/stat.h>
+#include <unistd.h>
+static std::string getCacheFilename(const char * filename, bool forRead)
+{
+	char path[PATH_MAX];
+	size_t n = confstr(_CS_DARWIN_USER_CACHE_DIR, path, sizeof(path));
+	if (n == 0)
+		return "";
+	else
+	{
+		if (n >= 2 && path[n - 2] == '/')
+			path[n - 2] = 0;
+		
+		uint32_t hash = 0;
+		for (int i = 0; filename[i]; ++i)
+			hash = hash * 13 + filename[i];
+		
+		char tempPath[PATH_MAX];
+		sprintf_s(tempPath, sizeof(tempPath), "%s/fwc-%08x.bin", path, hash);
+		
+		if (forRead)
+		{
+			// check timestamp on both files
+			bool outdated = false;
+			FILE * file1 = fopen(filename, "rb");
+			FILE * file2 = fopen(tempPath, "rb");
+			if (file1 == nullptr || file2 == nullptr)
+				outdated = true;
+			else
+			{
+				struct stat stat1;
+				struct stat stat2;
+				if (fstat(fileno(file1), &stat1) != 0 || fstat(fileno(file2), &stat2) != 0)
+					outdated = true;
+				else if (stat1.st_mtime > stat2.st_mtime)
+					outdated = true;
+			}
+			if (file1 != nullptr)
+				fclose(file1);
+			if (file2 != nullptr)
+				fclose(file2);
+			if (outdated)
+				return "";
+		}
+		
+		return tempPath;
+	}
+}
+#else
+static std::string getCacheFilename(const char * filename, bool forRead)
+{
+	return "";
+}
 #endif
 
 void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool mipmapped)
@@ -321,12 +374,11 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 	
 	ImageData * imageData = 0;
 
-#ifdef WIN32
 	if (framework.cacheResourceData)
 	{
-		std::string cacheFilename = getCacheFilename(filename, true);
+		const std::string cacheFilename = getCacheFilename(filename, true);
 
-		if (FileStream::Exists(cacheFilename.c_str()))
+		if (!cacheFilename.empty() && FileStream::Exists(cacheFilename.c_str()))
 		{
 			try
 			{
@@ -355,35 +407,39 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 			}
 		}
 	}
-#endif
 
 	if (!imageData)
 	{
 		imageData = loadImage(filename);
 
-	#ifdef WIN32 // todo : enable cacheResourceData on other platforms than windows too. requires platform independent function to get temp path (GetTempPathA on windows)
 		if (framework.cacheResourceData && imageData)
 		{
-			std::string cacheFilename = getCacheFilename(filename, false);
-
-			try
+			const std::string cacheFilename = getCacheFilename(filename, false);
+			
+			if (cacheFilename.empty())
 			{
-				FileStream stream(cacheFilename.c_str(), OpenMode_Write);
-				StreamWriter writer(&stream, false);
-
-				writer.WriteUInt32(0); // version number
-				writer.WriteUInt32(imageData->sx);
-				writer.WriteUInt32(imageData->sy);
-
-				writer.WriteBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
+				logWarning("failed to get cache filename for: %s", filename);
 			}
-			catch (std::exception & e)
+			else
 			{
-				logError("failed to write cache data: %s", e.what());
-				(void)e;
+				try
+				{
+					FileStream stream(cacheFilename.c_str(), OpenMode_Write);
+					StreamWriter writer(&stream, false);
+
+					writer.WriteUInt32(0); // version number
+					writer.WriteUInt32(imageData->sx);
+					writer.WriteUInt32(imageData->sy);
+
+					writer.WriteBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
+				}
+				catch (std::exception & e)
+				{
+					logError("failed to write cache data: %s", e.what());
+					(void)e;
+				}
 			}
 		}
-	#endif
 	}
 	
 	if (!imageData)
@@ -1184,7 +1240,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		int x2;
 		int y2;
 		
-		// todo : STBTT packing routines contain oversampling and filtering support ..
+		// note : STBTT packing routines contain oversampling and filtering support ..
 		//        but there's no way to access this functionality officially bypassing
 		//        the packing routines. copy the implementation ? or use STBTT packing
 		//        and texture atlas management ? I would rather not .. as the current

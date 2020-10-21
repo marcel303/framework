@@ -329,7 +329,7 @@ bool object_fromlines_recursive(
 	{
 		const char * line = line_reader.get_next_line(false);
 		
-		AssertMsg(line != nullptr, "got empty line for plain type", 0);
+		AssertMsg(line != nullptr, "got empty line for plain type");
 		
 		if (line == nullptr)
 		{
@@ -348,7 +348,7 @@ bool object_fromlines_recursive(
 			
 			if (plain_type_fromtext(plain_type, object, line) == false)
 			{
-				LOG_ERR("failed to deserialize plain type from text", 0);
+				LOG_ERR("failed to deserialize plain type from text");
 				
 				return false;
 			}
@@ -387,7 +387,7 @@ bool member_fromlines_recursive(
 				Assert(element[0] == '-');
 				if (element[0] != '-')
 				{
-					LOG_ERR("syntax error. expected '-' for next array element", 0);
+					LOG_ERR("syntax error. expected '-' for next array element");
 					result &= false;
 				}
 				else if (element[0] == '\t')
@@ -502,7 +502,7 @@ bool object_tolines_recursive(
 		
 		if (plain_type_totext(plain_type, object, text, text_size) == false)
 		{
-			LOG_ERR("failed to serialize plain type to text", 0);
+			LOG_ERR("failed to serialize plain type to text");
 			return false;
 		}
 		else

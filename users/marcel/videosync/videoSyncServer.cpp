@@ -5,10 +5,13 @@
 #include <SDL2/SDL.h>
 #include <string.h>
 
+#include <signal.h>
+
 #if defined(WINDOWS)
 	#include <WS2tcpip.h>
 #else
 	#include <netinet/tcp.h>
+	#include <unistd.h>
 #endif
 
 #if defined(WINDOWS)
@@ -34,31 +37,31 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+		// disable SIGPIPE (and handle broken connections ourselves)
+		signal(SIGPIPE, SIG_IGN);
+		
 	#if defined(WINDOWS)
+		// disable nagle & linger
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
 	#else
-	#if defined(MACOS)
-		setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
-	#endif
-		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
-		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
+		// disable nagle & linger
+		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, &set_false, sizeof(set_false));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
+		// enable address/port reuse
+		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, &set_true, sizeof(set_true));
 	#endif
-
-	// todo : disable nagle
-	// todo : disable linger
 		
 		if ((bind(m_socket, (struct sockaddr *)&m_socketAddress, sizeof(m_socketAddress))) < 0)
 		{
-			LOG_ERR("server bind failed", 0);
+			LOG_ERR("server bind failed");
 			result = false;
 		}
 		else
 		{
 			if (listen(m_socket, 1) < 0)
 			{
-				LOG_ERR("server listen failed", 0);
+				LOG_ERR("server listen failed");
 				result = false;
 			}
 			else
@@ -148,7 +151,7 @@ namespace Videosync
 			
 			if (self->accept(clientSocket) == false)
 			{
-				LOG_ERR("server accept: failed to accept connection", 0);
+				LOG_ERR("server accept: failed to accept connection");
 			}
 			else
 			{
@@ -189,7 +192,7 @@ namespace Videosync
 						
 						if (numBytes <= 0)
 						{
-							LOG_DBG("server: client socket disconnected", 0);
+							LOG_DBG("server: client socket disconnected");
 							break;
 						}
 						
@@ -224,7 +227,7 @@ namespace Videosync
 						
 						if (numBytes <= 0)
 						{
-							LOG_DBG("server: client socket disconnected", 0);
+							LOG_DBG("server: client socket disconnected");
 							break;
 						}
 						
@@ -271,7 +274,7 @@ namespace Videosync
 				if (clientSocket >= 0)
 				{
 				#if 0
-					LOG_DBG("slave: disconnecting..", 0);
+					LOG_DBG("slave: disconnecting..");
 					if (shutdown(clientSocket, 1) >= 0)
 					{
 					#if 1
@@ -281,11 +284,11 @@ namespace Videosync
 							// not done yet
 						}
 					#endif
-						LOG_DBG("slave: disconnecting.. done", 0);
+						LOG_DBG("slave: disconnecting.. done");
 					}
 					else
 					{
-						LOG_DBG("slave: disconnecting.. failure", 0);
+						LOG_DBG("slave: disconnecting.. failure");
 					}
 				#endif
 					

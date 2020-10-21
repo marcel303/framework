@@ -47,7 +47,7 @@ namespace Videosync
 		
 		if (::connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
 		{
-			LOG_ERR("client: connect failed", 0);
+			LOG_ERR("client: connect failed");
 			result = false;
 		}
 		
@@ -89,7 +89,7 @@ namespace Videosync
 		
 		if (::connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
 		{
-			LOG_ERR("client: connect failed", 0);
+			LOG_ERR("client: connect failed");
 			result = false;
 		}
 		
@@ -106,7 +106,7 @@ namespace Videosync
 		if (m_clientSocket >= 0)
 		{
 		#if 0
-			LOG_DBG("master: disconnecting..", 0);
+			LOG_DBG("master: disconnecting..");
 			if (shutdown(m_clientSocket, 1) >= 0)
 			{
 			#if 1
@@ -116,11 +116,11 @@ namespace Videosync
 					// not done yet
 				}
 			#endif
-				LOG_DBG("master: disconnecting.. done", 0);
+				LOG_DBG("master: disconnecting.. done");
 			}
 			else
 			{
-				LOG_DBG("master: disconnecting.. failed", 0);
+				LOG_DBG("master: disconnecting.. failed");
 			}
 		#endif
 		

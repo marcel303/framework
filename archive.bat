@@ -8,7 +8,7 @@ where /q cmake
 IF ERRORLEVEL 1 (
 	echo CMake not found. Please install CMake and make sure to add its location to the system path.
 	pause
-	exit /b
+	exit /b 1
 )
 
 rem verify all submodules are up to date
@@ -20,8 +20,8 @@ set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
 rem build chibi binary
 mkdir "chibi-build\chibi"
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || cd %~dp0 && exit /b
-cd %~dp0 || exit /b
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || cd %~dp0 && exit /b 1
+cd %~dp0 || exit /b 1
 
 rem use command line argument for selecting build target
 :build_loop
@@ -31,13 +31,13 @@ rem use command line argument for selecting build target
 	
 	rem generate cmake files using chibi
 	mkdir "chibi-build\cmake-files-for-archive"
-	%chibi_bin% -g . chibi-build/cmake-files-for-archive -target %1 || cd %~dp0 && exit /b
-	cd %~dp0 || exit /b
+	%chibi_bin% -g . chibi-build/cmake-files-for-archive -target %1 || cd %~dp0 && exit /b 1
+	cd %~dp0 || exit /b 1
 
 	rem build the selected target
 	mkdir "chibi-build\archive"
-	cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution -A Win32 ../cmake-files-for-archive && cmake --build . --config Distribution || cd %~dp0 && exit /b
-	cd %~dp0 || exit /b
+	cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution -A Win32 ../cmake-files-for-archive && cmake --build . --config Distribution || cd %~dp0 && exit /b 1
+	cd %~dp0 || exit /b 1
 
 	rem zip the target folder
 	call zip-folder.bat chibi-build\archive\%1 chibi-build\archive\%1-%DATETIME_STRING%-windows.zip

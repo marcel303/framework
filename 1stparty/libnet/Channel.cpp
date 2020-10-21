@@ -7,8 +7,8 @@
 #include "PacketDispatcher.h"
 #include <algorithm>
 
-#define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
-//#define LOG_CHANNEL_DBG(fmt, ...) LOG_INF("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
+#define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), ##__VA_ARGS__)
+//#define LOG_CHANNEL_DBG(fmt, ...) LOG_INF("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), ##__VA_ARGS__)
 //#define LOG_CHANNEL_DBG(fmt, ...) do { } while (false)
 
 Channel::Channel(ChannelType channelType, ChannelPool channelPool, uint32_t protocolMask)
@@ -270,7 +270,7 @@ void Channel::Update(uint64_t time)
 			SendUnreliable(packet, false);
 
 			if (LIBNET_CHANNEL_LOG_PINGPONG)
-				LOG_CHANNEL_DBG("sent ping message", 0);
+				LOG_CHANNEL_DBG("sent ping message");
 		}
 	}
 	else
@@ -287,7 +287,7 @@ void Channel::Update(uint64_t time)
 
 			m_channelMgr->DestroyChannelQueued(this);
 
-			LOG_CHANNEL_DBG("timeout", 0);
+			LOG_CHANNEL_DBG("timeout");
 		}
 	}
 
@@ -536,7 +536,7 @@ void Channel::HandlePing(Packet & packet)
 	NetAssert(m_state != ChannelState_Disconnected);
 
 	if (LIBNET_CHANNEL_LOG_PINGPONG)
-		LOG_CHANNEL_DBG("received ping message", 0);
+		LOG_CHANNEL_DBG("received ping message");
 
 	uint32_t time;
 
@@ -558,7 +558,7 @@ void Channel::HandlePing(Packet & packet)
 	SendUnreliable(reply.ToPacket(), false);
 
 	if (LIBNET_CHANNEL_LOG_PINGPONG)
-		LOG_CHANNEL_DBG("sent pong message", 0);
+		LOG_CHANNEL_DBG("sent pong message");
 }
 
 void Channel::HandlePong(Packet & packet)
@@ -631,7 +631,7 @@ void Channel::HandleRTUpdate(Packet & packet)
 		}
 		else
 		{
-			LOG_ERR("failed to extract packet", 0);
+			LOG_ERR("failed to extract packet");
 			NetAssert(false);
 		}
 	}
@@ -642,9 +642,9 @@ void Channel::HandleRTUpdate(Packet & packet)
 		if (LIBNET_CHANNEL_LOG_RT)
 		{
 			if (packetId > m_rtRcvId)
-				LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID", 0);
+				LOG_CHANNEL_DBG("RT UPD rcvd: ID > receive ID");
 			else
-				LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID", 0);
+				LOG_CHANNEL_DBG("RT UPD rcvd: ID < receive ID");
 		}
 
 		if (packetId > m_rtRcvId)
@@ -690,7 +690,7 @@ void Channel::HandleRTAck(Packet & packet)
 	{
 		if (LIBNET_CHANNEL_LOG_RT && packetId >= m_rtSndId)
 		{
-			LOG_CHANNEL_DBG("received ack for unsent message", 0);
+			LOG_CHANNEL_DBG("received ack for unsent message");
 		}
 
 		// Remove queued packets.
@@ -706,7 +706,7 @@ void Channel::HandleRTAck(Packet & packet)
 		NET_STAT_INC(NetStat_ReliableTransportAcksIgnored);
 
 		if (LIBNET_CHANNEL_LOG_RT)
-			LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID", 0);
+			LOG_CHANNEL_DBG("RT ACK rcvd: ID < ack ID");
 	}
 }
 
@@ -744,14 +744,14 @@ void Channel::HandleRTNack(Packet & packet)
 
 
 		if (LIBNET_CHANNEL_LOG_RT && !found)
-			LOG_CHANNEL_DBG("received nack for already acked message", 0);
+			LOG_CHANNEL_DBG("received nack for already acked message");
 	}
 	else
 	{
 		NET_STAT_INC(NetStat_ReliableTransportNacksIgnored);
 
 		if (LIBNET_CHANNEL_LOG_RT)
-			LOG_CHANNEL_DBG("received ack for unsent message", 0);
+			LOG_CHANNEL_DBG("received ack for unsent message");
 	}
 }
 

@@ -297,43 +297,9 @@ namespace rOne
 		const RenderBuffers & buffers,
 		const int viewportSx,
 		const int viewportSy,
-		const Mat4x4 & projectionMatrix,
-		const Mat4x4 & modelViewMatrix,
-		const float timeStep)
+		const RenderEyeData & eyeData)
 	{
-		const int kHistorySize = 100;
-		static Mat4x4 projectionToWorld_prev(true); // todo : per-eye storage
-		
-		static int projectionToWorld_prev_hist_idx = -1; // todo : per-eye storage
-		static Mat4x4 projectionToWorld_prev_hist[kHistorySize]; // todo : per-eye storage
-		
-		const Mat4x4 worldToProjection = projectionMatrix * modelViewMatrix;
-		const Mat4x4 projectionToWorld_curr = worldToProjection.CalcInv();
-		
 		const bool needsVelocityBuffer = renderOptions.motionBlur.enabled;
-		
-	#if 0 // enable to use a weird effect created by delayed reprojection matrices
-		if (needsVelocityBuffer == false)
-			projectionToWorld_prev_hist_idx = -1;
-		else
-		{
-			const Mat4x4 projectionToWorld = worldToProjection.CalcInv();
-			
-			if (projectionToWorld_prev_hist_idx == -1)
-			{
-				for (auto & m : projectionToWorld_prev_hist)
-					m = projectionToWorld;
-			}
-			else
-			{
-				projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx] = projectionToWorld;
-			}
-			
-			projectionToWorld_prev_hist_idx = (projectionToWorld_prev_hist_idx + 1) % kHistorySize;
-		}
-		
-		projectionToWorld_prev = projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx];
-	#endif
 		
 		if (needsVelocityBuffer)
 		{
@@ -347,11 +313,12 @@ namespace rOne
 					setShader(shader);
 					{
 						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setImmediateMatrix4x4("projectionToWorld_curr", projectionToWorld_curr.m_v);
-						shader.setImmediateMatrix4x4("projectionToWorld_prev", projectionToWorld_prev.m_v);
-						//shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
-						shader.setImmediateMatrix4x4("worldToProjection", worldToProjection.m_v);
-						shader.setImmediate("timeStepRcp", 1.f / timeStep);
+						shader.setImmediateMatrix4x4("projectionToWorld_curr", eyeData.projectionToWorld_curr.m_v);
+						shader.setImmediateMatrix4x4("projectionToWorld_prev", eyeData.projectionToWorld_prev.m_v);
+						shader.setImmediateMatrix4x4("worldToProjection", eyeData.projectionToWorld_curr.CalcInv().m_v);
+						shader.setImmediate("timeStepRcp", eyeData.timeStep > 0.f
+							? 1.f / eyeData.timeStep
+							: 1.f);
 						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
@@ -360,8 +327,6 @@ namespace rOne
 			}
 			popRenderPass();
 		}
-		
-		projectionToWorld_prev = projectionToWorld_curr;
 	}
 
 	static void renderPostOpaqueEffects(
@@ -620,14 +585,9 @@ namespace rOne
 					Shader shader("renderOne/postprocess/chromatic-aberration");
 					setShader(shader);
 					{
-						static int frameIndex = 0; // todo : make a member of a future post-effect object
-						
 						shader.setTexture("source", 0, composite[composite_idx]->getTextureId(), true, true);
 						shader.setImmediate("strength", renderOptions.chromaticAberration.strength / 20.f); // 100% = 5% image distortion
-						shader.setImmediate("time", frameIndex);
 						drawFullscreenQuad(viewportSx, viewportSy);
-						
-						++frameIndex;
 					}
 					clearShader();
 				}
@@ -989,7 +949,13 @@ namespace rOne
 		return nullptr;
 	}
 
-	static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, RenderBuffers & buffers, const int viewportSx, const int viewportSy, const float timeStep)
+	static ColorTarget * renderModeDeferredShaded(
+		const RenderFunctions & renderFunctions,
+		const RenderOptions & renderOptions,
+		RenderBuffers & buffers,
+		const int viewportSx,
+		const int viewportSy,
+		const RenderEyeData & eyeData)
 	{
 		Mat4x4 modelViewMatrix;
 		Mat4x4 projectionMatrix;
@@ -1007,7 +973,10 @@ namespace rOne
 				buffers.emissive
 			};
 		pushRenderPass(targets, 5, true, buffers.depth, true, "Normals + Colors + Specular + Emissive & Depth");
-		pushShaderOutputs("ncSse"); // todo : drawNormals -> "nn". currently bugs when generating shader
+		pushShaderOutputs(
+			renderOptions.drawNormals
+				? "nnSse"
+				: "ncSse");
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
@@ -1036,9 +1005,7 @@ namespace rOne
 			buffers,
 			viewportSx,
 			viewportSy,
-			projectionMatrix,
-			modelViewMatrix,
-			timeStep);
+			eyeData);
 		
 		// apply tri-planar texture projection test
 		
@@ -1208,7 +1175,7 @@ namespace rOne
 		RenderBuffers & buffers,
 		const int viewportSx,
 		const int viewportSy,
-		const float timeStep)
+		const RenderEyeData & eyeData)
 	{
 		Mat4x4 modelViewMatrix;
 		Mat4x4 projectionMatrix;
@@ -1224,7 +1191,7 @@ namespace rOne
 			};
 		
 		pushRenderPass(targets, 2, true, buffers.depth, true, "Normals + Colors & Depth");
-		pushShaderOutputs("nc"); // todo : drawNormals -> "nn". currently bugs when generating shader
+		pushShaderOutputs(renderOptions.drawNormals ? "nn" : "nc");
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
@@ -1278,9 +1245,7 @@ namespace rOne
 			buffers,
 			viewportSx,
 			viewportSy,
-			projectionMatrix,
-			modelViewMatrix,
-			timeStep);
+			eyeData);
 
 		// setup composite ping-pong buffers
 		
@@ -1512,7 +1477,16 @@ namespace rOne
 
 	#endif
 
-	static ColorTarget * renderFromEye(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, const Vec3 & eyeOffset, RenderBuffers & buffers, const int viewportSx, const int viewportSy, const float timeStep)
+	static ColorTarget * renderFromEye(
+		const RenderFunctions & renderFunctions,
+		const RenderOptions & renderOptions,
+		const Vec3 & eyeOffset,
+		RenderBuffers & buffers,
+		const int viewportSx,
+		const int viewportSy,
+		const float timeStep,
+		RenderEyeData & eyeData,
+		const bool updateHistory)
 	{
 		gxPushMatrix();
 		Mat4x4 viewMatrix;
@@ -1522,6 +1496,47 @@ namespace rOne
 			.Translate(eyeOffset[0], eyeOffset[1], eyeOffset[2])
 			.Mul(viewMatrix);
 		gxLoadMatrixf(viewMatrix.m_v);
+		
+		// update the per-eye data
+		
+		if (updateHistory || eyeData.isValid == false)
+		{
+			eyeData.isValid = true;
+			eyeData.timeStep = timeStep;
+			
+			Mat4x4 modelViewMatrix;
+			Mat4x4 projectionMatrix;
+			gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			
+			const Mat4x4 worldToProjection_curr = projectionMatrix * modelViewMatrix;
+			const Mat4x4 projectionToWorld_curr = worldToProjection_curr.CalcInv();
+			
+			eyeData.projectionToWorld_prev =
+				eyeData.isValid
+					? eyeData.projectionToWorld_curr
+					: projectionToWorld_curr;
+			eyeData.projectionToWorld_curr = projectionToWorld_curr;
+			
+		#if 0 // enable to use a weird effect created by delayed reprojection matrices
+			if (eyeData.projectionToWorld_prev_hist_idx == -1)
+			{
+				for (auto & m : eyeData.projectionToWorld_prev_hist)
+					m = projectionToWorld_curr;
+			}
+			else
+			{
+				eyeData.projectionToWorld_prev_hist[eyeData.projectionToWorld_prev_hist_idx] = projectionToWorld_curr;
+			}
+			
+			eyeData.projectionToWorld_prev_hist_idx += 1;
+			eyeData.projectionToWorld_prev_hist_idx %= RenderEyeData::kHistorySize;
+		
+			eyeData.projectionToWorld_prev = eyeData.projectionToWorld_prev_hist[eyeData.projectionToWorld_prev_hist_idx];
+		#endif
+		}
+		
+		// invoke the render mode specific render function
 		
 		ColorTarget * result = nullptr;
 		bool hasResult = false;
@@ -1534,12 +1549,24 @@ namespace rOne
 			break;
 			
 		case kRenderMode_DeferredShaded:
-			result = renderModeDeferredShaded(renderFunctions, renderOptions, buffers, viewportSx, viewportSy, timeStep);
+			result = renderModeDeferredShaded(
+				renderFunctions,
+				renderOptions,
+				buffers,
+				viewportSx,
+				viewportSy,
+				eyeData);
 			hasResult = true;
 			break;
 			
 		case kRenderMode_ForwardShaded:
-			result = renderModeForwardShaded(renderFunctions, renderOptions, buffers, viewportSx, viewportSy, timeStep);
+			result = renderModeForwardShaded(
+				renderFunctions,
+				renderOptions,
+				buffers,
+				viewportSx,
+				viewportSy,
+				eyeData);
 			hasResult = true;
 			break;
 		}
@@ -1575,7 +1602,19 @@ namespace rOne
 		framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
 	}
 
-	void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, const int viewportSx, const int viewportSy, const float timeStep)
+	void Renderer::free()
+	{
+		buffers.free();
+		buffers2.free();
+	}
+	
+	void Renderer::render(
+		const RenderFunctions & renderFunctions,
+		const RenderOptions & renderOptions,
+		const int viewportSx,
+		const int viewportSy,
+		const float timeStep,
+		const bool updateHistory)
 	{
 		buffers.alloc(viewportSx, viewportSy, renderOptions.linearColorSpace);
 		
@@ -1647,7 +1686,9 @@ namespace rOne
 						buffers,
 						viewportSx,
 						viewportSy,
-						timeStep);
+						timeStep,
+						eyeData[0],
+						updateHistory);
 					eyeL = buffers.colors;
 					
 				#if ENABLE_OPENGL
@@ -1676,7 +1717,9 @@ namespace rOne
 						buffers2,
 						viewportSx,
 						viewportSy,
-						timeStep);
+						timeStep,
+						eyeData[1],
+						updateHistory);
 					eyeR = buffers2.colors;
 					
 				#if ENABLE_OPENGL
@@ -1694,7 +1737,9 @@ namespace rOne
 					buffers,
 					viewportSx,
 					viewportSy,
-					timeStep);
+					timeStep,
+					eyeData[0],
+					updateHistory);
 				eyeR = renderFromEye(
 					renderFunctions,
 					renderOptions,
@@ -1702,7 +1747,9 @@ namespace rOne
 					buffers2,
 					viewportSx,
 					viewportSy,
-					timeStep);
+					timeStep,
+					eyeData[1],
+					updateHistory);
 			}
 
 			//
@@ -1733,7 +1780,9 @@ namespace rOne
 				buffers,
 				viewportSx,
 				viewportSy,
-				timeStep);
+				timeStep,
+				eyeData[0],
+				updateHistory);
 
 			if (result != nullptr)
 			{
@@ -1835,22 +1884,44 @@ namespace rOne
 		}
 	}
 
-	void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, ColorTarget * colorTarget, DepthTarget * depthTarget, const float timeStep)
+	void Renderer::render(
+		const RenderFunctions & renderFunctions,
+		const RenderOptions & renderOptions,
+		ColorTarget * colorTarget,
+		DepthTarget * depthTarget,
+		const float timeStep,
+		const bool updateHistory)
 	{
 		pushRenderPass(colorTarget, true, depthTarget, true, "Render");
 		{
-			render(renderFunctions, renderOptions, colorTarget->getWidth(), colorTarget->getHeight(), timeStep);
+			render(
+				renderFunctions,
+				renderOptions,
+				colorTarget->getWidth(),
+				colorTarget->getHeight(),
+				timeStep,
+				updateHistory);
 		}
 		popRenderPass();
 	}
 
-	void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, const float timeStep)
+	void Renderer::render(
+		const RenderFunctions & renderFunctions,
+		const RenderOptions & renderOptions,
+		const float timeStep,
+		const bool updateHistory)
 	{
 		int viewportSx;
 		int viewportSy;
 		framework.getCurrentViewportSize(viewportSx, viewportSy);
 		
-		render(renderFunctions, renderOptions, viewportSx, viewportSy, timeStep);
+		render(
+			renderFunctions,
+			renderOptions,
+			viewportSx,
+			viewportSy,
+			timeStep,
+			updateHistory);
 	}
 	
 	//

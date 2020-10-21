@@ -1774,6 +1774,7 @@ static void doVoiceButton(const char * name, const char * file, const bool isLas
 
 //
 
+#if FRAMEWORK_USE_PORTAUDIO
 #if LINUX
 	#include <portaudio.h>
 #else
@@ -1836,6 +1837,9 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 	
 	return result;
 }
+#else
+	#include "audiooutput/AudioOutput_Native.h"
+#endif
 
 //
 
@@ -1876,7 +1880,8 @@ int main(int argc, char * argv[])
 	fillPcmDataCache("voice-fragments", false, false, true);
 
 	//
-	
+
+#if FRAMEWORK_USE_PORTAUDIO
 	int inputDeviceIndex = paNoDevice;
 	int outputDeviceIndex = paNoDevice;
 	
@@ -1915,6 +1920,7 @@ int main(int argc, char * argv[])
 		
 		Pa_Terminate();
 	}
+#endif
 	
 	//
 	
@@ -1946,17 +1952,62 @@ int main(int argc, char * argv[])
 #endif
 	
 	//
-	
+
 	AudioUpdateHandler audioUpdateHandler;
 	
 	audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
 	
 	//
-	
+
+#if FRAMEWORK_USE_PORTAUDIO
 	PortAudioObject pa;
 	
 	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : CHANNEL_COUNT, STEREO_OUTPUT ? 2 : CHANNEL_COUNT, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex);
-	
+#else
+	struct MyAudioStream : AudioStream
+	{
+		AudioUpdateHandler * updateHandler = nullptr;
+
+		virtual int Provide(int numSamples, AudioSample* __restrict samples) override final
+		{
+			float outputBuffer[numSamples * 2];
+
+			updateHandler->portAudioCallback(
+				nullptr,
+				0,
+				outputBuffer,
+				2,
+				numSamples);
+
+			// perform soft clipping. since we need to go down to int16 range we need to ensure the sample range is within (-1, +1)
+			
+			audioBufferClip_FastSigmoid(outputBuffer, numSamples * 2);
+			
+			// convert from float (-1, +1) to int16
+			
+			const float scale = ((1 << 15) - 1);
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				const float valueL = outputBuffer[i * 2 + 0];
+				const float valueR = outputBuffer[i * 2 + 1];
+
+				samples[i].channel[0] = valueL * scale;
+				samples[i].channel[1] = valueR * scale;
+			}
+
+			return numSamples;
+		}
+	};
+
+	AudioOutput_Native audioOutput;
+	audioOutput.Initialize(2, 44100, 256);
+
+	MyAudioStream audioStream;
+	audioStream.updateHandler = &audioUpdateHandler;
+	audioOutput.Play(&audioStream);
+#endif
+
 	//
 	
 	Surface surface(GFX_SX, GFX_SY, false);
@@ -2428,7 +2479,12 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	} while (!keyboard.wentDown(SDLK_ESCAPE));
 	
+#if FRAMEWORK_USE_PORTAUDIO
 	pa.shut();
+#else
+	audioOutput.Stop();
+	audioOutput.Shutdown();
+#endif
 	
 	//
 	

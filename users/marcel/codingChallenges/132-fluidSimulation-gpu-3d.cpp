@@ -10,7 +10,7 @@ https://www.youtube.com/watch?v=alhpH6ECFvQ
 
 /*
 
-todo : experiment with the following boundary modes, and external forces,
+idea : experiment with the following boundary modes, and external forces,
 from: http://karlsims.com/fluid-flow.html,
 
 Zero: using a value of zero beyond the grid will avoid flow toward or away from the boundary, as if the fluid is contained in a box, because any edge cell's component of flow normal to the boundary would typically create a non-zero divergence and be removed. The divergence-removal examples above used this mode.
@@ -215,7 +215,7 @@ struct Texture3d
 
 		ComputeShader shader("clear3d");
 		setShader(shader);
-		shader.setTextureRw("destination", 0, getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 0, getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(m_size[0], m_size[1], m_size[2]);
 		clearShader();
 	}
@@ -232,7 +232,7 @@ struct Texture3d
 		ComputeShader shader("mul3d", 4, 4, 4);
 		setShader(shader);
 		setTexture3d(shader, "s", 0, getTexture(), false, true);
-		shader.setTextureRw("destination", 1, getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 1, getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("value", value);
 		shader.dispatch(m_size[0], m_size[1], m_size[2]);
 		clearShader();
@@ -375,7 +375,7 @@ static void lin_solve3d(const int b, Texture3d * x, const Texture3d * x0, const 
 		setShader(shader);
 		setTexture3d(shader, "x", 0, x->getTexture(), false, true);
 		setTexture3d(shader, "x0", 1, x0->getTexture(), false, true);
-		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 2, x->getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -418,7 +418,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
 		setTexture3d(shader, "x", 0, x->getTexture(), false, true);
 		setTexture3d(shader, "x0", 1, x0->getTexture(), false, true);
-		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 2, x->getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -433,7 +433,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
     	setTexture3d(shader, "x", 0, y->getTexture(), false, true);
 		setTexture3d(shader, "x0", 1, y0->getTexture(), false, true);
-		shader.setTextureRw("destination", 2, y->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 2, y->getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -448,7 +448,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
     	setTexture3d(shader, "x", 0, z->getTexture(), false, true);
 		setTexture3d(shader, "x0", 1, z0->getTexture(), false, true);
-		shader.setTextureRw("destination", 2, z->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 2, z->getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -500,7 +500,7 @@ static void project3d(
 		setTexture3d(shader, "velocX", 0, velocX->getTexture(), false, true);
 		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
 		setTexture3d(shader, "velocZ", 2, velocZ->getTexture(), false, true);
-		shader.setTextureRw("destination", 3, div->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 3, div->getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(div->getWidth(), div->getHeight(), div->getDepth());
 		clearShader();
 	}
@@ -535,7 +535,7 @@ static void project3d(
 		ComputeShader shader("project3d_veloc_x");
 		setShader(shader);
 		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("destination", 1, velocX->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 1, velocX->getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(velocX->getWidth(), velocX->getHeight(), velocX->getDepth());
 		clearShader();
 	}
@@ -544,7 +544,7 @@ static void project3d(
 		ComputeShader shader("project3d_veloc_y");
 		setShader(shader);
 		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("destination", 1, velocY->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 1, velocY->getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(velocY->getWidth(), velocY->getHeight(), velocY->getDepth());
 		clearShader();
 	}
@@ -553,7 +553,7 @@ static void project3d(
 		ComputeShader shader("project3d_veloc_z");
 		setShader(shader);
 		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("destination", 1, velocZ->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 1, velocZ->getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(velocZ->getWidth(), velocZ->getHeight(), velocZ->getDepth());
 		clearShader();
 	}
@@ -592,7 +592,7 @@ static void advect3d(
 		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
 		setTexture3d(shader, "velocZ", 2, velocZ->getTexture(), false, true);
 		setTexture3d(shader, "d0", 3, d0->getTexture(), true, true);
-		shader.setTextureRw("destination", 4, d->getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 4, d->getTexture(), GX_R16_FLOAT, false, true);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
 		shader.setImmediate("dtz", dtz);
@@ -707,7 +707,7 @@ struct FluidCube3d
 		setShader(shader);
 		shader.setImmediate("location", x, y, z);
 		shader.setImmediate("amount", amount);
-		shader.setTextureRw("destination", 0, density.getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 0, density.getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(1, 1, 1);
 		clearShader();
 	}
@@ -728,15 +728,15 @@ struct FluidCube3d
 		shader.setImmediate("location", x, y, z);
 		
 		shader.setImmediate("amount", amountX);
-		shader.setTextureRw("destination", 0, Vx.getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 0, Vx.getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(1, 1, 1);
 
 		shader.setImmediate("amount", amountY);
-		shader.setTextureRw("destination", 0, Vy.getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 0, Vy.getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(1, 1, 1);
 
 		shader.setImmediate("amount", amountZ);
-		shader.setTextureRw("destination", 0, Vz.getTexture(), GL_R16F, false, true);
+		shader.setTextureRw("destination", 0, Vz.getTexture(), GX_R16_FLOAT, false, true);
 		shader.dispatch(1, 1, 1);
 
 		clearShader();

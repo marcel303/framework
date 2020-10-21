@@ -88,7 +88,7 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 		if (!member_tolines_recursive(typeDB, member, component, line_writer, 0))
 		{
 		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
-			LOG_ERR("failed to serialize component property to text", 0);
+			LOG_ERR("failed to serialize component property to text");
 			continue;
 		}
 		
@@ -267,7 +267,7 @@ struct TemplateInstance
 			}
 			else if (!component.init(typeDB, componentType, componentTypeWithId.id.c_str(), templateComponent, componentSetId))
 			{
-				LOG_ERR("failed to initialize template component instance", 0);
+				LOG_ERR("failed to initialize template component instance");
 				return false;
 			}
 		}
@@ -313,7 +313,7 @@ struct TemplateInstance
 		}
 		else if (!component.init(typeDB, componentType, "", &template_component, componentSetId))
 		{
-			LOG_ERR("failed to initialize template component instance", 0);
+			LOG_ERR("failed to initialize template component instance");
 			components.pop_back();
 			return false;
 		}
@@ -430,7 +430,7 @@ int main(int argc, char * argv[])
 		
 		if (!parseTemplateFromFile(current_filename.c_str(), t))
 		{
-			LOG_ERR("failed to load template from file", 0);
+			LOG_ERR("failed to load template from file");
 			return -1;
 		}
 		
@@ -444,7 +444,7 @@ int main(int argc, char * argv[])
 		
 		if (processed.count(new_filename) != 0)
 		{
-			LOG_ERR("cyclic dependency detected", 0);
+			LOG_ERR("cyclic dependency detected");
 			return -1;
 		}
 		
@@ -514,7 +514,7 @@ int main(int argc, char * argv[])
 			
 			if (!template_instance.init(typeDB, t, allComponentTypesWithId))
 			{
-				LOG_ERR("failed to initialize (fallback) template instance", 0);
+				LOG_ERR("failed to initialize (fallback) template instance");
 				return -1;
 			}
 		}
@@ -536,7 +536,7 @@ int main(int argc, char * argv[])
 			
 			if (!template_instance.init(typeDB, t, componentTypesWithId))
 			{
-				LOG_ERR("failed to initialize template instance", 0);
+				LOG_ERR("failed to initialize template instance");
 				return -1;
 			}
 		}
@@ -614,7 +614,7 @@ int main(int argc, char * argv[])
 											
 											if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), i != selectedTemplateIndex, false))
 											{
-												LOG_ERR("failed to add component to template instance", 0);
+												LOG_ERR("failed to add component to template instance");
 											}
 										}
 										
@@ -624,7 +624,7 @@ int main(int argc, char * argv[])
 										
 										if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), true, true))
 										{
-											LOG_ERR("failed to add component to template instance", 0);
+											LOG_ERR("failed to add component to template instance");
 										}
 									}
 									

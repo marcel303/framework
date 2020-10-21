@@ -184,7 +184,9 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 
 void GxTexture::setSampling(const bool _filter, const bool _clamp)
 {
-	// todo : implement GxTexture::setSampling
+	// todo : implement setting texture sampling when the texture is set
+	filter = _filter;
+	clamp = _clamp;
 }
 
 void GxTexture::clearf(const float r, const float g, const float b, const float a)
@@ -700,12 +702,12 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 		const MTLPixelFormat format = texture.pixelFormat;
 		
 		// 8-bit integer unsigned normalized
-		if (format == MTLPixelFormatR8Uint) return GX_R8_UNORM;
-		if (format == MTLPixelFormatRG8Uint) return GX_RG8_UNORM;
-		if (format == MTLPixelFormatRGBA8Uint) return GX_RGBA8_UNORM;
+		if (format == MTLPixelFormatR8Unorm) return GX_R8_UNORM;
+		if (format == MTLPixelFormatRG8Unorm) return GX_RG8_UNORM;
+		if (format == MTLPixelFormatRGBA8Unorm) return GX_RGBA8_UNORM;
 		
 		// 16-bit integer unsigned normalized
-		if (format == MTLPixelFormatR16Uint) return GX_R16_UNORM;
+		if (format == MTLPixelFormatR16Unorm) return GX_R16_UNORM;
 		
 		// 16-bit floating point
 		if (format == MTLPixelFormatR16Float) return GX_R16_FLOAT;

@@ -64,10 +64,6 @@ bool FrameworkOvr::init()
 		return false;
 	}
 
-// todo : the native activity example doesn't do this. why? and what does it do anyway?
-    // This app will handle android gamepad events itself.
-    vrapi_SetPropertyInt(&Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
-
 	MainThreadTid = gettid();
 
     UseMultiview = false;

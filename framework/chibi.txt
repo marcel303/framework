@@ -21,17 +21,15 @@ library audiostream-vorbis
 
 	header_path . expose
 
-library audioio
+library soundfile
 
 # todo : add WAVE audio stream library and depend on it here
 
 	depend_library audiostream
 	depend_library audiostream-vorbis
 
-# todo : move AudioIO file to its own directory
-
-	add_files audiostream/AudioIO.cpp
-	add_files audiostream/AudioIO.h
+	add_files soundfile/SoundIO.cpp
+	add_files soundfile/SoundIO.h
 
 	header_path . expose
 
@@ -53,13 +51,12 @@ library framework
 	with_platform android  compile_definition FRAMEWORK_USE_SDL 0 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_SDL 1 expose
 
-	depend_library audioio
 	depend_library audiostream
 	depend_library audiostream-vorbis
 	depend_library glew
 	depend_library msdfgen
+	depend_library soundfile
 	
-	with_platform macos   depend_library portaudio
 	with_platform linux   depend_library portaudio
 	with_platform windows depend_library portaudio
 
@@ -80,35 +77,22 @@ library framework
 	scan_files cpp path audiooutput group audiooutput
 	scan_files h   path audiooutput group audiooutput
 
-# todo : simplify ?
-# with_platform macos|linux|windows scan_files cpp path gx-opengl group gx-opengl
-# with_platform macos|linux|windows scan_files h   path gx-opengl group gx-opengl
-
-	with_platform macos   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform macos   scan_files h   path gx-opengl group gx-opengl
-	with_platform linux   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform linux   scan_files h   path gx-opengl group gx-opengl
-	with_platform windows scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform windows scan_files h   path gx-opengl group gx-opengl
+	with_platform macos|linux|windows|iphoneos|android scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
+	with_platform macos|linux|windows|iphoneos|android scan_files h   path gx-opengl group gx-opengl
 
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
 
-	with_platform iphoneos scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
-	with_platform iphoneos scan_files h   path gx-opengl group gx-opengl
 	#with_platform iphoneos scan_files cpp path gx-metal group gx-metal
 	#with_platform iphoneos scan_files h   path gx-metal group gx-metal
 	#with_platform iphoneos scan_files mm  path gx-metal group gx-metal
-
-	with_platform android scan_files cpp path gx-opengl group gx-opengl
-	with_platform android scan_files h   path gx-opengl group gx-opengl
 
 	header_path . expose
 
 	compile_definition NO_SDL_GLEXT            * expose
 
-	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
@@ -213,6 +197,11 @@ push_group framework-examples
 
 	app framework-example-sprites
 		add_files examples/sprites.cpp
+		resource_path examples/data
+		depend_library framework
+
+	app framework-examples-primitives
+		add_files examples/primitives.cpp
 		resource_path examples/data
 		depend_library framework
 pop_group

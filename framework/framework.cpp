@@ -640,19 +640,16 @@ bool Framework::init(int sx, int sy)
 	
 	// initialize sound player
 	
-#if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
 	if (enableSound)
 	{
 		if (!g_soundPlayer.init(numSoundSources))
 		{
-		// todo : check if this now works on Linux
 			logError("failed to initialize sound player");
 			if (initErrorHandler)
 				initErrorHandler(INIT_ERROR_SOUND);
 			return false;
 		}
 	}
-#endif
 
 	// initialize real time editing
 
@@ -1465,14 +1462,36 @@ void Framework::process()
 
 	for (auto & pointer : vrPointer)
 		pointer.updateInputState();
+	
+	// determine the active pointer
+
+	for (int i = 0; i < 2; ++i)
+		vrPointer[i].isPrimary = false;
+	
+	bool hasPrimaryPointer = false;
+	int activeInputDeviceId = -1;
+	if (vrapi_GetPropertyInt(&frameworkOvr.Java, VRAPI_ACTIVE_INPUT_DEVICE_ID, &activeInputDeviceId))
+	{
+		for (int i = 0; i < 2; ++i)
+		{
+			Assert(vrPointer[i].getOvrDeviceId() != -1);
+			if (vrPointer[i].getOvrDeviceId() == activeInputDeviceId)
+			{
+				vrPointer[i].isPrimary = true;
+				hasPrimaryPointer = true;
+			}
+		}
+	}
+	
+	if (hasPrimaryPointer == false)
+	{
+		vrPointer[0].isPrimary = true;
+		hasPrimaryPointer = true;
+	}
 
 	if (vrMode == false)
 	{
 		// update virtual desktop. but first, find the pointer transform to use
-
-		// todo : remove this global
-		// todo : does ovr api provide a way to determine the active hand?
-	static int activeController = 0;
 
 		Mat4x4 pointerTransform[2] =
 			{
@@ -1483,12 +1502,14 @@ void Framework::process()
 		bool pointerTransformIsValid[2] = { };
 		int buttonMasks[2] = { 0, 0 };
 
+		int activePointer = 0;
+
 		for (int i = 0; i < 2; ++i)
 		{
 			auto & pointer = vrPointer[i];
 
-			if (pointer.wentDown(VrButton_Trigger))
-				activeController = i;
+			if (pointer.isPrimary)
+				activePointer = i;
 
 			if (pointer.hasTransform)
 			{
@@ -1503,9 +1524,11 @@ void Framework::process()
 				int(pointer.isDown(VrButton_GripTrigger) << 1);
 		}
 
-		// todo : use controller as a pointing device, not the direction of the head pose
-		// todo : let virtual desktop know if the transform is valid or not
-		framework.tickVirtualDesktop(pointerTransform[activeController], buttonMasks[activeController], false);
+		framework.tickVirtualDesktop(
+			pointerTransform[activePointer],
+			pointerTransformIsValid[activePointer],
+			buttonMasks[activePointer],
+			false);
 
 		globals.currentWindow->getWindowData()->makeActive();
 	}
@@ -1539,6 +1562,10 @@ void Framework::process()
 	{
 		model->updateAnimation(timeStep);
 	}
+	
+#if FRAMEWORK_USE_SDL && ENABLE_METAL
+	metal_capture_boundary();
+#endif
 }
 
 void Framework::processAction(const std::string & action, const Dictionary & args)
@@ -1842,7 +1869,11 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 
 	#if ENABLE_METAL
 	// todo : replace with beginBackbufferRenderPass
-		metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
+		metal_draw_begin(
+			scale255(r),
+			scale255(g),
+			scale255(b),
+			scale255(a), depth);
 	#endif
 	#endif
 	}
@@ -2028,32 +2059,39 @@ Mat4x4 Framework::getHeadTransform() const
 	return result;
 }
 
-bool Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
+bool Framework::tickVirtualDesktop(
+	const Mat4x4 & transform,
+	const bool transformIsValid,
+	const int in_buttonMask,
+	const bool isHand)
 {
 #if WINDOW_IS_3D
-	const Vec3 pointerOrigin = transform.GetTranslation();
-	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
-
-	const float depthThreshold = .1f;
-
 	Window * hoverWindow = nullptr;
 	Vec2 hoverPos;
 	float hoverDistance = FLT_MAX;
 
-	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	if (transformIsValid)
 	{
-		if (window->isHidden())
-			continue;
+		const float depthThreshold = .1f;
+		
+		const Vec3 pointerOrigin = transform.GetTranslation();
+		const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
 
-		Vec2 pixelPos;
-		float distance;
-		if (window->intersectRay(pointerOrigin, pointerDirection, depthThreshold, pixelPos, distance))
+		for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		{
-			if (distance < hoverDistance)
+			if (window->isHidden())
+				continue;
+
+			Vec2 pixelPos;
+			float distance;
+			if (window->intersectRay(pointerOrigin, pointerDirection, depthThreshold, pixelPos, distance))
 			{
-				hoverWindow = window;
-				hoverPos = pixelPos;
-				hoverDistance = distance;
+				if (distance < hoverDistance)
+				{
+					hoverWindow = window;
+					hoverPos = pixelPos;
+					hoverDistance = distance;
+				}
 			}
 		}
 	}
@@ -4102,8 +4140,6 @@ void popCullMode()
 void pushCullFlip()
 {
 	globals.frontFaceWinding = -globals.frontFaceWinding;
-	
-	Assert(globals.frontFaceWinding == gxGetMatrixParity());
 
 	setCullMode(globals.cullMode, globals.cullWinding);
 }

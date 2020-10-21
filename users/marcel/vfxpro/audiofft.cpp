@@ -7,8 +7,7 @@
 
 static audiofft::AudioFFT s_fft;
 
-float s_fftInputBuffer[4096] = { };
-float s_fftInput[kFFTSize] = { };
+float s_fftInputBuffer[kFFTBufferSize] = { };
 float s_fftReal[kFFTComplexSize] = { };
 float s_fftImaginary[kFFTComplexSize] = { };
 float s_fftBuckets[kFFTBucketCount] = { };
@@ -25,7 +24,6 @@ void fftShutdown()
 	s_fft.init(0);
 
 	memset(s_fftInputBuffer, 0, sizeof(s_fftInputBuffer));
-	memset(s_fftInput, 0, sizeof(s_fftInput));
 	memset(s_fftReal, 0, sizeof(s_fftReal));
 	memset(s_fftImaginary, 0, sizeof(s_fftImaginary));
 	memset(s_fftBuckets, 0, sizeof(s_fftBuckets));

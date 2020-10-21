@@ -386,7 +386,7 @@ struct Recorder
 
 		if (!result)
 		{
-			LOG_ERR("failed to initialize PS3 eye camera", 0);
+			LOG_ERR("failed to initialize PS3 eye camera");
 			shut();
 			return false;
 		}
@@ -462,7 +462,7 @@ struct Recorder
 			
 			self->eye->getFrame(self->frameData.cameraImage);
 			
-			//LOG_DBG("got frame data!", 0);
+			//LOG_DBG("got frame data!");
 			
 			applyThreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.thresholdedValues);
 			

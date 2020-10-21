@@ -29,10 +29,6 @@
 #include <algorithm>
 #include <string.h>
 
-// todo : use floyd steinberg error diffusion
-
-// todo : add bit crushing node
-
 #if defined(__AVX2__) && __AVX2__
 	#define USE_AVX2 1
 #else

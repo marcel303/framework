@@ -86,7 +86,7 @@ struct MyIMU9250 : IMU9250
 	virtual void send(const uint8_t * bytes, const int numBytes) override
 	{
 		if (write(port, bytes, numBytes) == -1)
-			LOG_DBG("failed to write to IMU", 0);
+			LOG_DBG("failed to write to IMU");
 	}
 	
 	void init(const int _port)
@@ -137,7 +137,7 @@ struct MyIMU9250 : IMU9250
 	
 		if (read(port, &c, 1) != 1)
 		{
-			LOG_WRN("read error", 0);
+			LOG_WRN("read error");
 			SDL_Delay(1); // avoid getting into a 100% CPU situation if shit really hit the fan
 			return;
 		}
@@ -259,7 +259,7 @@ struct TTY
 			
 			if (tcgetattr(port, &settings) != 0)
 			{
-				LOG_ERR("failed to get terminal io settings", 0);
+				LOG_ERR("failed to get terminal io settings");
 			}
 			else
 			{
@@ -275,9 +275,9 @@ struct TTY
 				//CRTS_IFLOW; // disable
 				
 				if (tcsetattr(port, TCSANOW, &settings) != 0)
-					LOG_ERR("failed to apply terminal io settings", 0);
+					LOG_ERR("failed to apply terminal io settings");
 				else
-					LOG_INF("succesfully applied terminal io settings", 0);
+					LOG_INF("succesfully applied terminal io settings");
 				
 				tcflush(port, TCIOFLUSH);
 			}
@@ -344,7 +344,7 @@ void testImu9250()
 	
 	if (tty.init() == false)
 	{
-		LOG_ERR("failed to open TTY", 0);
+		LOG_ERR("failed to open TTY");
 	}
 	else
 	{
@@ -366,7 +366,7 @@ void testImu9250()
 	const char * ipAddress = "192.168.0.209";
 	const int udpPorts[2] = { 2002, 2018 };
 	
-	LOG_DBG("setting up UDP transmit sockets for OSC messaging", 0);
+	LOG_DBG("setting up UDP transmit sockets for OSC messaging");
 
 	try
 	{

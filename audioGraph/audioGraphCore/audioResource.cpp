@@ -42,13 +42,16 @@ static AudioResourceTypeRegistration * g_audioResourceTypeRegistrationList = nul
 struct AudioResourcePath
 {
 	GraphNodeId nodeId;
-	std::string type;
+	std::type_index typeIndex;
 	std::string name;
 	
-	AudioResourcePath()
-		: nodeId(kGraphNodeIdInvalid)
-		, type()
-		, name()
+	AudioResourcePath(
+		const GraphNodeId in_nodeid,
+		const std::type_index & in_typeIndex,
+		const std::string & in_name)
+		: nodeId(in_nodeid)
+		, typeIndex(in_typeIndex)
+		, name(in_name)
 	{
 	}
 	
@@ -56,8 +59,8 @@ struct AudioResourcePath
 	{
 		if (nodeId != other.nodeId)
 			return nodeId < other.nodeId;
-		if (type != other.type)
-			return type < other.type;
+		if (typeIndex != other.typeIndex)
+			return typeIndex < other.typeIndex;
 		if (name != other.name)
 			return name < other.name;
 		
@@ -66,7 +69,7 @@ struct AudioResourcePath
 	
 	std::string toString() const
 	{
-		return String::FormatC("%s:%s/%d/%s", type.c_str(), "nodes", nodeId, name.c_str());
+		return String::FormatC("%s/%d/%s", "nodes", nodeId, name.c_str());
 	}
 };
 
@@ -118,20 +121,24 @@ void AudioResourceBase::unlock()
 static std::map<AudioResourcePath, AudioResourceElem> resourcesByPath;
 static std::map<AudioResourceBase*, AudioResourcePath> pathsByResource;
 
-AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const char * type, const char * name)
+AudioResourceBase * createAudioNodeResourceImpl(
+	const GraphNode & node,
+	const char * type,
+	const std::type_index & typeIndex,
+	const char * name)
 {
 	AudioResourceBase * resource = nullptr;
 	
-	AudioResourcePath path;
-	path.nodeId = node.id;
-	path.type = type;
-	path.name = name;
+	const AudioResourcePath resourcePath(
+		node.id,
+		typeIndex,
+		name);
 	
-	auto i = resourcesByPath.find(path);
+	auto i = resourcesByPath.find(resourcePath);
 	
 	if (i != resourcesByPath.end())
 	{
-		LOG_DBG("incremented refCount for resource %s", path.toString().c_str());
+		LOG_DBG("incremented refCount for resource %s", resourcePath.toString().c_str());
 		
 		auto & e = i->second;
 		
@@ -157,7 +164,12 @@ AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const ch
 		{
 			if (registration->typeName == type)
 			{
-				resource = registration->create();
+				Assert(registration->typeIndex == typeIndex);
+				
+				if (registration->typeIndex == typeIndex)
+				{
+					resource = registration->create();
+				}
 			}
 		}
 		
@@ -166,11 +178,11 @@ AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const ch
 		Assert(resource != nullptr);
 		if (resource == nullptr)
 		{
-			LOG_ERR("failed to create resource %s", path.toString().c_str());
+			LOG_ERR("failed to create resource %s", resourcePath.toString().c_str());
 		}
 		else
 		{
-			LOG_DBG("created resource %s", path.toString().c_str());
+			LOG_DBG("created resource %s", resourcePath.toString().c_str());
 			
 			if (hasXml)
 			{
@@ -181,8 +193,8 @@ AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const ch
 			e.resource = resource;
 			e.refCount = 1;
 			
-			resourcesByPath[path] = e;
-			pathsByResource[resource] = path;
+			resourcesByPath.emplace(resourcePath, e);
+			pathsByResource.emplace(resource, resourcePath);
 		}
 	}
 	
@@ -236,10 +248,11 @@ bool freeAudioNodeResourceImpl(AudioResourceBase * resource)
 	return result;
 }
 
-AudioResourceTypeRegistration::AudioResourceTypeRegistration()
+AudioResourceTypeRegistration::AudioResourceTypeRegistration(const std::type_index & in_typeIndex)
 	: next(nullptr)
 	, create(nullptr)
 	, typeName()
+	, typeIndex(in_typeIndex)
 {
 	next = g_audioResourceTypeRegistrationList;
 	g_audioResourceTypeRegistrationList = this;

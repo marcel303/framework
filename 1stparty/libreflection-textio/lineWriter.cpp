@@ -114,9 +114,7 @@ std::vector<std::string> LineWriter::to_lines() // todo : remove
 	std::vector<std::string> result;
 	
 	const std::string total_text = to_string();
-	
-	// todo : remove !
-	
+
 	size_t begin = 0;
 	size_t end = 0;
 	

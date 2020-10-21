@@ -71,8 +71,8 @@ AudioNodeSourcePcmSelect::AudioNodeSourcePcmSelect()
 	addInput(kInput_Play, kAudioPlugType_Trigger);
 	addInput(kInput_Stop, kAudioPlugType_Trigger);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
-	addOutput(kOutput_Loop, kAudioPlugType_Trigger, this);
-	addOutput(kOutput_Done, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_Loop, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Done, kAudioPlugType_Trigger, nullptr);
 }
 
 AudioNodeSourcePcmSelect::~AudioNodeSourcePcmSelect()

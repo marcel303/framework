@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "DownloadCache.h"
 #include "framework.h"
 #include "StringEx.h"
@@ -72,8 +72,8 @@ int main(int argc, char * argv[])
 		openParams.desiredAudioStreamIndex = 1; // select second audio stream, if available
 		mp.openAsync(openParams);
 		
-		AudioOutput_PortAudio audioOutput;
-		static AudioOutput_PortAudio & s_audioOutput = audioOutput;
+		AudioOutput_Native audioOutput;
+		static AudioOutput_Native & s_audioOutput = audioOutput;
 		
 		bool hasAudioInfo = false;
 		static bool & s_hasAudioInfo = hasAudioInfo;

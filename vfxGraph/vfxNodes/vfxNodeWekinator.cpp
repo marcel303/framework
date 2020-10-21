@@ -198,7 +198,7 @@ void VfxNodeWekinator::handleOscMessage(const osc::ReceivedMessage & m, const Ip
 	
 	if (strcmp(m.AddressPattern(), recvPath) == 0)
 	{
-		//LOG_DBG("OSC path is a match", 0);
+		//LOG_DBG("OSC path is a match");
 		
 		try
 		{

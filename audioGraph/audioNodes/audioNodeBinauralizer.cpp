@@ -26,6 +26,9 @@
 */
 
 #include "audioNodeBinauralizer.h"
+
+#include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "hrirSampleSetCache.h"
 
 AUDIO_NODE_TYPE(AudioNodeBinauralizer)
@@ -63,7 +66,11 @@ void AudioNodeBinauralizer::tick(const float dt)
 		
 		//
 		
-		sampleSet = getHrirSampleSet(location);
+		auto * sampleSetCache = g_currentAudioGraph->context->findObject<HRIRSampleSetCache>();
+		
+		sampleSet = sampleSetCache != nullptr
+			? sampleSetCache->find(location)
+			: nullptr;
 		
 		if (sampleSet != nullptr)
 		{

@@ -1,13 +1,29 @@
+#include "nodeDiscovery.h"
+
+// libgg includes
 #include "Debugging.h"
 #include "Log.h"
-#include "nodeDiscovery.h"
+#include "Multicore/ThreadName.h"
 #include "StringEx.h"
+
+// system includes
 #include <chrono>
 #include <inttypes.h> // PRIx64
 #include <mutex>
 #include <string>
 #include <string.h>
 #include <thread>
+
+#if defined(WINDOWS)
+	#include <winsock2.h>
+#elif defined(LINUX)
+	#include <endian.h> // be64toh/ntohll
+	#include <unistd.h>
+	#define ntohll(x) be64toh(x)
+#else
+	#include <arpa/inet.h> // ntohll
+	#include <unistd.h>
+#endif
 
 #define DISCOVERY_RECEIVE_PORT 2400
 
@@ -107,17 +123,14 @@ void NodeDiscoveryProcess::beginThread()
 	
 	mutex = new std::mutex();
 	
-	thread = new std::thread(threadMain, this); // todo : set thread name to "ESP32 Discovery Process"
+	thread = new std::thread(threadMain, this);
 }
 
 void NodeDiscoveryProcess::endThread()
 {
 	if (receiveSocket != nullptr)
 	{
-		receiveSocket->Break();
-		
-		delete receiveSocket;
-		receiveSocket = nullptr;
+		receiveSocket->AsynchronousBreak();
 	}
 	
 	if (thread != nullptr)
@@ -148,6 +161,8 @@ int NodeDiscoveryProcess::threadMain(void * obj)
 {
 	NodeDiscoveryProcess * self = (NodeDiscoveryProcess*)obj;
 	
+	SetCurrentThreadName("Node Discovery Process");
+	
 	self->receiveSocket->Run();
 	
 	return 0;
@@ -157,13 +172,13 @@ int NodeDiscoveryProcess::threadMain(void * obj)
 
 void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEndpointName & remoteEndpoint)
 {
-	LOG_DBG("received UDP packet!", 0);
+	LOG_DBG("received UDP packet!");
 	
 	// decode the discovery message
 	
 	if (size < sizeof(NodeDiscoveryPacket))
 	{
-		LOG_WRN("received invalid discovery message", 0);
+		LOG_WRN("received invalid discovery message");
 		return;
 	}
 	
@@ -171,7 +186,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	if (memcmp(discoveryPacket->version, "v100", 4) != 0)
 	{
-		LOG_WRN("received discovery message with unknown version string", 0);
+		LOG_WRN("received discovery message with unknown version string");
 		return;
 	}
 	
@@ -179,13 +194,13 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	for (auto & record : discoveryRecords)
 	{
-		if (record.id == discoveryPacket->id)
+		if (record.id == ntohll(discoveryPacket->id))
 			existingRecord = &record;
 	}
 	
 	NodeDiscoveryRecord record;
 	memset(&record, 0, sizeof(record));
-	record.id = discoveryPacket->id;
+	record.id = ntohll(discoveryPacket->id);
 	record.capabilities = discoveryPacket->capabilities;
 	strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
 	record.endpointName = remoteEndpoint;
@@ -193,7 +208,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	
 	if (existingRecord == nullptr)
 	{
-		LOG_DBG("found a new node! id=%" PRIx64, discoveryPacket->id);
+		LOG_DBG("found a new node! id=%016" PRIx64, discoveryPacket->id);
 		
 		lock();
 		{

@@ -1,4 +1,4 @@
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "audiosketch.h"
 #include "framework.h"
 #include <mutex>
@@ -49,7 +49,7 @@ void runAudiosketch(AudiosketchBase & sketch)
 {
 	framework.init(800, 600);
 
-	AudioOutput_PortAudio output;
+	AudioOutput_Native output;
 	output.Initialize(1, 44100, 256);
 
 	MyStream stream(sketch);

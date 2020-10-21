@@ -47,7 +47,7 @@ namespace binaural
 		
 		struct SampleBuffer
 		{
-			static const int kBufferSize = AUDIO_BUFFER_SIZE * 2;
+			static const int kBufferSize = 2048;
 			
 			float samples[kBufferSize];
 			int nextWriteIndex;

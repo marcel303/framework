@@ -134,7 +134,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 		g_PVR_Identifier[2] != ((header.pvrTag >> 16) & 0xff) ||
 		g_PVR_Identifier[3] != ((header.pvrTag >> 24) & 0xff))
 	{
-		LOG_ERR("invalid PVR texture identifier", 0);
+		LOG_ERR("invalid PVR texture identifier");
 		return false;
 	}
 	
@@ -144,7 +144,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 	
 	if (format != PVR_TextureType_2BPP && format != PVR_TextureType_4BPP)
 	{
-		LOG_ERR("unknown PVR texture format", 0);
+		LOG_ERR("unknown PVR texture format");
 		return false;
 	}
 	
@@ -228,7 +228,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 	
 	if (header.numMipmaps + 1 != m_Levels.size())
 	{
-		LOG_ERR("invalid number of mipmaps", 0);
+		LOG_ERR("invalid number of mipmaps");
 		return false;
 	}
 	

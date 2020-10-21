@@ -28,7 +28,11 @@
 #include "audioNodeSourceGenerator.h"
 #include <math.h>
 
-// todo : sine, triangle and square have a different phase. investigate which phase relative to each other makes sense. whether phase should 'match' at all, and if so how
+// note : sine, triangle and square appear to have a different 'phase' when looked
+//        at through a visualizer. this is by design. by design the shape,
+//        - is drawn just like the mathematical function sine(x) for sine,
+//        - initially low (min) for the square and high (max) for phase > skew
+//        - initially low (min) for the triangle and high (max) for phase == skew
 
 AUDIO_ENUM_TYPE(audioSineType)
 {
@@ -305,7 +309,10 @@ void AudioNodeSourceSine::drawSquare()
 			{
 				const float skew_i = skew->samples[i];
 				
-				audioOutput.samples[i] = phase < skew_i ? a->samples[i] : b->samples[i];
+				audioOutput.samples[i] =
+					phase < skew_i
+						? a->samples[i]
+						: b->samples[i];
 				
 				phase += dt * frequency->samples[i];
 				phase = phase - floorf(phase);
@@ -336,7 +343,10 @@ void AudioNodeSourceSine::drawSquare()
 		{
 			const float skew_i = skew->getMean();
 			
-			const float value = phase < skew_i ? a->getMean() : b->getMean();
+			const float value =
+				phase < skew_i
+					? a->getMean()
+					: b->getMean();
 			
 			audioOutput.setScalar(value);
 			

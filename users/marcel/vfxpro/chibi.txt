@@ -3,6 +3,7 @@ app marcel-vfxpro
 	depend_library framework
 	depend_library libosc
 	depend_library libvideo
+	depend_library portaudio
 	depend_library rtmidi
 	
 	scan_files *.cpp

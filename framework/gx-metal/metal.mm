@@ -203,12 +203,15 @@ void metal_make_active(SDL_Window * window)
 		activeWindowData = i->second;
 }
 
+void metal_capture_boundary()
+{
+	[queue insertDebugCaptureBoundary];
+}
+
 #include "renderTarget.h"
 
 void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
-	[queue insertDebugCaptureBoundary]; // todo : should be done @ framework::process()
-	
 	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 	[activeWindowData->current_drawable retain];
 	
@@ -226,14 +229,6 @@ void metal_draw_end()
 // todo : endRenderPass ?
 
 	[pd.encoder endEncoding];
-	
-#if 0
-	[pd.cmdbuf addCompletedHandler:
-		^(id<MTLCommandBuffer> _Nonnull)
-		{
-			NSLog(@"hello done! %@", activeWindowData);
-		}];
-#endif
 
 	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
@@ -272,9 +267,6 @@ void metal_draw_end()
 
 void metal_set_viewport(const int sx, const int sy)
 {
-	if (!s_activeRenderPass)
-		return; // todo : hack. remove
-
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
@@ -282,7 +274,14 @@ void metal_set_scissor(const int x, const int y, const int sx, const int sy)
 {
 	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
 	
-// todo : assert x/y >= 0 and x+sx/y+sy <= width/height
+	Assert(
+		x >= 0 &&
+		y >= 0 &&
+		sx >= 0 &&
+		sy >= 0 &&
+		x + sx <= s_activeRenderPass->viewportSx &&
+		y + sy <= s_activeRenderPass->viewportSy);
+
 // todo : clip coords to be within render target size
 
 	[s_activeRenderPass->encoder setScissorRect:rect];
@@ -708,13 +707,16 @@ void popRenderPass()
 	{
 		auto & new_pd = s_renderPasses.top();
 		
+		char passName[32];
+		sprintf_s(passName, sizeof(passName), "%s (cont)", new_pd.passName);
+		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName, new_pd.backingScale);
 		}
 	}
 	
@@ -821,7 +823,7 @@ static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
 		return MTLStencilOperationDecrementWrap;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_OP", 0);
+	AssertMsg(false, "unknown GX_STENCIL_OP");
 	return MTLStencilOperationKeep;
 }
 
@@ -847,7 +849,7 @@ static MTLCompareFunction translateCompareFunction(const GX_STENCIL_FUNC func)
 		return MTLCompareFunctionAlways;
 	}
 	
-	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
+	AssertMsg(false, "unknown GX_STENCIL_FUNC");
 	return MTLCompareFunctionAlways;
 }
 
@@ -915,6 +917,8 @@ static void fillDepthStencilDescriptor(MTLDepthStencilDescriptor * descriptor)
 	}
 }
 
+static id <MTLDepthStencilState> s_depthStencilStates[2][8][2] = { }; // depth-stencil states for states where the stencil test is disabled, are cached using a simple array, indexed by state
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
 	globals.depthTestEnabled = enabled;
@@ -923,17 +927,45 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	
 	// update depth-stencil state
 	
-	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	fillDepthStencilDescriptor(descriptor);
+	if (globals.stencilEnabled == false)
+	{
+		// lookup cached depth-stencil state
+		
+		id <MTLDepthStencilState> & state = s_depthStencilStates
+			[globals.depthTestWriteEnabled]
+			[globals.depthTest]
+			[globals.depthTestEnabled];
+		
+		if (state == nil)
+		{
+			// create the depth-stencil state when it isn't cached yet
+			
+			MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+			fillDepthStencilDescriptor(descriptor);
 	
-	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	[s_activeRenderPass->encoder setDepthStencilState:state];
-	
-	[state release];
-	state = nullptr;
-	
-	[descriptor release];
-	descriptor = nullptr;
+			state = [device newDepthStencilStateWithDescriptor:descriptor];
+		}
+		
+		// set the depth-stencil state
+			
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+	}
+	else
+	{
+		// for stencil-enabled depth-stencil states.. we create a new depth-stencil descriptor, each and every time. caching can be implemented if we calculate the hash or a composite-key of the state and use it as the lookup key into a map
+		
+		MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+		fillDepthStencilDescriptor(descriptor);
+		
+		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+		
+		[state release];
+		state = nullptr;
+		
+		[descriptor release];
+		descriptor = nullptr;
+	}
 }
 
 void setDepthBias(float depthBias, float slopeScale)
@@ -1476,21 +1508,19 @@ struct GxVertex
 	float tx, ty;
 };
 
-static GxVertex s_gxVertexBuffer[1024*64];
+#define GX_VERTEX_BUFFER_SIZE (1024*64)
+
+static GxVertex s_gxVertexBuffer[GX_VERTEX_BUFFER_SIZE];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = nullptr;
 static int s_gxVertexCount = 0;
-static int s_gxMaxVertexCount = 0;
+static const int s_gxMaxVertexCount = GX_VERTEX_BUFFER_SIZE;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static GxTextureId s_gxTexture = 0;
 static bool s_gxTextureEnabled = false;
 static int s_gxTextureSampler = 0;
-
-static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
-static int s_gxLastVertexCount = -1;
-static int s_gxLastIndexOffset = -1;
 
 static GxVertex s_gxFirstVertex;
 static bool s_gxHasFirstVertex = false;
@@ -1499,9 +1529,8 @@ static DynamicBufferPool s_gxVertexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
 static int s_gxVertexBufferElemOffset = 0;
 
-static DynamicBufferPool s_gxIndexBufferPool;
-static DynamicBufferPool::PoolElem * s_gxIndexBufferElem = nullptr;
-static int s_gxIndexBufferElemOffset = 0;
+static id <MTLBuffer> s_gxIndexBufferForQuads = nil;
+static id <MTLBuffer> s_gxIndexBufferForTriangleFans = nil;
 
 static GxCaptureCallback s_gxCaptureCallback = nullptr;
 
@@ -1537,30 +1566,84 @@ void gxInitialize()
 	s_gxVertex.cw = 1.f;
 
 	s_gxVertexBufferPool.init(sizeof(s_gxVertexBuffer));
-
-	const int maxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
-	const int maxQuads = maxVertexCount / 4;
-	const int maxIndicesForQuads = maxQuads * 6;
 	
-	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
+	// generate index buffer for drawing quads
+	
+	{
+		id <MTLDevice> device = metal_get_device();
+		
+		const int numQuads = s_gxMaxVertexCount / 4;
+		const int numIndices = numQuads * 6;
+		
+		INDEX_TYPE * indices = new INDEX_TYPE[numIndices];
+
+		INDEX_TYPE * __restrict indexPtr = indices;
+		INDEX_TYPE baseIndex = 0;
+
+		for (int i = 0; i < numQuads; ++i)
+		{
+			*indexPtr++ = baseIndex + 0;
+			*indexPtr++ = baseIndex + 1;
+			*indexPtr++ = baseIndex + 2;
+		
+			*indexPtr++ = baseIndex + 0;
+			*indexPtr++ = baseIndex + 2;
+			*indexPtr++ = baseIndex + 3;
+		
+			baseIndex += 4;
+		}
+		
+		s_gxIndexBufferForQuads = [device newBufferWithBytes:indices length:numIndices*sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
+		
+		delete [] indices;
+		indices = nullptr;
+	}
+	
+	// generate index buffer for drawing triangle fans
+	
+	{
+		id <MTLDevice> device = metal_get_device();
+		
+		const int numTriangles = s_gxMaxVertexCount - 2;
+		const int numIndices = numTriangles * 3;
+
+		INDEX_TYPE * indices = new INDEX_TYPE[numIndices];
+
+		INDEX_TYPE * __restrict indexPtr = indices;
+		INDEX_TYPE baseIndex = 0;
+	
+		for (int i = 0; i < numTriangles; ++i)
+		{
+			*indexPtr++ = 0;
+			*indexPtr++ = baseIndex + 1;
+			*indexPtr++ = baseIndex + 2;
+		
+			baseIndex += 1;
+		}
+		
+		s_gxIndexBufferForTriangleFans = [device newBufferWithBytes:indices length:numIndices*sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
+		
+		delete [] indices;
+		indices = nullptr;
+	}
 }
 
 void gxShutdown()
 {
-	s_gxVertexBufferPool.free();
+	[s_gxIndexBufferForQuads release];
+	s_gxIndexBufferForQuads = nil;
 	
-	s_gxIndexBufferPool.free();
+	[s_gxIndexBufferForTriangleFans release];
+	s_gxIndexBufferForTriangleFans = nil;
+	
+	s_gxVertexBufferPool.free();
 
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
 	s_gxVertexCount = 0;
-	s_gxMaxVertexCount = 0;
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
 	s_gxTextureEnabled = false;
-	
-	s_gxLastPrimitiveType = GX_INVALID_PRIM;
-	s_gxLastVertexCount = -1;
 }
 
 static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
@@ -1970,30 +2053,6 @@ static void gxValidatePipelineState()
 	}
 }
 
-static void ensureIndexBufferCapacity(const int numIndices)
-{
-	const int remaining = (s_gxIndexBufferElem == nullptr) ? 0 : (s_gxIndexBufferPool.m_numBytesPerBuffer - s_gxIndexBufferElemOffset);
-	
-	if (numIndices * sizeof(INDEX_TYPE) > remaining)
-	{
-		if (s_gxIndexBufferElem != nullptr)
-		{
-			auto * elem = s_gxIndexBufferElem;
-			
-			if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
-			[s_activeRenderPass->cmdbuf addCompletedHandler:
-				^(id<MTLCommandBuffer> _Nonnull)
-				{
-					s_gxIndexBufferPool.freeBuffer(elem);
-				}];
-			if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
-		}
-		
-		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
-		s_gxIndexBufferElemOffset = 0;
-	}
-}
-
 static void doCapture(const bool endOfBatch)
 {
 	Mat4x4 modelView;
@@ -2162,59 +2221,21 @@ static void gxFlush(bool endOfBatch)
 	
 		gxValidateShaderResources(useGenericShader);
 	
-		bool indexed = false;
+		id <MTLBuffer> indexBuffer = nil;
 		int numElements = s_gxVertexCount;
 
-		bool needToRegenerateIndexBuffer = false;
-	
-		if (s_gxPrimitiveType != s_gxLastPrimitiveType || s_gxVertexCount != s_gxLastVertexCount)
-		{
-			s_gxLastPrimitiveType = s_gxPrimitiveType;
-			s_gxLastVertexCount = s_gxVertexCount;
-
-			needToRegenerateIndexBuffer = true;
-		}
-	
 		// convert quads to triangles
 	
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount <= 65536);
 			
+			indexBuffer = s_gxIndexBufferForQuads;
+			s_gxPrimitiveType = GX_TRIANGLES;
+			
 			const int numQuads = s_gxVertexCount / 4;
 			const int numIndices = numQuads * 6;
-
-			if (needToRegenerateIndexBuffer)
-			{
-				ensureIndexBufferCapacity(numIndices);
-			
-				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
-				
-				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
-
-				INDEX_TYPE * __restrict indexPtr = indices;
-				INDEX_TYPE baseIndex = 0;
-			
-				for (int i = 0; i < numQuads; ++i)
-				{
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 1;
-					*indexPtr++ = baseIndex + 2;
-				
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 2;
-					*indexPtr++ = baseIndex + 3;
-				
-					baseIndex += 4;
-				}
-				
-				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
-			}
-			
-			s_gxPrimitiveType = GX_TRIANGLES;
 			numElements = numIndices;
-			
-			indexed = true;
 		}
 	
 		// convert triangle fan to triangles
@@ -2223,47 +2244,31 @@ static void gxFlush(bool endOfBatch)
 		{
 			fassert(s_gxVertexCount <= 65536);
 			
+			indexBuffer = s_gxIndexBufferForTriangleFans;
+			s_gxPrimitiveType = GX_TRIANGLES;
+			
 			const int numTriangles = s_gxVertexCount - 2;
 			const int numIndices = numTriangles * 3;
-
-			if (needToRegenerateIndexBuffer)
-			{
-				ensureIndexBufferCapacity(numIndices);
-				
-				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
-				
-				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
-
-				INDEX_TYPE * __restrict indexPtr = indices;
-				INDEX_TYPE baseIndex = 0;
-			
-				for (int i = 0; i < numTriangles; ++i)
-				{
-					*indexPtr++ = 0;
-					*indexPtr++ = baseIndex + 1;
-					*indexPtr++ = baseIndex + 2;
-				
-					baseIndex += 1;
-				}
-				
-				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
-			}
-			
-			s_gxPrimitiveType = GX_TRIANGLES;
 			numElements = numIndices;
-			
-			indexed = true;
 		}
 	
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
 
-		if (indexed)
+		if (indexBuffer != nil)
 		{
- 			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numElements
+				indexType:MTLIndexTypeUInt32
+				indexBuffer:indexBuffer
+				indexBufferOffset:0];
 		}
 		else
 		{
-			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
+			[s_activeRenderPass->encoder
+				drawPrimitives:metalPrimitiveType
+				vertexStart:0
+				vertexCount:numElements];
 		}
 	}
 	
@@ -2308,7 +2313,6 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 {
 	s_gxPrimitiveType = primitiveType;
 	s_gxVertices = s_gxVertexBuffer;
-	s_gxMaxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
 	
 	switch (primitiveType)
 	{
@@ -2356,10 +2360,9 @@ static void gxEndDraw()
 {
 	// add completion handler if there's still a buffer pool element in use
 	
-	if (s_gxVertexBufferElem != nullptr || s_gxIndexBufferElem != nullptr)
+	if (s_gxVertexBufferElem != nullptr)
 	{
 		auto * vb_elem = s_gxVertexBufferElem;
-		auto * ib_elem = s_gxIndexBufferElem;
 		
 		if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxEndDraw)"];
 		{
@@ -2368,30 +2371,22 @@ static void gxEndDraw()
 				{
 					if (vb_elem != nullptr)
 						s_gxVertexBufferPool.freeBuffer(vb_elem);
-					if (ib_elem != nullptr)
-						s_gxIndexBufferPool.freeBuffer(ib_elem);
 				}];
 		}
 		if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
 		
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
-		
-		s_gxIndexBufferElem = nullptr;
-		s_gxIndexBufferElemOffset = 0;
 	}
-	
-	s_gxLastVertexCount = -1; // reset, to ensure the index buffer gets regenerated
-	s_gxLastIndexOffset = -1; // reset, to ensure we don't reuse old index buffers
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
 	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-		[s_activeRenderPass->encoder setFragmentTexture:nullptr atIndex:i];
-	
+	static id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
+	static id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
+	[s_activeRenderPass->encoder setVertexTextures:vsTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxVsTextures)];
+	[s_activeRenderPass->encoder setFragmentTextures:psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
+
 	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
 	s_currentRenderPipelineState = nullptr;

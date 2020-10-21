@@ -77,7 +77,7 @@ void VfxNodeDatatable::tick(const float dt)
 	
 	if (newFilename != filename || newHasHeader != hasHeader || newTranspose != transpose || framework.fileHasChanged(filename.c_str()))
 	{
-		LOG_DBG("reloading data table!", 0);
+		LOG_DBG("reloading data table!");
 		
 		filename = newFilename;
 		hasHeader = newHasHeader;

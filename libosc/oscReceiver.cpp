@@ -223,7 +223,7 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 			
 			receiveSocket = new UdpListeningReceiveSocket(endpointName, packetListener);
 			
-			LOG_DBG("creating OSC receive thread", 0);
+			LOG_DBG("creating OSC receive thread");
 		
 			messageThreadPtr = new std::thread(executeOscThread, this);
 			
@@ -240,7 +240,7 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 
 bool OscReceiver::shut()
 {
-	LOG_DBG("terminating OSC receive thread", 0);
+	LOG_DBG("terminating OSC receive thread");
 	
 	if (receiveSocket != nullptr)
 	{
@@ -258,14 +258,14 @@ bool OscReceiver::shut()
 		messageThreadPtr = nullptr;
 	}
 	
-	LOG_DBG("terminating OSC receive thread [done]", 0);
+	LOG_DBG("terminating OSC receive thread [done]");
 	
-	LOG_DBG("terminating OSC UDP receive socket", 0);
+	LOG_DBG("terminating OSC UDP receive socket");
 	
 	delete receiveSocket;
 	receiveSocket = nullptr;
 	
-	LOG_DBG("terminating OSC UDP receive socket [done]", 0);
+	LOG_DBG("terminating OSC UDP receive socket [done]");
 	
 	delete packetListener;
 	packetListener = nullptr;

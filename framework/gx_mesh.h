@@ -37,9 +37,9 @@ enum GX_INDEX_FORMAT
 
 enum GX_ELEMENT_TYPE
 {
-	GX_ELEMENT_FLOAT32,
-	GX_ELEMENT_UINT8,
-	GX_ELEMENT_UINT16
+	GX_ELEMENT_FLOAT32, // float
+	GX_ELEMENT_UINT8,   // uint8_t
+	GX_ELEMENT_UINT16   // uint16_t
 };
 
 struct GxVertexInput
@@ -52,7 +52,7 @@ struct GxVertexInput
 	uint32_t stride : 12;      // byte stride between elements for this vertex stream
 };
 
-class GxVertexBufferBase
+class GxVertexBufferBase // base class for the rendering-api specific implementation
 {
 public:
 	virtual ~GxVertexBufferBase() { }
@@ -63,7 +63,7 @@ public:
 	virtual int getNumBytes() const = 0;
 };
 
-class GxIndexBufferBase
+class GxIndexBufferBase // base class for the rendering-api specific implementation
 {
 public:
 	virtual ~GxIndexBufferBase() { }
@@ -75,22 +75,24 @@ public:
 	virtual GX_INDEX_FORMAT getFormat() const = 0;
 };
 
-#include "framework.h"
+#include "framework.h" // GX_PRIMITIVE_TYPE
 
+// include rendering-api specific vertex and index buffer implementation
 #if ENABLE_METAL
 	#include "gx-metal/mesh.h"
-#endif
-
-#if ENABLE_OPENGL
+#elif ENABLE_OPENGL
 	#include "gx-opengl/mesh.h"
 #endif
 
+/**
+ * Mesh class. At a minimum, a mesh references a vertex buffer, with input specification.
+ * Optionally, the mesh also references an index buffer, and contains one or more primitives.
+ */
 class GxMesh
 {
 public:
 	static const int kMaxVertexInputs = 16;
 	
-private:
 	struct Primitive
 	{
 		GX_PRIMITIVE_TYPE type;
@@ -99,14 +101,14 @@ private:
 		bool indexed;
 	};
 	
-	const GxVertexBuffer * m_vertexBuffer = nullptr;
-	const GxIndexBuffer * m_indexBuffer = nullptr;
+	const GxVertexBuffer * vertexBuffer = nullptr;
+	const GxIndexBuffer * indexBuffer = nullptr;
 	
-	GxVertexInput m_vertexInputs[kMaxVertexInputs];
-	int m_numVertexInputs = 0;
-	int m_vertexStride = 0;
+	GxVertexInput vertexInputs[kMaxVertexInputs];
+	int numVertexInputs = 0;
+	int vertexStride = 0;
 	
-	std::vector<Primitive> m_primitives;
+	std::vector<Primitive> primitives;
 	
 public:
 	void clear();
@@ -114,11 +116,13 @@ public:
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
+	// immediate mode: draw primitives
 	void draw(const GX_PRIMITIVE_TYPE type) const;
 	void draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
 	void drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type) const;
 	void drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
 	
+	// retained mode: add and draw primitives
 	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed);
 	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed);
 	void draw() const;
@@ -128,9 +132,9 @@ public:
 /**
  * Sets a vertex buffer, and sets a buffer binding for vertex inputs.
  * The vertex buffer may contain either vertices in interleaved format,
- * or scattered across the buffer. The Metal back-end implements a
+ * or scattered across the buffer. The Metal back-end implements an
  * optimized code path for interleaved vertices.
- * In the case of a interleaved vertex format, 'vsStride' should be set
+ * In the case of an interleaved vertex format, 'vsStride' should be set
  * to the size of the vertex structure. In the non-interleaved case,
  * it should be set to zero.
  *
@@ -145,13 +149,61 @@ void gxSetVertexBuffer(
 	const int numVsInputs,
 	const int vsStride = 0);
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
-void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+// draw calls..
 
-void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
-void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+void gxDrawIndexedPrimitives(
+	const GX_PRIMITIVE_TYPE type,
+	const int firstIndex,
+	const int numIndices,
+	const GxIndexBuffer * indexBuffer);
+void gxDrawPrimitives(
+	const GX_PRIMITIVE_TYPE type,
+	const int firstVertex,
+	const int numVertices);
 
-//
+// instanced draw calls..
+
+void gxDrawInstancedIndexedPrimitives(
+	const int numInstances,
+	const GX_PRIMITIVE_TYPE type,
+	const int firstIndex,
+	const int numIndices,
+	const GxIndexBuffer * indexBuffer);
+void gxDrawInstancedPrimitives(
+	const int numInstances,
+	const GX_PRIMITIVE_TYPE type,
+	const int firstVertex,
+	const int numVertices);
+
+/**
+ * Mesh capture api:
+ * The mesh capture api allows capturing the results (vertex and index data plus primitives)
+ * of GX draw calls (gxBegin, gxVertex, gxEnd). This enables the scenario where the user
+ * first prototypes some drawing code, using the convenient, but less than optimal, GX api,
+ * and later want to draw the resulting mesh efficiently using cached vertex and index
+ * buffers.
+ *
+ * To use the capture api, GX draw calls should be surrounded by calls to gxCaptureMeshBegin
+ * and gxCaptureMeshEnd. Alternatively, a low-level capture callback may be set to retrieve
+ * the raw vertex and primitive data.
+ *
+ * Example:
+ *
+ * GxVertexBuffer vb;
+ * GxIndexBuffer ib;
+ * GxMesh mesh;
+ *
+ * gxCaptureMeshBegin(mesh, vb, ib);
+ * {
+ *     setColor(colorWhite);
+ *     drawRect(10, 10, 100, 100);
+ *     setColor(colorBlack);
+ *     fillCircle(70, 70, 10);
+ * }
+ * gxCaptureMeshEnd();
+ *
+ * mesh.draw();
+ */
 
 #include <functional>
 

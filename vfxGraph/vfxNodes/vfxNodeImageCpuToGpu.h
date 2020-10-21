@@ -61,6 +61,9 @@ struct VfxNodeImageCpuToGpu : VfxNodeBase
 	
 	VfxImage_Texture imageOutput;
 
+	uint8_t * interleaveBuffer; // storage for interleaving planar RGB/RGBA channels into packed RGBA
+	int interleaveBufferSize;
+	
 	VfxNodeImageCpuToGpu();
 	virtual ~VfxNodeImageCpuToGpu() override;
 	

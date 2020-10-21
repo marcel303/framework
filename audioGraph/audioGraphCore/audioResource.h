@@ -63,12 +63,15 @@ struct AudioResourceBase
 
 //
 
-AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const char * type, const char * name);
+#include <typeindex>
 
-// todo : add typeid check or create by typeid
+AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const char * type, const std::type_index & typeIndex, const char * name);
+
 template <typename T> bool createAudioNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
 {
-	AudioResourceBase * resourceBase = createAudioNodeResourceImpl(node, type, name);
+	const std::type_index typeIndex = std::type_index(typeid(T));
+	
+	AudioResourceBase * resourceBase = createAudioNodeResourceImpl(node, type, typeIndex, name);
 	
 	if (resourceBase == nullptr)
 	{
@@ -106,14 +109,16 @@ struct AudioResourceTypeRegistration
 	AudioResourceBase* (*create)();
 	
 	std::string typeName;
+	std::type_index typeIndex;
 
-	AudioResourceTypeRegistration();
+	AudioResourceTypeRegistration(const std::type_index & typeIndex);
 };
 
 #define AUDIO_RESOURCE_TYPE(type, name) \
 	struct type ## __audio_resourceRegistration : AudioResourceTypeRegistration \
 	{ \
 		type ## __audio_resourceRegistration() \
+			: AudioResourceTypeRegistration(std::type_index(typeid(type))) \
 		{ \
 			create = []() -> AudioResourceBase* { return new type(); }; \
 			typeName = name; \

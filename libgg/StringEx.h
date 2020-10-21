@@ -38,7 +38,7 @@ public:
 };
 
 #if defined(PSP) || defined(__GNUC__)
-    #define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, __VA_ARGS__)
+    #define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, ##__VA_ARGS__)
     #define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
     #define strcpy_s __libgg_strcpy_s
     #define sscanf_s sscanf

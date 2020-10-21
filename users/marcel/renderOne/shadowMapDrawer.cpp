@@ -219,7 +219,7 @@ namespace rOne
 		const float nearDistance,
 		const float farDistance)
 	{
-		AssertMsg(angle >= 0.f && angle <= float(M_PI), "spot angle must be between 0 and 180 degrees", 0);
+		AssertMsg(angle >= 0.f && angle <= float(M_PI), "spot angle must be between 0 and 180 degrees");
 		
 		ShadowMapLight light;
 		light.type = kShadowMapLightType_Spot;

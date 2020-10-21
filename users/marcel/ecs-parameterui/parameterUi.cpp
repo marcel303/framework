@@ -506,10 +506,14 @@ namespace parameterUi
 					continue;
 			}
 			
+			const ImGuiTreeNodeFlags treeNodeFlags =
+				ImGuiTreeNodeFlags_Framed |
+				ImGuiTreeNodeFlags_DefaultOpen * do_filter; // always open nodes when they pass the filter
+			
 			const bool isOpen = 
 				child->access_index() != -1
-				? ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index())
-				: ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str());
+				? ImGui::TreeNodeEx(child, treeNodeFlags, "%s [%d]", child->access_prefix().c_str(), child->access_index())
+				: ImGui::TreeNodeEx(child, treeNodeFlags, "%s", child->access_prefix().c_str());
 
 			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
 			{
@@ -522,7 +526,11 @@ namespace parameterUi
 			
 			if (isOpen)
 			{
-				doParameterUi_recursive(stack, stackSize, *child, child_filter);
+				ImGui::Indent();
+				{
+					doParameterUi_recursive(stack, stackSize, *child, child_filter);
+				}
+				ImGui::Unindent();
 				
 				ImGui::TreePop();
 			}

@@ -1,0 +1,35 @@
+<graph nextNodeId="67" nextLinkId="55">
+    <node id="60" typeName="audio.sine">
+        <input socket="frequency" value="172.399994"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="62" typeName="audio.sine">
+        <input socket="frequency" value="172.399994"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="65" typeName="audio.sine">
+        <input socket="frequency" value="172.399994"/>
+        <input socket="type" value="2"/>
+    </node>
+    <editor nextZKey="644">
+        <dragAndZoom x="0" y="0" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="60" x="-192" y="-272" zKey="642"/>
+            <nodeData nodeId="62" x="-192" y="-64" zKey="641"/>
+            <nodeData nodeId="65" x="-192" y="144" zKey="643"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="61" x="-32" y="-256" zKey="628" nodeId="60" dstSocketName="audio" sx="216" sy="148"/>
+            <visualizer id="64" x="-32" y="-48" zKey="639" nodeId="62" dstSocketName="audio" sx="216" sy="148"/>
+            <visualizer id="66" x="-32" y="160" zKey="640" nodeId="65" dstSocketName="audio" sx="216" sy="148"/>
+        </visualizers>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" showSocketNames="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="c8cc27cc" gridColor="ffffff5a">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

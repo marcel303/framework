@@ -67,7 +67,7 @@ bool loadSrt(const char * filename, Srt & srt)
 
 					if (sscanf_s(line.c_str(), "%02d:%02d:%02d,%d --> %02d:%02d:%02d,%d", &h1, &m1, &s1, &msec1, &h2, &m2, &s2, &msec2) == 8)
 					{
-						//LOG_DBG("time parse success!", 0);
+						//LOG_DBG("time parse success!");
 
 						const double t1 = convertTimeStampToSeconds(h1, m1, s1, msec1);
 						const double t2 = convertTimeStampToSeconds(h2, m2, s2, msec2);
@@ -79,7 +79,7 @@ bool loadSrt(const char * filename, Srt & srt)
 					}
 					else
 					{
-						LOG_WRN("time parse failure!", 0);
+						LOG_WRN("time parse failure!");
 
 						readState = kReadState_Error;
 					}

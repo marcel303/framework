@@ -43,13 +43,19 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	bool isLoading;
 	
 	AudioValueHistorySet * audioValueHistorySet;
+	AudioValueHistorySet * audioValueHistorySetCapture;
 	
 	AudioGraphContext * context;
 	
-	AudioRealTimeConnection(AudioGraph *& audioGraph, AudioGraphContext * context, AudioValueHistorySet * audioValueHistorySet);
+	AudioRealTimeConnection(
+		AudioGraph *& audioGraph,
+		AudioGraphContext * context,
+		AudioValueHistorySet * audioValueHistorySet,
+		AudioValueHistorySet * audioValueHistorySetCapture);
 	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();
+	void captureAudioValues();
 	
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;
@@ -137,5 +143,7 @@ struct AudioValueHistory_SocketRef
 
 struct AudioValueHistorySet
 {
-	std::map<AudioValueHistory_SocketRef, AudioValueHistory> s_audioValues;
+	std::map<AudioValueHistory_SocketRef, AudioValueHistory> audioValues;
+	
+	void captureInto(AudioValueHistorySet & dst) const;
 };

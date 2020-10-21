@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "framework.h"
+#include "graphEdit.h"
 #include <cmath>
 
 const int GFX_SX = 1024;
@@ -80,6 +81,9 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			for (auto & file : framework.droppedFiles)
+				audioGraphMgr.selectedFile->graphEdit->load(file.c_str());
+				
 			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 			
 			framework.beginDraw(0, 0, 0, 0);

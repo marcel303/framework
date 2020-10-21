@@ -1,6 +1,7 @@
 app marcel-jsusfx1
 
 	depend_library jsusfx-framework
+	depend_library portaudio
 	depend_library rtmidi
 
 	add_files audioIO.cpp audioIO.h main.cpp

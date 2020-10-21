@@ -893,9 +893,9 @@ AudioGraph * constructAudioGraph(
 			if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 			{
 				if (srcNodeItr == audioGraph->nodes.end())
-					LOG_ERR("unable to setup link. source node doesn't exist", 0);
+					LOG_ERR("unable to setup link. source node doesn't exist");
 				if (dstNodeItr == audioGraph->nodes.end())
-					LOG_ERR("unable to setup link. destination node doesn't exist", 0);
+					LOG_ERR("unable to setup link. destination node doesn't exist");
 			}
 			else
 			{

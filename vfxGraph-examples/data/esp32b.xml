@@ -1,0 +1,72 @@
+<graph nextNodeId="43" nextLinkId="58">
+    <node id="28" typeName="osc.sheet">
+        <input socket="oscEndpoint" value="esp32"/>
+        <input socket="oscPrefix" value="/modulation"/>
+        <input socket="oscSheet" value="esp32.csv"/>
+    </node>
+    <node id="29" typeName="osc.endpoint">
+        <input socket="name" value="esp32"/>
+        <input socket="sendIpAddress" value="192.168.10.4"/>
+        <input socket="sendPort" value="2000"/>
+    </node>
+    <node id="30" typeName="gen.sine"/>
+    <node id="31" typeName="osc.sheet">
+        <input socket="ledStrip/channel2Brightness" value="0.500000"/>
+        <input socket="ledStrip/channel3Brightness" value="0.250000"/>
+        <input socket="ledStrip/testMode" value="6"/>
+        <input socket="oscEndpoint" value="esp32"/>
+        <input socket="oscPrefix" value="/Artnet to Ledstrip"/>
+        <input socket="oscSheet" value="esp32.csv"/>
+    </node>
+    <node id="35" typeName="video">
+        <input socket="mode" value="0"/>
+        <input socket="source" value="/Users/thecat/Google Drive/The Grooop - The Tribe/0.640px.mp4"/>
+    </node>
+    <node id="36" typeName="image_cpu.downsample">
+        <input socket="channel" value="0"/>
+        <input socket="maxWidth" value="1"/>
+        <input socket="size" value="0"/>
+    </node>
+    <node id="38" typeName="image_cpu.sample"/>
+    <node id="40" typeName="draw.display"/>
+    <node id="41" typeName="image_cpu.toGpu">
+        <input socket="channel" value="0"/>
+    </node>
+    <link id="42" srcNodeId="28" srcNodeSocketName="ledstrip_X_loudness/dryWet" dstNodeId="30" dstNodeSocketName="value" dynamic="1">
+        <param name="in.max" value="0.000000"/>
+        <param name="in.min" value="1.000000"/>
+        <param name="out.max" value="0.500000"/>
+    </link>
+    <link id="45" srcNodeId="36" srcNodeSocketName="image" dstNodeId="35" dstNodeSocketName="mem.rgb"/>
+    <link id="46" srcNodeId="38" srcNodeSocketName="image" dstNodeId="36" dstNodeSocketName="image"/>
+    <link id="53" srcNodeId="40" srcNodeSocketName="image" dstNodeId="35" dstNodeSocketName="image"/>
+    <link id="54" srcNodeId="31" srcNodeSocketName="ledStrip/singleColor.x" dstNodeId="38" dstNodeSocketName="r" dynamic="1"/>
+    <link id="55" srcNodeId="31" srcNodeSocketName="ledStrip/singleColor.y" dstNodeId="38" dstNodeSocketName="g" dynamic="1"/>
+    <link id="56" srcNodeId="31" srcNodeSocketName="ledStrip/singleColor.z" dstNodeId="38" dstNodeSocketName="b" dynamic="1"/>
+    <link id="57" srcNodeId="41" srcNodeSocketName="image" dstNodeId="36" dstNodeSocketName="image"/>
+    <editor nextZKey="322">
+        <dragAndZoom x="0" y="0" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="28" x="128" y="-368" zKey="291"/>
+            <nodeData nodeId="29" x="-192" y="-320" zKey="270"/>
+            <nodeData nodeId="30" x="-128" y="-80" zKey="314"/>
+            <nodeData nodeId="31" x="320" y="-256" zKey="312"/>
+            <nodeData nodeId="35" x="-448" y="96" zKey="310"/>
+            <nodeData nodeId="36" x="-288" y="112" zKey="274"/>
+            <nodeData nodeId="38" x="-160" y="112" zKey="277"/>
+            <nodeData nodeId="40" x="-272" y="16" zKey="308"/>
+            <nodeData nodeId="41" x="-160" y="256" zKey="316"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="39" x="-32" y="48" zKey="321" nodeId="35" dstSocketName="image" sx="216" sy="198"/>
+            <visualizer id="42" x="-32" y="256" zKey="320" nodeId="41" dstSocketName="image" sx="216" sy="248"/>
+        </visualizers>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="1" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="5656564d" gridColor="fffcfc21">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0" g="0" b="0" a="0"/>
+                <key t="0.31999999284744263" r="0.38908833265304565" g="0.1291666179895401" b="0.87083327770233154" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

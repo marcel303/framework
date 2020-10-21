@@ -1,6 +1,6 @@
 #pragma once
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 #include "fileEditor.h"
 #include "video.h"
 
@@ -15,7 +15,7 @@ struct FileEditor_Video : FileEditor
 	};
 	
 	MediaPlayer mp;
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	
 	bool hasAudioInfo = false;
 	bool audioIsStarted = false;

@@ -1153,19 +1153,22 @@ void VfxNodeBase::reconnectDynamicInputs()
 	
 	for (auto & inputSocketValue : g_currentVfxGraph->dynamicData->inputSocketValues)
 	{
-		VfxPlug * input = nullptr;
-	
-		for (int i = 0; i < dynamicInputs.size(); ++i)
+		if (inputSocketValue.nodeId == id)
 		{
-			if (inputSocketValue.nodeId == id && inputSocketValue.socketName == dynamicInputs[i].name)
-				input = &inputs[numStaticInputs + i];
-		}
+			VfxPlug * input = nullptr;
 		
-		if (input != nullptr)
-		{
-			Assert(input->isConnected() == false);
+			for (int i = 0; i < dynamicInputs.size(); ++i)
+			{
+				if (inputSocketValue.socketName == dynamicInputs[i].name)
+					input = &inputs[numStaticInputs + i];
+			}
 			
-			g_currentVfxGraph->connectToInputLiteral(*input, inputSocketValue.value);
+			if (input != nullptr)
+			{
+				Assert(input->isConnected() == false);
+				
+				g_currentVfxGraph->connectToInputLiteral(*input, inputSocketValue.value);
+			}
 		}
 	}
 	
@@ -1345,6 +1348,13 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 	
 	for (int i = 0; i < numOutputs; ++i)
 	{
+		Assert( // other type must have mem set to non-null
+			dynamicOutputs[i].type == kVfxPlugType_Trigger ||
+			dynamicOutputs[i].mem != nullptr);
+		Assert( // trigger type must have mem set to null
+			dynamicOutputs[i].type != kVfxPlugType_Trigger ||
+			dynamicOutputs[i].mem == nullptr);
+		
 		outputs[numStaticOutputs + i] = VfxPlug();
 		outputs[numStaticOutputs + i].type = dynamicOutputs[i].type;
 		outputs[numStaticOutputs + i].mem = dynamicOutputs[i].mem;

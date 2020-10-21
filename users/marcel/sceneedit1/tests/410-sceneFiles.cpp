@@ -27,7 +27,7 @@ int main(int argc, char * argv[])
 	
 	if (!TextIO::load(path, lines, lineEndings))
 	{
-		LOG_ERR("failed to load text file", 0);
+		LOG_ERR("failed to load text file");
 		return -1;
 	}
 	
@@ -40,11 +40,11 @@ int main(int argc, char * argv[])
 	
 	if (!parseSceneFromLines(g_typeDB, line_reader, basePath.c_str(), scene))
 	{
-		LOG_ERR("failed to parse scene from lines", 0);
+		LOG_ERR("failed to parse scene from lines");
 		return -1;
 	}
 
-	LOG_INF("success!", 0);
+	LOG_INF("success!");
 	
 	// empty the scene before we quit the app
 	

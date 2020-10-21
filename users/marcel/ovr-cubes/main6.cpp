@@ -635,7 +635,7 @@ struct ModelObject
 struct JgplayerObject
 {
 	//static const int kMaxVoices = 12;
-	static const int kMaxVoices = 24;
+	static const int kMaxVoices = 32;
 	static const int kMaxSamplesForVisualization = 256;
 	
 	struct MyAudioSource : AudioSource
@@ -1296,7 +1296,7 @@ void Scene::tick(const float dt)
 #endif
 
 	// Update the virtual desktop.
-	framework.tickVirtualDesktop(viewToWorld, buttonMask, isHand);
+	framework.tickVirtualDesktop(viewToWorld, true, buttonMask, isHand);
 
 	controlPanel->tick(dt);
 
@@ -2072,7 +2072,10 @@ struct SpatialAudioSystemAudioStream : AudioStream
 	{
 		ALIGN16 float outputSamplesL[numSamples];
 		ALIGN16 float outputSamplesR[numSamples];
-		
+
+		// note : we update the audio in steps of 32 samples, to improve the timing for notes when the sample size is
+		//        large. hopefully this fixes strange timing issues during Oculus Vr movie recordings. also this will
+		//        reduce (the maximum) binauralization latency by a little and make it more stable/less jittery
 		for (int i = 0; i < numSamples; )
 		{
 			const int kUpdateSize = 32;

@@ -275,7 +275,7 @@ struct OscReceiver
 	
 	void shut()
 	{
-		LOG_DBG("terminating OSC receive thread", 0);
+		LOG_DBG("terminating OSC receive thread");
 		
 		if (receiveSocket != nullptr)
 		{
@@ -288,14 +288,14 @@ struct OscReceiver
 			receiveThread = nullptr;
 		}
 		
-		LOG_DBG("terminating OSC receive thread [done]", 0);
+		LOG_DBG("terminating OSC receive thread [done]");
 		
-		LOG_DBG("terminating OSC UDP receive socket", 0);
+		LOG_DBG("terminating OSC UDP receive socket");
 		
 		delete receiveSocket;
 		receiveSocket = nullptr;
 		
-		LOG_DBG("terminating OSC UDP receive socket [done]", 0);
+		LOG_DBG("terminating OSC UDP receive socket [done]");
 		
 		delete packetListener;
 		packetListener = nullptr;

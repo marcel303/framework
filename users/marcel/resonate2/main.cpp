@@ -362,7 +362,7 @@ static void simulateLattice_integrate(Lattice & lattice, const float dt, const f
 		// models a more rigid structure where vertices are held in place 'xy' on the plane they sit in through
 		// the forces of the elements in the structure below them
 		
-		// todo : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
+		// idea : constrain vertices using the normal of the plane they sit in instead of the line to (0, 0, 0)
 		
 		float nx = v_p.x;
 		float ny = v_p.y;

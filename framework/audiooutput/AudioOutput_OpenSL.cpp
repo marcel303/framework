@@ -169,7 +169,7 @@ bool AudioOutput_OpenSL::doInitialize(const int numChannels, const int sampleRat
 		};
 	const int numEngineOptions = sizeof(engineOptions) / sizeof(engineOptions[0]) / 2;
 	
-	if (!checkError("slCreateEngine", (&engineObject, numEngineOptions, engineOptions, 0, nullptr, nullptr)) ||
+	if (!checkError("slCreateEngine", slCreateEngine(&engineObject, numEngineOptions, engineOptions, 0, nullptr, nullptr)) ||
 		!checkError("Realize",        (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE)) ||
 		!checkError("GetInterface",   (*engineObject)->GetInterface(engineObject, SL_IID_ENGINE, &engineEngine)))
 	{
@@ -280,10 +280,12 @@ AudioOutput_OpenSL::~AudioOutput_OpenSL()
 
 bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
 {
-	if (!doInitialize())
-	{
+	const bool result = doInitialize(numChannels, sampleRate, bufferSize);
+
+	if (!result)
 		Shutdown();
-	}
+
+	return result;
 }
 
 bool AudioOutput_OpenSL::Shutdown()

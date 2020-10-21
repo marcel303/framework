@@ -327,13 +327,13 @@ bool GpuSimulationContext::computeEdgeForces(const float tension)
 		kernel.setArg(4, tension) != CL_SUCCESS ||
 		kernel.setArg(5, *edge_f_Buffer->buffer) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		LOG_ERR("failed to set buffer arguments for kernel");
 		return false;
 	}
 	
 	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numEdges/* & ~63*/)) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to enqueue kernel", 0);
+		LOG_ERR("failed to enqueue kernel");
 		return false;
 	}
 	
@@ -354,13 +354,13 @@ bool GpuSimulationContext::gatherEdgeForces()
 		kernel.setArg(1, *edge_f_gather_Buffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(2, *vertex_f_Buffer->buffer) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		LOG_ERR("failed to set buffer arguments for kernel");
 		return false;
 	}
 
 	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to enqueue kernel", 0);
+		LOG_ERR("failed to enqueue kernel");
 		return false;
 	}
 
@@ -389,13 +389,13 @@ bool GpuSimulationContext::integrate(Lattice & lattice, const float dt, const fl
 		kernel.setArg(3, dt) != CL_SUCCESS ||
 		kernel.setArg(4, retain) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		LOG_ERR("failed to set buffer arguments for kernel");
 		return false;
 	}
 	
 	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(numVertices)) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to enqueue kernel", 0);
+		LOG_ERR("failed to enqueue kernel");
 		return false;
 	}
 	
@@ -416,13 +416,13 @@ bool GpuSimulationContext::integrateImpulseResponse(const float dt)
 		integrateKernel.setArg(3, *impulseResponseProbesBuffer->buffer) != CL_SUCCESS ||
 		integrateKernel.setArg(4, dt) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		LOG_ERR("failed to set buffer arguments for kernel");
 		return false;
 	}
 	
 	if (gpuContext.commandQueue->enqueueNDRangeKernel(integrateKernel, cl::NullRange, cl::NDRange(numProbes), cl::NDRange(64)) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to enqueue kernel", 0);
+		LOG_ERR("failed to enqueue kernel");
 		return false;
 	}
 	
@@ -440,13 +440,13 @@ bool GpuSimulationContext::advanceImpulseState(const float dt)
 	if (kernel.setArg(0, *impulseResponseStateBuffer->buffer) != CL_SUCCESS ||
 		kernel.setArg(1, dt) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to set buffer arguments for kernel", 0);
+		LOG_ERR("failed to set buffer arguments for kernel");
 		return false;
 	}
 
 	if (gpuContext.commandQueue->enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(kNumProbeFrequencies)) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to enqueue kernel", 0);
+		LOG_ERR("failed to enqueue kernel");
 		return false;
 	}
 	

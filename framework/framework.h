@@ -483,7 +483,7 @@ public:
 	
 	void blinkTaskbarIcon(int count);
 
-	bool tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask, const bool isHand);
+	bool tickVirtualDesktop(const Mat4x4 & pointerTransform, const bool pointerTransformIsValid, const int buttonMask, const bool isHand);
 	void drawVirtualDesktop();
 	void drawVrPointers();
 	
@@ -974,7 +974,7 @@ public:
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureRw(const char * name, int unit, GxTextureId texture, uint32_t format, bool filtered, bool clamp = true); // todo : add enum for graphics api independent buffer formats
+	void setTextureRw(const char * name, int unit, GxTextureId texture, GX_TEXTURE_FORMAT format, bool filtered, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
@@ -1047,7 +1047,7 @@ public:
 	explicit Color(int r, int g, int b, int a = 255);
 	explicit Color(float r, float g, float b, float a = 1.f);
 	
-	static Color fromHex(const char * str);
+	static Color fromHex(const char * str, bool * success = nullptr);
 	static Color fromHSL(float hue, float sat, float lum);
 	
 	void toHSL(float & hue, float & sat, float & lum) const;
@@ -1940,6 +1940,12 @@ template <typename T>
 inline T lerp(T v1, T v2, double t)
 {
 	return v1 * (1.f - t) + v2 * t;
+}
+
+template <typename T>
+inline float inverseLerp(T v1, T v2, T v)
+{
+	return float(v - v1) / float(v2 - v1);
 }
 
 template <typename T>

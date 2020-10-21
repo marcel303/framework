@@ -29,6 +29,7 @@
 
 #if ENABLE_OPENGL && ENABLE_COMPUTE_SHADER // todo : metal compute shader implementation
 
+#include "gx-opengl/enumTranslation.h"
 #include "internal.h"
 
 uint32_t ComputeShader::getProgram() const
@@ -235,12 +236,14 @@ void ComputeShader::setTextureArray(const char * name, int unit, GxTextureId tex
 	checkErrorGL();
 }
 
-void ComputeShader::setTextureRw(const char * name, int unit, GxTextureId texture, GLuint format, bool filtered, bool clamp)
+void ComputeShader::setTextureRw(const char * name, int unit, GxTextureId texture, GX_TEXTURE_FORMAT format, bool filtered, bool clamp)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
-
-	glBindImageTexture(unit, texture, 0, false, 0, GL_READ_WRITE, format);
+	
+	const GLenum glFormat = toOpenGLInternalFormat(format);
+	
+	glBindImageTexture(unit, texture, 0, false, 0, GL_READ_WRITE, glFormat);
 	checkErrorGL();
 }
 

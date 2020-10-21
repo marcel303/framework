@@ -31,11 +31,31 @@
 #include "binaural_mit.h"
 #include "binaural_oalsoft.h"
 #include "hrirSampleSetCache.h"
+#include "Log.h"
 #include <map>
+#include <string>
 
-static std::map<std::string, binaural::HRIRSampleSet*> s_hrirSampleSetCache;
+typedef std::map<std::string, binaural::HRIRSampleSet*> HRIRSampleSetCacheInternal;
 
-void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type)
+static HRIRSampleSetCacheInternal & getInternal(void * internal)
+{
+	return *(HRIRSampleSetCacheInternal*)internal;
+}
+
+HRIRSampleSetCache::HRIRSampleSetCache()
+{
+	m_internal = new HRIRSampleSetCacheInternal();
+}
+
+HRIRSampleSetCache::~HRIRSampleSetCache()
+{
+	auto & internal = getInternal(m_internal);
+	
+	delete &internal;
+	m_internal = nullptr;
+}
+
+void HRIRSampleSetCache::add(const char * path, const char * name, const HRIRSampleSetType type)
 {
 	binaural::HRIRSampleSet * sampleSet = new binaural::HRIRSampleSet();
 	
@@ -59,7 +79,7 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	
 	if (result == false)
 	{
-		debugLog("failed to load sample set. path=%s", path);
+		LOG_ERR("failed to load sample set. path=%s", path);
 	
 		delete sampleSet;
 		sampleSet = nullptr;
@@ -68,7 +88,7 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	{
 		sampleSet->finalize();
 		
-		auto & elem = s_hrirSampleSetCache[name];
+		auto & elem = getInternal(m_internal)[name];
 		
 		delete elem;
 		elem = nullptr;
@@ -77,22 +97,26 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 	}
 }
 
-void clearHrirSampleSetCache()
+void HRIRSampleSetCache::clear()
 {
-	for (auto & i : s_hrirSampleSetCache)
+	auto & internal = getInternal(m_internal);
+	
+	for (auto & i : internal)
 	{
 		delete i.second;
 		i.second = nullptr;
 	}
 	
-	s_hrirSampleSetCache.clear();
+	internal.clear();
 }
 
-const binaural::HRIRSampleSet * getHrirSampleSet(const char * name)
+const binaural::HRIRSampleSet * HRIRSampleSetCache::find(const char * name) const
 {
-	auto i = s_hrirSampleSetCache.find(name);
+	auto & internal = getInternal(m_internal);
 	
-	if (i == s_hrirSampleSetCache.end())
+	auto i = internal.find(name);
+	
+	if (i == internal.end())
 	{
 		return nullptr;
 	}

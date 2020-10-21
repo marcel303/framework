@@ -108,7 +108,7 @@
     </node>
     <link id="55" srcNodeId="60" srcNodeSocketName="pcm" dstNodeId="59" dstNodeSocketName="pcm"/>
     <link id="61" srcNodeId="62" srcNodeSocketName="x" dstNodeId="63" dstNodeSocketName="time"/>
-    <link id="62" srcNodeId="67" srcNodeSocketName="set!" dstNodeId="60" dstNodeSocketName="loop"/>
+    <link id="62" srcNodeId="67" srcNodeSocketName="set!" dstNodeId="60" dstNodeSocketName="loop!"/>
     <link id="79" srcNodeId="71" srcNodeSocketName="delay" dstNodeId="72" dstNodeSocketName="audio"/>
     <link id="82" srcNodeId="73" srcNodeSocketName="value" dstNodeId="71" dstNodeSocketName="value"/>
     <link id="85" srcNodeId="69" srcNodeSocketName="impulse!" dstNodeId="74" dstNodeSocketName="trigger!"/>

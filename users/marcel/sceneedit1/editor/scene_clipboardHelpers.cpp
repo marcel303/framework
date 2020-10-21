@@ -151,7 +151,7 @@ std::vector<std::string> linesFromClipboard()
 	TextIO::LineEndings lineEndings;
 	if (TextIO::loadText(text.c_str(), lines, lineEndings) == false)
 	{
-		LOG_ERR("failed to load clipboard text into lines", 0);
+		LOG_ERR("failed to load clipboard text into lines");
 		return { };
 	}
 	

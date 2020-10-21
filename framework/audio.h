@@ -27,8 +27,9 @@
 
 #pragma once
 
-#include "audiostream/AudioIO.h"
+#include "soundfile/SoundIO.h"
 
+#define FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO   (FRAMEWORK_USE_PORTAUDIO && 0)
 #define FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT 1
 
 class SoundPlayer_Dummy
@@ -150,7 +151,7 @@ public:
 
 #endif
 
-#if FRAMEWORK_USE_PORTAUDIO
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO
 
 #include <stdint.h>
 
@@ -256,7 +257,7 @@ public:
 
 //
 
-#if FRAMEWORK_USE_PORTAUDIO && 0
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO
 	typedef SoundPlayer_PortAudio SoundPlayer;
 #elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
 	typedef SoundPlayer_AudioOutput SoundPlayer;

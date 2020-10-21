@@ -963,7 +963,7 @@ struct GraphEdit : GraphEditConnection
 	
 	GraphEdit_NodeTypeSelect * nodeInsertMenu;
 	
-	NodeResourceEditor nodeResourceEditor;
+	NodeResourceEditor nodeResourceEditor; // similar to nodeResourceEditorWindows, but editing happens inside the same window as the graph editor
 	
 	std::list<GraphEdit_NodeResourceEditorWindow*> nodeResourceEditorWindows;
 	

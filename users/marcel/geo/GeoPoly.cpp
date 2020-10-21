@@ -289,7 +289,9 @@ namespace Geo
 					
 					Vec3 delta = (*i)->vertex[1]->position - (*i)->vertex[0]->position;
 					
-					float t = - (plane * (*i)->vertex[0]->position) / (plane.normal * delta);
+					float d = plane * (*i)->vertex[0]->position;
+					float dd = plane.normal * delta;
+					float t = - d / dd;
 					
 					Assert(t >= 0.0f && t <= 1.0f);
 					
@@ -314,7 +316,9 @@ namespace Geo
 					
 					Vec3 delta = (*i)->vertex[1]->position - (*i)->vertex[0]->position;
 					
-					float t = - (plane * (*i)->vertex[0]->position) / (plane.normal * delta);
+					float d = plane * (*i)->vertex[0]->position;
+					float dd = plane.normal * delta;
+					float t = - d / dd;
 					
 					Assert(t >= 0.0f && t <= 1.0f);
 					

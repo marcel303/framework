@@ -48,7 +48,7 @@ bool GpuProgram::updateSource(const char * in_source)
 	
 	if (newProgram.build({ device }, buildOptions.c_str()) != CL_SUCCESS)
 	{
-		LOG_ERR("failed to build OpenCL program", 0);
+		LOG_ERR("failed to build OpenCL program");
 		LOG_ERR("%s", newProgram.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device).c_str());
 		
 		return false;
@@ -82,7 +82,7 @@ bool GpuContext::init()
 	
 	if (platforms.empty())
 	{
-		LOG_INF("no OpenCL platform(s) found", 0);
+		LOG_INF("no OpenCL platform(s) found");
 		return false;
 	}
 	
@@ -100,7 +100,7 @@ bool GpuContext::init()
 	
 	if (devices.empty())
 	{
-		LOG_ERR("no OpenGL GPU device(s) found", 0);
+		LOG_ERR("no OpenGL GPU device(s) found");
 		return false;
 	}
 	

@@ -70,30 +70,52 @@ namespace rOne
 		void free();
 	};
 
+	struct RenderEyeData
+	{
+		bool isValid = false;
+		float timeStep = 0.f;
+		
+		Mat4x4 projectionToWorld_curr = Mat4x4(true);
+		Mat4x4 projectionToWorld_prev = Mat4x4(true);
+		
+	#if 0
+		static const int kHistorySize = 100;
+		int projectionToWorld_prev_hist_idx = -1;
+		Mat4x4 projectionToWorld_prev_hist[kHistorySize];
+	#endif
+	};
+	
 	struct Renderer
 	{
 		RenderBuffers buffers;
 		RenderBuffers buffers2;
 		
+		RenderEyeData eyeData[2]; // left, right
+		
 		static void registerShaderOutputs();
+		
+		void free();
 		
 		void render(
 			const RenderFunctions & renderFunctions,
 			const RenderOptions & renderOptions,
 			const int viewportSx,
 			const int viewportsy,
-			const float timeStep);
+			const float timeStep,
+			const bool updateHistory = true);
 		
 		void render(
 			const RenderFunctions & renderFunctions,
 			const RenderOptions & renderOptions,
 			ColorTarget * colorTarget,
 			DepthTarget * depthTarget,
-			const float timeStep);
+			const float timeStep,
+			const bool updateHistory = true);
 		
 		void render(
 			const RenderFunctions & renderFunctions,
 			const RenderOptions & renderOptions,
-			const float timeStep);
+			const float timeStep,
+			const bool updateHistory = true);
 	};
 }

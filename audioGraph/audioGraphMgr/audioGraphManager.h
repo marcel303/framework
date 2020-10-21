@@ -65,6 +65,7 @@ struct AudioGraphFile
 	AudioGraphFileRTC * realTimeConnection;
 	
 	AudioValueHistorySet * audioValueHistorySet;
+	AudioValueHistorySet * audioValueHistorySetCapture;
 	
 	GraphEdit * graphEdit;
 

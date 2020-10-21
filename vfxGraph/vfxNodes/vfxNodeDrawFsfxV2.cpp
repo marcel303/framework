@@ -349,6 +349,9 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 
 void VfxNodeFsfxV2::freeShader()
 {
+	if (gaussianKernel != nullptr)
+		gaussianKernel->free();
+		
 	delete gaussianKernel;
 	gaussianKernel = nullptr;
 	

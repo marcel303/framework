@@ -33,7 +33,6 @@
 #include <typeindex>
 #include <vector>
 
-struct AudioGraphManager;
 struct AudioVoiceManager;
 
 struct AudioGraphContext
@@ -56,10 +55,17 @@ struct AudioGraphContext
 // todo : do the same for vfxgraph! useful for registering FsfxLibrary, ...
 /*
 
-	context.addObject(new AudioGraphMemfMgr());
-	context.addObject(new AudioGraphMemsMgr());
-	context.addObject(new AudioGraphControlValueMgr());
-	context.addObject(new JsusFxAudioGraphLibrary());
+	auto * memf = new AudioGraphMemfMgr();
+	auto * mems = new AudioGraphMemsMgr();
+ 	auto * controlValues = new AudioGraphControlValueMgr();
+ 	auto * jsusFxLibrary = new JsusFxAudioGraphLibrary();
+ 	auto * sampleSetCache = new HRIRSampleSetCache();
+ 	
+	context.addObject(memf);
+	context.addObject(mems);
+	context.addObject(controlValues);
+	context.addObject(jsusfxLibrary);
+	context.addObject(sampleSetCache);
  
 	auto * memfMgr = context.findObject<AudioGraphMemfMgr>();
  
@@ -72,8 +78,6 @@ struct AudioGraphContext
 	AudioMutexBase * audioMutex;
 	
 	AudioVoiceManager * voiceMgr;
-	
-	AudioGraphManager * audioGraphMgr;
 	
 	AudioThreadId mainThreadId;
 
@@ -88,7 +92,7 @@ struct AudioGraphContext
 	AudioGraphContext();
 	
 	// called from the app thread
-	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the audio thread

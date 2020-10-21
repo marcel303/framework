@@ -4,6 +4,7 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <initializer_list>
 #include <string>
 #include <typeindex>
 #include <vector>
@@ -599,6 +600,14 @@ public:
 		child->index = childIndex;
 		
 		children.push_back(child);
+	}
+	
+	void addChildren(const std::initializer_list<ParameterMgr*> & in_children)
+	{
+		for (auto * child : in_children)
+		{
+			children.push_back(child);
+		}
 	}
 	
 	bool getStrictStructuringEnabled() const

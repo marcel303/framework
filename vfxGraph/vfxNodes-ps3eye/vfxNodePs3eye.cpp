@@ -27,18 +27,23 @@
 
 #if ENABLE_PS3EYE
 
-#include "Log.h"
 #include "vfxNodePs3eye.h"
+
+#include "Log.h"
+#include "Multicore/ThreadName.h"
+
+#include <algorithm>
 #include <SDL2/SDL.h>
 
 // todo : add mutex and copy captured frame data
+// todo : use std mutex, thread. remove SDL2 dependency
 
 using namespace ps3eye;
 
 VFX_ENUM_TYPE(ps3eyeResolution)
 {
 	elem("320x240");
-	//elem("640x480");
+	elem("640x480");
 }
 
 VFX_NODE_TYPE(VfxNodePs3eye)
@@ -47,7 +52,7 @@ VFX_NODE_TYPE(VfxNodePs3eye)
 	
 	in("device", "int");
 	inEnum("resolution", "ps3eyeResolution");
-	in("fps", "int", "100");
+	in("fps", "int", "60");
 	in("color", "bool", "1");
 	in("autoColors", "bool", "1");
 	in("gain", "float", "0.32");
@@ -138,7 +143,11 @@ void VfxNodePs3eye::tick(const float dt)
 	
 	const int deviceIndex = getInputInt(kInput_DeviceIndex, 0);
 	const Resolution resolution = (Resolution)getInputInt(kInput_Resolution, 0);
-	const int desiredFramerate = getInputInt(kInput_Framerate, 100);
+	const int desiredFramerate = std::min(
+		resolution == kResolution_640x480
+			? 60
+			: 180,
+		getInputInt(kInput_Framerate, 100));
 	const bool enableColor = getInputBool(kInput_ColorEnabled, true);
 	
 	Verify(SDL_LockMutex(mutex) == 0);
@@ -153,7 +162,7 @@ void VfxNodePs3eye::tick(const float dt)
 	Verify(SDL_UnlockMutex(mutex) == 0);
 	
 	if (deviceIndex != currentDeviceIndex ||
-		currentResolution != resolution ||
+		resolution != currentResolution ||
 		desiredFramerate != currentFramerate ||
 		enableColor != currentEnableColor)
 	{
@@ -189,7 +198,7 @@ void VfxNodePs3eye::tick(const float dt)
 				desiredSy,
 				desiredFramerate,
 				enableColor
-				? PS3EYECam::EOutputFormat::RGB
+				? PS3EYECam::EOutputFormat::RGBA
 				: PS3EYECam::EOutputFormat::Gray);
 
 			if (result == false)
@@ -201,7 +210,7 @@ void VfxNodePs3eye::tick(const float dt)
 				const int sx = ps3eye->getWidth();
 				const int sy = ps3eye->getHeight();
 				
-				const int numBytes = sx * sy * (enableColor ? 3 : 1);
+				const int numBytes = sx * sy * (enableColor ? 4 : 1);
 				
 				Assert(frameData == nullptr);
 				frameData = new uint8_t[numBytes];
@@ -230,7 +239,7 @@ void VfxNodePs3eye::tick(const float dt)
 			{
 				vfxGpuTimingBlock(VfxNodePs3eye);
 				
-				const GX_TEXTURE_FORMAT format = enableColor ? GX_RGB8_UNORM : GX_R8_UNORM;
+				const GX_TEXTURE_FORMAT format = enableColor ? GX_RGBA8_UNORM : GX_R8_UNORM;
 
 				if (texture.isChanged(sx, sy, format))
 				{
@@ -246,15 +255,16 @@ void VfxNodePs3eye::tick(const float dt)
 			
 			if (enableColor)
 			{
-				imageCpuData.allocOnSizeChange(sx, sy, 3);
+				imageCpuData.allocOnSizeChange(sx, sy, 4);
 				imageCpuOutput = imageCpuData.image;
 				
-				VfxImageCpu::deinterleave3(
+				VfxImageCpu::deinterleave4(
 					frameData,
-					sx, sy, 4, sx * 3,
+					sx, sy, 4, sx * 4,
 					imageCpuOutput.channel[0],
 					imageCpuOutput.channel[1],
-					imageCpuOutput.channel[2]);
+					imageCpuOutput.channel[2],
+					imageCpuOutput.channel[3]);
 			}
 			else
 			{
@@ -292,6 +302,8 @@ void VfxNodePs3eye::allocateImage(const int sx, const int sy, const GX_TEXTURE_F
 int VfxNodePs3eye::captureThreadProc(void * obj)
 {
 	VfxNodePs3eye * self = (VfxNodePs3eye*)obj;
+	
+	SetCurrentThreadName("VfxNodePs3eye");
 	
 	auto ps3eye = self->ps3eye.get();
 	

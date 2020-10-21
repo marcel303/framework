@@ -55,11 +55,10 @@ inline void toSampleIndex(const float v, const int arraySize, int & s, float & f
 	const float vFloor = floorf(v);
 	fraction = v - vFloor;
 	
-	const int a = int(vFloor);
+	const int a = int(vFloor) % arraySize;
 	const int b = a < 0 ? a + arraySize : a;
-	const int c = b % arraySize;
 	
-	s = c;
+	s = b;
 }
 
 //

@@ -559,7 +559,7 @@ public:
 
 	virtual void OnReceive(Packet & packet, Channel * channel)
 	{
-		//LOG_DBG("received packet", 0);
+		//LOG_DBG("received packet");
 
 		uint16_t value;
 
@@ -577,7 +577,7 @@ public:
 			}
 			else
 			{
-				LOG_ERR("client state not found", 0);
+				LOG_ERR("client state not found");
 			}
 		}
 		else
@@ -670,7 +670,7 @@ public:
 	{
 		if (channel == 0)
 		{
-			LOG_INF("no channels left to remove", 0);
+			LOG_INF("no channels left to remove");
 		}
 		else
 		{
@@ -682,7 +682,7 @@ public:
 	{
 		if (channels.size() == 0)
 		{
-			LOG_INF("no channels left to remove", 0);
+			LOG_INF("no channels left to remove");
 		}
 		else
 		{
@@ -721,7 +721,7 @@ public:
 		LOG_INF("%s:", name);
 		if (channels.empty())
 		{
-			LOG_INF("(empty list)", 0);
+			LOG_INF("(empty list)");
 		}
 		else
 		{
@@ -1017,7 +1017,7 @@ static void TestGameUpdate(ImageMem & image)
 				StateVector::kSize,
 				result.m_diffs.get()))
 			{
-				LOG_ERR("binary diff validation failed", 0);
+				LOG_ERR("binary diff validation failed");
 				NetAssert(false);
 			}
 		}

@@ -56,7 +56,7 @@ bool FileEditor_Gltf::reflect(TypeDB & typeDB, StructuredType & type)
 
 void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
-// todo : always tick. return true if redraw is desired. create separate FileEditor method for updating the visual
+// todo : in general for file editors : always tick. return true if redraw is desired. create separate FileEditor method for updating the visual
 
 	if (hasFocus == false)
 		return;

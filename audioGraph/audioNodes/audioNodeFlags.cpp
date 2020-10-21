@@ -50,8 +50,8 @@ AudioNodeFlags::AudioNodeFlags()
 	addInput(kInput_Set, kAudioPlugType_Trigger);
 	addInput(kInput_Reset, kAudioPlugType_Trigger);
 	addOutput(kOutput_IsSet, kAudioPlugType_Bool, &isSetOutput);
-	addOutput(kOutput_Set, kAudioPlugType_Trigger, this);
-	addOutput(kOutput_Reset, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_Set, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Reset, kAudioPlugType_Trigger, nullptr);
 }
 
 void AudioNodeFlags::tick(const float dt)

@@ -25,11 +25,14 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiostream/AudioIO.h"
+#include "soundfile/SoundIO.h"
+#include "soundmix.h"
+
 #include "Debugging.h"
 #include "Log.h"
 #include "Path.h"
-#include "soundmix.h"
+
+#include <math.h>
 #include <string.h>
 
 #if AUDIO_USE_SSE
@@ -628,6 +631,62 @@ float audioBufferSum(
 	}
 	
 	return sum;
+}
+
+void audioBufferClip_Hard(
+	float * __restrict audioBuffer,
+	const int numSamples)
+{
+	int begin = 0;
+	
+#if ENABLE_SSE
+	__m128 * __restrict audioBuffer4 = (__m128*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	
+	const __m128 min = _mm_set1_ps(-1.f);
+	const __m128 max = _mm_set1_ps(+1.f);
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		audioBuffer4[i] = _mm_max_ps(min, _mm_min_ps(max, audioBuffer4[i]));
+	}
+	
+	begin = numSamples4 * 4;
+#endif
+
+	for (int i = begin; i < numSamples; ++i)
+	{
+		float value = audioBuffer[i];
+		
+		if (value < -1.f)
+			value = -1.f;
+		else if (value > +1.f)
+			value = +1.f;
+		
+		audioBuffer[i] = value;
+	}
+}
+
+void audioBufferClip_FastSigmoid(
+	float * __restrict audioBuffer,
+	const int numSamples)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float value = audioBuffer[i];
+		
+	#if 0
+		// stays linear aroud zero for a longer period of time
+		value = value / sqrtf(1.f + value * value);
+	#else
+		// quickly begins to attenuate. more 'range' when clipping occurs
+		const float absValue = value < 0.f ? -value : +value;
+		
+		value = value / (1.f + absValue);
+	#endif
+		
+		audioBuffer[i] = value;
+	}
 }
 
 //

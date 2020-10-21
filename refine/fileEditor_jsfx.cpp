@@ -6,6 +6,7 @@
 
 #include "fileEditor_jsfx.h"
 #include "imgui.h"
+#include "StringEx.h"
 #include <algorithm>
 
 #define ENABLE_MIDI 1
@@ -295,9 +296,6 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	, gfx(jsusFx)
 	, pathLibary(".")
 {
-// todo : add option to path library to search all sub folders
-	pathLibary.addSearchPath("lib"); // for Kawa scripts
-	
 	jsusFx.init();
 
 	fileApi.init(jsusFx.m_vm);
@@ -305,26 +303,6 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 
 	gfx.init(jsusFx.m_vm);
 	jsusFx.gfx = &gfx;
-
-	isValid = jsusFx.compile(pathLibary, path, JsusFx::kCompileFlag_CompileGraphicsSection);
-
-	if (isValid)
-	{
-		mutex = SDL_CreateMutex();
-
-		jsusFx.prepare(44100, 256);
-		
-		jsusFx.gfx_w = std::max(jsusFx.gfx_w, 440);
-		jsusFx.gfx_h = std::max(jsusFx.gfx_h, 240);
-		
-		paObject.init(44100, 2, 1, 256, this);
-		
-		jsusFxWindow.init(10, 100, jsusFx.gfx_w, jsusFx.gfx_h, jsusFx.desc);
-	}
-	else
-	{
-		jsusFxWindow.init(10, 100, 200, 100, nullptr);
-	}
 
 	midiKeyboardWindow.init(10, 10, 300, 40, "Midi Keyboard");
 	
@@ -534,6 +512,27 @@ void FileEditor_JsusFx::doButtonBar()
 		
 		ImGui::EndMenu();
 	}
+	
+	if (ImGui::BeginMenu("Library paths"))
+	{
+		for (size_t i = 0; i < paths.size(); ++i)
+		{
+			ImGui::PushID(i);
+			{
+				auto & path = paths[i];
+				char text[128];
+				strcpy_s(text, sizeof(text), path.c_str());
+				
+				if (ImGui::InputText("Path", text, sizeof(text)))
+					path = text;
+			}
+			ImGui::PopID();
+		}
+		
+		ImGui::Text("(Requires reopening of file)");
+		
+		ImGui::EndMenu();
+	}
 }
 
 void FileEditor_JsusFx::updateMidi()
@@ -593,6 +592,8 @@ void FileEditor_JsusFx::updateSynthesisParams()
 
 bool FileEditor_JsusFx::reflect(TypeDB & typeDB, StructuredType & type)
 {
+	type.add("libraryPaths", &FileEditor_JsusFx::paths);
+	
 	typeDB.addEnum<FileEditor_JsusFx::AudioSource>("FileEditor_JsusFx::AudioSource")
 		.add("silence", kAudioSource_Silence)
 		.add("pinkNoise", kAudioSource_PinkNoise)
@@ -612,6 +613,43 @@ bool FileEditor_JsusFx::reflect(TypeDB & typeDB, StructuredType & type)
 
 void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
+	if (firstFrame)
+	{
+		if (paths.empty())
+		{
+			paths.resize(8);
+			paths[0] = "lib";
+		}
+		
+		for (auto & path : paths)
+		{
+			if (!path.empty())
+				pathLibary.addSearchPath(path);
+		}
+		
+		isValid = jsusFx.compile(pathLibary, path, JsusFx::kCompileFlag_CompileGraphicsSection);
+
+		if (isValid)
+		{
+			mutex = SDL_CreateMutex();
+
+			jsusFx.prepare(44100, 256);
+			
+			jsusFx.gfx_w = std::max(jsusFx.gfx_w, 440);
+			jsusFx.gfx_h = std::max(jsusFx.gfx_h, 240);
+			
+			paObject.init(44100, 2, 1, 256, this);
+			
+			jsusFxWindow.init(10, 100, jsusFx.gfx_w, jsusFx.gfx_h, jsusFx.desc);
+		}
+		else
+		{
+			jsusFxWindow.init(10, 100, 200, 100, nullptr);
+		}
+	}
+	
+	//
+	
 	updateSynthesisParams();
 	
 	//
@@ -680,8 +718,6 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 
 					if (firstFrame)
 					{
-						firstFrame = false;
-
 						offsetX = (sx - gfxSx) / 2;
 						offsetY = (sy - gfxSy) / 2;
 					}
@@ -881,4 +917,6 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 		}
 		gxPopMatrix();
 	}
+	
+	firstFrame = false;
 }

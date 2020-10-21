@@ -25,9 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-// todo : replace this with a decent sample set cache object and make it a global
-// todo : move binaural sample set cache to somewhere else
-
 namespace binaural
 {
 	struct HRIRSampleSet;
@@ -41,6 +38,17 @@ enum HRIRSampleSetType
 	kHRIRSampleSetType_Oalsoft
 };
 
-void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
-void clearHrirSampleSetCache();
-const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);
+struct HRIRSampleSetCache
+{
+private:
+	void * m_internal;
+	
+public:
+	HRIRSampleSetCache();
+	~HRIRSampleSetCache();
+	
+	void add(const char * path, const char * name, const HRIRSampleSetType type);
+	void clear();
+	
+	const binaural::HRIRSampleSet * find(const char * name) const;
+};

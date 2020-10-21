@@ -126,7 +126,7 @@ enum WiimoteAddress
 	
 	if (initialized == false)
 	{
-		LOG_DBG("initializing Wiimote", 0);
+		LOG_DBG("initializing Wiimote");
 		
 		initialized = true;
 		
@@ -156,12 +156,12 @@ enum WiimoteAddress
 
 - (void)l2capChannelClosed:(IOBluetoothL2CAPChannel*)l2capChannel
 {
-	LOG_DBG("l2capChannelClosed", 0);
+	LOG_DBG("l2capChannelClosed");
 }
 
 - (void)l2capChannelReconfigured:(IOBluetoothL2CAPChannel*)l2capChannel;
 {
-	LOG_DBG("l2capChannelReconfigured", 0);
+	LOG_DBG("l2capChannelReconfigured");
 }
 
 - (void)l2capChannelData:(IOBluetoothL2CAPChannel*)l2capChannel data:(void *)_packetData length:(size_t)_packetSize;
@@ -227,7 +227,7 @@ enum WiimoteAddress
 
 - (void)l2capChannelQueueSpaceAvailable:(IOBluetoothL2CAPChannel*)l2capChannel;
 {
-	LOG_DBG("l2capChannelQueueSpaceAvailable", 0);
+	LOG_DBG("l2capChannelQueueSpaceAvailable");
 }
 
 - (void)sendCommand:(WiimoteCommand)command data:(const void*)data dataSize:(uint16_t)dataSize
@@ -331,13 +331,13 @@ enum WiimoteAddress
 {
 	if ([newDevice openConnection] != kIOReturnSuccess)
 	{
-		LOG_DBG("openConnection failed", 0);
+		LOG_DBG("openConnection failed");
 		return false;
 	}
 	
 	if ([newDevice performSDPQuery:nil] != kIOReturnSuccess)
 	{
-		LOG_DBG("performSDPQuery failed", 0);
+		LOG_DBG("performSDPQuery failed");
 		return false;
 	}
 	
@@ -350,7 +350,7 @@ enum WiimoteAddress
 	
 	if ([newDevice openL2CAPChannelSync:&outChannel withPSM:kBluetoothL2CAPPSMHIDControl delegate:channelDelegate] != kIOReturnSuccess)
 	{
-		LOG_DBG("failed to open output channel", 0);
+		LOG_DBG("failed to open output channel");
 		outChannel = nil;
 		[newDevice closeConnection];
 		return false;
@@ -358,7 +358,7 @@ enum WiimoteAddress
 	
 	if ([newDevice openL2CAPChannelSync:&inChannel withPSM:kBluetoothL2CAPPSMHIDInterrupt delegate:channelDelegate] != kIOReturnSuccess)
 	{
-		LOG_DBG("failed to open input channel", 0);
+		LOG_DBG("failed to open input channel");
 		inChannel = nil;
 		[outChannel closeChannel];
 		[outChannel release];
@@ -468,7 +468,7 @@ enum WiimoteAddress
 		
 		if (hostController == nil)
 		{
-			LOG_DBG("no bluetooth host controller present", 0);
+			LOG_DBG("no bluetooth host controller present");
 			return;
 		}
 		
@@ -478,7 +478,7 @@ enum WiimoteAddress
 		
 		if ([inquiry start] != kIOReturnSuccess)
 		{
-			LOG_DBG("failed to start bluetooth device enquiry", 0);
+			LOG_DBG("failed to start bluetooth device enquiry");
 			inquiry = nil;
 			return;
 		}
@@ -491,7 +491,7 @@ enum WiimoteAddress
 {
 	if ([[foundDevice getName] isEqualToString:@"Nintendo RVL-CNT-01"])
 	{
-		LOG_DBG("found Wiimote", 0);
+		LOG_DBG("found Wiimote");
 		
 		@autoreleasepool
 		{

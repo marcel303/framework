@@ -88,7 +88,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 		, wavefield()
 	{
 		uiState.sx = sx;
-		uiState.textBoxTextOffset = 40;
+		uiState.textBoxTextOffset = 150;
 	}
 	
 	virtual ~ResourceEditor_Wavefield1D() override

@@ -1,0 +1,18 @@
+# todo : add vfx graph example using custom node, which allows the user to select a node and get various useful infos from the discovered node. todo : register node discovery system w/ vfx graph context
+
+#app nodeDiscovery-100-discovery
+#app nodeDiscovery-120-parameterUi
+#app nodeDiscovery-200-audioStream
+#app nodeDiscovery-220-artnetToDmx
+#app nodeDiscovery-240-artnetToLedstrip
+
+app nodeDiscovery-400-audiograph
+	depend_library audiograph
+	depend_library framework
+	depend_library nodeDiscovery
+	depend_library nodeServices-audioStreamToTcp
+	add_files 400-audiograph.cpp
+	resource_path data
+	
+#app nodeDiscovery-600-vfxgraph
+

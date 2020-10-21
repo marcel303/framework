@@ -40,6 +40,7 @@
 #endif
 
 #include "renderTarget.h"
+#include "StringEx.h" // strcpy_s
 
 // -- render passes --
 
@@ -173,40 +174,43 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	}
 	else
 	{
-		int clearFlags = 0;
-		
 		if (clearColor)
 		{
-		// todo : for MRT support : use extended clear color function
-			Assert(false);
-			glClearColor(0, 0, 0, 0);
-			clearFlags |= GL_COLOR_BUFFER_BIT;
+			pushColorWriteMask(1, 1, 1, 1);
+			for (int i = 0; i < numTargets; ++i)
+			{
+				GLenum drawBuffer = GL_COLOR_ATTACHMENT0 + i;
+				glDrawBuffers(1, &drawBuffer);
+
+				glClearColor(0, 0, 0, 0);
+				glClear(GL_COLOR_BUFFER_BIT);
+				checkErrorGL();
+			}
+			popColorWriteMask();
+			
+			glDrawBuffers(numDrawBuffers, drawBuffers);
+			checkErrorGL();
 		}
 	
 		if (clearDepth && depthTarget != nullptr)
 		{
 		#if ENABLE_DESKTOP_OPENGL
 			glClearDepth(depthTarget->getClearDepth());
+			checkErrorGL();
 		#else
 			glClearDepthf(depthTarget->getClearDepth());
+			checkErrorGL();
 		#endif
-			clearFlags |= GL_DEPTH_BUFFER_BIT;
 			
 			//
 			
 			glClearStencil(0x00);
 			glStencilMask(0xff);
-			clearFlags |= GL_STENCIL_BUFFER_BIT;
-		}
-	
-		if (clearFlags)
-		{
-			glClear(clearFlags);
 			checkErrorGL();
-		}
-		
-		if (clearDepth && depthTarget != nullptr)
-		{
+			
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			checkErrorGL();
+			
 			glStencilMaskSeparate(GL_FRONT, globals.frontStencilState.writeMask);
 			glStencilMaskSeparate(GL_BACK, globals.backStencilState.writeMask);
 			checkErrorGL();
@@ -290,9 +294,9 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	if (globals.currentWindow->getWindow())
 		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 	else
-		AssertMsg(false, "beginBackbufferRenderPass called when no SDL window set", 0);
+		AssertMsg(false, "beginBackbufferRenderPass called when no SDL window set");
 #else
-	AssertMsg(false, "beginBackbufferRenderPass called when no backbuffer is available", 0);
+	AssertMsg(false, "beginBackbufferRenderPass called when no backbuffer is available");
 #endif
 
 	// update viewport
@@ -380,6 +384,7 @@ struct RenderPassData
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
+	char passName[32] = { };
 	int backingScale = 0;
 };
 
@@ -426,12 +431,10 @@ void pushRenderPass(
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
-	
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		pd.target[pd.numTargets++] = targets[i];
-	
 	pd.depthTarget = depthTarget;
-	
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
@@ -458,9 +461,8 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
-	
 	pd.isBackbufferPass = true;
-	
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
@@ -486,11 +488,11 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)", new_pd.backingScale); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)", new_pd.backingScale); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
 		}
 	}
 	

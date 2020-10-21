@@ -106,7 +106,7 @@ bool loadImage_turbojpeg(const void * buffer, const int bufferSize, JpegLoadData
 			}
 			else
 			{
-				//LOG_DBG("decoded jpeg!", 0);
+				//LOG_DBG("decoded jpeg!");
 			}
 		}
 		

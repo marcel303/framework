@@ -24,7 +24,7 @@ void DDS_PIXELFORMAT::Load(StreamReader& reader)
 
 	if (dwFlags & DDPF_FOURCC)
 	{
-		LOG_DBG("DDS file contains FOURCC pixel format", 0);
+		LOG_DBG("DDS file contains FOURCC pixel format");
 	}
 }
 

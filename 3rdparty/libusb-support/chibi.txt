@@ -4,6 +4,7 @@ library libusb
 	scan_files h path ../libusb/libusb
 	
 	with_platform macos   header_path macos
+	with_platform linux   header_path linux
 	with_platform windows header_path win32
 
 	with_platform macos add_files ../libusb/libusb/os/darwin_usb.c
@@ -13,6 +14,10 @@ library libusb
 	with_platform macos add_files ../libusb/libusb/os/threads_posix.c
 	with_platform macos add_files ../libusb/libusb/os/threads_posix.h
 
+	with_platform linux add_files ../libusb/libusb/os/linux_netlink.c
+	with_platform linux add_files ../libusb/libusb/os/linux_udev.c
+	with_platform linux add_files ../libusb/libusb/os/linux_usbfs.c
+	with_platform linux add_files ../libusb/libusb/os/linux_usbfs.h
 	with_platform linux add_files ../libusb/libusb/os/poll_posix.c
 	with_platform linux add_files ../libusb/libusb/os/poll_posix.h
 	with_platform linux add_files ../libusb/libusb/os/threads_posix.c

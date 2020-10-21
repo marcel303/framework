@@ -352,7 +352,7 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 					{
 						int r_encoded;
 						if (sscanf(r_text.c_str(), "%d", &r_encoded) != 1)
-							LOG_WRN("failed to read encoded rotation", 0);
+							LOG_WRN("failed to read encoded rotation");
 						else
 						{
 							MagicaRotation r;
@@ -367,7 +367,7 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 					{
 						float t[3];
 						if (sscanf(t_text.c_str(), "%f %f %f", &t[0], &t[1], &t[2]) != 3)
-							LOG_WRN("failed to read encoded translation", 0);
+							LOG_WRN("failed to read encoded translation");
 						else
 							m.SetTranslation(t[0], t[1], t[2]);
 					}

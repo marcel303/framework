@@ -5,7 +5,7 @@
 
 #include "audio.h"
 #include "audiooutput/AudioOutput.h"
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 
 #include <limits.h> // INT_MAX
 #include <map>
@@ -1032,7 +1032,7 @@ bool doGame()
 {
 	OptionMenu optionsMenu;
 
-	AudioOutput_PortAudio ao;
+	AudioOutput_Native ao;
 	MyAudioStream mas;
 	mas.Open("Sound Assets/Music/Loops/Music_Layer_%02d_Loop.ogg", "Sound Assets/Music/Loops/Choir_Layer_%02d_Loop.ogg", "Sound Assets/AMB/AMB_STATE_%02d_LOOP.ogg");
 	ao.Initialize(2, 48000, 1 << 8);

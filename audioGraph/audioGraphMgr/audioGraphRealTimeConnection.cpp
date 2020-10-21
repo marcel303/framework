@@ -75,6 +75,35 @@ bool AudioValueHistory::isActive() const
 
 //
 
+void AudioValueHistorySet::captureInto(AudioValueHistorySet & dst) const
+{
+	// add or update audio values
+	
+	for (auto & audioValueItr : audioValues)
+	{
+		auto & srcAudioValue = audioValueItr.second;
+		auto & dstAudioValue = dst.audioValues[audioValueItr.first];
+		
+		memcpy(
+			dstAudioValue.samples,
+			srcAudioValue.samples,
+			sizeof(dstAudioValue.samples));
+		dstAudioValue.isValid = srcAudioValue.isValid;
+	}
+	
+	// prune out-of-date audio values
+	
+	for (auto i = dst.audioValues.begin(); i != dst.audioValues.end(); )
+	{
+		if (audioValues.count(i->first) == 0)
+			i = dst.audioValues.erase(i);
+		else
+			++i;
+	}
+}
+
+//
+
 #define AUDIO_SCOPE AudioScope audioScope(audioMutex)
 
 struct AudioScope
@@ -95,19 +124,25 @@ struct AudioScope
 
 //
 
-AudioRealTimeConnection::AudioRealTimeConnection(AudioGraph *& in_audioGraph, AudioGraphContext * in_context, AudioValueHistorySet * in_audioValueHistorySet)
+AudioRealTimeConnection::AudioRealTimeConnection(
+	AudioGraph *& in_audioGraph,
+	AudioGraphContext * in_context,
+	AudioValueHistorySet * in_audioValueHistorySet,
+	AudioValueHistorySet * in_audioValueHistorySetCapture)
 	: GraphEdit_RealTimeConnection()
 	, audioGraph(nullptr)
 	, audioGraphPtr(nullptr)
 	, audioMutex(nullptr)
 	, isLoading(false)
 	, audioValueHistorySet(nullptr)
+	, audioValueHistorySetCapture(nullptr)
 	, context(nullptr)
 {
 	audioGraph = in_audioGraph;
 	audioGraphPtr = &in_audioGraph;
 	
 	audioValueHistorySet = in_audioValueHistorySet;
+	audioValueHistorySetCapture = in_audioValueHistorySetCapture;
 	
 	context = in_context;
 }
@@ -122,23 +157,19 @@ void AudioRealTimeConnection::updateAudioValues()
 	if (audioGraph == nullptr)
 		return;
 
-// todo : make a copy of the history data when we're done here
-//        this to avoid data races, where the audio thread is calling this method and providing more data
-//        while at the same time we're drawing visualizers
-
 	AUDIO_SCOPE;
 	
 	if (audioGraph->currentTickTraversalId < 0)
 		return;
 	
-	for (auto i = audioValueHistorySet->s_audioValues.begin(); i != audioValueHistorySet->s_audioValues.end(); )
+	for (auto i = audioValueHistorySet->audioValues.begin(); i != audioValueHistorySet->audioValues.end(); )
 	{
 		auto & socketRef = i->first;
 		auto & audioValueHistory = i->second;
 		
 		if (audioValueHistory.isActive() == false)
 		{
-			i = audioValueHistorySet->s_audioValues.erase(i);
+			i = audioValueHistorySet->audioValues.erase(i);
 		}
 		else
 		{
@@ -208,6 +239,13 @@ void AudioRealTimeConnection::updateAudioValues()
 	}
 }
 
+void AudioRealTimeConnection::captureAudioValues()
+{
+	AUDIO_SCOPE;
+	
+	audioValueHistorySet->captureInto(*audioValueHistorySetCapture);
+}
+
 void AudioRealTimeConnection::loadBegin()
 {
 	audioMutex->lock();
@@ -234,7 +272,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("nodeAdd", 0);
+	//LOG_DBG("nodeAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -279,7 +317,7 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("nodeRemove", 0);
+	//LOG_DBG("nodeRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -332,13 +370,13 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	audioGraph->nodes.erase(nodeItr);
 	
-	for (auto audioValueItr = audioValueHistorySet->s_audioValues.begin(); audioValueItr != audioValueHistorySet->s_audioValues.end(); )
+	for (auto audioValueItr = audioValueHistorySet->audioValues.begin(); audioValueItr != audioValueHistorySet->audioValues.end(); )
 	{
 		auto & socketRef = audioValueItr->first;
 		
 		if (socketRef.nodeId == nodeId)
 		{
-			audioValueItr = audioValueHistorySet->s_audioValues.erase(audioValueItr);
+			audioValueItr = audioValueHistorySet->audioValues.erase(audioValueItr);
 		}
 		else
 		{
@@ -352,7 +390,7 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("linkAdd", 0);
+	//LOG_DBG("linkAdd");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -365,9 +403,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 	{
 		if (srcNodeItr == audioGraph->nodes.end())
-			LOG_ERR("source node doesn't exist", 0);
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == audioGraph->nodes.end())
-			LOG_ERR("destination node doesn't exist", 0);
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}
@@ -382,9 +420,9 @@ void AudioRealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeI
 	if (input == nullptr || output == nullptr)
 	{
 		if (input == nullptr)
-			LOG_ERR("input node socket doesn't exist", 0);
+			LOG_ERR("input node socket doesn't exist");
 		if (output == nullptr)
-			LOG_ERR("output node socket doesn't exist", 0);
+			LOG_ERR("output node socket doesn't exist");
 		
 		return;
 	}
@@ -416,7 +454,7 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (isLoading)
 		return;
 	
-	//LOG_DBG("linkRemove", 0);
+	//LOG_DBG("linkRemove");
 	
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
@@ -429,9 +467,9 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
 	{
 		if (srcNodeItr == audioGraph->nodes.end())
-			LOG_ERR("source node doesn't exist", 0);
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == audioGraph->nodes.end())
-			LOG_ERR("destination node doesn't exist", 0);
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}
@@ -792,15 +830,16 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 	if (input->isConnected() == false)
 		return false;
 	
+	// note : this method operates on a copy of the audio data, which is why
+	//        we don't have to use a mutex
+	
 	if (input->type == kAudioPlugType_FloatVec)
 	{
-		AUDIO_SCOPE;
-		
 		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
-		auto & history = audioValueHistorySet->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->audioValues[ref];
 		
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
@@ -855,15 +894,16 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 	if (output == nullptr)
 		return false;
 	
+	// note : this method operates on a copy of the audio data, which is why
+	//        we don't have to use a mutex
+	
 	if (output->type == kAudioPlugType_FloatVec)
 	{
-		AUDIO_SCOPE;
-		
 		AudioValueHistory_SocketRef ref;
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
-		auto & history = audioValueHistorySet->s_audioValues[ref];
+		auto & history = audioValueHistorySetCapture->audioValues[ref];
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)

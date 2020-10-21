@@ -1,3 +1,6 @@
+#include "framework.h"
+
+// libgg includes
 #include "Calc.h"
 #include "picedit.h"
 #include "Traveller.h"

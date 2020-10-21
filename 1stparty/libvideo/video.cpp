@@ -30,6 +30,8 @@
 #include <atomic>
 
 #include "mediaplayer/MPVideoBuffer.h"
+
+#include "Multicore/ThreadName.h"
 #include "StringEx.h"
 
 static SDL_mutex * s_avcodecMutex = nullptr;
@@ -71,6 +73,7 @@ static int ExecMediaPlayerThread(void * param)
 		char threadName[1024];
 		sprintf_s(threadName, sizeof(threadName), "Media Player (%s)", context->openParams.filename.c_str());
 		cpuTimingSetThreadName(threadName);
+		SetCurrentThreadName(threadName);
 	}
 
 	SDL_LockMutex(context->mpTickMutex);

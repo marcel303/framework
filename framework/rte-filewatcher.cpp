@@ -181,7 +181,7 @@ void rteFileWatcher_Windows::tick()
 
 			if (!result)
 			{
-				LOG_ERR("failed to watch for next file change notification", 0);
+				LOG_ERR("failed to watch for next file change notification");
 			}
 		}
 	}

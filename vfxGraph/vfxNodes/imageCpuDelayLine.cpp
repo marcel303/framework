@@ -413,46 +413,34 @@ bool ImageCpuDelayLine::decode(const JpegData & jpegData, VfxImageCpuData & imag
 
 bool ImageCpuDelayLine::get(const int offset, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch, const float glitchiness)
 {
-	JpegData jpegData;
-	bool gotImageData = false;
-	
-	// make a copy of the data, so we can leave the mutex quickly again and let the worker thread do it's encode thing
-	
 	if (offset >= 0 && offset < historySize)
 	{
 		HistoryItem * item = history[offset];
 		
 		if (item->jpegData != nullptr)
 		{
-			memcpy(&jpegData, item->jpegData, sizeof(jpegData));
-			jpegData.bytes = new uint8_t[jpegData.numBytes];
-			memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
-			
 			if (imageTimestamp != nullptr)
 			{
 				*imageTimestamp = item->timestamp;
 			}
+			
+			return decode(*item->jpegData, imageData, glitch, glitchiness);
 		}
 		else
 		{
-			gotImageData = true;
-			
 			copyImage(item->imageData->image, imageData);
+			
+			return true;
 		}
 	}
-	
-	if (gotImageData)
-		return true;
 	else
-		return decode(jpegData, imageData, glitch, glitchiness);
+	{
+		return false;
+	}
 }
 
 bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData & imageData, double * imageTimestamp, const bool glitch, const float glitchiness)
 {
-	JpegData jpegData;
-	
-	// make a copy of the data, so we can leave the mutex quickly again and let the worker thread do it's encode thing
-	
 	HistoryItem * item = nullptr;
 	
 	for (auto & h : history)
@@ -465,17 +453,26 @@ bool ImageCpuDelayLine::getByTimestamp(const double timestamp, VfxImageCpuData &
 	
 	if (item != nullptr)
 	{
-		memcpy(&jpegData, item->jpegData, sizeof(jpegData));
-		jpegData.bytes = new uint8_t[item->jpegData->numBytes];
-		memcpy(jpegData.bytes, item->jpegData->bytes, item->jpegData->numBytes);
-		
 		if (imageTimestamp != nullptr)
 		{
 			*imageTimestamp = item->timestamp;
 		}
+		
+		if (item->jpegData != nullptr)
+		{
+			return decode(*item->jpegData, imageData, glitch, glitchiness);
+		}
+		else
+		{
+			copyImage(item->imageData->image, imageData);
+			
+			return true;
+		}
 	}
-	
-	return decode(jpegData, imageData, glitch, glitchiness);
+	else
+	{
+		return false;
+	}
 }
 
 void ImageCpuDelayLine::clearHistory()
@@ -736,7 +733,10 @@ void ImageCpuDelayLine::compressWait()
 	{
 		if (work.imageData != nullptr)
 		{
-			Verify(SDL_CondWait(doneEvent, mutex) == 0);
+			if (!work.isDone)
+			{
+				Verify(SDL_CondWait(doneEvent, mutex) == 0);
+			}
 			
 			// is the compression work done?
 			

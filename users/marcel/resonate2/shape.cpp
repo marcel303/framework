@@ -19,7 +19,7 @@ bool ShapeDefinition::loadFromFile(const char * filename)
 	
 	if (TextIO::load(filename, lines, lineEndings) == false)
 	{
-		LOG_ERR("failed to load text from file", 0);
+		LOG_ERR("failed to load text from file");
 		return false;
 	}
 	else

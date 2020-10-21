@@ -86,7 +86,7 @@ void ofxJpegGlitch::glitch() {
     int cur = 0;
     MarkerType startMarker = calcMarkerType(bytes, cur);
     if(startMarker != MT_SOI) {
-        LOG_ERR("this isn't jpeg", 0);
+        LOG_ERR("this isn't jpeg");
         return;
     }
     cur += 2;

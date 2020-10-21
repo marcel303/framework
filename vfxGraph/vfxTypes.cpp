@@ -171,7 +171,7 @@ void VfxTimeline::load(XMLElement * elem)
 		}
 		else
 		{
-			LOG_WRN("timeline key allocation failed", 0);
+			LOG_WRN("timeline key allocation failed");
 		}
 	}
 

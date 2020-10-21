@@ -103,7 +103,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 		, rng()
 	{
 		uiState.sx = sx;
-		uiState.textBoxTextOffset = 40;
+		uiState.textBoxTextOffset = 150;
 	}
 	
 	virtual ~ResourceEditor_Wavefield2D() override

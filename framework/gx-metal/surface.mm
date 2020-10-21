@@ -33,7 +33,7 @@ void Surface::blitTo(Surface * surface) const
 
 void blitBackBufferToSurface(Surface * surface)
 {
-	AssertMsg(false, "blitBackBufferToSurface not yet implemented", 0);
+	AssertMsg(false, "blitBackBufferToSurface not yet implemented");
 }
 
 #endif

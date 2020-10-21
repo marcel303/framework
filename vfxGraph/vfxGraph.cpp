@@ -658,7 +658,7 @@ VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibr
 			
 			if (found == false)
 			{
-				logDebug("adding dynamic input socket value. socketName=%s, socketValue=%s", inputName.c_str(), inputValue.c_str());
+				logDebug("adding dynamic input socket value. nodeId=%d, socketName=%s, socketValue=%s", node.id, inputName.c_str(), inputValue.c_str());
 				
 				VfxDynamicInputSocketValue inputSocketValue;
 				inputSocketValue.nodeId = node.id;

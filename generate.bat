@@ -4,7 +4,7 @@ where /q cmake
 IF ERRORLEVEL 1 (
 	echo CMake not found. Please install CMake and make sure to add its location to the system path.
 	pause
-	exit /b
+	exit /b 1
 )
 
 rem use command line argument for selecting build target
@@ -31,13 +31,13 @@ set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
 rem build chibi binary
 mkdir "chibi-build\chibi"
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Debug ../../chibi && cmake --build . || cd %~dp0 && exit /b
-cd %~dp0 || exit /b
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Debug ../../chibi && cmake --build . || cd %~dp0 && exit /b 1
+cd %~dp0 || exit /b 1
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files"
-%chibi_bin% -g . chibi-build/cmake-files %target_arg% || cd %~dp0 && exit /b
-cd %~dp0 || exit /b
+%chibi_bin% -g . chibi-build/cmake-files %target_arg% || cd %~dp0 && exit /b 1
+cd %~dp0 || exit /b 1
 
 rem generate Visual Studio project file
 
@@ -52,7 +52,7 @@ IF %success% == "false" (
 		set success="true"
 		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
-	cd %~dp0 || exit /b
+	cd %~dp0 || exit /b 1
 )
 
 IF %success% == "false" (
@@ -64,7 +64,7 @@ IF %success% == "false" (
 		set success="true"
 		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
-	cd %~dp0 || exit /b
+	cd %~dp0 || exit /b 1
 )
 
 IF %success% == "false" (
@@ -76,5 +76,5 @@ IF %success% == "false" (
 		set success="true"
 		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
-	cd %~dp0 || exit /b
+	cd %~dp0 || exit /b 1
 )

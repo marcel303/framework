@@ -9,7 +9,6 @@ struct ParameterComponentMgr;
 namespace parameterUi
 {
 	// todo : open folders and scroll to parameter when a single parameter matches the address filter
-	// todo : show closed folders when a folder has matching parameters
 	// todo : option + click to unfold all underlying folders
 
 	enum Flags

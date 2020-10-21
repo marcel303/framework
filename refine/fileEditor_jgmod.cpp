@@ -5,8 +5,6 @@
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
 
-#include "audiooutput/AudioOutput_PortAudio.h"
-
 #include "fileEditor_jgmod.h"
 #include "imgui.h"
 

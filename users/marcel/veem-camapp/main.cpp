@@ -227,7 +227,7 @@ struct Recorder
 
 		if (!result)
 		{
-			LOG_ERR("failed to initialize PS3 eye camera", 0);
+			LOG_ERR("failed to initialize PS3 eye camera");
 			shut();
 			return false;
 		}
@@ -285,7 +285,7 @@ struct Recorder
 			
 			self->eye->getFrame(self->frameData);
 			
-			//LOG_DBG("got frame data!", 0);
+			//LOG_DBG("got frame data!");
 			
 			// note : we copy the OSC address prefix to ensure it's thread safe to use later
 			//        it may change and become invalid due to ui interactions otherwise
@@ -546,7 +546,11 @@ void changeDirectory(const char * path);
 
 int main(int argc, char * argv[])
 {
+#if DO_CONTROLLER
 	setupPaths(CHIBI_RESOURCE_PATHS);
+#else
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
 
 #if 1
 	// show connected devices

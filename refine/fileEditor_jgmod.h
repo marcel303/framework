@@ -8,7 +8,7 @@
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
 
-#include "audiooutput/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_Native.h"
 
 struct FileEditor_Jgmod : FileEditor
 {
@@ -21,7 +21,7 @@ struct FileEditor_Jgmod : FileEditor
 	
 	JGVIS vis;
 	
-	AudioOutput_PortAudio audioOutput;
+	AudioOutput_Native audioOutput;
 	AudioStream_AllegroVoiceMixer voiceMixer;
 	
 	FileEditor_Jgmod(const char * path);

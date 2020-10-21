@@ -1,0 +1,32 @@
+OSC Address	Type	Default Value	Has Range	Range Min	Range Max	Enumeration Values
+/artnetToDmx/artnet/universe	i	0	false			
+/artnetToDmx/artnet/firstChannel	i	0	true	0	128	
+/artnetToDmx/artnet/numChannels	i	4	true	0	128	
+/artnetToDmx/dmx/testMode	s (enum)	Off	false			Off, Channel 1, Channel 2, Channel 3, Channel 4, All channels, Single color
+/artnetToDmx/dmx/outputEnabled	b	true	false			
+/artnetToDmx/dmx/outputZeroes	b	false	false			
+/artnetToDmx/dmx/singleColor	f f f f	1.00 1.00 1.00 1.00 	false			
+/Artnet to Ledstrip/artnet/universe	i	0	false			
+/Artnet to Ledstrip/ledStrip/brightness	f	1.00	true	0.00	1.00	
+/Artnet to Ledstrip/ledStrip/channel1Brightness	f	1.00	true	0.00	1.00	
+/Artnet to Ledstrip/ledStrip/channel2Brightness	f	1.00	true	0.00	1.00	
+/Artnet to Ledstrip/ledStrip/channel3Brightness	f	1.00	true	0.00	1.00	
+/Artnet to Ledstrip/ledStrip/channel4Brightness	f	1.00	true	0.00	1.00	
+/Artnet to Ledstrip/ledStrip/gamma	f	2.00	true	0.00	4.00	
+/Artnet to Ledstrip/ledStrip/testMode	s (enum)	Off	false			Off, Channel 1, Channel 2, Channel 3, Channel 4, All channels, Single color
+/Artnet to Ledstrip/ledStrip/singleColor	f f f f	1.00 1.00 1.00 1.00 	false			
+/tcpToI2S(4ch)/volume	f	1.00	true	0.00	1.00	
+/tcpToI2S(4ch)/channel1Volume	f	1.00	true	0.00	1.00	
+/tcpToI2S(4ch)/channel2Volume	f	1.00	true	0.00	1.00	
+/tcpToI2S(4ch)/channel3Volume	f	1.00	true	0.00	1.00	
+/tcpToI2S(4ch)/channel4Volume	f	1.00	true	0.00	1.00	
+/tcpToI2S(4ch)/muted	b	false	false			
+/tcpToI2S(4ch)/soloChannel	s (enum)	Off	false			Off, Channel 1, Channel 2, Channel 3, Channel 4
+/tcpToI2S(4ch)/testMode	s (enum)	Off	false			Off, Sine, 440Hz, Sine, 4000Hz, Square, 440Hz
+/modulation/ledstrip_X_loudness/dryWet	f	1.00	true	0.00	1.00	
+/modulation/ledstrip_X_loudness/allChannels	s (enum)	None	false			None, Channel 1, Channel 2, Channel 3, Channel 4
+/modulation/ledstrip_X_loudness/channel1	s (enum)	None	false			None, Channel 1, Channel 2, Channel 3, Channel 4
+/modulation/ledstrip_X_loudness/channel2	s (enum)	None	false			None, Channel 1, Channel 2, Channel 3, Channel 4
+/modulation/ledstrip_X_loudness/channel3	s (enum)	None	false			None, Channel 1, Channel 2, Channel 3, Channel 4
+/modulation/ledstrip_X_loudness/channel4	s (enum)	None	false			None, Channel 1, Channel 2, Channel 3, Channel 4
+/modulation/ledstrip_X_loudness/loudnessDecay	f	1.00	true	0.00	1.00	
