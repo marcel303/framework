@@ -2379,11 +2379,11 @@ static void gxEndDraw()
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
 	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-		[s_activeRenderPass->encoder setFragmentTexture:nullptr atIndex:i];
-	
+	static id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
+	static id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
+	[s_activeRenderPass->encoder setVertexTextures:vsTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxVsTextures)];
+	[s_activeRenderPass->encoder setFragmentTextures:psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
+
 	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
 	s_currentRenderPipelineState = nullptr;
