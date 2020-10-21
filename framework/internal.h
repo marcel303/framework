@@ -1046,7 +1046,7 @@ struct Stack
 	{
 		fassert(stackSize > 0);
 		--stackSize;
-		memset(&stack[stackSize], 0, sizeof(Type));
+		stack[stackSize] = Type();
 	}
 	
 	Type popValue()
