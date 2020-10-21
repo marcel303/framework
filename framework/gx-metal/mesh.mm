@@ -52,16 +52,14 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	
 	id <MTLDevice> device = metal_get_device();
 	
-	id <MTLBuffer> buffer = [device newBufferWithLength:(numBytes > 0 ? numBytes : 1) options:MTLResourceStorageModeManaged];
-	
-	memcpy(buffer.contents, bytes, numBytes);
-	
-	NSRange range;
-	range.location = 0;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
-	
-	m_buffer = buffer;
+	if (numBytes > 0)
+	{
+		m_buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	}
+	else
+	{
+		m_buffer = [device newBufferWithLength:1 options:MTLResourceStorageModeManaged];
+	}
 }
 
 void GxVertexBuffer::free()
@@ -148,17 +146,14 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	id <MTLDevice> device = metal_get_device();
 	
-	id <MTLBuffer> buffer = [device newBufferWithLength:(numBytes > 0 ? numBytes: 4) options:MTLResourceStorageModeManaged];
-	
-	void * bufferContents = buffer.contents;
-	memcpy(bufferContents, bytes, numBytes);
-	
-	NSRange range;
-	range.location = 0;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
-	
-	m_buffer = buffer;
+	if (numBytes > 0)
+	{
+		m_buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	}
+	else
+	{
+		m_buffer = [device newBufferWithLength:4 options:MTLResourceStorageModeManaged];
+	}
 }
 
 void GxIndexBuffer::free()
