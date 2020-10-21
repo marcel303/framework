@@ -1562,6 +1562,10 @@ void Framework::process()
 	{
 		model->updateAnimation(timeStep);
 	}
+	
+#if FRAMEWORK_USE_SDL && ENABLE_METAL
+	metal_capture_boundary();
+#endif
 }
 
 void Framework::processAction(const std::string & action, const Dictionary & args)

@@ -203,12 +203,15 @@ void metal_make_active(SDL_Window * window)
 		activeWindowData = i->second;
 }
 
+void metal_capture_boundary()
+{
+	[queue insertDebugCaptureBoundary];
+}
+
 #include "renderTarget.h"
 
 void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
-	[queue insertDebugCaptureBoundary]; // todo : should be done @ framework::process()
-	
 	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 	[activeWindowData->current_drawable retain];
 	
