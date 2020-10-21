@@ -704,13 +704,16 @@ void popRenderPass()
 	{
 		auto & new_pd = s_renderPasses.top();
 		
+		char passName[32];
+		sprintf_s(passName, sizeof(passName), "%s (cont)", new_pd.passName);
+		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName, new_pd.backingScale);
 		}
 	}
 	
