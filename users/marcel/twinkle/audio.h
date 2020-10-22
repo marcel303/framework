@@ -3,6 +3,7 @@
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
+#include <string.h>
 
 class MyAudioStream : public AudioStream
 {
