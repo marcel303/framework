@@ -146,7 +146,7 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	
 	if (mFile == 0)
 	{
-		LOG_ERR("Vosbis Audio Stream: failed to open file (%s)", fileName);
+		LOG_ERR("Vorbis Audio Stream: failed to open file (%s)", fileName);
 		Close();
 		return;
 	}
@@ -156,7 +156,7 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	int result = ov_open(mFile, mVorbisFile, NULL, 0);
 	if (result != 0)
 	{
-		LOG_ERR("Vosbis Audio Stream: failed to create vorbis decoder (%d)", result);
+		LOG_ERR("Vorbis Audio Stream: failed to create vorbis decoder (%d)", result);
 		Close();
 		return;
 	}

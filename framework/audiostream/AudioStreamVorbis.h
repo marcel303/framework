@@ -27,8 +27,9 @@
 
 #pragma once
 
+#include "AudioStream.h"
+#include <stdio.h> // FILE
 #include <string>
-#include "AudioMixer.h"
 
 class AudioStream_Vorbis : public AudioStream
 {
