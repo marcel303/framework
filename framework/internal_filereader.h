@@ -9,16 +9,25 @@ public:
 	FileReader()
 	{
 		file = 0;
+		ownsFile = false;
+	}
+	
+	FileReader(FILE * in_file)
+	{
+		file = in_file;
+		ownsFile = false;
 	}
 	
 	~FileReader()
 	{
-		close();
+		if (ownsFile)
+			close();
 	}
 	
 	bool open(const char * filename, bool textMode)
 	{
 		file = fopen(filename, textMode ? "rt" : "rb");
+		ownsFile = true;
 		
 		return file != 0;
 	}
@@ -29,6 +38,7 @@ public:
 		{
 			fclose(file);
 			file = 0;
+			ownsFile = false;
 		}
 	}
 	
@@ -60,5 +70,16 @@ public:
 		return fseek(file, numBytes, SEEK_CUR) == 0;
 	}
 	
+	size_t position() const
+	{
+		return ftell(file);
+	}
+	
+	bool seek(size_t position)
+	{
+		return fseek(file, position, SEEK_SET) == 0;
+	}
+	
 	FILE * file;
+	bool ownsFile;
 };
