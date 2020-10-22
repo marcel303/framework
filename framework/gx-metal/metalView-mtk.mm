@@ -25,10 +25,58 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#pragma once
-
 #if defined(IPHONEOS)
-	#include "metalView-mtk.h"
-#else
-	#include "metalView-ns.h"
+
+#import "framework.h"
+
+#if ENABLE_METAL
+
+// todo : for MSAA we would need to create an additional backing layer, and resolve it on endDraw
+
+#import "metalView-mtk.h"
+
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+@implementation MetalView
+
++ (Class)layerClass
+{
+    return [CAMetalLayer class];
+}
+
+- (BOOL)wantsUpdateLayer
+{
+    return YES;
+}
+
+- (CALayer*)makeBackingLayer
+{
+    return [self.class.layerClass layer];
+}
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync
+{
+    if ((self = [super initWithFrame:frame]))
+    {
+		self.depthTexture = nil;
+		
+    	self.opaque = YES;
+    	self.device = device;
+    	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+    	self.framebufferOnly = YES;
+		
+    	if (wantsDepthBuffer)
+    	{
+			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+		}
+    }
+
+    return self;
+}
+
+@end
+
+#endif
+
 #endif

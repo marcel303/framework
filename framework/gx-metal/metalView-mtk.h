@@ -27,8 +27,13 @@
 
 #pragma once
 
-#if defined(IPHONEOS)
-	#include "metalView-mtk.h"
-#else
-	#include "metalView-ns.h"
-#endif
+#import <UIKit/UIView.h>
+#import <MetalKit/MTKView.h>
+
+@interface MetalView : MTKView
+
+@property (nonatomic, assign) id <MTLTexture> depthTexture;
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
+
+@end
