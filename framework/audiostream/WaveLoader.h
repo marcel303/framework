@@ -30,8 +30,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-class FileReader;
-
 // RIFF/WAVE loader constants
 
 #define WAVE_FORMAT_PCM 1

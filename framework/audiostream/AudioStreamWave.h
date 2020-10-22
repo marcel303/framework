@@ -61,4 +61,7 @@ private:
 	int mPosition;
 	bool mLoop;
 	bool mHasLooped;
+	int mCompressionType;
+	int mBitDepth;
+	int mNumBytesPerSample;
 };
