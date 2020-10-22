@@ -1902,28 +1902,11 @@ void Framework::endDraw()
 	if (enableDrawTiming)
 		gpuTimingEnd();
 
-	if (globals.currentWindow->hasSurface())
+	popRenderPass();
+	
+	if (globals.currentWindow->hasSurface() == false)
 	{
-		popRenderPass();
-	}
-	else
-	{
-	#if FRAMEWORK_USE_SDL
-	#if ENABLE_OPENGL
-		popRenderPass();
-		
-		// flip back buffers
-		
-		SDL_GL_SwapWindow(globals.currentWindow->getWindow());
-	#endif
-
-	#if ENABLE_METAL
-	// todo : replace with popRenderPass
-		metal_draw_end();
-
-	// todo : add metal_present function
-	#endif
-	#endif
+		present();
 	}
 }
 
@@ -1932,6 +1915,13 @@ void Framework::present()
 #if FRAMEWORK_USE_OVR_MOBILE
 	if (vrMode)
 		frameworkOvr.submitFrameAndPresent();
+#elif FRAMEWORK_USE_SDL
+	// schedule the back buffer for presentation
+#if ENABLE_OPENGL
+	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
+#elif ENABLE_METAL
+	metal_present();
+#endif
 #endif
 }
 

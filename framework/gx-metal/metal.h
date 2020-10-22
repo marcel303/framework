@@ -43,6 +43,7 @@ void metal_make_active(SDL_Window * window);
 void metal_capture_boundary();
 void metal_acquire_drawable();
 void metal_draw_end();
+void metal_present();
 void metal_set_viewport(const int sx, const int sy);
 void metal_set_scissor(const int x, const int y, const int sx, const int sy);
 void metal_clear_scissor();

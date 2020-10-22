@@ -243,6 +243,19 @@ void metal_draw_end()
 	activeWindowData->current_drawable = nullptr;
 }
 
+void metal_present()
+{
+	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+	
+	[cmdbuf presentDrawable:activeWindowData->current_drawable];
+	
+	[activeWindowData->current_drawable release];
+	activeWindowData->current_drawable = nullptr;
+	
+	[cmdbuf commit];
+	cmdbuf = nil;
+}
+
 void metal_set_viewport(const int sx, const int sy)
 {
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
