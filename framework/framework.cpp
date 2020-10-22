@@ -1854,7 +1854,10 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	else
 	{
 	#if FRAMEWORK_USE_SDL
-	#if ENABLE_OPENGL
+	#if ENABLE_METAL
+		metal_acquire_drawable();
+	#endif
+	
 		if (enableDrawTiming)
 			gpuTimingBegin(frameworkDraw);
 		
@@ -1863,18 +1866,8 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 			scale255(g),
 			scale255(b),
 			scale255(a));
-		
-		pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
-	#endif
-
-	#if ENABLE_METAL
-	// todo : replace with beginBackbufferRenderPass
-		metal_draw_begin(
-			scale255(r),
-			scale255(g),
-			scale255(b),
-			scale255(a), depth);
-	#endif
+			
+		pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer pass");
 	#endif
 	}
 	
@@ -1919,17 +1912,13 @@ void Framework::endDraw()
 	#if ENABLE_OPENGL
 		popRenderPass();
 		
-		// check for errors
-		
-		checkErrorGL();
-		
 		// flip back buffers
 		
 		SDL_GL_SwapWindow(globals.currentWindow->getWindow());
 	#endif
 
 	#if ENABLE_METAL
-	// todo : replace with endRenderPass
+	// todo : replace with popRenderPass
 		metal_draw_end();
 
 	// todo : add metal_present function

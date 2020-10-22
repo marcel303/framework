@@ -210,59 +210,37 @@ void metal_capture_boundary()
 
 #include "renderTarget.h"
 
-void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
+void metal_acquire_drawable()
 {
+	/*
+	Note that the current scheme, where the next drawable is acquired during 'framework.beginDraw' and scheduled for present during 'endDraw' follows the recommendation set out by Apple, which is to acquire a drawable for as short a duration as possible.
+
+	source: https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/Drawables.html
+ 
+		"To hold a drawable as briefly as possible, follow these two steps:
+
+		Always acquire a drawable as late as possible; preferably, immediately before encoding an on-screen render pass. A frame’s CPU work may include dynamic data updates and off-screen render passes that you can perform before acquiring a drawable.
+
+		Always release a drawable as soon as possible; preferably, immediately after finalizing a frame’s CPU work. It is highly advisable to contain your rendering loop within an autorelease pool block to avoid possible deadlock situations with multiple drawables."
+	*/
+	
 	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 	[activeWindowData->current_drawable retain];
-	
-	pushBackbufferRenderPass(true, Color(r, g, b, a), true, depth, "Framebuffer pass");
 }
 
 void metal_draw_end()
 {
-	Assert(s_activeRenderPass != nullptr);
-	
-	gxEndDraw();
-	
 	auto & pd = *s_activeRenderPass;
-	
-// todo : endRenderPass ?
 
-	[pd.encoder endEncoding];
-
+	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is schedule (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
 	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
-	[pd.cmdbuf commit];
-	//[activeWindowData->current_drawable present]; // todo : research the appropriate drawable presentation method
 	
-	//
-	
-	[pd.encoder release];
-	[pd.renderdesc release];
-	[pd.cmdbuf release];
-	
-	pd.encoder = nullptr;
-	pd.renderdesc = nullptr;
-	pd.cmdbuf = nullptr;
-	
-	[activeWindowData->current_drawable release];
-	activeWindowData->current_drawable = nullptr;
-	
-	s_renderPasses.pop();
+	popRenderPass();
 	
 	Assert(s_renderPasses.empty());
 	
-	s_activeRenderPass = nullptr;
-	
-	renderState.renderPass = RenderPipelineState::RenderPass();
-	
-#if 1 // todo : remove once we call popRenderPass here
-	// restore state
-	
-	gxMatrixMode(GX_PROJECTION);
-	gxPopMatrix();
-	gxMatrixMode(GX_MODELVIEW);
-	gxPopMatrix();
-#endif
+	[activeWindowData->current_drawable release];
+	activeWindowData->current_drawable = nullptr;
 }
 
 void metal_set_viewport(const int sx, const int sy)
