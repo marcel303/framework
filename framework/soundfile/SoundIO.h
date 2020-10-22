@@ -48,3 +48,6 @@ public:
 };
 
 SoundData * loadSound(const char * filename);
+
+SoundData * loadSound_OGG(const char * filename);
+SoundData * loadSound_WAV(const char * filename);

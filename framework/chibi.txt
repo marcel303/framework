@@ -28,8 +28,8 @@ library soundfile
 	depend_library audiostream
 	depend_library audiostream-vorbis
 
-	add_files soundfile/SoundIO.cpp
-	add_files soundfile/SoundIO.h
+	scan_files cpp path soundfile
+	scan_files h   path soundfile
 
 	header_path . expose
 
