@@ -43,6 +43,7 @@ namespace Videosync
 	#if defined(WINDOWS)
 		// disable nagle & linger
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(m_socket, SOL_SOCKET, SO_REUSEADDR, I_HATE_WINDOWS &set_true, sizeof(set_true));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
 	#else
 		// disable nagle & linger

@@ -28,6 +28,7 @@ namespace Videosync
 	
 	#if defined(WIN32)
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(m_clientSocket, SOL_SOCKET, SO_REUSEADDR, I_HATE_WINDOWS &set_true, sizeof(set_true));
 		setsockopt(m_clientSocket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
 	#else
 	#if defined(MACOS)
