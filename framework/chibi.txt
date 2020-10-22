@@ -11,6 +11,14 @@ library audiostream
 
 	header_path . expose
 
+library audiostream-wave
+
+	depend_library audiostream
+	depend_library waveloader
+
+	add_files audiostream/AudioStreamWave.cpp
+	add_files audiostream/AudioStreamWave.h
+
 library audiostream-vorbis
 	
 	depend_library audiostream
@@ -21,12 +29,20 @@ library audiostream-vorbis
 
 	header_path . expose
 
-library soundfile
+library waveloader
 
-# todo : add WAVE audio stream library and depend on it here
+	depend_library libgg
+
+	add_files audiostream/WaveLoader.cpp
+	add_files audiostream/WaveLoader.h
+
+	header_path . expose
+
+library soundfile
 
 	depend_library audiostream
 	depend_library audiostream-vorbis
+	depend_library waveloader
 
 	scan_files cpp path soundfile
 	scan_files h   path soundfile
@@ -53,6 +69,7 @@ library framework
 
 	depend_library audiostream
 	depend_library audiostream-vorbis
+	depend_library audiostream-wave
 	depend_library glew
 	depend_library msdfgen
 	depend_library soundfile
