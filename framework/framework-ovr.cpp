@@ -81,15 +81,35 @@ bool FrameworkOvr::init()
     }
 
 	StartTime = getTimeInSeconds();
+	
+	// initialize vr hands and pointers
+	
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrHand[i].init((VrSide)i);
+
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrPointer[i].init((VrSide)i);
 
 	return true;
 }
 
 void FrameworkOvr::shutdown()
 {
+	// shut down vr hands and pointers
+	
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrHand[i].shut();
+	
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrPointer[i].shut();
+	
+	// free frame buffers
+	
     for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
         FrameBuffer[eyeIndex].shut();
 
+	// shut down vr api
+	
 	vrapi_Shutdown();
 
 	Java.Vm->DetachCurrentThread();
@@ -97,6 +117,13 @@ void FrameworkOvr::shutdown()
 
 void FrameworkOvr::process()
 {
+	// update haptics (from the previous frame)
+	
+	for (auto & pointer : vrPointer)
+	{
+		pointer.updateHaptics();
+	}
+	
 	// process app events
 
 	processEvents();
@@ -110,6 +137,38 @@ void FrameworkOvr::process()
     TimeStep = PredictedDisplayTime - StartTime;
 
     StartTime = PredictedDisplayTime;
+	
+    // update input state
+	
+	for (auto & hand : vrHand)
+		hand.updateInputState();
+
+	for (auto & pointer : vrPointer)
+		pointer.updateInputState();
+	
+	// determine the active pointer
+
+	for (int i = 0; i < 2; ++i)
+		vrPointer[i].isPrimary = false;
+	
+	int activeInputDeviceId;
+	if (!vrapi_GetPropertyInt(&frameworkOvr.Java, VRAPI_ACTIVE_INPUT_DEVICE_ID, &activeInputDeviceId))
+		activeInputDeviceId = -1;
+	
+	if (activeInputDeviceId == -1)
+	{
+		logWarning("failed to get active input device id from vrapi");
+		vrPointer[0].isPrimary = true;
+	}
+	else
+	{
+		for (int i = 0; i < 2; ++i)
+		{
+			Assert(vrPointer[i].DeviceID != -1);
+			if (vrPointer[i].DeviceID == activeInputDeviceId)
+				vrPointer[i].isPrimary = true;
+		}
+	}
 }
 
 void FrameworkOvr::nextFrame()

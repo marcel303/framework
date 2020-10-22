@@ -26,12 +26,6 @@ public:
 	bool wantsToVibrate = false; // when set to true, the pointer will perform haptic vribration (if supported)
 
 public:
-	virtual void init(VrSide side) = 0;
-	virtual void shut() = 0;
-	
-	virtual void updateInputState() = 0;
-	virtual void updateHaptics() = 0;
-	
 	Mat4x4 getTransform(Vec3Arg vrOrigin) const;
 	
 public:
@@ -63,18 +57,18 @@ public:
 class VrPointer : public VrPointerBase
 {
 private:
+	friend class FrameworkOvr;
+	
 	VrSide side = VrSide_Undefined;
 	
 	ovrDeviceID DeviceID = -1; // cached by updateInputState. used by updateHaptics()
 
 public:
-	virtual void init(VrSide side) override final;
-	virtual void shut() override final;
+	void init(VrSide side);
+	void shut();
 	
-	virtual void updateInputState() override final;
-	virtual void updateHaptics() override final;
-
-	ovrDeviceID getOvrDeviceId() const { return DeviceID; }
+	void updateInputState();
+	void updateHaptics();
 };
 
 #else
@@ -82,11 +76,6 @@ public:
 class VrPointer : public VrPointerBase
 {
 public:
-	virtual void init(VrSide side) override final { }
-	virtual void shut() override final { }
-	
-	virtual void updateInputState() override final { }
-	virtual void updateHaptics() override final { }
 };
 
 #endif

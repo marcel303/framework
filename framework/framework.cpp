@@ -86,10 +86,6 @@
 
 #if FRAMEWORK_USE_OVR_MOBILE
 	#include "framework-ovr.h"
-
-	// todo : remove these include once controller input is handled more nicely
-	#include <VrApi_Helpers.h>
-	#include <VrApi_Input.h>
 #endif
 
 // -----
@@ -612,14 +608,6 @@ bool Framework::init(int sx, int sy)
 	}
 #endif
 
-	// initialize vr hands and pointers
-	
-	for (int i = 0; i < VrSide_COUNT; ++i)
-		vrHand[i].init((VrSide)i);
-
-	for (int i = 0; i < VrSide_COUNT; ++i)
-		vrPointer[i].init((VrSide)i);
-	
 	// initialize built-in shaders
 	
 	fassert(globals.builtinShaders == nullptr);
@@ -713,14 +701,6 @@ bool Framework::shutdown()
 	g_fontCacheMSDF.clear();
 #endif
 	g_glyphCache.clear();
-	
-	// shut down vr hands and pointers
-	
-	for (int i = 0; i < VrSide_COUNT; ++i)
-		vrHand[i].shut();
-		
-	for (int i = 0; i < VrSide_COUNT; ++i)
-		vrPointer[i].shut();
 	
 #if USE_FREETYPE
 	// shut down FreeType
@@ -1015,13 +995,6 @@ void Framework::process()
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();
-	
-	// update haptics
-	
-	for (auto & pointer : vrPointer)
-	{
-		pointer.updateHaptics();
-	}
 	
 #if FRAMEWORK_USE_SDL
 	// poll SDL event queue
@@ -1454,40 +1427,6 @@ void Framework::process()
 
 	timeStep = float(frameworkOvr.TimeStep);
 	time = frameworkOvr.PredictedDisplayTime;
-	
-	// update input state
-
-	for (auto & hand : vrHand)
-		hand.updateInputState();
-
-	for (auto & pointer : vrPointer)
-		pointer.updateInputState();
-	
-	// determine the active pointer
-
-	for (int i = 0; i < 2; ++i)
-		vrPointer[i].isPrimary = false;
-	
-	bool hasPrimaryPointer = false;
-	int activeInputDeviceId = -1;
-	if (vrapi_GetPropertyInt(&frameworkOvr.Java, VRAPI_ACTIVE_INPUT_DEVICE_ID, &activeInputDeviceId))
-	{
-		for (int i = 0; i < 2; ++i)
-		{
-			Assert(vrPointer[i].getOvrDeviceId() != -1);
-			if (vrPointer[i].getOvrDeviceId() == activeInputDeviceId)
-			{
-				vrPointer[i].isPrimary = true;
-				hasPrimaryPointer = true;
-			}
-		}
-	}
-	
-	if (hasPrimaryPointer == false)
-	{
-		vrPointer[0].isPrimary = true;
-		hasPrimaryPointer = true;
-	}
 
 	if (vrMode == false)
 	{
@@ -1500,9 +1439,9 @@ void Framework::process()
 			};
 
 		bool pointerTransformIsValid[2] = { };
-		int buttonMasks[2] = { 0, 0 };
+		int buttonMasks[2] = { };
 
-		int activePointer = 0;
+		int activePointer = -1;
 
 		for (int i = 0; i < 2; ++i)
 		{
@@ -1516,18 +1455,15 @@ void Framework::process()
 				pointerTransform[i] = pointer.getTransform(vrOrigin);
 				pointerTransformIsValid[i] = true;
 			}
-			else
-				pointerTransformIsValid[i] = false;
 
-			buttonMasks[i] =
-				int(pointer.isDown(VrButton_Trigger) << 0) |
-				int(pointer.isDown(VrButton_GripTrigger) << 1);
+			for (int j = 0; j < VrButton_COUNT; ++j)
+				buttonMasks[i] |= int(pointer.isDown((VrButton)j)) << j;
 		}
 
 		framework.tickVirtualDesktop(
-			pointerTransform[activePointer],
-			pointerTransformIsValid[activePointer],
-			buttonMasks[activePointer],
+			activePointer == -1 ? Mat4x4(true) : pointerTransform[activePointer],
+			activePointer == -1 ? false : pointerTransformIsValid[activePointer],
+			activePointer == -1 ? 0 : buttonMasks[activePointer],
 			false);
 
 		globals.currentWindow->getWindowData()->makeActive();
