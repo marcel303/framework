@@ -9,6 +9,9 @@ library audiostream
 
 	add_files audiostream/AudioStream.h
 
+	add_files audiostream/AudioStreamResampler.cpp
+	add_files audiostream/AudioStreamResampler.h
+
 	header_path . expose
 
 library audiostream-wave
