@@ -61,7 +61,7 @@ private:
 	int32_t mDurationInFrames;
 	int32_t mPositionInFrames;
 	bool mLoop;
-	bool mHasLooped; // todo : should be atomic ?
+	bool mHasLooped;
 	
 	int32_t mDataOffset;
 	int16_t mCompressionType;
