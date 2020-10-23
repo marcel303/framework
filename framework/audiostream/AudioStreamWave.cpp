@@ -32,6 +32,8 @@
 #include "Debugging.h"
 #include "Log.h"
 
+#include <string.h>
+
 AudioStreamWave::AudioStreamWave()
 	: mFile(0)
 	, mNumChannels(0)
