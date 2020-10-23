@@ -94,6 +94,7 @@ class SoundPlayer_AudioOutput
 	//
 	
 	class AudioStream_Vorbis * m_musicStream;
+	class AudioStreamResampler * m_musicStreamResampler;
 	float m_musicVolume;
 	
 	//
@@ -200,6 +201,7 @@ class SoundPlayer_PortAudio
 	//
 	
 	class AudioStream_Vorbis * m_musicStream;
+	class AudioStreamResampler * m_musicStreamResampler;
 	float m_musicVolume;
 	
 	//

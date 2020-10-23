@@ -27,6 +27,7 @@
 
 #include "audio.h"
 #include "audiooutput/AudioOutput.h"
+#include "audiostream/AudioStreamResampler.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
@@ -174,7 +175,7 @@ void SoundPlayer_AudioOutput::generateAudio(AudioSample * __restrict samples, co
 		{
 			num_mixed_voices++;
 			
-			const int numSamplesRead = m_musicStream->Provide(numSamples, samples);
+			const int numSamplesRead = m_musicStreamResampler->Provide(numSamples, samples);
 			
 			for (int i = 0; i < numSamplesRead; ++i)
 			{
@@ -348,6 +349,7 @@ SoundPlayer_AudioOutput::SoundPlayer_AudioOutput()
 	//
 	
 	m_musicStream = nullptr;
+	m_musicStreamResampler = nullptr;
 	m_musicVolume = 0.f;
 	
 	//
@@ -378,7 +380,9 @@ bool SoundPlayer_AudioOutput::init(int numSources)
 	// create music source
 	
 	fassert(m_musicStream == nullptr);
+	fassert(m_musicStreamResampler == nullptr);
 	m_musicStream = new AudioStream_Vorbis();
+	m_musicStreamResampler = new AudioStreamResampler();
 	m_musicVolume = 1.f;
 	
 	// initialize audio output
@@ -401,7 +405,9 @@ bool SoundPlayer_AudioOutput::shutdown()
 	// destroy music source
 	
 	delete m_musicStream;
+	delete m_musicStreamResampler;
 	m_musicStream = nullptr;
+	m_musicStreamResampler = nullptr;
 	m_musicVolume = 0.f;
 	
 	// destroy audio sources
@@ -515,8 +521,7 @@ void SoundPlayer_AudioOutput::playMusic(const char * filename, const bool loop)
 	MutexScope scope(m_mutex);
 	
 	m_musicStream->Open(filename, loop);
-	
-	Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
+	m_musicStreamResampler->SetSource(m_musicStream, m_musicStream->SampleRate_get(), m_sampleRate);
 }
 
 void SoundPlayer_AudioOutput::stopMusic()
@@ -668,7 +673,7 @@ void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int 
 		{
 			AudioSample * __restrict voiceSamples = (AudioSample*)alloca(numSamples * sizeof(AudioSample));
 			
-			const int numSamplesRead = m_musicStream->Provide(numSamples, voiceSamples);
+			const int numSamplesRead = m_musicStreamResampler->Provide(numSamples, voiceSamples);
 			
 			if (numSamplesRead < numSamples)
 				memset(voiceSamples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(AudioSample));
@@ -871,6 +876,7 @@ SoundPlayer_PortAudio::SoundPlayer_PortAudio()
 	//
 	
 	m_musicStream = nullptr;
+	m_musicStreamResampler = nullptr;
 	m_musicVolume = 0.f;
 	
 	//
@@ -909,7 +915,9 @@ bool SoundPlayer_PortAudio::init(int numSources)
 	// create music source
 	
 	fassert(m_musicStream == nullptr);
+	fassert(m_musicStreamResampler == nullptr);
 	m_musicStream = new AudioStream_Vorbis();
+	m_musicStreamResampler = new AudioStreamResampler();
 	m_musicVolume = 1.f;
 	
 	// initialize portaudio
@@ -932,7 +940,9 @@ bool SoundPlayer_PortAudio::shutdown()
 	// destroy music source
 	
 	delete m_musicStream;
+	delete m_musicStreamResampler;
 	m_musicStream = nullptr;
+	m_musicStreamResampler = nullptr;
 	m_musicVolume = 0.f;
 	
 	// destroy audio sources
@@ -1052,8 +1062,7 @@ void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
 	MutexScope scope(m_mutex);
 	
 	m_musicStream->Open(filename, loop);
-	
-	Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
+	m_musicStreamResampler->SetSource(m_musicStream, m_musicStream->SampleRate_get(), m_sampleRate);
 }
 
 void SoundPlayer_PortAudio::stopMusic()
