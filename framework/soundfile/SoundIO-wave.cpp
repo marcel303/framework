@@ -62,8 +62,6 @@ SoundData * loadSound_WAV(const char * filename)
 		return nullptr;
 	}
 	
-// todo : remember offset to data. keep parsing chunks. load data after having parsed all the chunks. this will make it possible to separate parsing the headers/chunks from the data, and create either a sound loader, or an audio stream implementation, using the same RIFF/WAVE header parsing code
-
 	if (!r.seek(headers.dataOffset))
 	{
 		LOG_ERR("failed to seek to WAVE data");
