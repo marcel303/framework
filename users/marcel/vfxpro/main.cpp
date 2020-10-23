@@ -10,7 +10,6 @@
 #include "effect.h"
 #include "FileStream.h"
 #include "framework.h"
-#include "leap/Leap.h"
 #include "midi.h"
 #include "Path.h"
 #include "scene.h"
@@ -21,6 +20,7 @@
 #include "video.h"
 #include "xml.h"
 #include <algorithm>
+#include <cmath>
 #include <list>
 #include <map>
 #include <sys/stat.h>
@@ -28,6 +28,10 @@
 #if ENABLE_VIDEO
 	#include "mediaplayer/MPContext.h"
 	#include "mediaplayer/MPUtil.h"
+#endif
+
+#if ENABLE_LEAPMOTION
+	#include "leap/Leap.h"
 #endif
 
 #ifdef MACOS

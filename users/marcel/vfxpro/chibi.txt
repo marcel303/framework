@@ -5,6 +5,8 @@ app marcel-vfxpro
 	depend_library libvideo
 	depend_library portaudio
 	depend_library rtmidi
+
+	with_platform macos|windows depend_library leapmotion
 	
 	scan_files *.cpp
 	scan_files *.h
