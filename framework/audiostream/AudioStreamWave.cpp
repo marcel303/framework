@@ -36,8 +36,8 @@ AudioStreamWave::AudioStreamWave()
 	: mFile(0)
 	, mNumChannels(0)
 	, mSampleRate(0)
-	, mDuration(0)
-	, mPosition(0)
+	, mDurationInFrames(0)
+	, mPositionInFrames(0)
 	, mLoop(false)
 	, mHasLooped(false)
 {
@@ -50,113 +50,152 @@ AudioStreamWave::~AudioStreamWave()
 
 int AudioStreamWave::Provide(int numSamples, AudioSample* __restrict buffer)
 {
-	if (mFile == 0)
-		return 0;
-
-	// read source values and convert them into int16 destination values
-	// we will convert this data to stereo later on
-
-// todo : don't read past the end of the file
-// todo : check fread return codes
-// todo : implement looping
-
+	int numSamplesTodo = numSamples;
+	int numSamplesRead = 0;
+	
 	int16_t * dstValues = (int16_t*)alloca(numSamples * mNumChannels * 2);
 	
-	if (mCompressionType == WAVE_FORMAT_PCM)
+	for (;;)
 	{
-		if (mBitDepth == 8)
-		{
-			// for 8 bit data the integers are unsigned. convert them to signed here
-			
-			uint8_t * srcValues = (uint8_t*)alloca(numSamples * mNumChannels);
-			fread(srcValues, numSamples * mNumChannels, 1, mFile);
-			
-			for (int i = 0; i < numSamples; ++i)
-			{
-				const int value = int(srcValues[i]) - 128;
-				
-				dstValues[i] = value << 8;
-			}
-		}
-		else if (mBitDepth == 16)
-		{
-			// 16 bit data is already signed. no conversion needed
-			fread(dstValues, numSamples * mNumChannels, 1, mFile);
-		}
-		else if (mBitDepth == 24)
-		{
-			uint8_t * srcValues = (uint8_t*)alloca(numSamples * mNumChannels * 3);
-			fread(srcValues, numSamples * mNumChannels * 3, 1, mFile);
-			
-			for (int i = 0; i < numSamples; ++i)
-			{
-				int32_t value =
-					(srcValues[i * 3 + 0] << 8) |
-					(srcValues[i * 3 + 1] << 16) |
-					(srcValues[i * 3 + 2] << 24);
-				
-				// perform a shift right to sign-extend the 24 bit number (which we packed into the top-most 24 bits of a 32 bits number)
-				value >>= 8;
-				
-				dstValues[i] = value;
-			}
-		}
-		else if (mBitDepth == 32)
-		{
-			int32_t * srcValues = (int32_t*)alloca(numSamples * mNumChannels * 4);
-			fread(srcValues, numSamples * mNumChannels * 4, 1, mFile);
-			
-			for (int i = 0; i < numSamples; ++i)
-			{
-			// todo : pack so we get endianness right. see 24 bits case
-			
-				dstValues[i] = srcValues[i] >> 16;
-			}
-		}
-	}
-	else if (mCompressionType == WAVE_FORMAT_IEEE_FLOAT)
-	{
-		if (mBitDepth == 32)
-		{
-			float * srcValues = (float*)alloca(numSamples * mNumChannels * 4);
-			fread(srcValues, numSamples * mNumChannels * 4, 1, mFile);
+	// todo : don't read past the end of the file
+	// todo : check fread return codes
+	// todo : implement looping
 		
-		// todo : shuffle so we get endianness right. see 24 bits case
-			for (int i = 0; i < numSamples; ++i)
+		if (numSamplesTodo == 0)
+			break;
+			
+		// handle looping
+		
+		if (mPositionInFrames == mDurationInFrames)
+		{
+			mPositionInFrames = 0;
+			mHasLooped = true;
+			
+			if (fseek(mFile, mDataOffset, SEEK_SET) != 0)
+				Close();
+		}
+		
+		if (mFile == 0)
+			break;
+
+		// read source values and convert them into int16 destination values
+		// we will convert this data to stereo later on
+		
+		const int numSamplesRemaining = mDurationInFrames - mPositionInFrames;
+		
+		const int numSamplesToRead =
+			numSamplesRemaining > numSamplesTodo
+				? numSamplesTodo
+				: numSamplesRemaining;
+		
+		if (mCompressionType == WAVE_FORMAT_PCM)
+		{
+			if (mBitDepth == 8)
 			{
-				dstValues[i] = int16_t(srcValues[i] * ((1 << 15) - 1));
+				// for 8 bit data the integers are unsigned. convert them to signed here
+				
+				uint8_t * srcValues = (uint8_t*)alloca(numSamplesToRead * mNumChannels * 1);
+				fread(srcValues, numSamplesToRead * mNumChannels * 1, 1, mFile);
+				
+				for (int i = 0; i < numSamplesToRead; ++i)
+				{
+					const int value = int(srcValues[i]) - 128;
+					
+					dstValues[i] = value << 8;
+				}
+			}
+			else if (mBitDepth == 16)
+			{
+				uint8_t * srcValues = (uint8_t*)alloca(numSamplesToRead * mNumChannels * 2);
+				fread(srcValues, numSamplesToRead * mNumChannels * 2, 1, mFile);
+				
+				for (int i = 0; i < numSamplesToRead; ++i)
+				{
+					const int16_t value =
+						(srcValues[i * 2 + 0] << 0) |
+						(srcValues[i * 2 + 1] << 8);
+					
+					dstValues[i] = value;
+				}
+			}
+			else if (mBitDepth == 24)
+			{
+				uint8_t * srcValues = (uint8_t*)alloca(numSamplesToRead * mNumChannels * 3);
+				fread(srcValues, numSamplesToRead * mNumChannels * 3, 1, mFile);
+				
+				for (int i = 0; i < numSamplesToRead; ++i)
+				{
+					const int32_t value =
+						(srcValues[i * 3 + 0] << 8) |
+						(srcValues[i * 3 + 1] << 16) |
+						(srcValues[i * 3 + 2] << 24);
+					
+					// perform a shift right to sign-extend the 24 bit number (which we packed into the top-most 24 bits of a 32 bits number)
+					dstValues[i] = value >> 8;
+				}
+			}
+			else if (mBitDepth == 32)
+			{
+				int8_t * srcValues = (int8_t*)alloca(numSamplesToRead * mNumChannels * 4);
+				fread(srcValues, numSamplesToRead * mNumChannels * 4, 1, mFile);
+				
+				for (int i = 0; i < numSamplesToRead; ++i)
+				{
+					const int32_t value =
+						(srcValues[i * 4 + 0] << 0) |
+						(srcValues[i * 4 + 1] << 8) |
+						(srcValues[i * 4 + 2] << 16) |
+						(srcValues[i * 4 + 3] << 24);
+				
+					dstValues[i] = value >> 16;
+				}
+			}
+		}
+		else if (mCompressionType == WAVE_FORMAT_IEEE_FLOAT)
+		{
+			if (mBitDepth == 32)
+			{
+				float * srcValues = (float*)alloca(numSamplesToRead * mNumChannels * 4);
+				fread(srcValues, numSamplesToRead * mNumChannels * 4, 1, mFile);
+			
+			// todo : shuffle so we get endianness right. see 24 bits case
+				for (int i = 0; i < numSamplesToRead; ++i)
+				{
+					dstValues[i] = int16_t(srcValues[i] * ((1 << 15) - 1));
+				}
+			}
+			else
+			{
+				Assert(false);
 			}
 		}
 		else
 		{
 			Assert(false);
 		}
-	}
-	else
-	{
-		Assert(false);
-	}
-	
-	for (int i = 0; i < numSamples; ++i)
-	{
+		
+		AudioSample * __restrict bufferWithOffset = buffer + numSamplesRead;
+		
 		if (mNumChannels == 1)
 		{
-			buffer[i].channel[0] = dstValues[i];
-			buffer[i].channel[1] = dstValues[i];
+			for (int i = 0; i < numSamplesToRead; ++i)
+			{
+				bufferWithOffset[i].channel[0] = dstValues[i];
+				bufferWithOffset[i].channel[1] = dstValues[i];
+			}
 		}
 		else if (mNumChannels == 2)
 		{
-		// todo : memcpy
-			buffer[i].channel[0] = dstValues[i * 2 + 0];
-			buffer[i].channel[1] = dstValues[i * 2 + 1];
+			memcpy(bufferWithOffset, dstValues, numSamplesToRead * sizeof(AudioSample));
 		}
+		
+		numSamplesTodo -= numSamplesToRead;
+		numSamplesRead += numSamplesToRead;
+		
+		mPositionInFrames += numSamplesToRead;
 	}
 	
-	const int numReadSamples = numSamples;
-	
-	mPosition += numReadSamples;
-	
-	return numReadSamples;
+	return numSamplesRead;
 }
 
 void AudioStreamWave::Open(const char* fileName, bool loop)
@@ -247,7 +286,9 @@ void AudioStreamWave::Open(const char* fileName, bool loop)
 	
 	mNumChannels = headers.fmtChannelCount;
 	mSampleRate = headers.fmtSampleRate;
-	mDuration = headers.dataLength / numBytesPerSample / headers.fmtChannelCount;
+	mDurationInFrames = headers.dataLength / numBytesPerSample / headers.fmtChannelCount;
+	
+	mDataOffset = headers.dataOffset;
 	mNumBytesPerSample = numBytesPerSample;
 	mCompressionType = headers.fmtCompressionType;
 	mBitDepth = headers.fmtBitDepth;
@@ -265,12 +306,12 @@ void AudioStreamWave::Close()
 	}
 	
 	mFileName.clear();
-	mPosition = 0;
+	mPositionInFrames = 0;
 }
 
 int AudioStreamWave::Position_get() const
 {
-	return mPosition;
+	return mPositionInFrames;
 }
 
 bool AudioStreamWave::HasLooped_get() const

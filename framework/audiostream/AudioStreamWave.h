@@ -29,6 +29,7 @@
 
 #include "AudioStream.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <string>
 
 class AudioStreamWave : public AudioStream
@@ -43,7 +44,7 @@ public:
 	void Close();
 	
 	int SampleRate_get() const { return mSampleRate; }
-	int Duration_get() const { return mDuration; }
+	int Duration_get() const { return mDurationInFrames; }
 	
 	int Position_get() const;
 	bool HasLooped_get() const;
@@ -55,13 +56,15 @@ public:
 private:
 	std::string mFileName;
 	FILE* mFile;
-	int mNumChannels;
-	int mSampleRate;
-	int mDuration;
-	int mPosition;
+	int16_t mNumChannels;
+	int32_t mSampleRate;
+	int32_t mDurationInFrames;
+	int32_t mPositionInFrames;
 	bool mLoop;
-	bool mHasLooped;
-	int mCompressionType;
-	int mBitDepth;
-	int mNumBytesPerSample;
+	bool mHasLooped; // todo : should be atomic ?
+	
+	int32_t mDataOffset;
+	int16_t mCompressionType;
+	int16_t mBitDepth;
+	int16_t mNumBytesPerSample;
 };
