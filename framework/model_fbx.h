@@ -34,9 +34,9 @@ namespace AnimModel
 	class LoaderFbxBinary : public Loader
 	{
 	public:
-		MeshSet * loadMeshSet(const char * filename, const BoneSet * boneSet);
-		BoneSet * loadBoneSet(const char * filename);
-		AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet);
+		virtual MeshSet * loadMeshSet(const char * filename, const BoneSet * boneSet) override;
+		virtual BoneSet * loadBoneSet(const char * filename) override;
+		virtual AnimSet * loadAnimSet(const char * filename, const BoneSet * boneSet) override;
 		
 		static bool readFile(const char * filename, std::vector<unsigned char> & bytes);
 	};
