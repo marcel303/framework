@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -42,9 +42,41 @@ TODO:
 - Apply geometric transform the vertex data.
 - Transform normals as well as vertices to get them into global object space.
 
+NOTES:
+
+An FBX scene contains a node hierarchy
+
+FbxNode
+	FbxNode
+	FbxNode
+		FbxNode
+
+Each node can have a 'node attribute'. The node attribute creates a specialization of the node.
+Without an attribute, the node helps define the hierarchy, but not much else.
+
+Examples of node attributes:
+	FbxCamera
+	FbxMesh
+	FbxSkeleton
+
+Node attributes are connected to nodes using connections.
+
+The same node attribute may be shared by multiple nodes. This makes it possible for instance, to reuse the same mesh on multiple nodes (instancing).
+
+Node attributes are stored inside the 'Objects' section.
+
 */
 
-static bool logEnabled = false;
+enum LogLevel
+{
+	kLogDbg,
+	kLogInf,
+	kLogWrn,
+	kLogErr,
+	kLogNone
+};
+
+static LogLevel logEnabled = kLogDbg;
 
 //
 
@@ -53,13 +85,14 @@ using namespace AnimModel;
 // forward declarations
 
 class FbxDeformer;
+class FbxGeometry;
 class FbxMesh;
 class FbxObject;
 class FbxPose;
 
 // helper functions
 
-static void fbxLog(int logIndent, const char * fmt, ...);
+static void fbxLog(int logIndent, LogLevel logLevel, const char * fmt, ...);
 static int getTimeMS();
 
 static RotationType convertRotationOrder(int order);
@@ -74,9 +107,9 @@ static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, 
 
 //
 
-static void fbxLog(int logIndent, const char * fmt, ...)
+static void fbxLog(int logIndent, LogLevel logLevel, const char * fmt, ...)
 {
-	if (logEnabled)
+	if (logLevel >= logEnabled)
 	{
 		va_list va;
 		va_start(va, fmt);
@@ -90,9 +123,17 @@ static void fbxLog(int logIndent, const char * fmt, ...)
 		vsprintf_s(temp, sizeof(temp), fmt, va);
 		va_end(va);
 		
-		logInfo("%s%s", tabs, temp);
+		if (logLevel == kLogDbg) logDebug  ("%s%s", tabs, temp);
+		if (logLevel == kLogInf) logInfo   ("%s%s", tabs, temp);
+		if (logLevel == kLogWrn) logWarning("%s%s", tabs, temp);
+		if (logLevel == kLogErr) logError  ("%s%s", tabs, temp);
 	}
 }
+
+#define fbxLogDbg(indent, fmt, ...) fbxLog(indent, kLogDbg, fmt, ##__VA_ARGS__)
+#define fbxLogInf(indent, fmt, ...) fbxLog(indent, kLogInf, fmt, ##__VA_ARGS__)
+#define fbxLogWrn(indent, fmt, ...) fbxLog(indent, kLogWrn, fmt, ##__VA_ARGS__)
+#define fbxLogErr(indent, fmt, ...) fbxLog(indent, kLogErr, fmt, ##__VA_ARGS__)
 
 static int getTimeMS()
 {
@@ -389,18 +430,18 @@ public:
 					key.captureProperties<FbxValue>(values);
 					const int stride = int(values.size()) / keyCount;
 					
-					//fbxLog(logIndent, "keyCount=%d", keyCount);
+					fbxLogDbg(logIndent, "keyCount=%d", keyCount);
 					
 					for (size_t i = 0; i + stride <= values.size(); i += stride)
 					{
 						float value = get<float>(values[i + 1]);
 						
-					#if 1 // todo: enable duplicate removal
-						// round with a fixed precision so small floating point drift is eliminated from the exported values
+					#if 1
+						// round with a fixed precision, so small floating point drift is eliminated from the exported values
 						value = int(value * 1000.f + .5f) / 1000.f;
 						
 						// don't write duplicate values, unless it's the first/last key in the list. exporters sometimes write a fixed number of keys (sampling based), with lots of duplicates
-						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value;// && i + stride != values.size();
+						const bool isDuplicate = keys.size() >= 1 && keys.back().value == value;
 					#else
 						const bool isDuplicate = false;
 					#endif
@@ -414,7 +455,7 @@ public:
 							key.value = value;
 							keys.push_back(key);
 							
-							//fbxLog(logIndent, "%014lld -> %f", temp.time, temp.value);
+							fbxLogDbg(logIndent, "%014lld -> %f", time, value);
 						}
 						
 						if (time > endTime)
@@ -423,7 +464,7 @@ public:
 						}
 					}
 					
-					//fbxLog(logIndent, "got %d unique keys", keys.size());
+					fbxLogDbg(logIndent, "got %d unique keys", keys.size());
 				}
 				else
 				{
@@ -450,7 +491,7 @@ public:
 			{
 				const std::string name = channel.captureProperty<std::string>(0);
 				
-				//fbxLog(logIndent, "stream: name=%s", name.c_str());
+				fbxLogDbg(logIndent, "stream: name=%s", name.c_str());
 				
 				logIndent++;
 				{
@@ -877,7 +918,9 @@ static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std:
 	
 	// type = BindPose
 	
-	fbxLog(logIndent, "pose! name=%s, type=%s", poseName.c_str(), poseType.c_str());
+	fbxLogInf(logIndent, "pose! name=%s, type=%s",
+		poseName.c_str(),
+		poseType.c_str());
 	
 	for (FbxRecord poseNode = pose.firstChild("PoseNode"); poseNode.isValid(); poseNode = poseNode.nextSibling("PoseNode"))
 	{
@@ -898,10 +941,12 @@ static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std:
 		}
 		else
 		{
-			fbxLog(logIndent, "warning: pose matrix doesn't contain 16 elements");
+			fbxLogWrn(logIndent, "pose matrix doesn't contain 16 elements");
 		}
 		
-		//fbxLog(logIndent, "pose node! matrixSize=%d, node=%s", int(matrix.size()), nodeName.c_str());
+		fbxLogDbg(logIndent, "pose node! matrixSize=%d, node=%s",
+			int(matrix.size()),
+			nodeName.c_str());
 	}
 	
 	return fbxPose;
@@ -954,7 +999,11 @@ static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, 
 	else
 		fbxDeformer->transformLink.MakeIdentity();
 	
-	//fbxLog(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
+	fbxLogDbg(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d",
+		fbxDeformer->name.c_str(),
+		fbxDeformer->type.c_str(),
+		int(fbxDeformer->indices.size()),
+		int(fbxDeformer->weights.size()));
 	
 	return fbxDeformer;
 }
@@ -1155,11 +1204,11 @@ public:
 		const std::vector<int> & colorIndices,
 		const std::vector<FbxMesh::Deformer> & deformers)
 	{
-		fbxLog(logIndent, "-- running da welding machine! --");
+		fbxLogInf(logIndent, "-- running da welding machine! --");
 		
 		logIndent++;
 		
-		fbxLog(logIndent, "input: %d vertices, %d indices, %d normals (%d indices), %d UVs (%d indices), %d colors (%d indices)",
+		fbxLogInf(logIndent, "input: %d vertices, %d indices, %d normals (%d indices), %d UVs (%d indices), %d colors (%d indices)",
 			(int)vertices.size()/3,
 			(int)vertexIndices.size(),
 			(int)normals.size()/3,
@@ -1343,7 +1392,11 @@ public:
 				vertex.boneIndices[d] = deformers[vertexIndex].entries[d].index;
 				vertex.boneWeights[d] = uint8_t(deformers[vertexIndex].entries[d].weight * 255.f);
 				
-				//fbxLog(logIndent, "added %d, %d", vertex.blendIndices[d], vertex.boneWeights[d]);
+				/*
+				fbxLogDbg(logIndent, "added %d, %d",
+					vertex.boneIndices[d],
+					vertex.boneWeights[d]);
+				*/
 			}
 			for (int d = numDeformers; d < 4; ++d)
 			{
@@ -1425,15 +1478,17 @@ public:
 				}
 			}
 			
-			fbxLog(logIndent, "triangulation result: %d -> %d indices", int(m_indices.size()), int(temp.size()));
+			fbxLogInf(logIndent, "triangulation result: %d -> %d indices",
+				int(m_indices.size()),
+				int(temp.size()));
 			
 			std::swap(m_indices, temp);
 		}
 		
 		const int time2 = getTimeMS();
-		fbxLog(logIndent, "time: %d ms", time2 - time1);
+		fbxLogInf(logIndent, "time: %d ms", time2 - time1);
 		
-		fbxLog(logIndent, "output: %d vertices, %d indices",
+		fbxLogInf(logIndent, "output: %d vertices, %d indices",
 			(int)m_vertices.size(),
 			(int)m_indices.size());
 		
@@ -1497,7 +1552,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s", filename);
+			fbxLogErr(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -1511,7 +1566,7 @@ namespace AnimModel
 		}
 		catch (std::exception & e)
 		{
-			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			fbxLogErr(logIndent, "failed to open FBX from memory: %s", e.what());
 			(void)e;
 			return 0;
 		}
@@ -1587,13 +1642,15 @@ namespace AnimModel
 					}
 					else
 					{
-						fbxLog(logIndent, "duplicate object name !!!");
+						fbxLogErr(logIndent, "duplicate object name !!!");
 						delete fbxObject;
 					}
 				}
 				else
 				{
-					fbxLog(logIndent, "unknown object type: %s (name=%s)", objectType.c_str(), objectName.c_str());
+					fbxLogWrn(logIndent, "unknown object type: %s (name=%s)",
+						objectType.c_str(),
+						objectName.c_str());
 				}
 			}
 		}
@@ -1789,7 +1846,9 @@ namespace AnimModel
 			
 			if (isDead)
 			{
-				fbxLog(logIndent, "garbage collecting object! name=%s, type=%s", object->name.c_str(), object->type.c_str());
+				fbxLogInf(logIndent, "garbage collecting object! name=%s, type=%s",
+					object->name.c_str(),
+					object->type.c_str());
 				
 				garbage.push_back(object);
 			}
@@ -1820,7 +1879,7 @@ namespace AnimModel
 				
 				if (deformer->indices.size() != deformer->weights.size())
 				{
-					fbxLog(logIndent, "error: deformer indices / weights mismatch");
+					fbxLogErr(logIndent, "deformer indices / weights mismatch");
 					continue;
 				}
 				
@@ -1850,7 +1909,7 @@ namespace AnimModel
 				
 				if (mesh != 0 && boneMesh != 0)
 				{
-					//fbxLog(logIndent, "found mesh for deformer! %s", mesh->name.c_str());
+					fbxLogDbg(logIndent, "found mesh for deformer! %s", mesh->name.c_str());
 					
 					const std::string & boneName = boneMesh->name;
 					fassert(boneNameToBoneIndex.count(boneName) != 0);
@@ -1873,13 +1932,16 @@ namespace AnimModel
 						}
 						else
 						{
-							fbxLog(logIndent, "error: deformer index %d is out of range [max=%d]", vertexIndex, int(mesh->deformers.size()));
+							fbxLogErr(logIndent, "deformer index %d is out of range [max=%d]", vertexIndex, int(mesh->deformers.size()));
 						}
 					}
 				}
 				else
 				{
-					fbxLog(logIndent, "error: deformer %s: mesh=%p, boneMesh=%p", deformer->name.c_str(), mesh, boneMesh);
+					fbxLogErr(logIndent, "deformer %s: mesh=%p, boneMesh=%p",
+						deformer->name.c_str(),
+						mesh,
+						boneMesh);
 				}
 			}
 		}
@@ -1898,7 +1960,7 @@ namespace AnimModel
 				{
 					FbxMesh * mesh = static_cast<FbxMesh*>(object);
 					
-					fbxLog(logIndent, "transforming vertices for %s into global object space", mesh->name.c_str());
+					fbxLogInf(logIndent, "transforming vertices for %s into global object space", mesh->name.c_str());
 					
 					// todo: include geometric transform as well
 					
@@ -1973,7 +2035,7 @@ namespace AnimModel
 		
 		const int time2 = getTimeMS();
 		
-		fbxLog(logIndent, "time: %d ms", time2-time1);
+		fbxLogInf(logIndent, "time: %d ms", time2 - time1);
 		
 		// create meshes
 		
@@ -2037,7 +2099,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s", filename);
+			fbxLogErr(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -2051,7 +2113,7 @@ namespace AnimModel
 		}
 		catch (std::exception & e)
 		{
-			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			fbxLogErr(logIndent, "failed to open FBX from memory: %s", e.what());
 			(void)e;
 			return 0;
 		}
@@ -2226,11 +2288,11 @@ namespace AnimModel
 					const int index = int(modelNameToBoneIndex.size());
 					modelNameToBoneIndex[object.name] = index;
 					
-					//fbxLog(logIndent, "bone %s = index %d", object.name.c_str(), index);
+					fbxLogDbg(logIndent, "bone %s = index %d", object.name.c_str(), index);
 				}
 				else
 				{
-					fbxLog(logIndent, "warning: duplicate object name: %s", object.name.c_str());
+					fbxLogWrn(logIndent, "duplicate object name: %s", object.name.c_str());
 				}
 			}
 		}
@@ -2241,7 +2303,7 @@ namespace AnimModel
 		
 		// allocate bone matrix for each mesh
 		
-		//fbxLog(logIndent, "allocating %d bones", int(modelNameToBoneIndex.size()));
+		fbxLogDbg(logIndent, "allocating %d bones", int(modelNameToBoneIndex.size()));
 		
 		std::vector<Mat4x4> objectToBoneMatrices;
 		std::vector<Mat4x4> boneToObjectMatrices;
@@ -2344,7 +2406,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s", filename);
+			fbxLogErr(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -2358,7 +2420,7 @@ namespace AnimModel
 		}
 		catch (std::exception & e)
 		{
-			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			fbxLogErr(logIndent, "failed to open FBX from memory: %s", e.what());
 			(void)e;
 			return 0;
 		}
@@ -2376,7 +2438,7 @@ namespace AnimModel
 		{
 			const std::string name = take.captureProperty<std::string>(0);
 			
-			fbxLog(logIndent, "take: %s", name.c_str());
+			fbxLogInf(logIndent, "take: %s", name.c_str());
 			
 			anims.push_back(FbxAnim());
 			FbxAnim & anim = anims.back();
@@ -2393,7 +2455,7 @@ namespace AnimModel
 			{
 				std::string modelName = model.captureProperty<std::string>(0);
 				
-				fbxLog(logIndent, "model: %s", modelName.c_str());
+				fbxLogInf(logIndent, "model: %s", modelName.c_str());
 				
 				logIndent++;
 				
@@ -2401,7 +2463,7 @@ namespace AnimModel
 				{
 					std::string channelName = channel.captureProperty<std::string>(0);
 					
-					//fbxLog(logIndent, "channel: %s", channelName.c_str());
+					fbxLogDbg(logIndent, "channel: %s", channelName.c_str());
 					
 					if (channelName == "Transform")
 					{
@@ -2477,7 +2539,7 @@ namespace AnimModel
 				}
 			}
 			
-			fbxLog(logIndent, "added animation: %s", anim.name.c_str());
+			fbxLogInf(logIndent, "added animation: %s", anim.name.c_str());
 			
 			animations[anim.name] = animation;
 		}
