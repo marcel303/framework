@@ -31,7 +31,15 @@ extern "C"
 {
 	#include <libavcodec/avcodec.h>
 	#include <libavformat/avformat.h>
+	#include <libavutil/avutil.h>
 }
+
+#if !defined(CODEC_FLAG2_FAST)
+	// recent versions of avcodec prefixed the codec flags with AV_
+	// to support compiling with both recent and older versions, we
+	// define the old version here, in case it is missing
+	#define CODEC_FLAG2_FAST AV_CODEC_FLAG2_FAST
+#endif
 
 namespace MP
 {
@@ -80,8 +88,10 @@ namespace MP
 			//codecContext->error_resilience  = error_resilience;
 			codecContext->error_concealment = error_concealment;
 
+		#if defined(CODEC_FLAG_EMU_EDGE)
 			if (lowres)
 				codecContext->flags |= CODEC_FLAG_EMU_EDGE;
+		#endif
 
 			if (fast)
 				codecContext->flags2 |= CODEC_FLAG2_FAST;
