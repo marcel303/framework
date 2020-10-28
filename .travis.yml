@@ -16,8 +16,6 @@ before_install:
       sudo apt-get install -y --no-install-recommends libsdl2-dev;
       sudo apt-get install -y --no-install-recommends libglew-dev;
       sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
-      sudo apt-get install -y --no-install-recommends libfreeimage-dev;
-      sudo apt-get install -y --no-install-recommends libfreetype6-dev;
       sudo apt-get install -y --no-install-recommends libavcodec-dev;
       sudo apt-get install -y --no-install-recommends libavdevice-dev;
       sudo apt-get install -y --no-install-recommends libavfilter-dev;
@@ -26,7 +24,6 @@ before_install:
       sudo apt-get install -y --no-install-recommends libswscale-dev;
       sudo apt-get install -y --no-install-recommends libturbojpeg0-dev;
       sudo apt-get install -y --no-install-recommends gobjc++;
-      sudo apt-get install -y --no-install-recommends libusb-1.0-0-dev;
       sudo apt-get install -y --no-install-recommends libasound2-dev;
       sudo apt-get install -y --no-install-recommends portaudio19-dev;
       sudo apt-get install -y --no-install-recommends ocl-icd-opencl-dev;
