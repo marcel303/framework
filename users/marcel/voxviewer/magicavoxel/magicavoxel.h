@@ -3,6 +3,7 @@
 #include "Mat4x4.h"
 #include <map> // for MagicaDict
 #include <stdint.h>
+#include <string>
 #include <vector>
 
 struct MagicaDict
