@@ -152,7 +152,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		if (checkStatus(status) == false)
 			return false;
 		
-		logDebug("stream format is writable: %d", writable);
+		//logDebug("stream format is writable: %d", writable);
 	
 		if (writable)
 		{
@@ -180,7 +180,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		if (checkStatus(status) == false)
 			return false;
 		
-		logDebug("stream format is writable: %d", writable);
+		//logDebug("stream format is writable: %d", writable);
 		
 		if (writable)
 		{
