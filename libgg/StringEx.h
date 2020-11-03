@@ -4,6 +4,7 @@
 #include <string.h>
 #include <vector>
 #include <stddef.h>
+#include <stdio.h> // snprintf
 #include <stdint.h>
 
 class String
