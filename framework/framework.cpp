@@ -180,6 +180,7 @@ Framework::Framework()
 	windowSx = 0;
 	windowSy = 0;
 	windowIsActive = false;
+	portraitMode = false;
 	enableSound = true;
 	numSoundSources = 32;
 	actionHandler = 0;
@@ -249,7 +250,9 @@ bool Framework::init(int sx, int sy)
 	int flags = 0;
 
 #if defined(IPHONEOS)
-// todo : add framework option to select orientation, instead of hard-coding it here
+	if (portraitMode)
+		SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
+	else
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
@@ -815,6 +818,7 @@ bool Framework::shutdown()
 	windowSx = 0;
 	windowSy = 0;
 	windowIsActive = false;
+	portraitMode = false;
 	actionHandler = 0;
 	fillCachesCallback = 0;
 	fillCachesUnknownResourceCallback = 0;

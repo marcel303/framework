@@ -524,6 +524,7 @@ public:
 	int windowSx;
 	int windowSy;
 	bool windowIsActive;
+	bool portraitMode;
 	
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
