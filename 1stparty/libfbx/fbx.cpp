@@ -399,8 +399,8 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 			return;
 		}
 		
-		result64 = *(int64_t*)&m_bytes[offset];
-		offset += sizeof(int64_t);
+		memcpy(&result64, &m_bytes[offset], sizeof(result64));
+		offset += sizeof(result64);
 		
 		if (result64 > std::numeric_limits<int32_t>::max())
 		{
@@ -420,7 +420,7 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 			return;
 		}
 		
-		result = *(T*)&m_bytes[offset];
+		memcpy(&result, &m_bytes[offset], sizeof(T));
 		offset += sizeof(T);
 	}
 }
