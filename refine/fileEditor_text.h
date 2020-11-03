@@ -226,16 +226,20 @@ struct FileEditor_Text : FileEditor
 					ImGui::SetNextWindowFocus();
 				}
 				
+				// note : we use a child window to ensure the status bar text clips to the size of the window
 				auto cpos = textEditor.GetCursorPosition();
+				ImGui::BeginChild("Status Bar", ImVec2(sx - 20, 20));
 				ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, textEditor.GetTotalLines(),
 					lineEndings == TextIO::kLineEndings_Unix ? "Unix" :
 					lineEndings == TextIO::kLineEndings_Windows ? "Win " :
 					"",
 					textEditor.IsOverwrite() ? "Ovr" : "Ins",
 					textIsDirty ? "dirty" : "-----",
-					textEditor.GetLanguageDefinition().mName.c_str(), path.c_str());
+					textEditor.GetLanguageDefinition().mName.c_str(),
+					Path::GetFileName(path).c_str());
+				ImGui::EndChild();
 				
-				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 70), false);
+				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 80), false);
 				
 				textIsDirty |= textEditor.IsTextChanged();
 			}
