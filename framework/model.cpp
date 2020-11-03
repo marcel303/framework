@@ -930,6 +930,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
+		skinningMatrices.alloc(sizeof(Mat4x4) * numBones);
 		skinningMatrices.setData(globalMatrices, sizeof(Mat4x4) * numBones);
 		
 		const Shader * previousShader = nullptr;
