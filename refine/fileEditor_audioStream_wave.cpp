@@ -1,16 +1,16 @@
-#include "audiostream/AudioStreamVorbis.h"
-#include "fileEditor_audioStream_vorbis.h"
+#include "audiostream/AudioStreamWave.h"
+#include "fileEditor_audioStream_wave.h"
 
-FileEditor_AudioStream_Vorbis::FileEditor_AudioStream_Vorbis(const char * path)
+FileEditor_AudioStream_Wave::FileEditor_AudioStream_Wave(const char * path)
 {
-	audioStream = new AudioStream_Vorbis();
+	audioStream = new AudioStreamWave();
 	audioStream->Open(path, true);
 	
 	audioOutput.Initialize(2, audioStream->SampleRate_get(), 256);
 	audioOutput.Play(audioStream);
 }
 
-FileEditor_AudioStream_Vorbis::~FileEditor_AudioStream_Vorbis()
+FileEditor_AudioStream_Wave::~FileEditor_AudioStream_Wave()
 {
 	audioOutput.Shutdown();
 	
@@ -18,7 +18,7 @@ FileEditor_AudioStream_Vorbis::~FileEditor_AudioStream_Vorbis()
 	audioStream = nullptr;
 }
 
-void FileEditor_AudioStream_Vorbis::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
+void FileEditor_AudioStream_Wave::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
 	audioOutput.Update();
 	

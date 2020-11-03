@@ -3,15 +3,15 @@
 #include "audiooutput/AudioOutput_Native.h"
 #include "fileEditor.h"
 
-class AudioStream_Vorbis;
+class AudioStreamWave;
 
-struct FileEditor_AudioStream_Vorbis : FileEditor
+struct FileEditor_AudioStream_Wave : FileEditor
 {
 	AudioOutput_Native audioOutput;
-	AudioStream_Vorbis * audioStream = nullptr;
+	AudioStreamWave * audioStream = nullptr;
 	
-	FileEditor_AudioStream_Vorbis(const char * path);
-	virtual ~FileEditor_AudioStream_Vorbis();
+	FileEditor_AudioStream_Wave(const char * path);
+	virtual ~FileEditor_AudioStream_Wave();
 	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 };
