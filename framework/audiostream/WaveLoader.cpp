@@ -77,7 +77,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 			chunk = kChunk_RIFF;
 		else if (checkId(id, "data"))
 			chunk = kChunk_DATA;
-		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact"))
+		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact") || checkId(id, "attn"))
 			chunk = kChunk_OTHER;
 		else
 		{
