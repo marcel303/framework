@@ -80,7 +80,7 @@ static int TimerThreadProc(void * obj)
 		}
 		else
 		{
-			printf("no wait..\n");
+			//printf("no wait..\n");
 		}
 		
 		clock_gettime(CLOCK_MONOTONIC_RAW, &start);
