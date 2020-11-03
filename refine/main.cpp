@@ -12,6 +12,7 @@
 #include "fileEditor.h"
 #include "fileEditor_audioGraph.h"
 #include "fileEditor_audioStream_vorbis.h"
+#include "fileEditor_audioStream_wave.h"
 #include "fileEditor_font.h"
 #include "fileEditor_gltf.h"
 #include "fileEditor_ies.h"
@@ -248,6 +249,10 @@ int main(int argc, char * argv[])
 		else if (extension == "ogg")
 		{
 			editor = new FileEditor_AudioStream_Vorbis(filename.c_str());
+		}
+		else if (extension == "wav")
+		{
+			editor = new FileEditor_AudioStream_Wave(filename.c_str());
 		}
 		else if (extension == "fbx")
 		{
