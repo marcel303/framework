@@ -3,14 +3,6 @@
 #include "StringEx.h"
 #include "webrequest.h"
 
-/*
-#include "FileStream.h"
-#include "Log.h"
-#include "StreamWriter.h"
-#include <map>
-#include <set>
-#include <vector>
-*/
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);

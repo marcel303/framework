@@ -308,7 +308,7 @@ struct WebRequest_Posix : WebRequest
 				
 				const auto hdr_host = ApplyFormat("Host: %s\r\n", hostname);
 
-				const auto hdr_end = "\r\n\r\n";
+				const auto hdr_end = "\r\n";
 				
 				const auto hdrs =
 					hdr_method +
