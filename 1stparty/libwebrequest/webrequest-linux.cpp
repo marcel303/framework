@@ -1,15 +1,23 @@
 #include "webrequest.h"
 
-#include <assert.h>
+// libc++ includes
+#include <mutex>
 #include <string>
+#include <thread>
 
+// libc includes
+#include <assert.h>
+#include <stdarg.h> // va_*
+#include <stdio.h> // vsnprintf
+
+// socket includes
 #if defined(WINDOWS)
 	#include <winsock2.h>
 #else
 	#include <netinet/in.h>
 	#include <netinet/tcp.h>
 	#include <sys/socket.h>
-	#include <unistd.h> // close, sleep
+	#include <unistd.h> // close
 	#include <netdb.h> // addrinfo
 
 	#define closesocket close
@@ -17,19 +25,17 @@
 
 // todo : rename implementation depending on api used: posix
 
-#include <stdarg.h>
-#include <stdio.h> // vsnprintf
-
-#include <mutex>
-#include <thread>
-
 std::string ApplyFormat(const char * format, ...)
 {
 	char text[1024];
 	va_list args;
 	va_start(args, format);
-	vsnprintf(text, sizeof(text), format, args);
+	const int n = vsnprintf(text, sizeof(text), format, args);
 	va_end(args);
+	
+	assert(n >= 0 && n < 1024);
+	if (n < 0 || n >= 1024)
+		text[0] = 0;
 	
 	return text;
 }
@@ -41,8 +47,10 @@ struct WebRequest_Posix : WebRequest
 	
 	std::string url;
 	std::string result;
-	int progress = 0;
+	
 	int sock = -1;
+	int progress = 0;
+	
 	bool canceled = false;
 	bool done = false;
 	bool success = false;
@@ -55,47 +63,174 @@ struct WebRequest_Posix : WebRequest
 		{
 			bool ok = true;
 			
-			// extract hostname. pattern = <protocol>://hostname[:port][/]
+			// extract protocol, hostname, port number
+			// pattern = <protocol>://<hostname>[:<port>][/]
 			
-			const char * hostname_begin = url.c_str();
+			const char * url_ptr = url.c_str();
 			
-			while (hostname_begin[0] != 0)
+			if (ok)
 			{
-				// todo : check if the protocol is 'http'
-				// todo : extract port number
+				const char * protocol_begin = url_ptr;
+				const char * protocol_end = protocol_begin;
+			
+				// extract protocol
 				
-				if (hostname_begin[0] == '/' && hostname_begin[1] == '/')
+				while (protocol_end[0] != 0)
 				{
-					hostname_begin += 2;
-					break;
+					if (protocol_end[0] == ':' &&
+						protocol_end[1] == '/' &&
+						protocol_end[2] == '/')
+					{
+						break;
+					}
+					
+					protocol_end++;
 				}
 				
-				hostname_begin++;
-			}
-			
-			const char * hostname_end = hostname_begin;
-			
-			if (hostname_begin[0] != 0)
-			{
-				hostname_end++;
+				// check if we found the protocol
 				
-				while (hostname_end[0] != 0 && hostname_end[0] != '/' && hostname_end[0] != ':')
-					hostname_end++;
+				if (protocol_end[0] == 0)
+				{
+					// invalid url. expected protocol
+					
+					ok = false;
+				}
+				else
+				{
+					// check if the protocol is 'http'
+					
+					const int protocol_length = protocol_end - protocol_begin;
+					assert(protocol_length >= 0);
+					
+					if (protocol_length == 0)
+					{
+						// invalid url. protocol missing
+						
+						ok = false;
+					}
+					else if (
+					// todo : case insensitivity
+						protocol_length != 4 ||
+						memcmp(protocol_begin, "http", 4) != 0)
+					{
+						// unsupported protocol
+						
+						ok = false;
+					}
+				}
+				
+				if (ok)
+				{
+					// skip '://'
+					protocol_end += 3;
+					
+					// advance url pointer
+					url_ptr = protocol_end;
+				}
 			}
-			
-			const size_t hostname_len = hostname_end - hostname_begin;
 			
 			char hostname[1024];
+			hostname[0] = 0;
 			
-			if (hostname_begin[0] != 0 && hostname_len > 0 && hostname_len < 1024)
+			if (ok)
 			{
-				memcpy(hostname, hostname_begin, hostname_len);
-				hostname[hostname_len] = 0;
+				const char * hostname_begin = url_ptr;
+				const char * hostname_end = hostname_begin;
+			
+				// extract hostname
+				
+				while (
+					hostname_end[0] != 0 &&
+					hostname_end[0] != '/' &&
+					hostname_end[0] != ':')
+				{
+					hostname_end++;
+				}
+			
+				const int hostname_length = hostname_end - hostname_begin;
+				assert(hostname_length >= 0);
+				
+				// check if we found the hostname
+				
+				if (hostname_length == 0)
+				{
+					// hostname missing
+					
+					ok = false;
+				}
+				else if (hostname_length >= 1024)
+				{
+					// hostname too long
+					
+					ok = false;
+				}
+				else
+				{
+					// register hostname
+					
+					memcpy(
+						hostname,
+						hostname_begin,
+						hostname_length);
+					hostname[hostname_length] = 0;
+				}
+				
+				if (ok)
+				{
+					// advance url pointer
+					
+					url_ptr = hostname_end;
+				}
 			}
-			else
+			
+			char portnumber[32];
+			strcpy(portnumber, "80");
+			
+			// does the url have an optional port number?
+			
+			if (ok && url_ptr[0] == ':')
 			{
-				hostname[0] = 0;
-				ok = false;
+				const char * portnumber_begin = url_ptr + 1;
+				const char * portnumber_end = portnumber_begin;
+			
+				// extract the port number
+				
+				while (
+					portnumber_end[0] != 0 &&
+					portnumber_end[0] != '/')
+				{
+					portnumber_end++;
+				}
+				
+				const int portnumber_length = portnumber_end - portnumber_begin;
+				assert(portnumber_length >= 0);
+				
+				if (portnumber_length == 0)
+				{
+					// port number missing
+					
+					ok = false;
+				}
+				else if (portnumber_length >= 32)
+				{
+					// port number too long
+					
+					ok = false;
+				}
+				else
+				{
+					// register port number
+					
+					memcpy(
+						portnumber,
+						portnumber_begin,
+						portnumber_length);
+					portnumber[portnumber_length] = 0;
+				}
+				
+				// we're done parsing the url. reset url pointer
+				
+				url_ptr = nullptr;
 			}
 			
 			addrinfo * addrinfo = nullptr;
@@ -108,9 +243,14 @@ struct WebRequest_Posix : WebRequest
 				baseaddr.ai_family = AF_INET;
 				baseaddr.ai_socktype = SOCK_STREAM;
 
-				if (getaddrinfo(hostname, "80", &baseaddr, &addrinfo) != 0)
+				if (getaddrinfo(
+					hostname,
+					portnumber,
+					&baseaddr,
+					&addrinfo) != 0)
 				{
 					//LOG_ERR("failed to resolve hostname");
+					
 					ok = false;
 				}
 			}
@@ -129,7 +269,11 @@ struct WebRequest_Posix : WebRequest
 				mutex.unlock();
 
 				if (sock == -1)
+				{
+					// webrequest got canceled
+					
 					ok = false;
+				}
 			}
 
 			if (ok)
@@ -138,9 +282,15 @@ struct WebRequest_Posix : WebRequest
 				
 				signal(SIGPIPE, SIG_IGN);
 				
-				if (connect(sock, addrinfo->ai_addr, addrinfo->ai_addrlen) == -1)
+				// connect to remote endpoint
+				
+				if (connect(
+					sock,
+					addrinfo->ai_addr,
+					addrinfo->ai_addrlen) == -1)
 				{
-					//LOG_ERR("failed to connect socket");
+					//LOG_ERR("failed to connect to remote endpoint");
+					
 					ok = false;
 				}
 			}
@@ -155,7 +305,7 @@ struct WebRequest_Posix : WebRequest
 				
 				const auto hdr_host = ApplyFormat("Host: %s\r\n", hostname);
 
-				const char * hdr_end = "\r\n\r\n";
+				const auto hdr_end = "\r\n\r\n";
 				
 				const auto hdrs =
 					hdr_method +
@@ -182,11 +332,6 @@ struct WebRequest_Posix : WebRequest
 					}
 
 					bytes += numBytesSent;
-
-					if (bytes == bytes_end)
-					{
-						break;
-					}
 				}
 			}
 
@@ -208,7 +353,12 @@ struct WebRequest_Posix : WebRequest
 				{
 					char bytes[1024];
 
-					const auto numBytesReceived = recv(sock, bytes, sizeof(bytes) / sizeof(bytes[0]), 0);
+					const int numBytesReceived =
+						recv(
+							sock,
+							bytes,
+							sizeof(bytes) / sizeof(bytes[0]),
+							0);
 
 					// connection closed normally
 					if (numBytesReceived == 0)
@@ -261,14 +411,15 @@ struct WebRequest_Posix : WebRequest
 									if (firstLine)
 									{
 									// todo : decode result code
+									// todo : check response code is 200 (OK)
 										firstLine = false;
-										end += 2;
+										end += 2; // skip \r\n
 										begin = end;
 										continue;
 									}
 									
 									// decode header key-value pair
-									// format: key: value
+									// format: <key>: <value>
 									
 									int keyBegin = begin;
 									int keyEnd = begin;
@@ -283,7 +434,7 @@ struct WebRequest_Posix : WebRequest
 									
 									if (keyEnd == end)
 									{
-										// not a key-value pair
+										// ':' not found. not a key-value pair
 									}
 									else
 									{
@@ -291,6 +442,8 @@ struct WebRequest_Posix : WebRequest
 										
 										int valueBegin = keyEnd + 1; // +1 to skip ':'
 										int valueEnd = end;
+										
+										// trim white space before the value
 										
 										while (valueBegin < valueEnd)
 										{
@@ -318,7 +471,7 @@ struct WebRequest_Posix : WebRequest
 									#undef is_header
 									}
 									
-									end += 2;
+									end += 2; // skip \r\n
 									
 									begin = end;
 								}
@@ -328,7 +481,13 @@ struct WebRequest_Posix : WebRequest
 								}
 							}
 							
-							// todo : if no content length, abort
+							if (hasContentLength == false)
+							{
+								// missing content length
+								
+								ok = false;
+								break;
+							}
 						}
 					}
 					
@@ -351,11 +510,6 @@ struct WebRequest_Posix : WebRequest
 						}
 					}
 				}
-			}
-
-			if (ok)
-			{
-				// todo : check response code is 200 (OK)
 			}
 
 			if (ok)
@@ -390,7 +544,9 @@ struct WebRequest_Posix : WebRequest
 				// has occurred. we want to keep recv'ing until either condition occurred
 				char c;
 				while (recv(sock, &c, 1, 0) == 1)
-					sleep(0);
+				{
+					// (flush)
+				}
 				
 				// close the socket
 				
