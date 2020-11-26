@@ -40,6 +40,19 @@ std::string ApplyFormat(const char * format, ...)
 	return text;
 }
 
+static void LogError(const char * format, ...)
+{
+	char text[1024];
+	va_list args;
+	va_start(args, format);
+	const int n = vsnprintf(text, sizeof(text), format, args);
+	va_end(args);
+	
+	assert(n >= 0 && n < 1024);
+	if (n >= 0 && n < 1024)
+		printf("webrequest: error: %s\n", text);
+}
+
 struct WebRequest_Posix : WebRequest
 {
 	std::thread thread;
@@ -91,8 +104,7 @@ struct WebRequest_Posix : WebRequest
 				
 				if (protocol_end[0] == 0)
 				{
-					// invalid url. expected protocol
-					
+					LogError("invalid url. expected protocol");
 					ok = false;
 				}
 				else
@@ -104,8 +116,7 @@ struct WebRequest_Posix : WebRequest
 					
 					if (protocol_length == 0)
 					{
-						// invalid url. protocol missing
-						
+						LogError("invalid url. expected protocol");
 						ok = false;
 					}
 					else if (
@@ -113,8 +124,7 @@ struct WebRequest_Posix : WebRequest
 						protocol_length != 4 ||
 						memcmp(protocol_begin, "http", 4) != 0)
 					{
-						// unsupported protocol
-						
+						LogError("unsupported protocol. must be 'http'");
 						ok = false;
 					}
 				}
@@ -154,14 +164,12 @@ struct WebRequest_Posix : WebRequest
 				
 				if (hostname_length == 0)
 				{
-					// hostname missing
-					
+					LogError("invalid url. expected hostname");
 					ok = false;
 				}
 				else if (hostname_length >= 1024)
 				{
-					// hostname too long
-					
+					LogError("invalid url. hostname too long");
 					ok = false;
 				}
 				else
@@ -207,14 +215,12 @@ struct WebRequest_Posix : WebRequest
 				
 				if (portnumber_length == 0)
 				{
-					// port number missing
-					
+					LogError("invalid url. port number is empty");
 					ok = false;
 				}
 				else if (portnumber_length >= 32)
 				{
-					// port number too long
-					
+					LogError("invalid url. port number too long");
 					ok = false;
 				}
 				else
@@ -249,8 +255,7 @@ struct WebRequest_Posix : WebRequest
 					&baseaddr,
 					&addrinfo) != 0)
 				{
-					//LOG_ERR("failed to resolve hostname");
-					
+					LogError("failed to resolve hostname");
 					ok = false;
 				}
 			}
@@ -271,7 +276,6 @@ struct WebRequest_Posix : WebRequest
 				if (sock == -1)
 				{
 					// webrequest got canceled
-					
 					ok = false;
 				}
 			}
@@ -289,8 +293,7 @@ struct WebRequest_Posix : WebRequest
 					addrinfo->ai_addr,
 					addrinfo->ai_addrlen) == -1)
 				{
-					//LOG_ERR("failed to connect to remote endpoint");
-					
+					LogError("failed to connect to remote endpoint");
 					ok = false;
 				}
 			}
@@ -326,7 +329,7 @@ struct WebRequest_Posix : WebRequest
 					
 					if (numBytesSent < 0)
 					{
-						//LOG_ERR("failed to send");
+						LogError("failed to send request to server");
 						ok = false;
 						break;
 					}
@@ -367,6 +370,7 @@ struct WebRequest_Posix : WebRequest
 					// connection closed unexpectedly
 					if (numBytesReceived < 0)
 					{
+						LogError("failed to receive response data from server");
 						ok = false;
 						break;
 					}
@@ -483,8 +487,7 @@ struct WebRequest_Posix : WebRequest
 							
 							if (hasContentLength == false)
 							{
-								// missing content length
-								
+								LogError("missing Content-Length header");
 								ok = false;
 								break;
 							}
@@ -518,6 +521,7 @@ struct WebRequest_Posix : WebRequest
 				
 				if (hasContentOffset == false)
 				{
+					LogError("response is missing content section");
 					ok = false;
 				}
 				else
