@@ -126,7 +126,7 @@ bool Worker::initImpl(const char * url)
 			nullptr,
 			WINHTTP_NO_REFERER, 
 			WINHTTP_DEFAULT_ACCEPT_TYPES, 
-			WINHTTP_FLAG_SECURE*0);
+			WINHTTP_FLAG_SECURE*0); // enable SSL
 	}
 	urlComp.lpszUrlPath[urlComp.dwUrlPathLength] = c;
 
@@ -136,7 +136,9 @@ bool Worker::initImpl(const char * url)
 		return false;
 	}
 
-	if (WinHttpSetTimeouts(hRequest, 2000, 2000, 2000, 2000) == FALSE)
+	// timeout values are in milliseconds (resolve, connect, send, receive)
+	// defaults: 0 (infinite), 60, 30, 30 (seconds)
+	if (WinHttpSetTimeouts(hRequest, 6000, 2000, 2000, 2000) == FALSE)
 	{
 		handleError("failed to set WinHTTP timeouts");
 		return false;

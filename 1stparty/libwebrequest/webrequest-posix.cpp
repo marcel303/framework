@@ -315,7 +315,7 @@ struct WebRequest_Posix : WebRequest
 			
 				struct timeval sendTimeout;
 				memset(&sendTimeout, 0, sizeof(sendTimeout));
-				sendTimeout.tv_sec = 30;
+				sendTimeout.tv_sec = 2;
 				if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&sendTimeout, sizeof(sendTimeout)) < 0)
 				{
 					LogError("failed to set send timeout");
@@ -324,7 +324,7 @@ struct WebRequest_Posix : WebRequest
 				
 				struct timeval recvTimeout;
 				memset(&recvTimeout, 0, sizeof(recvTimeout));
-				recvTimeout.tv_sec = 30;
+				recvTimeout.tv_sec = 2;
 				if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&recvTimeout, sizeof(recvTimeout)) < 0)
 				{
 					LogError("failed to set receive timeout");

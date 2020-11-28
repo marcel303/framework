@@ -16,8 +16,15 @@ struct WebRequestCocoa : WebRequest
 		: failure(false)
 		, done(false)
 	{
-		NSURL * url = [NSURL URLWithString:[NSString stringWithCString:in_url encoding:NSASCIIStringEncoding]];
- 		NSURLRequest * request = [NSURLRequest requestWithURL:url];
+		NSURL * url =
+			[NSURL
+				URLWithString:[NSString stringWithCString:in_url
+				encoding:NSASCIIStringEncoding]];
+ 		NSURLRequest * request =
+ 			[NSURLRequest
+ 				requestWithURL:url
+ 				cachePolicy:NSURLRequestReloadIgnoringCacheData
+				timeoutInterval:6.0];
 
 		NSURLSession * session = [NSURLSession sharedSession];
 		
@@ -31,13 +38,17 @@ struct WebRequestCocoa : WebRequest
 				else
 				{
 					if ([response isKindOfClass:[NSHTTPURLResponse class]] == false)
+					{
 						failure = true;
+					}
 					else
 					{
 						NSHTTPURLResponse * httpResponse = (NSHTTPURLResponse*)response;
 						
 						if (httpResponse.statusCode < 200 || httpResponse.statusCode >= 300)
+						{
 							failure = true;
+						}
 						else
 						{
 							resultData = data;
