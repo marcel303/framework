@@ -23,8 +23,6 @@
 	#define closesocket close
 #endif
 
-// todo : rename implementation depending on api used: posix
-
 std::string ApplyFormat(const char * format, ...)
 {
 	char text[1024];
@@ -51,6 +49,17 @@ static void LogError(const char * format, ...)
 	assert(n >= 0 && n < 1024);
 	if (n >= 0 && n < 1024)
 		printf("webrequest: error: %s\n", text);
+}
+
+static bool StringEqualCaseInsensitive(const char * a, const char * b, const int length)
+{
+	for (int i = 0; i < length; ++i)
+	{
+		if (tolower(a[i]) != tolower(b[i]))
+			return false;
+	}
+	
+	return true;
 }
 
 struct WebRequest_Posix : WebRequest
@@ -120,9 +129,8 @@ struct WebRequest_Posix : WebRequest
 						ok = false;
 					}
 					else if (
-					// todo : case insensitivity
 						protocol_length != 4 ||
-						memcmp(protocol_begin, "http", 4) != 0)
+						!StringEqualCaseInsensitive(protocol_begin, "http", 4))
 					{
 						LogError("unsupported protocol. must be 'http'");
 						ok = false;
@@ -245,6 +253,9 @@ struct WebRequest_Posix : WebRequest
 			{
 				// resolve hostname
 
+				// note : the timeout interval for getaddrinfo cannot be set
+				//        it's defined system-wide in resolv.conf
+			
 				struct addrinfo baseaddr = { };
 				baseaddr.ai_family = AF_INET;
 				baseaddr.ai_socktype = SOCK_STREAM;
@@ -294,6 +305,29 @@ struct WebRequest_Posix : WebRequest
 					addrinfo->ai_addrlen) == -1)
 				{
 					LogError("failed to connect to remote endpoint");
+					ok = false;
+				}
+			}
+			
+			if (ok)
+			{
+				// set timeout intervals for send and receive
+			
+				struct timeval sendTimeout;
+				memset(&sendTimeout, 0, sizeof(sendTimeout));
+				sendTimeout.tv_sec = 30;
+				if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&sendTimeout, sizeof(sendTimeout)) < 0)
+				{
+					LogError("failed to set send timeout");
+					ok = false;
+				}
+				
+				struct timeval recvTimeout;
+				memset(&recvTimeout, 0, sizeof(recvTimeout));
+				recvTimeout.tv_sec = 30;
+				if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&recvTimeout, sizeof(recvTimeout)) < 0)
+				{
+					LogError("failed to set receive timeout");
 					ok = false;
 				}
 			}
@@ -398,14 +432,17 @@ struct WebRequest_Posix : WebRequest
 						{
 							// we reached the end of the headers
 							
-							// decode headers
+							// decode result code and headers
+							
+							int resultCode = 0;
+							char resultText[32];
 							
 							int begin = 0;
 							int end = 0;
 							
 							bool firstLine = true;
 							
-							while (end + 1 < contentOffset)
+							while (ok && end + 1 < contentOffset)
 							{
 								// end of header line?
 								
@@ -414,8 +451,15 @@ struct WebRequest_Posix : WebRequest
 								{
 									if (firstLine)
 									{
-									// todo : decode result code
-									// todo : check response code is 200 (OK)
+										char protocol[256];
+										
+										if (sscanf(response.data() + begin, "%s %d %s", protocol, &resultCode, resultText) != 3)
+										{
+											LogError("invalid HTTP response header");
+											ok = false;
+											break;
+										}
+										
 										firstLine = false;
 										end += 2; // skip \r\n
 										begin = end;
@@ -485,12 +529,31 @@ struct WebRequest_Posix : WebRequest
 								}
 							}
 							
-							if (hasContentLength == false)
+							if (ok)
 							{
-								LogError("missing Content-Length header");
-								ok = false;
+								if (resultCode < 200 || resultCode >= 300)
+								{
+									LogError("HTTP response code: %d (%s)", resultCode, resultText);
+									ok = false;
+								}
+							}
+							
+							if (ok)
+							{
+								if (hasContentLength == false)
+								{
+									LogError("missing Content-Length header");
+									ok = false;
+								}
+							}
+							
+							if (ok == false)
+							{
+								// don't read the content following the response headers if the request failed
 								break;
 							}
+							
+							//printf("response: %s", response.c_str());
 						}
 					}
 					
@@ -668,7 +731,7 @@ struct WebRequest_Posix : WebRequest
 			{
 				if (shutdown(sock, SHUT_RDWR) == -1)
 				{
-					// todo : log error
+					LogError("graceful TCP shutdown failed");
 				}
 			}
 		}
