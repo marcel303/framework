@@ -19,7 +19,6 @@ public:
 	int m_levelCount; // # LOD levels
 	int m_size;       // # tiles
 	int m_vbSize;     // vertex buffer size
-	int m_radius;     // max H/V distance
 
 	LodLevel * m_levels;
 	
@@ -35,7 +34,7 @@ public:
 	{
 	public:
 		int m_level;
-		IB m_buffers[16];
+		IB m_buffers[16]; // pre-computed index buffers, one for each combination of neighboring LOD levels
 
 		static int sign(const int v)
 		{
@@ -54,7 +53,11 @@ public:
 			if (dx2 < 0) dx2 = 0;
 			if (dy2 < 0) dy2 = 0;
 
-			const int index = (dx1 << 0) | (dy1 << 1) | (dx2 << 2) | (dy2 << 3);
+			const int index =
+				(dx1 << 0) |
+				(dy1 << 1) |
+				(dx2 << 2) |
+				(dy2 << 3);
 
 			return index;
 		}
@@ -76,7 +79,6 @@ public:
 		m_levelCount = 0;
 		m_size = 0;
 		m_vbSize = 0;
-		m_radius = 0;
 		
 		m_levels = nullptr;
 	}
@@ -97,12 +99,9 @@ public:
 
 		m_vbSize = m_size + 1;
 
-		m_radius = m_levelCount * 2 + 1;
-
 		logDebug("Powah: %d.", m_powah);
 		logDebug("LevelCount: %d.", m_levelCount);
 		logDebug("Size: %dx%d.", m_size, m_size);
-		logDebug("Radius: %d.", m_radius);
 
 		allocLevels();
 	}
@@ -121,7 +120,10 @@ public:
 	IB & getIB(int level, int levelX1, int levelY1, int levelX2, int levelY2)
 	{
 		#define CLAMP_LEVEL(level) \
-			if (level >= m_levelCount) level = m_levelCount - 1; else if (level < 0) level = 0
+			if (level >= m_levelCount) \
+				level = m_levelCount - 1; \
+			else if (level < 0) \
+				level = 0
 
 		CLAMP_LEVEL(level);
 		CLAMP_LEVEL(levelX1);
@@ -197,7 +199,7 @@ private:
 
 		logDebug("IndexCount: %d. VBSkip: %d.", indexCount, vbSkip);
 
-		#define VBINDEX(x, y) (x) * vbSkip + (y) * vbSkip * m_vbSize;
+		#define VBINDEX(x, y) ((x) * vbSkip + (y) * vbSkip * m_vbSize)
 		#define IBINDEX(x, y, tri, vert) (((x) + (y) * ib.size) * 2 * 3 + (tri) * 3 + (vert))
 
 		for (int x = 0; x < ib.size; ++x)
@@ -303,8 +305,37 @@ private:
 class Tile
 {
 public:
-	void Initialize(int vbSize, int tileX, int tileY)
+	int m_vbSize;
+	GxVertexBuffer m_vb;
+	int m_level;
+	
+	Tile()
 	{
+		setZero();
+	}
+	
+	~Tile()
+	{
+		free();
+	}
+	
+	void free()
+	{
+		m_vb.free();
+		
+		setZero();
+	}
+	
+	void setZero()
+	{
+		m_vbSize = 0;
+		m_level = 0;
+	}
+	
+	void initialize(int vbSize, int tileX, int tileY)
+	{
+		free();
+		
 		m_vbSize = vbSize;
 
 		Vec3 * positions = (Vec3*)alloca(vbSize * vbSize * sizeof(Vec3));
@@ -320,9 +351,9 @@ public:
 				
 				const float worldX = (tX + tileX) * vbSize;
 				const float worldY = (tY + tileY) * vbSize;
-				
-				const int index = x + y * vbSize;
 
+				// -- calculate terrain height
+				
 				float phase = ((worldX - vbSize / 2.0f) + (worldY - vbSize / 2.0f)) / vbSize;
 				//float phase = worldX / vbSize * 1.3f;
 				//float phase = worldY / vbSize * 1.3f;
@@ -330,6 +361,8 @@ public:
 				float height = sinf(phase * 2.0f * M_PI) * 10.0f;
 				//float height = 0.0f;
 
+				// -- add some additional humps along the surface
+				
 				float dx = fabsf((tX - 0.5f) * 2.0f);
 				float dy = fabsf((tY - 0.5f) * 2.0f);
 
@@ -337,6 +370,10 @@ public:
 				//float extra = 0.0f;
 				
 				height += extra * 20.0f * sign;
+				
+				// -- store position
+				
+				const int index = x + y * vbSize;
 
 				positions[index].Set(
 					tX * vbSize,
@@ -347,10 +384,6 @@ public:
 		
 		m_vb.alloc(positions, vbSize * vbSize * sizeof(Vec3));
 	}
-
-	int m_vbSize;
-	GxVertexBuffer m_vb;
-	int m_level;
 };
 
 class Map
@@ -398,7 +431,7 @@ public:
 
 		for (int x = 0; x < sizeX; ++x)
 			for (int y = 0; y < sizeY; ++y)
-				m_tiles[x + y * sizeX].Initialize(vbSize, x, y);
+				m_tiles[x + y * sizeX].initialize(vbSize, x, y);
 	}
 	
 	void free()
@@ -445,6 +478,7 @@ public:
 				int dx = x - m_centerX;
 				int dy = y - m_centerY;
 
+			#if 1
 				int level = 0;
 
 				dx = abs(dx);
@@ -454,8 +488,11 @@ public:
 					level = dx;
 				else
 					level = dy;
-
-				//int level = abs(dx) + abs(dy);
+			#elif 1
+				int level = sqrt(dx * dx + dy * dy);
+			#else
+				int level = abs(dx) + abs(dy);
+			#endif
 
 				m_tiles[x + y * m_sizeX].m_level = level;
 			}
@@ -485,6 +522,12 @@ int main(int argc, char * argv[])
 	const int levelCount = 3;
 
 	logDebug("Size: %d. VB size: %d. Powah: %d. LevelCount: %d", size, vbSize, powah, levelCount);
+
+// todo : change LOD index buffer so they don't need duplicate vertices
+//        inside tiles. this will require usage of a single vertex buffer
+//        for the entire terrain (instead of per-tile) and LodBuffers will
+//        need to know this width of the terrain so it can use the correct
+//        stride
 
 	LodBuffers buffers;
 
@@ -518,17 +561,6 @@ int main(int argc, char * argv[])
 		{
 			projectPerspective3d(79.f, .01f, 100.f);
 			camera.pushViewMatrix();
-		
-			float scale = 0.0075f;
-			//float scale = 0.01f;
-
-			Mat4x4 matScale;
-			matScale.MakeScaling(Vec3(scale, scale, scale));
-
-			Mat4x4 matRot;
-			//matRot.MakeRotationY(framework.time);
-			//matRot.MakeRotationEuler(Vec3(sinf(framework.time) * 0.3f, 0.0f, framework.time * 0.1f));
-			matRot.MakeIdentity();
 
 			pushWireframe(true);
 			
@@ -555,39 +587,40 @@ int main(int argc, char * argv[])
 			{
 				for (int y = 0; y < map.m_sizeY; ++y)
 				{
-					const GxVertexInput vsInputs[1] =
-					{
-						{ VS_POSITION, 3, GX_ELEMENT_FLOAT32, false, 0, sizeof(Vec3) }
-					};
-					
-					gxSetVertexBuffer(
-						&map.m_tiles[x + y * map.m_sizeX].m_vb,
-						vsInputs,
-						sizeof(vsInputs) / sizeof(vsInputs[0]));
-
-					const float offsetX = (map.m_sizeX - 1) / 2.0f;
-					const float offsetY = (map.m_sizeY - 1) / 2.0f;
-
-					Mat4x4 matMove;
-					matMove.MakeTranslation(
-						Vec3(
-							((x - offsetX) - 0.5f) * vbSize,
-							((y - offsetY) - 0.5f) * vbSize,
-							0.0f));
-
-					const Mat4x4 mat = matRot * matScale * matMove;
 					gxPushMatrix();
 					{
-						gxMultMatrixf(mat.m_v);
+						gxScalef(
+							1.0f / vbSize,
+							1.0f / vbSize,
+							1.0f / vbSize);
 
-						GxIndexBuffer * indexBuffer = &buffers.getIB(
+
+						const float offsetX = map.m_sizeX / 2.0f;
+						const float offsetY = map.m_sizeY / 2.0f;
+						
+						gxTranslatef(
+							(x - offsetX) * vbSize,
+							(y - offsetY) * vbSize,
+							0.0f);
+
+						const GxVertexInput vsInputs[1] =
+						{
+							{ VS_POSITION, 3, GX_ELEMENT_FLOAT32, false, 0, sizeof(Vec3) }
+						};
+						
+						gxSetVertexBuffer(
+							&map.m_tiles[x + y * map.m_sizeX].m_vb,
+							vsInputs,
+							sizeof(vsInputs) / sizeof(vsInputs[0]));
+
+						const GxIndexBuffer * indexBuffer = &buffers.getIB(
 							map.getLevel(x    , y    ),
 							map.getLevel(x - 1, y    ),
 							map.getLevel(x    , y - 1),
 							map.getLevel(x + 1, y    ),
 							map.getLevel(x    , y + 1)).indexBuffer;
 
-					// todo : use vertex offset and generate levels once
+					// todo : use vertex offset and use a single vertex buffer
 						gxDrawIndexedPrimitives(
 							GX_TRIANGLES,
 							0,
