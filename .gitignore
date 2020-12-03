@@ -37,12 +37,6 @@ audioGraph/conglomerates/audioNodes_all.h
 audioGraph/conglomerates/binaural_all.cpp
 video_uikit_all.m
 kinect_all.h
-users/marcel/refine/data/editor-settings/FileEditor_Gltf.txt
-users/marcel/refine/data/editor-settings/FileEditor_JsusFx.txt
-users/marcel/refine/data/editor-settings/FileEditor_Model.txt
-users/marcel/refine/data/editor-settings/FileEditor_Sprite.txt
-users/marcel/refine/data/editor-settings/FileEditor_Spriter.txt
-users/marcel/refine/data/editor-settings/FileEditor_Video.txt
 vfxNodes_all-mac.h
 binaural_all.cpp
 gx-opengl-all.cpp
@@ -51,3 +45,5 @@ refine/data/editor-settings
 3rdparty/libsdl2-support/conglomerates
 users/marcel/ovr-cubes/data/Secret of Mana
 users/marcel/ovr-cubes/data/binaural
+1stparty/libwebrequest/data/testfile*
+users/marcel/sceneedit1/data/out
