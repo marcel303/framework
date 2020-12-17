@@ -1,4 +1,5 @@
 #include "fileEditor_video.h"
+#include "framework.h"
 #include "imgui.h" // doButtonBar
 #include "reflection.h"
 #include "ui.h" // drawUiRectCheckered

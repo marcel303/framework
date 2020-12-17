@@ -4,6 +4,8 @@
 #include "fileEditor_audioGraph.h"
 #include "graphEdit.h"
 
+#include "Debugging.h"
+
 FileEditor_AudioGraph::FileEditor_AudioGraph(const char * path)
 	: audioGraphMgr(defaultSx, defaultSy)
 {

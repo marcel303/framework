@@ -5,6 +5,7 @@
 #include "ui.h" // drawUiRectCheckered
 
 #include "fileEditor_jsfx.h"
+#include "framework.h"
 #include "imgui.h"
 #include "StringEx.h"
 #include <algorithm>

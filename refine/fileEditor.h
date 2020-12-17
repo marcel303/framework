@@ -1,10 +1,11 @@
 #pragma once
 
-#include "framework.h"
 #include <string>
 
 struct StructuredType;
 struct TypeDB;
+
+class Surface;
 
 struct FileEditor
 {
@@ -12,26 +13,14 @@ struct FileEditor
 	
 	Surface * editorSurface = nullptr; // reference to the editor surface this file editor is asked to draw into. note that we don't own this surface ourselves
 	
-	virtual ~FileEditor()
-	{
-	}
+	virtual ~FileEditor();
 	
-	void clearSurface(const int r, const int g, const int b, const int a)
-	{
-		editorSurface->clear(r, g, b, a);
-		
-		editorSurface->clearDepth(1.f);
-	}
+	void clearSurface(const int r, const int g, const int b, const int a);
 	
-	void tickBegin(Surface * in_editorSurface)
-	{
-		editorSurface = in_editorSurface;
-	}
+	void tickBegin(Surface * in_editorSurface);
+	void tickEnd();
 	
-	void tickEnd()
-	{
-		editorSurface = nullptr;
-	}
+	void showErrorMessage(const char * forAction, const char * format, ...);
 	
 	virtual bool reflect(TypeDB & typeDB, StructuredType & type)
 	{

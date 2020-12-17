@@ -4,10 +4,12 @@
 #include "framework.h"
 #include "imgui/TextEditor.h"
 #include "nfd.h"
+#include "Path.h"
 #include "TextIO.h"
-#include <SDL2/SDL.h> // SDL_ShowSimpleMessageBox
 
 // todo : add option to select font
+
+// todo : move implementation to cpp file
 
 static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor)
 {
@@ -92,7 +94,7 @@ struct FileEditor_Text : FileEditor
 			
 			if (TextIO::save(path.c_str(), lines, lineEndings) == false)
 			{
-				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+				showErrorMessage("Save error", "Failed to save to file");
 			}
 			else
 			{
@@ -153,7 +155,7 @@ struct FileEditor_Text : FileEditor
 							
 							if (TextIO::save(path.c_str(), lines, lineEndings) == false)
 							{
-								SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+								showErrorMessage("Save error", "Failed to save to file");
 							}
 							else
 							{
@@ -180,7 +182,7 @@ struct FileEditor_Text : FileEditor
 								
 								if (TextIO::save(filename, lines, lineEndings) == false)
 								{
-									SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+									showErrorMessage("Save error", "Failed to save to file");
 								}
 								else
 								{

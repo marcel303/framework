@@ -202,7 +202,7 @@ struct RealtimeShaderEditor
 								
 								if (TextIO::save(path.c_str(), lines, lineEndings) == false)
 								{
-									SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+									showErrorMessage("Save error", "Failed to save to file");
 								}
 							}
 						}
@@ -217,7 +217,7 @@ struct RealtimeShaderEditor
 								
 								if (TextIO::save(filename, lines, lineEndings) == false)
 								{
-									SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+									showErrorMessage("Save error", "Failed to save to file");
 									
 									path.clear();
 									pathIsValid = false;

@@ -4,7 +4,12 @@
 #include "lineWriter.h"
 #include "reflection.h"
 #include "reflection-textio.h"
+
+#include "Log.h"
 #include "TextIO.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Vec4.h"
 #include <typeinfo>
 
 #if defined(__GNUC__)
@@ -50,13 +55,13 @@ void saveEditorSettings(FileEditor * editor)
 		
 		LineWriter lineWriter;
 		if (object_tolines_recursive(typeDB, &type, editor, lineWriter, 0) == false)
-			logError("failed to save object to lines");
+			LOG_ERR("failed to save object to lines");
 		else
 		{
 			auto lines = lineWriter.to_lines();
 			
 			if (TextIO::save(filename.c_str(), lines, TextIO::kLineEndings_Unix) == false)
-				logError("failed to save editor settings");
+				LOG_ERR("failed to save editor settings");
 		}
 	}
 }
@@ -82,7 +87,7 @@ void loadEditorSettings(FileEditor * editor)
 			LineReader lineReader(lines, 0, 0);
 			
 			if (object_fromlines_recursive(typeDB, &type, editor, lineReader) == false)
-				logError("failed to load object from lines");
+				LOG_ERR("failed to load object from lines");
 		}
 	}
 }

@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+struct SDL_mutex;
+
 class RtMidiIn;
 
 struct MidiBuffer

@@ -6,6 +6,7 @@
 #include "allegro2-voiceApi.h"
 
 #include "fileEditor_jgmod.h"
+#include "framework.h"
 #include "imgui.h"
 
 FileEditor_Jgmod::FileEditor_Jgmod(const char * path)

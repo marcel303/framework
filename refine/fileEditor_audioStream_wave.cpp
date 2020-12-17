@@ -1,5 +1,6 @@
 #include "audiostream/AudioStreamWave.h"
 #include "fileEditor_audioStream_wave.h"
+#include "framework.h"
 
 FileEditor_AudioStream_Wave::FileEditor_AudioStream_Wave(const char * path)
 {

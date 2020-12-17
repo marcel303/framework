@@ -1,5 +1,6 @@
 #include "audiostream/AudioStreamVorbis.h"
 #include "fileEditor_audioStream_vorbis.h"
+#include "framework.h"
 
 FileEditor_AudioStream_Vorbis::FileEditor_AudioStream_Vorbis(const char * path)
 {
