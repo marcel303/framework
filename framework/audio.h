@@ -59,6 +59,8 @@ class AudioOutput;
 
 class SoundPlayer_AudioOutput
 {
+// todo : accept an AudioOutput at init(..). let framework create a global sound output and pass it into here. make the global sound output available to others by adding the ability to register audio streams
+
 	friend class SoundCacheElem;
 	
 	struct Buffer

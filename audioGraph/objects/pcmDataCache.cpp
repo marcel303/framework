@@ -34,6 +34,8 @@
 #include "Timer.h"
 #include <map>
 
+// todo : use a system-provided temp path for the cache files, to avoid polluting the data folder
+
 struct PcmDataCache
 {
 	std::map<std::string, PcmData*> elems;
