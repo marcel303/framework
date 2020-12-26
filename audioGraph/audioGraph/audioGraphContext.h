@@ -52,6 +52,7 @@ struct AudioGraphContext
 	};
 	
 // todo : add a method for adding 'objects'. query objects by typeid
+// todo : document 'objects'
 // todo : do the same for vfxgraph! useful for registering FsfxLibrary, ...
 /*
 

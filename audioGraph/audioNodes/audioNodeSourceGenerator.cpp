@@ -34,6 +34,9 @@
 //        - initially low (min) for the square and high (max) for phase > skew
 //        - initially low (min) for the triangle and high (max) for phase == skew
 
+// todo : have a phase input. if connected, use it to draw the shapes
+//        if not connected, generate it ourselves, and expose it as an output
+
 AUDIO_ENUM_TYPE(audioSineType)
 {
 	elem("sine");

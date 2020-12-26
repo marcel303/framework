@@ -34,7 +34,7 @@ AUDIO_NODE_TYPE(AudioNodeRamp)
 	
 	in("startRamped", "bool", "1");
 	in("value", "audioValue", "1");
-	in("rampTime", "audioValue", "1");
+	in("rampTime", "audioValue", "1"); // todo : separate ramp up and down time
 	in("rampUp!", "trigger");
 	in("rampDown!", "trigger");
 	out("value", "audioValue");

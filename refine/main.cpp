@@ -225,8 +225,8 @@ int main(int argc, char * argv[])
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch
 		{
-		// todo : think of a nicer way to open files with ambiguous filename extensions
-		// todo : investigate possibility of removing ambiguous filename extensions
+		// todo : think of a nicer way to open files with ambiguous filename extensions. right-click menu ?
+		// todo : investigate possibility of removing ambiguous filename extensions -> use resource-specific filenames, or look for meta file automatically (model.fbx -> look for model.txt)
 			if (extension == "txt" && (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)))
 				editor = new FileEditor_Model(filename.c_str());
 			else
