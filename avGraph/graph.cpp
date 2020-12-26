@@ -545,12 +545,18 @@ bool Graph::load(const char * filename, const Graph_TypeDefinitionLibrary * type
 	XMLDocument document;
 	
 	if (document.LoadFile(filename) != XML_SUCCESS)
+	{
+		LOG_ERR("failed to load %s", filename);
 		return false;
+	}
 	
 	XMLElement * xmlGraph = document.FirstChildElement("graph");
 	
 	if (xmlGraph == nullptr)
+	{
+		LOG_ERR("missing 'graph' XML element");
 		return false;
+	}
 	
 	return loadXml(xmlGraph, typeDefinitionLibrary);
 }
