@@ -19,6 +19,8 @@
 	#include <sys/socket.h>
 	#include <unistd.h> // close
 	#include <netdb.h> // addrinfo
+	#include <signal.h> // signal
+	#include <string.h> // memcmp, memcpy, memset
 
 	#define closesocket close
 #endif
