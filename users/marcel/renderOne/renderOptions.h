@@ -5,6 +5,8 @@
 
 class Color;
 
+struct GxTexture3d;
+
 struct TypeDB;
 
 namespace rOne
@@ -211,10 +213,10 @@ namespace rOne
 			typedef void (SrgbColorTransform)(Color & color);
 			
 			bool enabled = false;
-			int lookupTexture = 0;
+			int lookupTextureId = 0;
 			
-			static int lookupTextureFromFile(const char * filename);
-			static int lookupTextureFromSrgbColorTransform(SrgbColorTransform transform);
+			static void lookupTextureFromFile(const char * filename, GxTexture3d & texture);
+			static void lookupTextureFromSrgbColorTransform(SrgbColorTransform transform, GxTexture3d & texture);
 
 			static void reflect(TypeDB & typeDB);
 		} colorGrading;

@@ -870,13 +870,8 @@ namespace rOne
 			composite_idx = next_composite_idx;
 		}
 		
-		if (renderOptions.colorGrading.enabled && renderOptions.colorGrading.lookupTexture != 0)
+		if (renderOptions.colorGrading.enabled && renderOptions.colorGrading.lookupTextureId != 0)
 		{
-		// todo : create a color grading designer UI, with export option ?
-		// todo : write color grading identity LUT to data folder, at startup (when it doesn't exist yet)
-		// todo : add a Help Text about color grading
-		// todo : add the ability to load/save color grading LUT textures
-		// todo : remember last color grading LUT and automatically use it at startup
 			const int next_composite_idx = 1 - composite_idx;
 			
 			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Color grading");
@@ -889,7 +884,7 @@ namespace rOne
 					setShader(shader);
 					{
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setTexture3d("lutTexture", 1, renderOptions.colorGrading.lookupTexture, true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+						shader.setTexture3d("lutTexture", 1, renderOptions.colorGrading.lookupTextureId, true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
@@ -1926,42 +1921,35 @@ namespace rOne
 	
 	//
 	
-	int RenderOptions::ColorGrading::lookupTextureFromFile(const char * filename)
+	void RenderOptions::ColorGrading::lookupTextureFromFile(const char * filename, GxTexture3d & texture)
 	{
-		GxTextureId result = 0;
-		
 		ImageData * image = loadImage(filename);
 		
 		if (image == nullptr)
 		{
 			logError("failed to load image: %s", filename);
+			texture.free();
 		}
 		else if (image->sx != kLookupSize * kLookupSize || image->sy != kLookupSize)
 		{
 			logError("image doesn't adhere to the required size of %dx%d pixels for color grading lookup. filename=%s", kLookupSize * kLookupSize, kLookupSize, filename);
+			texture.free();
 		}
 		else
 		{
-			GxTexture3d texture;
-			texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA8_UNORM);
+			if (texture.isChanged(kLookupSize, kLookupSize, kLookupSize, GX_RGBA8_UNORM))
+			{
+				texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA8_UNORM);
+			}
+			
 			texture.upload(image->imageData, 4, 0);
-			
-		// fixme : make GxTexture3d a member of the color grading options ? or make a copy of the texture using copyTexture ?
-			GxTextureId textureId = texture.id;
-			texture.id = 0;
-			
-			texture.free();
-		
-			result = textureId;
 		}
 		
 		delete image;
 		image = nullptr;
-		
-		return result;
 	}
 	
-	int RenderOptions::ColorGrading::lookupTextureFromSrgbColorTransform(RenderOptions::ColorGrading::SrgbColorTransform transform)
+	void RenderOptions::ColorGrading::lookupTextureFromSrgbColorTransform(RenderOptions::ColorGrading::SrgbColorTransform transform, GxTexture3d & texture)
 	{
 		float * colors = (float*)malloc(kLookupSize * kLookupSize * kLookupSize * (sizeof(float)*4));
 		
@@ -1997,19 +1985,14 @@ namespace rOne
 			}
 		}
 		
-		GxTexture3d texture;
-		texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA32_FLOAT);
+		if (texture.isChanged(kLookupSize, kLookupSize, kLookupSize, GX_RGBA32_FLOAT))
+		{
+			texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA32_FLOAT);
+		}
+		
 		texture.upload(colors, 4, 0);
-		
-	// fixme : make GxTexture3d a member of the color grading options ? or make a copy of the texture using copyTexture ?
-		GxTextureId textureId = texture.id;
-		texture.id = 0;
-		
-		texture.free();
 		
 		free(colors);
 		colors = nullptr;
-		
-		return textureId;
 	}
 }

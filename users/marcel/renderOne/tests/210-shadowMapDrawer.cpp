@@ -149,11 +149,11 @@ int main(int argc, char * argv[])
 		
 		Mat4x4 worldToView = camera.getViewMatrix();
 		
-		if (keyboard.isDown(SDLK_1))
+		if (keyboard.isDown(SDLK_1) && spots.size() >= 1)
 			worldToView = spots[0].transform.CalcInv();
-		if (keyboard.isDown(SDLK_2))
+		if (keyboard.isDown(SDLK_2) && spots.size() >= 2)
 			worldToView = spots[1].transform.CalcInv();
-		if (keyboard.isDown(SDLK_3))
+		if (keyboard.isDown(SDLK_3) && spots.size() >= 3)
 			worldToView = spots[2].transform.CalcInv();
 		
 		if (keyboard.isDown(SDLK_0))

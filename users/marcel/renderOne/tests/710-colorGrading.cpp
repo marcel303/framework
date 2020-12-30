@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
 	renderOptions.renderMode = kRenderMode_ForwardShaded;
 	renderOptions.colorGrading.enabled = true;
 	
-	GxTextureId colorGradingTexture = 0;
+	GxTexture3d colorGradingTexture;
 	
 	FrameworkImGuiContext guiCtx;
 	guiCtx.init();
@@ -35,8 +35,7 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
-		freeTexture(colorGradingTexture);
-		colorGradingTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
+		renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
 			[](Color & color)
 			{
 			#if true
@@ -67,8 +66,9 @@ int main(int argc, char * argv[])
 				color.g *= 1.f;
 				color.b *= .9f;
 			#endif
-			});
-		renderOptions.colorGrading.lookupTexture = colorGradingTexture;
+			},
+			colorGradingTexture);
+		renderOptions.colorGrading.lookupTextureId = colorGradingTexture.id;
 		
 		bool inputIsCaptured = false;
 		guiCtx.processBegin(framework.timeStep, 800, 800, inputIsCaptured);
@@ -164,7 +164,11 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
+	colorGradingTexture.free();
+	
 	guiCtx.shut();
+	
+	framework.shutdown();
 	
 	return 0;
 }
