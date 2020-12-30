@@ -88,6 +88,12 @@
 	#include "framework-ovr.h"
 #endif
 
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
+	#include "audiooutput/AudioOutput_Native.h"
+
+	static AudioOutput_Native * g_audioOutput = nullptr;
+#endif
+
 // -----
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900
@@ -633,6 +639,36 @@ bool Framework::init(int sx, int sy)
 	
 	if (enableSound)
 	{
+	#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
+		fassert(g_audioOutput == nullptr);
+		g_audioOutput = new AudioOutput_Native();
+		
+		const int kSampleRate = 44100;
+		const int kBufferSize = 256;
+		
+		if (!g_audioOutput->Initialize(2, kSampleRate, kBufferSize))
+		{
+			logError("failed to initialize audio output");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_SOUND);
+			return false;
+		}
+		
+		if (!g_soundPlayer.init(
+			numSoundSources,
+			kSampleRate))
+		{
+			delete g_audioOutput;
+			g_audioOutput = nullptr;
+			
+			logError("failed to initialize sound player");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_SOUND);
+			return false;
+		}
+		
+		g_audioOutput->Play(&g_soundPlayer.getAudioStream());
+	#else
 		if (!g_soundPlayer.init(numSoundSources))
 		{
 			logError("failed to initialize sound player");
@@ -640,6 +676,7 @@ bool Framework::init(int sx, int sy)
 				initErrorHandler(INIT_ERROR_SOUND);
 			return false;
 		}
+	#endif
 	}
 
 	// initialize real time editing
@@ -684,6 +721,16 @@ bool Framework::shutdown()
 	shutRealTimeEditing();
 
 	// shut down sound player
+	
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
+	if (g_audioOutput != nullptr)
+	{
+		g_audioOutput->Shutdown();
+		
+		delete g_audioOutput;
+		g_audioOutput = nullptr;
+	}
+#endif
 	
 	if (!g_soundPlayer.shutdown())
 	{

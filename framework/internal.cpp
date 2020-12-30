@@ -970,7 +970,7 @@ SoundCacheElem::SoundCacheElem()
 
 void SoundCacheElem::free()
 {
-#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM || FRAMEWORK_USE_PORTAUDIO
 	if (buffer != nullptr)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -990,8 +990,13 @@ void SoundCacheElem::load(const char * filename)
 	
 	if (soundData != 0)
 	{
-	#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
-		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
+	#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM || FRAMEWORK_USE_PORTAUDIO
+		buffer = g_soundPlayer.createBuffer(
+			soundData->sampleData,
+			soundData->sampleCount,
+			soundData->sampleRate,
+			soundData->channelSize,
+			soundData->channelCount);
 
 		if (buffer != nullptr)
 		{

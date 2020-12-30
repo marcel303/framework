@@ -39,31 +39,31 @@ SoundPlayer g_soundPlayer;
 
 //
 
-#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
 
 #include "audiooutput/AudioOutput_Native.h"
 
 #define RESAMPLE_FIXEDBITS 32
 
-SoundPlayer_AudioOutput::MutexScope::MutexScope(std::mutex & mutex)
+SoundPlayer_AudioStream::MutexScope::MutexScope(std::mutex & mutex)
 	: m_mutex(mutex)
 {
 	m_mutex.lock();
 }
 
-SoundPlayer_AudioOutput::MutexScope::~MutexScope()
+SoundPlayer_AudioStream::MutexScope::~MutexScope()
 {
 	m_mutex.unlock();
 }
 
-int SoundPlayer_AudioOutput::Stream::Provide(int numSamples, AudioSample * samples)
+int SoundPlayer_AudioStream::Stream::Provide(int numSamples, AudioSample * samples)
 {
 	m_soundPlayer->generateAudio(samples, numSamples);
 	
 	return numSamples;
 }
 
-void * SoundPlayer_AudioOutput::createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount)
+void * SoundPlayer_AudioStream::createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount)
 {
 	if (sampleCount > 0 && channelSize == 2 && (channelCount == 1 || channelCount == 2))
 	{
@@ -84,7 +84,7 @@ void * SoundPlayer_AudioOutput::createBuffer(const void * sampleData, const int 
 	}
 }
 
-void SoundPlayer_AudioOutput::destroyBuffer(void *& buffer)
+void SoundPlayer_AudioStream::destroyBuffer(void *& buffer)
 {
 	if (buffer == nullptr)
 		return;
@@ -93,7 +93,7 @@ void SoundPlayer_AudioOutput::destroyBuffer(void *& buffer)
 	buffer = nullptr;
 }
 
-SoundPlayer_AudioOutput::Source * SoundPlayer_AudioOutput::allocSource()
+SoundPlayer_AudioStream::Source * SoundPlayer_AudioStream::allocSource()
 {
 	fassert(m_mutex.try_lock() == false);
 	
@@ -145,7 +145,7 @@ inline short clip16(int v)
 	return v;
 }
 
-void SoundPlayer_AudioOutput::generateAudio(AudioSample * __restrict samples, const int numSamples)
+void SoundPlayer_AudioStream::generateAudio(AudioSample * __restrict samples, const int numSamples)
 {
 	MutexScope scope(m_mutex);
 	
@@ -305,41 +305,7 @@ void SoundPlayer_AudioOutput::generateAudio(AudioSample * __restrict samples, co
 	}
 }
 
-bool SoundPlayer_AudioOutput::initAudioOutput(const int numChannels, const int sampleRate, const int bufferSize)
-{
-	auto * audioOutput = new AudioOutput_Native();
-	
-	fassert(m_audioOutput == nullptr);
-	m_audioOutput = audioOutput;
-	m_sampleRate = sampleRate;
-	
-	if (!audioOutput->Initialize(numChannels, sampleRate, bufferSize))
-		return false;
-	
-	m_stream.m_soundPlayer = this;
-	m_audioOutput->Play(&m_stream);
-	
-	return true;
-}
-
-bool SoundPlayer_AudioOutput::shutAudioOutput()
-{
-	if (m_audioOutput != nullptr)
-	{
-		m_audioOutput->Stop();
-		
-		delete m_audioOutput;
-		m_audioOutput = nullptr;
-	}
-	
-	m_sampleRate = 0;
-	
-	m_stream = Stream();
-	
-	return true;
-}
-
-SoundPlayer_AudioOutput::SoundPlayer_AudioOutput()
+SoundPlayer_AudioStream::SoundPlayer_AudioStream()
 {
 	m_numSources = 0;
 	m_sources = nullptr;
@@ -351,19 +317,14 @@ SoundPlayer_AudioOutput::SoundPlayer_AudioOutput()
 	m_musicStream = nullptr;
 	m_musicStreamResampler = nullptr;
 	m_musicVolume = 0.f;
-	
-	//
-	
-	m_audioOutput = nullptr;
-	m_sampleRate = 0;
 }
 
-SoundPlayer_AudioOutput::~SoundPlayer_AudioOutput()
+SoundPlayer_AudioStream::~SoundPlayer_AudioStream()
 {
-	fassert(m_audioOutput == nullptr);
+	fassert(m_stream.m_soundPlayer == nullptr);
 }
 
-bool SoundPlayer_AudioOutput::init(int numSources)
+bool SoundPlayer_AudioStream::init(const int numSources, const int sampleRate)
 {
 	// create audio sources
 	
@@ -385,22 +346,19 @@ bool SoundPlayer_AudioOutput::init(int numSources)
 	m_musicStreamResampler = new AudioStreamResampler();
 	m_musicVolume = 1.f;
 	
-	// initialize audio output
+	// initialize audio stream
 	
-	if (!initAudioOutput(2, 44100, 256)) // fixme
-	{
-		logError("failed to initialize audio output");
-		return false;
-	}
+	m_stream.m_soundPlayer = this;
+	m_stream.m_sampleRate = sampleRate;
 	
 	return true;
 }
 
-bool SoundPlayer_AudioOutput::shutdown()
+bool SoundPlayer_AudioStream::shutdown()
 {
-	// shut down audio output
+	// shut down audio stream
 	
-	shutAudioOutput();
+	m_stream = Stream();
 	
 	// destroy music source
 	
@@ -421,11 +379,11 @@ bool SoundPlayer_AudioOutput::shutdown()
 	return true;
 }
 
-void SoundPlayer_AudioOutput::process()
+void SoundPlayer_AudioStream::process()
 {
 }
 
-int SoundPlayer_AudioOutput::playSound(const void * buffer, const float volume, const bool loop)
+int SoundPlayer_AudioStream::playSound(const void * buffer, const float volume, const bool loop)
 {
 	if (buffer == nullptr)
 		return -1;
@@ -445,7 +403,7 @@ int SoundPlayer_AudioOutput::playSound(const void * buffer, const float volume, 
 		source->playId = m_playId++;
 		source->buffer = (Buffer*)buffer;
 		source->bufferPosition_fp = 0;
-		source->bufferIncrement_fp = ((int64_t(source->buffer->sampleRate) << RESAMPLE_FIXEDBITS) / m_sampleRate);
+		source->bufferIncrement_fp = ((int64_t(source->buffer->sampleRate) << RESAMPLE_FIXEDBITS) / m_stream.m_sampleRate);
 		source->loop = loop;
 		source->volume = volume;
 		
@@ -453,7 +411,7 @@ int SoundPlayer_AudioOutput::playSound(const void * buffer, const float volume, 
 	}
 }
 
-void SoundPlayer_AudioOutput::stopSound(const int playId)
+void SoundPlayer_AudioStream::stopSound(const int playId)
 {
 	fassert(playId != -1);
 	if (playId == -1)
@@ -471,7 +429,7 @@ void SoundPlayer_AudioOutput::stopSound(const int playId)
 	}
 }
 
-void SoundPlayer_AudioOutput::stopSoundsForBuffer(const void * _buffer)
+void SoundPlayer_AudioStream::stopSoundsForBuffer(const void * _buffer)
 {
 	Buffer * buffer = (Buffer*)_buffer;
 	
@@ -490,7 +448,7 @@ void SoundPlayer_AudioOutput::stopSoundsForBuffer(const void * _buffer)
 	}
 }
 
-void SoundPlayer_AudioOutput::stopAllSounds()
+void SoundPlayer_AudioStream::stopAllSounds()
 {
 	MutexScope scope(m_mutex);
 	for (int i = 0; i < m_numSources; ++i)
@@ -500,7 +458,7 @@ void SoundPlayer_AudioOutput::stopAllSounds()
 	}
 }
 
-void SoundPlayer_AudioOutput::setSoundVolume(const int playId, const float volume)
+void SoundPlayer_AudioStream::setSoundVolume(const int playId, const float volume)
 {
 	fassert(playId != -1);
 	if (playId == -1)
@@ -516,22 +474,25 @@ void SoundPlayer_AudioOutput::setSoundVolume(const int playId, const float volum
 	}
 }
 
-void SoundPlayer_AudioOutput::playMusic(const char * filename, const bool loop)
+void SoundPlayer_AudioStream::playMusic(const char * filename, const bool loop)
 {
 	MutexScope scope(m_mutex);
 	
 	m_musicStream->Open(filename, loop);
-	m_musicStreamResampler->SetSource(m_musicStream, m_musicStream->SampleRate_get(), m_sampleRate);
+	m_musicStreamResampler->SetSource(
+		m_musicStream,
+		m_musicStream->SampleRate_get(),
+		m_stream.m_sampleRate);
 }
 
-void SoundPlayer_AudioOutput::stopMusic()
+void SoundPlayer_AudioStream::stopMusic()
 {
 	MutexScope scope(m_mutex);
 	
 	m_musicStream->Close();
 }
 
-void SoundPlayer_AudioOutput::setMusicVolume(const float volume)
+void SoundPlayer_AudioStream::setMusicVolume(const float volume)
 {
 	MutexScope scope(m_mutex);
 	

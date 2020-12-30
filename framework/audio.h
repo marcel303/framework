@@ -30,7 +30,7 @@
 #include "soundfile/SoundIO.h"
 
 #define FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO   (FRAMEWORK_USE_PORTAUDIO && 0)
-#define FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT 1
+#define FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM 1
 
 class SoundPlayer_Dummy
 {
@@ -49,18 +49,14 @@ public:
 	void setMusicVolume(const float volume) { }
 };
 
-#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
 
 #include "audiostream/AudioStream.h"
 #include <mutex>
 #include <stdint.h>
 
-class AudioOutput;
-
-class SoundPlayer_AudioOutput
+class SoundPlayer_AudioStream
 {
-// todo : accept an AudioOutput at init(..). let framework create a global sound output and pass it into here. make the global sound output available to others by adding the ability to register audio streams
-
 	friend class SoundCacheElem;
 	
 	struct Buffer
@@ -101,14 +97,10 @@ class SoundPlayer_AudioOutput
 	
 	//
 	
-	AudioOutput * m_audioOutput;
-	int m_sampleRate;
-	
-	//
-	
 	struct Stream : AudioStream
 	{
-		SoundPlayer_AudioOutput * m_soundPlayer = nullptr;
+		SoundPlayer_AudioStream * m_soundPlayer = nullptr;
+		int m_sampleRate = 0;
 		
 		virtual int Provide(int numSamples, AudioSample* __restrict samples) override final;
 	};
@@ -131,14 +123,11 @@ class SoundPlayer_AudioOutput
 	
 	void generateAudio(AudioSample * __restrict samples, const int numSamples);
 	
-	bool initAudioOutput(const int numChannels, const int sampleRate, const int bufferSize);
-	bool shutAudioOutput();
-	
 public:
-	SoundPlayer_AudioOutput();
-	~SoundPlayer_AudioOutput();
+	SoundPlayer_AudioStream();
+	~SoundPlayer_AudioStream();
 	
-	bool init(const int numSources);
+	bool init(const int numSources, const int sampleRate);
 	bool shutdown();
 	void process();
 	
@@ -150,6 +139,8 @@ public:
 	void playMusic(const char * filename, const bool loop);
 	void stopMusic();
 	void setMusicVolume(const float volume);
+	
+	AudioStream & getAudioStream() { return m_stream; }
 };
 
 #endif
@@ -263,8 +254,8 @@ public:
 
 #if FRAMEWORK_USE_SOUNDPLAYER_USING_PORTAUDIO
 	typedef SoundPlayer_PortAudio SoundPlayer;
-#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
-	typedef SoundPlayer_AudioOutput SoundPlayer;
+#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
+	typedef SoundPlayer_AudioStream SoundPlayer;
 #else
 	typedef SoundPlayer_Dummy SoundPlayer;
 #endif
