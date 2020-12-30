@@ -221,13 +221,11 @@ static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 
 	for (int i = 0; i < 2; ++i)
 	{
-		const char * shaderName = (i % 2) == 0 ? "guassian-h.ps" : "guassian-v.ps";
-
-		Shader shader(shaderName, "effect.vs", shaderName);
-		setShader(shader);
-		shader.setTexture("colormap", 0, src->getTexture(), true, true);
-		shader.setImmediate("amount", blurAmount);
-
+		if (i == 0)
+			setShader_GaussianBlurH(src->getTexture(), 11, blurAmount);
+		else
+			setShader_GaussianBlurV(src->getTexture(), 11, blurAmount);
+		
 		if (dst == src)
 		{
 			src->swapBuffers();
@@ -235,13 +233,11 @@ static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 
 		pushSurface(dst);
 		{
-			setShader(shader);
-			{
-				drawRect(0.f, 0.f, dst->getWidth(), dst->getHeight());
-			}
-			clearShader();
+			drawRect(0.f, 0.f, dst->getWidth(), dst->getHeight());
 		}
 		popSurface();
+		
+		clearShader();
 	}
 	
 	popBlend();
@@ -311,7 +307,11 @@ struct Grid
 		const float scaleX = !forDraw ? 1.f : cosf((1.f - cell.scaleTimer * cell.scaleTimerRcp) * Calc::mPI2);
 		const float scaleY = !forDraw ? 1.f : 1.f;
 
-		result = Mat4x4(true).Translate(px, py, 0.f).Scale(sx * scale, sy * scale, 1.f).Scale(scaleX, scaleY, 1.f).RotateZ(angle);
+		result = Mat4x4(true)
+			.Translate(px, py, 0.f)
+			.Scale(sx * scale, sy * scale, 1.f)
+			.Scale(scaleX, scaleY, 1.f)
+			.RotateZ(angle);
 	}
 
 	void tick(const float dt)
@@ -451,7 +451,7 @@ struct Grid
 
 				gxColor4f(1.f, 1.f, 1.f, ca);
 
-				const float stroke = 1.3f;
+				const float stroke = 1.3f * (cell.mouseTimer * cell.mouseTimerRcp);
 				
 				hqLine(p1[0], p1[1], stroke, p2[0], p2[1], stroke);
 				hqLine(p2[0], p2[1], stroke, p3[0], p3[1], stroke);
