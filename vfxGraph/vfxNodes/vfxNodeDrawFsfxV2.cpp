@@ -187,6 +187,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 	
 	//
 	
+	clearEditorIssue();
+	
 	if (filename)
 	{
 		shader = new Shader(filename, "fsfx/fsfx.vs", filename);
@@ -196,6 +198,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 		if (!shader->isValid())
 		{
 			logDebug("shader is invalid: %s", filename);
+			
+			setEditorIssue("shader is invalid");
 		}
 		else
 		{
@@ -428,8 +432,6 @@ void VfxNodeFsfxV2::draw() const
 {
 	vfxCpuTimingBlock(VfxNodeFsfxV2);
 	
-	clearEditorIssue();
-	
 	if (isPassthrough || shader == nullptr || g_currentVfxSurface == nullptr)
 	{
 		updateImageOutput(g_currentVfxSurface);
@@ -585,8 +587,6 @@ void VfxNodeFsfxV2::draw() const
 	}
 	else
 	{
-		setEditorIssue("shader is invalid");
-		
 		g_currentVfxSurface->clear(127, 0, 127, 255);
 	}
 	
