@@ -179,7 +179,13 @@ void VfxNodeDrawPrimitive::draw() const
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
 						
-						hqFillTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size);
+						hqFillTriangle(
+							x,
+							y - r * size,
+							x - r * size,
+							y + r * size,
+							x + r * size,
+							y + r * size);
 						
 						zipper.next();
 					}
@@ -198,7 +204,13 @@ void VfxNodeDrawPrimitive::draw() const
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
 						
-						hqFillTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size);
+						hqFillTriangle(
+							x,
+							y + r * size,
+							x - r * size,
+							y - r * size,
+							x + r * size,
+							y - r * size);
 						
 						zipper.next();
 					}
@@ -258,7 +270,12 @@ void VfxNodeDrawPrimitive::draw() const
 						const float r = zipper.read(2, 1.f);
 						const float s = zipper.read(3, 0.f);
 						
-						hqFillRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f);
+						hqFillRoundedRect(
+							x - r * size,
+							y - r * size,
+							x + r * size,
+							y + r * size,
+							s * .5f);
 						
 						zipper.next();
 					}
@@ -329,7 +346,14 @@ void VfxNodeDrawPrimitive::draw() const
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
 						
-						hqStrokeTriangle(x, y - r * size, x - r * size, y + r * size, x + r * size, y + r * size, strokeSize);
+						hqStrokeTriangle(
+							x,
+							y - r * size,
+							x - r * size,
+							y + r * size,
+							x + r * size,
+							y + r * size,
+							strokeSize);
 						
 						zipper.next();
 					}
@@ -348,7 +372,14 @@ void VfxNodeDrawPrimitive::draw() const
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
 						
-						hqStrokeTriangle(x, y + r * size, x - r * size, y - r * size, x + r * size, y - r * size, strokeSize);
+						hqStrokeTriangle(
+							x,
+							y + r * size,
+							x - r * size,
+							y - r * size,
+							x + r * size,
+							y - r * size,
+							strokeSize);
 						
 						zipper.next();
 					}
@@ -372,7 +403,13 @@ void VfxNodeDrawPrimitive::draw() const
 						const float r = zipper.read(2, 1.f);
 						const float s = zipper.read(3, 0.f);
 						
-						hqStrokeRoundedRect(x - r * size, y - r * size, x + r * size, y + r * size, s * .5f, strokeSize);
+						hqStrokeRoundedRect(
+							x - r * size,
+							y - r * size,
+							x + r * size,
+							y + r * size,
+							s * .5f,
+							strokeSize);
 						
 						zipper.next();
 					}
