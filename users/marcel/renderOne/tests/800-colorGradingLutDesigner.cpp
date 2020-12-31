@@ -42,6 +42,11 @@ int main(int argc, char * argv[])
 		{
 			editor.DrawPreview();
 			
+			if (editor.previewFilename[0] == 0)
+			{
+				drawText(400, 300, 24, 0, 0, "Drag an image here for a preview");
+			}
+			
 			guiContext.draw();
 		}
 		framework.endDraw();
