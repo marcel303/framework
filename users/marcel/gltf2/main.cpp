@@ -76,10 +76,13 @@ int main(int argc, char * argv[])
 	renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color[3] = .01f;
 	renderOptions.colorGrading.enabled = true;
-	renderOptions.colorGrading.lookupTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform([](Color & color)
+	GxTexture3d colorGradingLookupTexture;
+	renderOptions.colorGrading.lookupTextureFromSrgbColorTransform([](Color & color)
 		{
 			color = color.hueShift(.3f).desaturate(.5f);
-		});
+		},
+		colorGradingLookupTexture);
+	renderOptions.colorGrading.lookupTextureId = colorGradingLookupTexture.id;
 	//renderOptions.chromaticAberration.enabled = true;
 	renderOptions.motionBlur.enabled = true;
 	renderOptions.lightScatter.enabled = true;
