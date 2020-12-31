@@ -1,6 +1,7 @@
 library libwebrequest
 	add_files webrequest.cpp webrequest.h
 	with_platform linux add_files webrequest-posix.cpp
+	with_platform linux depend_library pthread find
 	with_platform macos add_files webrequest-cocoa.mm
 	with_platform macos depend_library CoreFoundation find
 	with_platform macos depend_library Foundation find
