@@ -1,0 +1,7 @@
+library renderOne-colorGradingLutDesigner
+	depend_library imgui
+	depend_library renderOne
+	add_files colorGradingLutDesigner.h
+	add_files colorGradingLutDesigner.cpp
+	header_path .. expose
+

@@ -157,7 +157,7 @@ namespace rOne
 		{
 			bool enabled = false;
 			float strength = 1.f;
-			float blurSize = 1.f; // todo : make blur blur size resolution independent
+			float blurSize = 1.f; // todo : make blur size resolution independent
 			float brightPassValue = 0.f;
 			
 			// when true, the top-level image from the down sample chain is dropped, speeding up processing significantly

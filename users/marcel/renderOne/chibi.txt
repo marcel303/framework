@@ -6,6 +6,8 @@ library renderOne
 	header_path . expose
 	resource_path data
 
+add imgui
+
 # -- 200 - core lights and shadows
 
 app renderOne-200-lightVolumeBuilder
@@ -42,3 +44,12 @@ app renderOne-710-colorGrading
 	depend_library renderOne
 	add_files tests/710-colorGrading.cpp
 	resource_path tests/data
+
+# -- 800 - imgui
+
+app renderOne-800-colorGradingLutDesigner
+	depend_library imgui-framework
+	depend_library renderOne-colorGradingLutDesigner
+	add_files tests/800-colorGradingLutDesigner.cpp
+	resource_path tests/data
+
