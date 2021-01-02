@@ -127,7 +127,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	if (depthTarget != nullptr)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId_unchecked(), 0);
 		checkErrorGL();
 		
 		if (depthTarget->getWidth() > renderTargetSx)

@@ -127,6 +127,11 @@ public:
 		return m_depthTextureId;
 	}
 	
+	GxTextureId getTextureId_unchecked() const
+	{
+		return m_depthTextureId;
+	}
+	
 	virtual int getWidth() const override final
 	{
 		return properties.dimensions.width;
