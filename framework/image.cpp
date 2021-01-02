@@ -267,3 +267,45 @@ ImageData * imageFixAlphaFilter(const ImageData * image)
 
 	return result;
 }
+
+bool saveImage(const ImageData * image, const char * filename)
+{
+#if USE_FREEIMAGE
+	bool result = false;
+	
+	FIBITMAP * bmp = FreeImage_Allocate(image->sx, image->sy, 32);
+	
+	if (bmp != nullptr)
+	{
+		for (int y = 0; y < image->sy; ++y)
+		{
+			const ImageData::Pixel * srcLine = image->getLine(y);
+			uint32_t * __restrict dstLine = (uint32_t*)FreeImage_GetScanLine(bmp, image->sy - 1 - y);
+
+			for (int x = 0; x < image->sx; ++x)
+			{
+				dstLine[x] =
+					(srcLine[x].r << FI_RGBA_RED_SHIFT) |
+					(srcLine[x].g << FI_RGBA_GREEN_SHIFT) |
+					(srcLine[x].b << FI_RGBA_BLUE_SHIFT) |
+					(srcLine[x].a << FI_RGBA_ALPHA_SHIFT);
+			}
+		}
+		
+		if (FreeImage_Save(FreeImage_GetFIFFromFilename(filename), bmp, filename))
+		{
+			result = true;
+		}
+	}
+	
+	if (bmp != nullptr)
+	{
+		FreeImage_Unload(bmp);
+		bmp = nullptr;
+	}
+	
+	return result;
+#else
+	return false;
+#endif
+}
