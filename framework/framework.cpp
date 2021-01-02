@@ -741,6 +741,7 @@ bool Framework::shutdown()
 	// free resources
 	
 	g_textureCache.clear();
+	g_texture3dCache.clear();
 	g_shaderCache.clear();
 	g_animCache.clear();
 	g_spriterCache.clear();
@@ -1579,6 +1580,7 @@ void Framework::processActions(const std::string & actions, const Dictionary & a
 void Framework::reloadCaches()
 {
 	g_textureCache.reload();
+	g_texture3dCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
 	g_spriterCache.reload();
@@ -2958,6 +2960,15 @@ GxTextureId getTexture(const char * filename)
 
 // -----
 
+const GxTexture3d & getTexture3d(const char * filename)
+{
+	const Texture3dCacheElem & elem = g_texture3dCache.findOrCreate(filename);
+
+	return *elem.texture;
+}
+
+// -----
+
 Sound::Sound(const char * filename)
 {
 	m_sound = &g_soundCache.findOrCreate(filename);
@@ -3388,7 +3399,10 @@ void clearCaches(int caches)
 		g_spriterCache.clear();
 
 	if (caches & CACHE_TEXTURE)
+	{
 		g_textureCache.clear();
+		g_texture3dCache.clear();
+	}
 }
 
 // -----

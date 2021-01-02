@@ -61,6 +61,7 @@
 Globals globals;
 
 TextureCache g_textureCache;
+Texture3dCache g_texture3dCache;
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
@@ -481,7 +482,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 			// todo : try to see if there's a meta data file for this texture,
 			//        if so, load texture settings from this file (similar to Sprite)
 			//     _OR_ when getTexture is called on a .txt file, load the .txt
-			//        file and reference the texture from the .txt file or by replacing extension
+			//        file and reference the texture from the .txt file or by replacing the extension
 			//    -> use meta data to see if mipmaps should be enabled, and for filter settings
 			
 			for (int i = 0; i < numTextures; ++i)
@@ -560,6 +561,125 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 		TextureCacheElem elem;
 		
 		elem.load(name, gridSx, gridSy, mipmapped);
+		
+		i = m_map.insert(Map::value_type(key, elem)).first;
+		
+		return i->second;
+	}
+}
+
+// -----
+
+Texture3dCacheElem::Texture3dCacheElem()
+{
+	texture = nullptr;
+}
+
+void Texture3dCacheElem::free()
+{
+	if (texture != nullptr)
+	{
+		texture->free();
+		
+		delete texture;
+		texture = nullptr;
+	}
+}
+
+void Texture3dCacheElem::load(const char * filename)
+{
+	ScopedLoadTimer loadTimer(filename);
+
+	free();
+	
+	name = filename;
+	texture = new GxTexture3d();
+	
+	ImageData * imageData = loadImage(filename);
+
+	if (!imageData)
+	{
+		logError("failed to load %s", filename);
+	}
+	else
+	{
+	#if 1 // imageFixAlphaFilter for png and gif
+		if (String::EndsWith(filename, ".png") || String::EndsWith(filename, ".gif"))
+		{
+			ImageData * temp = imageFixAlphaFilter(imageData);
+			delete imageData;
+			imageData = temp;
+		}
+	#endif
+		
+		GxTexture3dProperties textureProperties;
+		if (imageData->sx > 0 && imageData->sy > 0)
+		{
+			textureProperties.dimensions.sx = imageData->sx / imageData->sy;
+			textureProperties.dimensions.sy = imageData->sy;
+			textureProperties.dimensions.sz = imageData->sx / imageData->sy;
+		}
+		textureProperties.format = GX_RGBA8_UNORM;
+		textureProperties.mipmapped = false;
+		
+	// todo : try to see if there's a meta data file for this texture,
+	//        if so, load texture settings from this file (similar to Sprite)
+	//     _OR_ when getTexture3d is called on a .txt file, load the .txt
+	//        file and reference the texture from the .txt file or by replacing the extension
+	//    -> use meta data to see if mipmaps should be enabled
+
+		texture->allocate(textureProperties);
+		texture->upload(imageData->imageData, 4, 0);
+
+		logInfo("loaded %s", filename);
+	}
+	
+	delete imageData;
+}
+
+void Texture3dCacheElem::reload()
+{
+	const std::string oldName = name;
+
+	free();
+
+	load(oldName.c_str());
+}
+
+void Texture3dCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.free();
+	}
+	
+	m_map.clear();
+}
+
+void Texture3dCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second.reload();
+	}
+}
+
+Texture3dCacheElem & Texture3dCache::findOrCreate(const char * name)
+{
+	Key key;
+	key.name = name;
+	
+	Map::iterator i = m_map.find(key);
+	
+	if (i != m_map.end())
+	{
+		return i->second;
+	}
+	else
+	{
+		Texture3dCacheElem elem;
+		
+		elem.load(name);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		

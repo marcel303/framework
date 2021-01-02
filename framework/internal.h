@@ -721,6 +721,44 @@ public:
 
 //
 
+class Texture3dCacheElem
+{
+public:
+	std::string name;
+	GxTexture3d * texture;
+	
+	Texture3dCacheElem();
+	void free();
+	void load(const char * filename);
+	void reload();
+};
+
+class Texture3dCache
+{
+public:
+	class Key
+	{
+	public:
+		std::string name;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			return false;
+		}
+	};
+	typedef std::map<Key, Texture3dCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	Texture3dCacheElem & findOrCreate(const char * name);
+};
+
+//
+
 class AnimCacheElem
 {
 public:
@@ -1170,6 +1208,7 @@ public:
 extern Globals globals;
 
 extern TextureCache g_textureCache;
+extern Texture3dCache g_texture3dCache;
 #if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
 #if ENABLE_COMPUTE_SHADER

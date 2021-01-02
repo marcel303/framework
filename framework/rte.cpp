@@ -78,7 +78,21 @@ static void handleFileChange(const char * filename)
 	}
 	else if (extension == "png" || extension == "jpg")
 	{
-		Sprite(filename).reload();
+		for (auto & i : g_textureCache.m_map)
+		{
+			auto & elem = i.second;
+			
+			if (elem.name == filename)
+				elem.reload();
+		}
+		
+		for (auto & i : g_texture3dCache.m_map)
+		{
+			auto & elem = i.second;
+			
+			if (elem.name == filename)
+				elem.reload();
+		}
 	}
 	
 	// call real time editing callback

@@ -1110,6 +1110,7 @@ public:
 //
 
 GxTextureId getTexture(const char * filename);
+const GxTexture3d & getTexture3d(const char * filename);
 
 //
 
