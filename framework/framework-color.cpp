@@ -129,7 +129,7 @@ Color Color::fromHex(const char * str, bool * success)
 
 Color Color::fromHSL(float hue, float sat, float lum)
 {
-	hue = fmod(hue, 1.f) * 6.f;
+	hue = fmodf(hue, 1.f) * 6.f;
 	sat = sat < 0.f ? 0.f : sat > 1.f ? 1.f : sat;
 	lum = lum < 0.f ? 0.f : lum > 1.f ? 1.f : lum;
 	
@@ -199,12 +199,12 @@ Color Color::fromHSL(float hue, float sat, float lum)
 
 void Color::toHSL(float & hue, float & sat, float & lum) const
 {
-	float max = std::max(r, std::max(g, b));
-	float min = std::min(r, std::min(g, b));
+	const float max = fmaxf(r, fmaxf(g, b));
+	const float min = fminf(r, fminf(g, b));
 
 	lum = (max + min) / 2.0f;
 
-	float delta = max - min;
+	const float delta = max - min;
 
 	if (delta < FLT_EPSILON)
 	{
