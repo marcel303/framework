@@ -7,6 +7,7 @@
 #include "Debugging.h"
 #include <math.h>
 #include <string.h>
+#include <stack>
 
 namespace ImGui
 {
@@ -75,14 +76,24 @@ namespace ImGui
 			float gamma = 1.f;
 		};
 		
-		float lookupTable[kLookupSize][kLookupSize][kLookupSize][3];
+		struct UndoItem
+		{
+			LookupTable lookupTable;
+		};
+		
+		LookupTable lookupTable;
 		
 		char textureFilename[1024];
 		char previewFilename[1024];
 		
 		TransformParams transformParams;
 		
+		std::stack<UndoItem> undoStack;
+		std::stack<UndoItem> redoStack;
+		
 		ColorGradingEditor();
+		
+		void applyTransform();
 		
 		static void applyTransform(
 			const TransformParams & transformParams,
@@ -131,8 +142,10 @@ namespace ImGui
 			      LookupTable dst,
 			const float gamma);
 		
-		bool Edit();
+		void Edit();
 		
-		void DrawPreview();
+		void DrawPreview(
+			const int sx,
+			const int sy);
 	};
 }

@@ -1,8 +1,13 @@
 #include "colorGradingLutDesigner.h"
 #include "imgui.h"
+#include "imgui_internal.h"
+#include "nfd.h"
 
 #include "framework.h"
 #include "gx_texture.h"
+#include "image.h"
+
+#include "Path.h"
 
 namespace ImGui
 {
@@ -14,6 +19,23 @@ namespace ImGui
 		previewFilename[0] = 0;
 	}
 
+	void ColorGradingEditor::applyTransform()
+	{
+		Assert(transformParams.transformType != kTransformType_None);
+		
+		UndoItem undoItem;
+		memcpy(undoItem.lookupTable, lookupTable, sizeof(LookupTable));
+		undoStack.push(undoItem);
+		redoStack = std::stack<UndoItem>();
+
+		applyTransform(
+			transformParams,
+			lookupTable,
+			lookupTable);
+
+		transformParams.transformType = kTransformType_None;
+	}
+	
 	void ColorGradingEditor::applyTransform(
 		const TransformParams & transformParams,
 		const LookupTable src,
@@ -71,13 +93,13 @@ namespace ImGui
 		      LookupTable dst,
 		const float weight)
 	{
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 			for (int y = 0; y < kLookupSize; ++y)
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 					for (int i = 0; i < 3; ++i)
-						dst[x][y][z][i] =
-							from[x][y][z][i] * (1.f - weight) +
-							to[x][y][z][i] * weight;
+						dst[z][y][x][i] =
+							from[z][y][x][i] * (1.f - weight) +
+							to[z][y][x][i] * weight;
 	}
 
 	void ColorGradingEditor::applyIdentity(
@@ -87,26 +109,15 @@ namespace ImGui
 		for (int x = 0; x < kLookupSize; ++x)
 			value[x] = x / (kLookupSize - 1.f);
 		
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
-					// note : [x][y][z] actually index into the
-					//        [z][y][x] pixels of the 3d lookup
-					//        texture. this 'technicality' is not
-					//        so important for the per-pixel
-					//        operations performed by other
-					//        transforms, but for the identity
-					//        transforms we need to map the
-					//        right pixel to the right color,
-					//        hence the mapping indexing here
-					//        looks a little bit weird
-					
-					lookupTable[x][y][z][0] = value[z];
-					lookupTable[x][y][z][1] = value[y];
-					lookupTable[x][y][z][2] = value[x];
+					lookupTable[z][y][x][0] = value[x];
+					lookupTable[z][y][x][1] = value[y];
+					lookupTable[z][y][x][2] = value[z];
 				}
 			}
 		}
@@ -145,15 +156,15 @@ namespace ImGui
 		Color c;
 		colorTemperatureToRgb(temperatureInKelvins, &c.r);
 		
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
-					dst[x][y][z][0] = src[x][y][z][0] * c.r;
-					dst[x][y][z][1] = src[x][y][z][1] * c.g;
-					dst[x][y][z][2] = src[x][y][z][2] * c.b;
+					dst[z][y][x][0] = src[z][y][x][0] * c.r;
+					dst[z][y][x][1] = src[z][y][x][1] * c.g;
+					dst[z][y][x][2] = src[z][y][x][2] * c.b;
 				}
 			}
 		}
@@ -168,15 +179,15 @@ namespace ImGui
 	{
 		const Color c = Color::fromHSL(hue, saturation, lightness);
 		
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
-					dst[x][y][z][0] = src[x][y][z][0] * c.r;
-					dst[x][y][z][1] = src[x][y][z][1] * c.g;
-					dst[x][y][z][2] = src[x][y][z][2] * c.b;
+					dst[z][y][x][0] = src[z][y][x][0] * c.r;
+					dst[z][y][x][1] = src[z][y][x][1] * c.g;
+					dst[z][y][x][2] = src[z][y][x][2] * c.b;
 				}
 			}
 		}
@@ -192,16 +203,16 @@ namespace ImGui
 		const float wg = 1.f / 3.f;
 		const float wb = 1.f / 3.f;
 		
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
 					const float luminance =
-						wr * src[x][y][z][0] +
-						wg * src[x][y][z][1] +
-						wb * src[x][y][z][2];
+						wr * src[z][y][x][0] +
+						wg * src[z][y][x][1] +
+						wb * src[z][y][x][2];
 					
 					int tapIndex = 0;
 					
@@ -218,7 +229,7 @@ namespace ImGui
 					
 					for (int i = 0; i < 3; ++i)
 					{
-						dst[x][y][z][i] =
+						dst[z][y][x][i] =
 							a * taps[tapIndex    ].rgb[i] +
 							b * taps[tapIndex + 1].rgb[i];
 					}
@@ -233,15 +244,15 @@ namespace ImGui
 		const float contrast,
 		const float brightness)
 	{
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
-					dst[x][y][z][0] = (src[x][y][z][0] - .5f) * contrast + .5f + brightness;
-					dst[x][y][z][1] = (src[x][y][z][1] - .5f) * contrast + .5f + brightness;
-					dst[x][y][z][2] = (src[x][y][z][2] - .5f) * contrast + .5f + brightness;
+					dst[z][y][x][0] = (src[z][y][x][0] - .5f) * contrast + .5f + brightness;
+					dst[z][y][x][1] = (src[z][y][x][1] - .5f) * contrast + .5f + brightness;
+					dst[z][y][x][2] = (src[z][y][x][2] - .5f) * contrast + .5f + brightness;
 				}
 			}
 		}
@@ -252,26 +263,216 @@ namespace ImGui
 		      LookupTable dst,
 		const float gamma)
 	{
-		for (int x = 0; x < kLookupSize; ++x)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
 			for (int y = 0; y < kLookupSize; ++y)
 			{
-				for (int z = 0; z < kLookupSize; ++z)
+				for (int x = 0; x < kLookupSize; ++x)
 				{
-					dst[x][y][z][0] = powf(fmaxf(0.f, src[x][y][z][0]), gamma);
-					dst[x][y][z][1] = powf(fmaxf(0.f, src[x][y][z][1]), gamma);
-					dst[x][y][z][2] = powf(fmaxf(0.f, src[x][y][z][2]), gamma);
+					dst[z][y][x][0] = powf(fmaxf(0.f, src[z][y][x][0]), gamma);
+					dst[z][y][x][1] = powf(fmaxf(0.f, src[z][y][x][1]), gamma);
+					dst[z][y][x][2] = powf(fmaxf(0.f, src[z][y][x][2]), gamma);
 				}
 			}
 		}
 	}
 	
-	bool ColorGradingEditor::Edit()
+	void ColorGradingEditor::Edit()
 	{
-		// todo : add import & export option
-		// todo : add a Help Text about color grading
+		ImGui::Text("File: %s", Path::GetFileName(textureFilename).c_str());
 		
-		bool result = false;
+		if (ImGui::Button("Load.."))
+		{
+			nfdchar_t * path = nullptr;
+			
+			auto result = NFD_OpenDialog(nullptr, nullptr, &path);
+			
+			if (result != NFD_CANCEL)
+			{
+				bool success = false;
+				
+				if (result == NFD_OKAY)
+				{
+					auto * image = loadImage(path);
+					
+					if (image != nullptr &&
+						image->sx == kLookupSize * kLookupSize &&
+						image->sy == kLookupSize)
+					{
+						for (int y = 0; y < kLookupSize; ++y)
+						{
+							auto * line = image->getLine(y);
+							
+							for (int z = 0; z < kLookupSize; ++z)
+							{
+								for (int x = 0; x < kLookupSize; ++x, ++line)
+								{
+									lookupTable[z][y][x][0] = line->r / 255.f;
+									lookupTable[z][y][x][1] = line->g / 255.f;
+									lookupTable[z][y][x][2] = line->b / 255.f;
+								}
+							}
+						}
+						
+						strcpy(textureFilename, path);
+						
+						success = true;
+					}
+					
+					delete image;
+					image = nullptr;
+				}
+				
+				if (success == false)
+				{
+					applyIdentity(lookupTable);
+					
+					textureFilename[0] = 0;
+					
+					ImGui::OpenPopup("LoadError_LoadImage");
+				}
+				
+				// reset editing
+				transformParams = TransformParams();
+				undoStack = std::stack<UndoItem>();
+				redoStack = std::stack<UndoItem>();
+			}
+			
+			if (path != nullptr)
+			{
+				free(path);
+				path = nullptr;
+			}
+		}
+		
+		if (ImGui::BeginPopupModal("LoadError_LoadImage", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Failed to load image");
+			if (ImGui::Button("OK"))
+				ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+		}
+		
+		bool save = false;
+		
+		if (textureFilename[0] != 0)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Save"))
+			{
+				save = true;
+			}
+		}
+		
+		ImGui::SameLine();
+		if (ImGui::Button("Save as.."))
+		{
+			nfdchar_t * path = nullptr;
+			
+			auto result = NFD_SaveDialog(nullptr, textureFilename, &path);
+			
+			if (result != NFD_CANCEL)
+			{
+				if (result == NFD_OKAY)
+				{
+					strcpy(textureFilename, path);
+					save = true;
+				}
+				else
+				{
+					ImGui::OpenPopup("SaveError_Filename");
+				}
+			}
+			
+			if (path != nullptr)
+			{
+				free(path);
+				path = nullptr;
+			}
+		}
+		
+		if (save)
+		{
+			if (transformParams.transformType != kTransformType_None)
+			{
+				applyTransform();
+			}
+			
+			ImageData image;
+			image.sx = kLookupSize * kLookupSize;
+			image.sy = kLookupSize;
+			image.imageData = new ImageData::Pixel[image.sx * image.sy];
+			
+			for (int y = 0; y < image.sy; ++y)
+			{
+				ImageData::Pixel * line = image.getLine(y);
+				
+				const int ly = y;
+				
+				for (int x = 0; x < image.sx; ++x)
+				{
+					const int lx = x % kLookupSize;
+					const int lz = x / kLookupSize;
+					
+					line[x].r = int(clamp(lookupTable[lz][ly][lx][0], 0.f, 1.f) * 255.f);
+					line[x].g = int(clamp(lookupTable[lz][ly][lx][1], 0.f, 1.f) * 255.f);
+					line[x].b = int(clamp(lookupTable[lz][ly][lx][2], 0.f, 1.f) * 255.f);
+					line[x].a = 255;
+				}
+			}
+			
+			if (saveImage(&image, textureFilename) == false)
+			{
+				ImGui::OpenPopup("SaveError_SaveImage");
+			}
+		}
+		
+		if (ImGui::BeginPopupModal("SaveError_Filename", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Failed to select file for save");
+			if (ImGui::Button("OK"))
+				ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+		}
+		
+		if (ImGui::BeginPopupModal("SaveError_SaveImage", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Failed to save image");
+			if (ImGui::Button("OK"))
+				ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+		}
+		
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, undoStack.empty());
+		{
+			if (ImGui::Button("Undo"))
+			{
+				UndoItem redoItem;
+				memcpy(redoItem.lookupTable, lookupTable, sizeof(LookupTable));
+				redoStack.push(redoItem);
+
+				auto & undoItem = undoStack.top();
+				memcpy(lookupTable, undoItem.lookupTable, sizeof(LookupTable));
+				undoStack.pop();
+			}
+		}
+		ImGui::PopItemFlag();
+		
+		ImGui::SameLine();
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, redoStack.empty());
+		{
+			if (ImGui::Button("Redo"))
+			{
+				UndoItem undoItem;
+				memcpy(undoItem.lookupTable, lookupTable, sizeof(LookupTable));
+				undoStack.push(undoItem);
+				
+				auto & redoItem = redoStack.top();;
+				memcpy(lookupTable, redoItem.lookupTable, sizeof(LookupTable));
+				redoStack.pop();
+			}
+		}
+		ImGui::PopItemFlag();
 		
 		const char * transform_items[] =
 		{
@@ -288,6 +489,7 @@ namespace ImGui
 		
 		if (ImGui::Combo("Transform", &transform_index, transform_items, sizeof(transform_items) / sizeof(transform_items[0])))
 		{
+			transformParams = TransformParams();
 			transformParams.transformType = (TransformType)transform_index;
 		}
 		
@@ -330,20 +532,18 @@ namespace ImGui
 			
 			if (Button("Apply"))
 			{
-				applyTransform(
-					transformParams,
-					lookupTable,
-					lookupTable);
-				
-				transformParams.transformType = kTransformType_None;
-				result = true;
+				applyTransform();
 			}
+			
+			ImGui::SameLine();
+			if (Button("Cancel"))
+				transformParams.transformType = kTransformType_None;
 		}
-		
-		return result;
 	}
 	
-	void ColorGradingEditor::DrawPreview()
+	void ColorGradingEditor::DrawPreview(
+		const int sx,
+		const int sy)
 	{
 		LookupTable previewLookupTable;
 		
@@ -370,16 +570,21 @@ namespace ImGui
 		
 		pushBlend(BLEND_OPAQUE);
 		{
+			setColor(colorWhite);
+			gxSetTexture(getTexture(previewFilename));
+			drawRect(0, 0, sx/2, sy/2);
+			gxSetTexture(0);
+			
 			Shader shader("renderOne/postprocess/color-grade");
 			setShader(shader);
 			{
 				shader.setTexture("colorTexture", 0, getTexture(previewFilename), true);
 
 				shader.setTexture3d("lutTexture", 1, currentTexture.id, true, true);
-				drawRect(0, 0, 400, 400);
+				drawRect(0, sy/2, sx/2, sy);
 				
 				shader.setTexture3d("lutTexture", 1, previewTexture.id, true, true);
-				drawRect(400, 0, 800, 400);
+				drawRect(sx/2, sy/2, sx, sy);
 			}
 			clearShader();
 		}

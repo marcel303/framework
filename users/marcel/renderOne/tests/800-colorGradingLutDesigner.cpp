@@ -19,6 +19,7 @@ int main(int argc, char * argv[])
 	for (;;)
 	{
 		framework.process();
+		framework.waitForEvents = true;
 		
 		if (framework.quitRequested)
 			break;
@@ -40,10 +41,11 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			editor.DrawPreview();
+			editor.DrawPreview(800, 600);
 			
 			if (editor.previewFilename[0] == 0)
 			{
+				setColor(colorWhite);
 				drawText(400, 300, 24, 0, 0, "Drag an image here for a preview");
 			}
 			
