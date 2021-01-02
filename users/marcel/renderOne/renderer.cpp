@@ -1019,7 +1019,6 @@ namespace rOne
 					Shader shader("renderOne/tri-planar-texture-projection");
 					setShader(shader);
 					{
-					// todo : ping pong composite buffer for screen space effects
 						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setTexture("planarTextureX", 3, getTexture("textures/refraction/droplets.png"), true, false);
@@ -1343,9 +1342,7 @@ namespace rOne
 			specularColor->init(sx, sy, linearColorSpace ? SURFACE_RGBA8_SRGB : SURFACE_RGBA8, colorBlackTranslucent);
 			specularExponent->init(sx, sy, SURFACE_R16F, colorBlackTranslucent);
 			emissive->init(sx, sy, SURFACE_R8, colorBlackTranslucent);
-	// todo : OpenGL function to set depth target always requires enableTexture to be true, or else it will assert. add a low-level depth buffer access function so we can bind it to the frame buffer object
-			// note : we will need the texture for lighting, so we enable the depth texture here
-			depth->init(sx, sy, DEPTH_FLOAT32, true, 1.f);
+			depth->init(sx, sy, DEPTH_FLOAT32, true, 1.f); // note : we will need the depth texture for lighting, so we enable texture access here
 			light->init(sx, sy, SURFACE_RGBA16F, colorBlackTranslucent);
 			composite1->init(sx, sy, SURFACE_RGBA16F, colorBlackTranslucent);
 			composite2->init(sx, sy, SURFACE_RGBA16F, colorBlackTranslucent);
