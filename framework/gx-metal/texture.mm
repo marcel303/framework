@@ -36,7 +36,7 @@
 
 #define TODO 0
 
-#define ENABLE_TEXTURE_CONVERSIONS 0
+#define ENABLE_TEXTURE_CONVERSIONS 1
 
 id <MTLDevice> metal_get_device();
 
@@ -282,6 +282,8 @@ static void * make_compatible(const void * src, const int srcSx, const int srcSy
 		
 		return copy_dst;
 	}
+#else
+	Assert(format != GX_RGB8_UNORM && format != GX_RGB32_FLOAT);
 #endif
 
 	return nullptr;
@@ -615,20 +617,25 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 		const int srcPitch = in_srcPitch == 0 ? srcSx : in_srcPitch;
 		const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
 		
-	// todo : make 3d textures compatible
-		Assert(format != GX_RGB8_UNORM && format != GX_RGB32_FLOAT);
-		//void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
-		void * copy = nullptr;
+		void * copy = make_compatible(src, srcSx, srcSy * srcSz, srcPitch, format);
 		
 		if (copy != nullptr)
 		{
-			[src_texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
+			[src_texture
+				replaceRegion:region mipmapLevel:0 slice:0
+				withBytes:copy
+				bytesPerRow:srcSx * bytesPerPixel
+				bytesPerImage:srcSx * srcSy * bytesPerPixel];
 			
 			::free(copy);
 		}
 		else
 		{
-			[src_texture replaceRegion:region mipmapLevel:0 slice:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel bytesPerImage:srcPitch * srcSy * bytesPerPixel];
+			[src_texture
+				replaceRegion:region mipmapLevel:0 slice:0
+				withBytes:src
+				bytesPerRow:srcPitch * bytesPerPixel
+				bytesPerImage:srcPitch * srcSy * bytesPerPixel];
 		}
 		
 		// 3. asynchronously copy from the source texture to our own texture
