@@ -342,107 +342,128 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 	{
 		const char * name = [uniform.name cStringUsingEncoding:NSASCIIStringEncoding];
 		
-		bool found = false;
+		// determine the element type, number of elements, and the array length
+		
+		int elemType = 0;
+		int numElems = 0;
+		int arrayLen = 1;
+		
+		switch (uniform.dataType)
+		{
+		case MTLDataTypeFloat:
+			elemType = 'f';
+			numElems = 1;
+			break;
+		case MTLDataTypeFloat2:
+			elemType = 'f';
+			numElems = 2;
+			break;
+		case MTLDataTypeFloat3:
+			elemType = 'f';
+			numElems = 3;
+			break;
+		case MTLDataTypeFloat4:
+			elemType = 'f';
+			numElems = 4;
+			break;
+		case MTLDataTypeFloat4x4:
+			elemType = 'm';
+			numElems = 16;
+			break;
+		case MTLDataTypeArray:
+			//logDebug("found MTLDataTypeArray. elementType=%d", uniform.arrayType.elementType);
+			switch (uniform.arrayType.elementType)
+			{
+			case MTLDataTypeFloat:
+				elemType = 'F';
+				numElems = 1;
+				arrayLen = uniform.arrayType.arrayLength;
+				break;
+			case MTLDataTypeFloat2:
+				elemType = 'F';
+				numElems = 2;
+				arrayLen = uniform.arrayType.arrayLength;
+				break;
+			case MTLDataTypeFloat3:
+				elemType = 'F';
+				numElems = 3;
+				arrayLen = uniform.arrayType.arrayLength;
+				break;
+			case MTLDataTypeFloat4:
+				elemType = 'F';
+				numElems = 4;
+				arrayLen = uniform.arrayType.arrayLength;
+				break;
+			case MTLDataTypeFloat4x4:
+				elemType = 'M';
+				numElems = 16;
+				arrayLen = uniform.arrayType.arrayLength;
+				break;
+			default:
+				AssertMsg(false, "unknown MTLDataType: %d", uniform.arrayType.elementType);
+				break;
+			}
+			break;
+		default:
+			AssertMsg(false, "unknown MTLDataType");
+			break;
+		}
+		
+		UniformInfo * found = nullptr;
 		
 		for (UniformInfo & uniformInfo : uniformInfos)
 		{
 			if (uniformInfo.name == name)
 			{
-				found = true;
-				
-				if (type == 'v')
-				{
-					uniformInfo.vsBuffer = arg.index;
-					uniformInfo.vsOffset = uniform.offset;
-				}
-				else
-				{
-					uniformInfo.psBuffer = arg.index;
-					uniformInfo.psOffset = uniform.offset;
-				}
+				found = &uniformInfo;
+				break;
 			}
 		}
 		
-	// todo : assert types in vs and ps match. right now, we just skip creation of a new uniform info, when we've already seen it before. we should still make it, and check it against the stored one to compare
-		
-		if (found == false)
+		Assert(elemType != 0);
+		if (elemType != 0)
 		{
-			uniformInfos.resize(uniformInfos.size() + 1);
+			UniformInfo * uniformInfo;
 			
-			UniformInfo & uniformInfo = uniformInfos.back();
-			uniformInfo.name = name;
-			
-			if (type == 'v')
+			if (found == nullptr)
 			{
-				uniformInfo.vsBuffer = arg.index;
-				uniformInfo.vsOffset = uniform.offset;
+				uniformInfos.resize(uniformInfos.size() + 1);
+				
+				uniformInfo = &uniformInfos.back();
+				uniformInfo->name = name;
 			}
 			else
 			{
-				uniformInfo.psBuffer = arg.index;
-				uniformInfo.psOffset = uniform.offset;
+				uniformInfo = found;
 			}
 			
-			switch (uniform.dataType)
+			// when we've already seen this uniform for a different shader stage,
+			// we need to assert the types in the vs and ps stages match. this is
+			// because the GX api assumes that uniforms are global to all
+			// shader stages, and share the same type and semantics across them
+
+			Assert(uniformInfo->elemType == 0 || uniformInfo->elemType == elemType);
+			Assert(uniformInfo->numElems == 0 || uniformInfo->numElems == numElems);
+			Assert(uniformInfo->arrayLen == 0 || uniformInfo->arrayLen == arrayLen);
+			
+			// fill in the details (for vs or ps stage)
+			
+			if (type == 'v')
 			{
-			case MTLDataTypeFloat:
-				uniformInfo.elemType = 'f';
-				uniformInfo.numElems = 1;
-				break;
-			case MTLDataTypeFloat2:
-				uniformInfo.elemType = 'f';
-				uniformInfo.numElems = 2;
-				break;
-			case MTLDataTypeFloat3:
-				uniformInfo.elemType = 'f';
-				uniformInfo.numElems = 3;
-				break;
-			case MTLDataTypeFloat4:
-				uniformInfo.elemType = 'f';
-				uniformInfo.numElems = 4;
-				break;
-			case MTLDataTypeFloat4x4:
-				uniformInfo.elemType = 'm';
-				uniformInfo.numElems = 16;
-				break;
-			case MTLDataTypeArray:
-				//logDebug("found MTLDataTypeArray. elementType=%d", uniform.arrayType.elementType);
-				switch (uniform.arrayType.elementType)
-				{
-				case MTLDataTypeFloat:
-					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = 1;
-					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
-					break;
-				case MTLDataTypeFloat2:
-					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = 2;
-					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
-					break;
-				case MTLDataTypeFloat3:
-					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = 3;
-					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
-					break;
-				case MTLDataTypeFloat4:
-					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = 4;
-					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
-					break;
-				case MTLDataTypeFloat4x4:
-					uniformInfo.elemType = 'M';
-					uniformInfo.numElems = 16;
-					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
-					break;
-				default:
-					AssertMsg(false, "unknown MTLDataType: %d", uniform.arrayType.elementType);
-					break;
-				}
-				break;
-			default:
-				AssertMsg(false, "unknown MTLDataType");
-				break;
+				uniformInfo->vsBuffer = arg.index;
+				uniformInfo->vsOffset = uniform.offset;
 			}
+			else
+			{
+				uniformInfo->psBuffer = arg.index;
+				uniformInfo->psOffset = uniform.offset;
+			}
+	
+			// fill in the details (shared)
+
+			uniformInfo->elemType = elemType;
+			uniformInfo->numElems = numElems;
+			uniformInfo->arrayLen = arrayLen;
 		}
 	}
 }
