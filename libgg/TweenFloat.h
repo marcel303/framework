@@ -7,7 +7,7 @@
 
 class TweenFloat;
 
-// todo : groups of tween values .to(...) :: set multiple targets at once, easier to chain and sync tweens
+// idea : groups of tween values .to(...) :: set multiple targets at once, easier to chain and sync tweens
 
 class TweenFloatModifier
 {
