@@ -148,14 +148,17 @@ int main(int argc, char * argv[])
 			{
 				// show light volume data
 				
-				int indexTextureSx;
-				int indexTextureSy;
-				gxGetTextureSize(helper.indexTextureId, indexTextureSx, indexTextureSy);
-				
-				setColorf(1.f / indexTextureSx, 1.f / 4, 1);
-				gxSetTexture(helper.indexTextureId);
-				drawRect(0, 0, 800, 800);
-				gxSetTexture(0);
+				Shader indicesShader("light-indices-2d");
+				setShader(indicesShader);
+				{
+					indicesShader.setTexture3d("lightVolume", 0, helper.indexTexture.id, false, false);
+					indicesShader.setImmediate("lightVolumeDims",
+						helper.indexTexture.sx,
+						helper.indexTexture.sy,
+						helper.indexTexture.sz);
+					drawRect(0, 0, 800, 800);
+				}
+				clearShader();
 				
 				setColorf(1, 1, 1, 1, 1.f / 4);
 				gxSetTexture(helper.lightIdsTextureId);

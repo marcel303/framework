@@ -1,0 +1,20 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 v_texcoord;
+
+uniform sampler3D lightVolume;
+uniform vec3 lightVolumeDims;
+
+void main()
+{
+	float numSamples = lightVolumeDims.y * lightVolumeDims.z;
+
+	float sampleX = v_texcoord.x;
+	float sampleY = mod(v_texcoord.y * numSamples , lightVolumeDims.y) / lightVolumeDims.y;
+	float sampleZ = int(v_texcoord.y * numSamples / lightVolumeDims.y) / lightVolumeDims.z;
+
+	shader_fragColor.rg = texture(lightVolume, vec3(sampleX, sampleY, sampleZ), 0).rg;
+	shader_fragColor.rg /= vec2(lightVolumeDims.x, 4.0);
+	shader_fragColor.b = 0.0;
+	shader_fragColor.a = 1.0;
+}

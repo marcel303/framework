@@ -1,4 +1,4 @@
-uniform sampler2D lightVolume;
+uniform sampler3D lightVolume;
 uniform sampler2D lightIds;
 uniform float worldToVolumeScale;
 uniform float infiniteSpaceMode;
@@ -19,11 +19,24 @@ ivec2 rOne_toIvec2(ivec2 v)
 	return v;
 }
 
+ivec3 rOne_toIvec3(vec3 v)
+{
+	return ivec3(
+		int(v.x),
+		int(v.y),
+		int(v.z));
+}
+
+ivec3 rOne_toIvec3(ivec3 v)
+{
+	return v;
+}
+
 void forEachLightIdAt(vec3 in_position)
 {
 	vec3 position = in_position * worldToVolumeScale;
 	
-	ivec2 lightVolumeDims = rOne_toIvec2(textureSize(lightVolume, 0));
+	ivec3 lightVolumeDims = rOne_toIvec3(textureSize(lightVolume, 0));
 
 	// position to cell coord
 
@@ -32,14 +45,14 @@ void forEachLightIdAt(vec3 in_position)
 	int z = int(floor(position.z));
 
 	x += (lightVolumeDims.x - 1) / 2;
-	y += (lightVolumeDims.x - 1) / 2;
-	z += (lightVolumeDims.x - 1) / 2;
+	y += (lightVolumeDims.y - 1) / 2;
+	z += (lightVolumeDims.z - 1) / 2;
 
 	if (infiniteSpaceMode == 0.0)
 	{
 		if (x < 0 || x >= lightVolumeDims.x ||
-			y < 0 || y >= lightVolumeDims.x ||
-			z < 0 || z >= lightVolumeDims.x) // note : this assumes the volume has NxNxN cells. perhaps make dimensions a uniform so we can have different dimensions for each axis
+			y < 0 || y >= lightVolumeDims.y ||
+			z < 0 || z >= lightVolumeDims.z)
 		{
 			return;
 		}
@@ -47,15 +60,15 @@ void forEachLightIdAt(vec3 in_position)
 	else
 	{
 		x = x % lightVolumeDims.x;
-		y = y % lightVolumeDims.x;
-		z = z % lightVolumeDims.x;
+		y = y % lightVolumeDims.y;
+		z = z % lightVolumeDims.z;
 
 		if (x < 0) x += lightVolumeDims.x;
-		if (y < 0) y += lightVolumeDims.x;
-		if (z < 0) z += lightVolumeDims.x;
+		if (y < 0) y += lightVolumeDims.y;
+		if (z < 0) z += lightVolumeDims.z;
 	}
 
-	ivec2 startOffsetAndCount = rOne_toIvec2(texelFetch(lightVolume, ivec2(x, y + z * lightVolumeDims.x), 0).xy);
+	ivec2 startOffsetAndCount = rOne_toIvec2(texelFetch(lightVolume, ivec3(x, y, z), 0).xy);
 
 	int startOffset = startOffsetAndCount.x;
 	int count = startOffsetAndCount.y;

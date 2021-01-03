@@ -44,7 +44,7 @@ namespace rOne
 		ShaderBuffer lightParamsBuffer;
 		ShaderBuffer lightExtrasBuffer;
 		
-		GxTextureId indexTextureId = 0;
+		GxTexture3d indexTexture;
 		GxTextureId lightIdsTextureId = 0;
 		
 		int numGlobalLights = 0;

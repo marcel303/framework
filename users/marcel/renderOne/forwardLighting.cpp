@@ -22,6 +22,8 @@ namespace rOne
 		
 		lightParamsBuffer.free();
 		lightExtrasBuffer.free();
+		
+		indexTexture.free();
 	}
 
 	void ForwardLightingHelper::addLight(const Light & light)
@@ -193,7 +195,6 @@ namespace rOne
 	{
 		lights.clear();
 		
-		freeTexture(indexTextureId);
 		freeTexture(lightIdsTextureId);
 		
 		numGlobalLights = 0;
@@ -380,13 +381,19 @@ namespace rOne
 
 			// create textures from data
 
-			indexTextureId = createTextureFromRG32F(
-				data.index_table,
+			if (indexTexture.isChanged(
 				data.index_table_sx,
-				data.index_table_sy * data.index_table_sz, // todo : would be nice to use 3d textures here
-				false,
-				false);
-
+				data.index_table_sy,
+				data.index_table_sz, GX_RG32_FLOAT))
+			{
+				indexTexture.allocate(
+					data.index_table_sx,
+					data.index_table_sy,
+					data.index_table_sz, GX_RG32_FLOAT);
+			}
+			
+			indexTexture.upload(data.index_table, 4, 0);
+			
 			if (data.light_ids_sx * data.light_ids_sy > 0)
 			{
 				lightIdsTextureId = createTextureFromR32F(
@@ -413,7 +420,7 @@ namespace rOne
 		shader.setBuffer("LightExtrasBuffer", lightExtrasBuffer);
 		shader.setImmediate("numLights", lights.size());
 		shader.setImmediate("numGlobalLights", numGlobalLights);
-		shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);
+		shader.setTexture3d("lightVolume", nextTextureUnit++, indexTexture.id, false, false);
 		shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
 		shader.setImmediate("worldToVolumeScale", worldToVolumeScale);
 		shader.setImmediate("infiniteSpaceMode", infiniteSpaceMode ? 1.f : 0.f);
