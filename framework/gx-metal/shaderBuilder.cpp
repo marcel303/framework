@@ -339,9 +339,21 @@ struct sampler3D
 // texture sampling
 #define texture(sampler, coord) sampler.t.sample(sampler.s, coord)
 #define textureOffset(sampler, coord, offset) sampler.t.sample(sampler.s, coord, offset)
-#define textureSize(sampler, level) vec2(sampler.t.get_width(level), sampler.t.get_height(level))
-#define texelFetch(sampler, coord, level) sampler.t.read(uint2(coord), level)
-#define texelFetchOffset(sampler, coord, level, offset) sampler.t.read(uint2(coord + offset), level)
+vec2 textureSize(sampler2D sampler, uint level)
+{
+	return vec2(
+		sampler.t.get_width(level),
+		sampler.t.get_height(level));
+}
+vec3 textureSize(sampler3D sampler, uint level)
+{
+	return vec3(
+		sampler.t.get_width(level),
+		sampler.t.get_height(level),
+		sampler.t.get_depth(level));
+}
+#define texelFetch(sampler, coord, level) sampler.t.read(gx::to_uint(coord), level)
+#define texelFetchOffset(sampler, coord, level, offset) sampler.t.read(gx::to_uint(coord + offset), level)
 
 // standard library
 #define dFdx dfdx
@@ -353,6 +365,15 @@ vec2 mod(vec2 x, vec2 y) { return fmod(x, y); }
 vec3 mod(vec3 x, vec3 y) { return fmod(x, y); }
 vec4 mod(vec4 x, vec4 y) { return fmod(x, y); }
 float atan(float x, float y) { return atan2(x, y); }
+
+// helper functions
+namespace gx
+{
+	uint2 to_uint(vec2 v) { return uint2(v); }
+	uint2 to_uint(ivec2 v) { return uint2(v); }
+	uint3 to_uint(vec3 v) { return uint3(v); }
+	uint3 to_uint(ivec3 v) { return uint3(v); }
+}
 )SHADER";
 
 		sb.Append(header);
