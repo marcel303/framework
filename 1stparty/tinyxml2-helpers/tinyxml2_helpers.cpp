@@ -102,15 +102,47 @@ static void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, 
 	}
 }
 
-void pushAttrib_array(tinyxml2::XMLPrinter * printer, const char * name, const void * elems, const int elemSize, const int numElems)
+static void convertEndiannessInline(void * elems, const int elemSize, const int numElems)
 {
 #if defined(__BIG_ENDIAN__)
-	#error "perform endian conversion when needed"
+	// perform endian conversion (reverse bytes)
+	uint8_t * elem_ptr = (uint8_t*)elems;
+	for (int i = 0; i < numElems; ++i, elem_ptr += elemSize)
+	{
+		for (int b = 0; b < elemSize/2; ++b)
+		{
+			const uint8_t temp = elem_ptr[b];
+			elem_ptr[b] = elem_ptr[elemSize - 1 - b];
+			elem_ptr[elemSize - 1 - b] = temp;
+		}
+	}
 #endif
+}
 
-	// todo : perform endian conversion when needed
+static void * convertEndianness(const void * elems, const int elemSize, const int numElems)
+{
+#if defined(__BIG_ENDIAN__)
+	// perform endian conversion (reverse bytes)
+	const uint8_t * elem_ptr = (const uint8_t*)elems;
+	uint8_t * copy = (uint8_t*)malloc(elemSize * numElems);
+	uint8_t * copy_ptr = copy;
+	for (int i = 0; i < numElems; ++i, elem_ptr += elemSize, copy_ptr += elemSize)
+		for (int b = 0; b < elemSize; ++b)
+			copy_ptr[elemSize - 1 - b] = elem_ptr[b];
+	return copy;
+#else
+	return nullptr;
+#endif
+}
 
-	pushAttrib_bytes(printer, name, elems, elemSize * numElems);
+void pushAttrib_array(tinyxml2::XMLPrinter * printer, const char * name, const void * elems, const int elemSize, const int numElems)
+{
+	void * copy = convertEndianness(elems, elemSize, numElems);
+	
+	pushAttrib_bytes(printer, name, copy ? copy : elems, elemSize * numElems);
+	
+	if (copy)
+		free(copy);
 }
 
 static int decodeAndConsume(const char *& text)
@@ -157,9 +189,5 @@ void arrayAttrib(tinyxml2::XMLElement * elem, const char * name, void * elems, c
 {
 	bytesAttrib(elem, name, elems, elemSize * numElems);
 
-#if defined(__BIG_ENDIAN__)
-	#error "perform endian conversion when needed"
-#endif
-
-	// todo : perform endian conversion when needed
+	convertEndiannessInline(elems, elemSize, numElems);
 }
