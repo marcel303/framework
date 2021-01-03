@@ -111,6 +111,8 @@ int main(int argc, char * argv[])
 	Surface skyTarget;
 	skyTarget.init(128, 64, SURFACE_RGBA16F, false, true);
 	
+	GxTexture3d lookupTexture;
+	
 	for (;;)
 	{
 	#if !defined(DEBUG)
@@ -166,16 +168,20 @@ int main(int argc, char * argv[])
 		
 		skyTarget.gaussianBlur(10.f, 10.f);
 
-		GxTextureId lookupTexture = renderOptions.colorGrading.lookupTexture;
-		freeTexture(lookupTexture);
-		renderOptions.colorGrading.lookupTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
+	#if 1
+		renderOptions.colorGrading.lookupTextureId = getTexture3d("color-grading-01.png").id;
+	#elif 0
+		renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
 			[](Color & color)
 			{
 				color = color
 					.hueShift(framework.time / 12.f)
 					//.invertRGB(sinf(framework.time / 3.45f))
 					.desaturate(sinf(framework.time / 2.34f));
-			});
+			},
+			lookupTexture);
+		renderOptions.colorGrading.lookupTextureId = lookupTexture.id;
+	#endif
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -603,6 +609,8 @@ int main(int argc, char * argv[])
 		helper.reset();
 		shadowMapDrawer.reset();
 	}
+	
+	lookupTexture.free();
 	
 	skyTarget.free();
 	
