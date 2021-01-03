@@ -13,7 +13,7 @@ void main()
 	float sampleY = mod(v_texcoord.y * numSamples , lightVolumeDims.y) / lightVolumeDims.y;
 	float sampleZ = int(v_texcoord.y * numSamples / lightVolumeDims.y) / lightVolumeDims.z;
 
-	shader_fragColor.rg = texture(lightVolume, vec3(sampleX, sampleY, sampleZ), 0).rg;
+	shader_fragColor.rg = texture(lightVolume, vec3(sampleX, sampleY, sampleZ)).rg;
 	shader_fragColor.rg /= vec2(lightVolumeDims.x, 4.0);
 	shader_fragColor.b = 0.0;
 	shader_fragColor.a = 1.0;
