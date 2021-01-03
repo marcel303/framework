@@ -984,6 +984,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
 	else if (internalFormat == GL_RGBA16F) return GX_RGBA16_FLOAT;
 	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RG32F) return GX_RG32_FLOAT;
 	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
 	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
 	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
@@ -1196,6 +1197,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
 	else if (internalFormat == GL_RGBA16F) return GX_RGBA16_FLOAT;
 	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RG32F) return GX_RG32_FLOAT;
 	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
 	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
 	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
