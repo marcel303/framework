@@ -179,15 +179,15 @@ Effect::~Effect()
 Vec2 Effect::screenToLocal(Vec2Arg v) const
 {
 	return Vec2(
-		(v[0] - screenX) / scaleX,
-		(v[1] - screenY) / scaleY);
+		(v[0] - screenX.get()) / scaleX.get(),
+		(v[1] - screenY.get()) / scaleY.get());
 }
 
 Vec2 Effect::localToScreen(Vec2Arg v) const
 {
 	return Vec2(
-		v[0] * scaleX + screenX,
-		v[1] * scaleY + screenY);
+		v[0] * scaleX.get() + screenX.get(),
+		v[1] * scaleY.get() + screenY.get());
 }
 
 Vec3 Effect::worldToLocal(Vec3Arg v, const bool withTranslation) const
@@ -257,7 +257,7 @@ void Effect::applyBlendMode() const
 
 void Effect::tickBase(const float dt)
 {
-	const float timeStep = dt * timeMultiplier;
+	const float timeStep = dt * timeMultiplier.get();
 
 	TweenFloatCollection::tick(timeStep);
 
@@ -274,7 +274,7 @@ TweenFloat * Effect::getVar(const char * name)
 //
 
 EffectDrawable::EffectDrawable(Effect * effect)
-	: Drawable(effect->z)
+	: Drawable(effect->z.get())
 	, m_effect(effect)
 {
 }
@@ -283,7 +283,7 @@ void EffectDrawable::draw()
 {
 	if (!m_effect->debugEnabled)
 		return;
-	if (!m_effect->visible)
+	if (!m_effect->visible.get())
 		return;
 
 	gxPushMatrix();
@@ -292,15 +292,15 @@ void EffectDrawable::draw()
 			gxMultMatrixf(m_effect->transform.m_v);
 		else if (m_effect->is2D)
 		{
-			gxTranslatef(virtualToScreenX(m_effect->screenX), virtualToScreenY(m_effect->screenY), 0.f);
-			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
-			gxRotatef(m_effect->angle, 0.f, 0.f, 1.f);
+			gxTranslatef(virtualToScreenX(m_effect->screenX.get()), virtualToScreenY(m_effect->screenY.get()), 0.f);
+			gxScalef(m_effect->scaleX.get() * m_effect->scale.get(), m_effect->scaleY.get() * m_effect->scale.get(), 1.f);
+			gxRotatef(m_effect->angle.get(), 0.f, 0.f, 1.f);
 		}
 		else if (m_effect->is2DAbsolute)
 		{
-			gxTranslatef(m_effect->screenX, m_effect->screenY, 0.f);
-			gxScalef(m_effect->scaleX * m_effect->scale, m_effect->scaleY * m_effect->scale, 1.f);
-			gxRotatef(m_effect->angle, 0.f, 0.f, 1.f);
+			gxTranslatef(m_effect->screenX.get(), m_effect->screenY.get(), 0.f);
+			gxScalef(m_effect->scaleX.get() * m_effect->scale.get(), m_effect->scaleY.get() * m_effect->scale.get(), 1.f);
+			gxRotatef(m_effect->angle.get(), 0.f, 0.f, 1.f);
 		}
 
 		m_effect->applyBlendMode();
@@ -357,8 +357,8 @@ void Effect_StarCluster::tick(const float dt)
 		if (!m_particleSystem.alive[i])
 			continue;
 
-		const float dx = m_particleSystem.x[i] - m_gravityX;
-		const float dy = m_particleSystem.y[i] - m_gravityY;
+		const float dx = m_particleSystem.x[i] - m_gravityX.get();
+		const float dy = m_particleSystem.y[i] - m_gravityY.get();
 		const float ds = sqrtf(dx * dx + dy * dy) + eps;
 
 #if 0
@@ -388,14 +388,14 @@ void Effect_StarCluster::draw(DrawableList & list)
 
 void Effect_StarCluster::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	gxSetTexture(Sprite("prayer.png").getTexture());
 	{
 		setColor(colorWhite);
 
-		m_particleSystem.draw(m_alpha);
+		m_particleSystem.draw(m_alpha.get());
 	}
 	gxSetTexture(0);
 }
@@ -693,7 +693,7 @@ void Effect_Fsfx::draw(DrawableList & list)
 
 void Effect_Fsfx::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	setBlend(BLEND_OPAQUE);
@@ -704,13 +704,13 @@ void Effect_Fsfx::draw()
 	setTextures(shader);
 	ShaderBuffer buffer;
 	FsfxData data;
-	data.alpha = m_alpha;
+	data.alpha = m_alpha.get();
 	//data._time = g_currentScene->m_time;
 	data._time = m_time;
-	data._param1 = m_param1;
-	data._param2 = m_param2;
-	data._param3 = m_param3;
-	data._param4 = m_param4;
+	data._param1 = m_param1.get();
+	data._param2 = m_param2.get();
+	data._param3 = m_param3.get();
+	data._param4 = m_param4.get();
 	data._pcmVolume = g_pcmVolume;
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
@@ -770,8 +770,8 @@ Effect_Rain::Effect_Rain(const char * name, const int numRainDrops)
 
 void Effect_Rain::tick(const float dt)
 {
-	const float gravityY = m_gravity;
-	const float falloff = Calc::Max(0.f, 1.f - m_falloff);
+	const float gravityY = m_gravity.get();
+	const float falloff = Calc::Max(0.f, 1.f - m_falloff.get());
 	const float falloffThisTick = powf(falloff, dt);
 
 	const Sprite sprite("rain.png");
@@ -782,15 +782,15 @@ void Effect_Rain::tick(const float dt)
 
 	m_spawnTimer.tick(dt);
 
-	while (m_spawnRate != 0.f && m_spawnTimer.consume(1.f / m_spawnRate))
+	while (m_spawnRate.get() != 0.f && m_spawnTimer.consume(1.f / m_spawnRate.get()))
 	{
 		int id;
 
-		if (!m_particleSystem.alloc(false, m_spawnLife, id))
+		if (!m_particleSystem.alloc(false, m_spawnLife.get(), id))
 			continue;
 
 		m_particleSystem.x[id] = rand() % GFX_SX;
-		m_particleSystem.y[id] = m_spawnY;
+		m_particleSystem.y[id] = m_spawnY.get();
 		m_particleSystem.vx[id] = 0.f;
 		m_particleSystem.vy[id] = 0.f;
 		m_particleSystem.sx[id] = 1.f;
@@ -816,7 +816,7 @@ void Effect_Rain::tick(const float dt)
 		if (m_particleSystem.y[i] > GFX_SY)
 		{
 			m_particleSystem.y[i] = GFX_SY;
-			m_particleSystem.vy[i] *= -m_bounce;
+			m_particleSystem.vy[i] *= -m_bounce.get();
 		}
 
 		// velocity falloff
@@ -830,15 +830,15 @@ void Effect_Rain::tick(const float dt)
 
 		float size = m_particleSizes[i];
 
-		size *= lerp((float)m_size2, (float)m_size1, life);
+		size *= lerp(m_size2.get(), m_size1.get(), life);
 
-		m_particleSystem.sx[i] = /*size * */ spriteSx * m_sizeX;
-		m_particleSystem.sy[i] = size * spriteSy * m_sizeY;
+		m_particleSystem.sx[i] = /*size * */ spriteSx * m_sizeX.get();
+		m_particleSystem.sy[i] = size * spriteSy * m_sizeY.get();
 
-		if (m_speedScaleX != 0.f)
-			m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX;
-		if (m_speedScaleY != 0.f)
-			m_particleSystem.sy[i] *= m_particleSystem.vy[i] * m_speedScaleY;
+		if (m_speedScaleX.get() != 0.f)
+			m_particleSystem.sx[i] *= m_particleSystem.vx[i] * m_speedScaleX.get();
+		if (m_speedScaleY.get() != 0.f)
+			m_particleSystem.sy[i] *= m_particleSystem.vy[i] * m_speedScaleY.get();
 
 		// check if the particle is dead
 
@@ -858,14 +858,14 @@ void Effect_Rain::draw(DrawableList & list)
 
 void Effect_Rain::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	gxSetTexture(Sprite("rain.png").getTexture());
 	{
 		setColor(colorWhite);
 
-		m_particleSystem.draw(m_alpha);
+		m_particleSystem.draw(m_alpha.get());
 	}
 	gxSetTexture(0);
 }
@@ -1087,7 +1087,7 @@ void Effect_Boxes::draw(DrawableList & list)
 
 void Effect_Boxes::draw()
 {
-	if (m_outline)
+	if (m_outline.get())
 		pushWireframe(true);
 
 	gxPushMatrix();
@@ -1117,13 +1117,13 @@ void Effect_Boxes::draw()
 			{
 				gxScalef(1.f, 1.f, 0.f);
 
-				gxTranslatef(b.m_tx, b.m_ty, b.m_tz);
+				gxTranslatef(b.m_tx.get(), b.m_ty.get(), b.m_tz.get());
 
-				gxRotatef(b.m_rx, 1.f, 0.f, 0.f);
-				gxRotatef(b.m_ry, 0.f, 1.f, 0.f);
-				gxRotatef(b.m_rz, 0.f, 0.f, 1.f);
+				gxRotatef(b.m_rx.get(), 1.f, 0.f, 0.f);
+				gxRotatef(b.m_ry.get(), 0.f, 1.f, 0.f);
+				gxRotatef(b.m_rz.get(), 0.f, 0.f, 1.f);
 
-				gxScalef(b.m_sx, b.m_sy, b.m_sz);
+				gxScalef(b.m_sx.get(), b.m_sy.get(), b.m_sz.get());
 
 				if (b.m_axis == 0)
 					gxRotatef(90, 0, 1, 0);
@@ -1167,7 +1167,7 @@ void Effect_Boxes::draw()
 	}
 	gxPopMatrix();
 
-	if (m_outline)
+	if (m_outline.get())
 		popWireframe();
 }
 
@@ -1280,7 +1280,7 @@ void Effect_Picture::draw(DrawableList & list)
 
 void Effect_Picture::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	Shader shader;
@@ -1310,7 +1310,7 @@ void Effect_Picture::draw()
 		if (m_centered)
 			gxTranslatef(-sx / 2.f, -sy / 2.f, 0.f);
 
-		setColorf(1.f, 1.f, 1.f, m_alpha);
+		setColorf(1.f, 1.f, 1.f, m_alpha.get());
 		sprite.drawEx(0.f, 0.f, 0.f, 1.f, 1.f, false, FILTER_LINEAR);
 	}
 	gxPopMatrix();
@@ -1369,7 +1369,7 @@ void Effect_Video::tick(const float dt)
 
 		m_mediaPlayer.tick(m_mediaPlayer.context, true);
 
-		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
+		if (m_hideWhenDone.get() && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
 			m_mediaPlayer.close(false);
 
@@ -1385,7 +1385,7 @@ void Effect_Video::draw(DrawableList & list)
 
 void Effect_Video::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 	if (!m_mediaPlayer.isActive(m_mediaPlayer.context))
 		return;
@@ -1414,13 +1414,13 @@ void Effect_Video::draw()
 				Shader shader(m_shader.c_str());
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
-				setColorf(1.f, 1.f, 1.f, m_alpha);
+				setColorf(1.f, 1.f, 1.f, m_alpha.get());
 				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				clearShader();
 			}
 			else
 			{
-				setColorf(1.f, 1.f, 1.f, m_alpha);
+				setColorf(1.f, 1.f, 1.f, m_alpha.get());
 				gxSetTexture(texture);
 				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				gxSetTexture(0);
@@ -1454,7 +1454,7 @@ void Effect_Video::syncTime(const float time)
 {
 	if (m_playing && m_mediaPlayer.isActive(m_mediaPlayer.context))
 	{
-		const double videoTime = (time - m_startTime) * timeMultiplier;
+		const double videoTime = (time - m_startTime) * timeMultiplier.get();
 
 		if (videoTime >= 0.0)
 		{
@@ -1519,7 +1519,7 @@ void Effect_VideoLoop::draw(DrawableList & list)
 
 void Effect_VideoLoop::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	int sx;
@@ -1548,13 +1548,13 @@ void Effect_VideoLoop::draw()
 				Shader shader(m_shader.c_str());
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
-				shader.setImmediate("alpha", m_alpha);
+				shader.setImmediate("alpha", m_alpha.get());
 				drawRect(0, 0, sx, sy);
 				clearShader();
 			}
 			else
 			{
-				setColorf(1.f, 1.f, 1.f, m_alpha);
+				setColorf(1.f, 1.f, 1.f, m_alpha.get());
 				gxSetTexture(texture);
 				drawRect(0, 0, sx, sy);
 				gxSetTexture(0);
@@ -1611,13 +1611,13 @@ void Effect_Luminance::draw()
 	ShaderBuffer buffer;
 	ShaderBuffer buffer2;
 	LuminanceData data;
-	data.alpha = m_alpha;
-	data.power = m_power;
-	data.scale = m_mul;
-	data.darken = m_darken;
+	data.alpha = m_alpha.get();
+	data.power = m_power.get();
+	data.scale = m_mul.get();
+	data.darken = m_darken.get();
 	LuminanceData2 data2;
-	data2.darkenAlpha = m_darkenAlpha;
-	//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
+	data2.darkenAlpha = m_darkenAlpha.get();
+	//logDebug("p=%g, m=%g", m_power.get(), m_mul.get());
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("LuminanceBlock", buffer);
@@ -1667,10 +1667,10 @@ void Effect_ColorLut2D::draw()
 	shader.setTexture("lut", 1, lutTexture, true, true);
 	ShaderBuffer buffer;
 	ColorLut2DData data;
-	data.alpha = m_alpha;
-	data.lutStart = m_lutStart;
-	data.lutEnd = m_lutEnd;
-	data.numTaps = m_numTaps;
+	data.alpha = m_alpha.get();
+	data.lutStart = m_lutStart.get();
+	data.lutEnd = m_lutEnd.get();
+	data.numTaps = m_numTaps.get();
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("ColorLut2DBlock", buffer);
@@ -1705,7 +1705,7 @@ void Effect_Flowmap::draw(DrawableList & list)
 
 void Effect_Flowmap::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	setBlend(BLEND_OPAQUE);
@@ -1720,9 +1720,9 @@ void Effect_Flowmap::draw()
 	shader.setImmediate("flow_time", g_currentScene->m_time);
 	ShaderBuffer buffer;
 	FlowmapData data;
-	data.alpha = m_alpha;
-	data.strength = m_strength;
-	data.darken = m_darken;
+	data.alpha = m_alpha.get();
+	data.strength = m_strength.get();
+	data.darken = m_darken.get();
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FlowmapBlock", buffer);
@@ -1755,7 +1755,7 @@ void Effect_Vignette::draw(DrawableList & list)
 
 void Effect_Vignette::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	setBlend(BLEND_OPAQUE);
@@ -1766,9 +1766,9 @@ void Effect_Vignette::draw()
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 	ShaderBuffer buffer;
 	VignetteData data;
-	data.alpha = m_alpha;
-	data.innerRadius = m_innerRadius;
-	data.distanceRcp = 1.f / m_distance;
+	data.alpha = m_alpha.get();
+	data.innerRadius = m_innerRadius.get();
+	data.distanceRcp = 1.f / m_distance.get();
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("VignetteBlock", buffer);
@@ -1801,7 +1801,7 @@ void Effect_Clockwork::draw(DrawableList & list)
 
 void Effect_Clockwork::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	setBlend(BLEND_OPAQUE);
@@ -1812,9 +1812,9 @@ void Effect_Clockwork::draw()
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
 	ShaderBuffer buffer;
 	VignetteData data;
-	data.alpha = m_alpha;
-	data.innerRadius = m_innerRadius;
-	data.distanceRcp = 1.f / m_distance;
+	data.alpha = m_alpha.get();
+	data.innerRadius = m_innerRadius.get();
+	data.distanceRcp = 1.f / m_distance.get();
 	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("VignetteBlock", buffer);
@@ -1858,11 +1858,11 @@ void Effect_DrawPicture::tick(const float dt)
 			{
 				float distance = m_distance + ds;
 
-				while (distance >= m_step)
+				while (distance >= m_step.get())
 				{
-					distance -= m_step;
-					m_lastCoord.x += dx / ds * m_step;
-					m_lastCoord.y += dy / ds * m_step;
+					distance -= m_step.get();
+					m_lastCoord.x += dx / ds * m_step.get();
+					m_lastCoord.y += dy / ds * m_step.get();
 					m_coords.push_back(m_lastCoord);
 				}
 
@@ -1901,12 +1901,12 @@ void Effect_DrawPicture::draw()
 
 		gxPushMatrix();
 		{
-			gxTranslatef(-sx / 2.f * scale, -sy / 2.f * scale, 0.f);
+			gxTranslatef(-sx / 2.f * scale.get(), -sy / 2.f * scale.get(), 0.f);
 			gxColor4f(1.f, 1.f, 1.f, 1.f);
 
 			for (auto coord : m_coords)
 			{
-				sprite.drawEx(coord.x, coord.y, 0.f, scale, scale, false, FILTER_LINEAR);
+				sprite.drawEx(coord.x, coord.y, 0.f, scale.get(), scale.get(), false, FILTER_LINEAR);
 			}
 		}
 		gxPopMatrix();
@@ -1939,22 +1939,22 @@ Effect_Blit::Effect_Blit(const char * name, const char * layer)
 
 void Effect_Blit::transformCoords(float x, float y, bool addSize, float & out_x, float & out_y, float & out_u, float & out_v)
 {
-	float srcX = m_srcX;
-	float srcY = m_srcY;
+	float srcX = m_srcX.get();
+	float srcY = m_srcY.get();
 
 	float dstX = 0.f;
 	float dstY = 0.f;
 
 	if (addSize)
 	{
-		srcX += m_srcSx;
-		srcY += m_srcSy;
+		srcX += m_srcSx.get();
+		srcY += m_srcSy.get();
 
-		dstX += m_srcSx;
-		dstY += m_srcSy;
+		dstX += m_srcSx.get();
+		dstY += m_srcSy.get();
 	}
 
-	if (m_absolute <= 0.f)
+	if (m_absolute.get() <= 0.f)
 	{
 		srcX = virtualToScreenX(srcX);
 		srcY = virtualToScreenY(srcY);
@@ -1978,27 +1978,27 @@ void Effect_Blit::draw(DrawableList & list)
 
 void Effect_Blit::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
-	if (m_srcSx <= 0.f || m_srcSy <= 0.f)
+	if (m_srcSx.get() <= 0.f || m_srcSy.get() <= 0.f)
 		return;
 
 	const SceneLayer * layer = g_currentScene->findLayerByName(m_layer.c_str());
 
 	gxPushMatrix();
 	{
-		if (m_absolute > 0.f)
-			gxTranslatef(screenX, screenY, 0.f);
+		if (m_absolute.get() > 0.f)
+			gxTranslatef(screenX.get(), screenY.get(), 0.f);
 		else
-			gxTranslatef(virtualToScreenX(screenX), virtualToScreenY(screenY), 0.f);
-		gxScalef(scaleX * scale, scaleY * scale, 1.f);
+			gxTranslatef(virtualToScreenX(screenX.get()), virtualToScreenY(screenY.get()), 0.f);
+		gxScalef(scaleX.get() * scale.get(), scaleY.get() * scale.get(), 1.f);
 
-		gxRotatef(angle, 0.f, 0.f, 1.f);
+		gxRotatef(angle.get(), 0.f, 0.f, 1.f);
 
-		if (m_centered)
-			gxTranslatef(-m_srcSx / 2.f, -m_srcSy / 2.f, 0.f);
+		if (m_centered.get())
+			gxTranslatef(-m_srcSx.get() / 2.f, -m_srcSy.get() / 2.f, 0.f);
 
-		gxColor4f(1.f, 1.f, 1.f, m_alpha);
+		gxColor4f(1.f, 1.f, 1.f, m_alpha.get());
 		gxSetTexture(layer->m_surface->getTexture());
 		{
 			gxBegin(GX_QUADS);
@@ -2051,8 +2051,8 @@ void Effect_Blocks::spawnBlock()
 
 	b.x = random(0.f, (float)GFX_SX);
 	b.y = random(0.f, (float)GFX_SY);
-	b.size = random((float)m_minSize, (float)m_maxSize);
-	b.speed = random((float)m_minSpeed, (float)m_maxSpeed);
+	b.size = random(m_minSize.get(), m_maxSize.get());
+	b.speed = random(m_minSpeed.get(), m_maxSpeed.get());
 	b.value = random(0.f, 1.f);
 
 	m_blocks.push_back(b);
@@ -2067,7 +2067,7 @@ void Effect_Blocks::tick(const float dt)
 		b.value += b.speed * dt;
 	}
 
-	const size_t numBlocks = (size_t)m_numBlocks;
+	const size_t numBlocks = (size_t)m_numBlocks.get();
 
 	while (m_blocks.size() > numBlocks)
 		m_blocks.pop_back();
@@ -2082,7 +2082,7 @@ void Effect_Blocks::draw(DrawableList & list)
 
 void Effect_Blocks::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	const GLuint image1 = Sprite("track-healer/block01.png").getTexture();
@@ -2097,7 +2097,7 @@ void Effect_Blocks::draw()
 
 		const float t = (std::sin(b.value * 2.f * M_PI) + 1.f) / 2.f;
 		const float scale = Calc::Lerp(1.f, 1.5f, t);
-		const float alpha = Calc::Lerp(.2f, .5f, t) * m_alpha;
+		const float alpha = Calc::Lerp(.2f, .5f, t) * m_alpha.get();
 		const float imageAlpha = t;
 
 		const float sx = scale * b.size / 2.f;
@@ -2163,16 +2163,16 @@ void Effect_Lines::spawnLine()
 		{
 			const bool h = (rand() % 2) != 0;
 			const int d = (rand() % 2) ? -1 : +1;
-			const float speed = random((float)m_minSpeed, (float)m_maxSpeed);
+			const float speed = random(m_minSpeed.get(), m_maxSpeed.get());
 
 			m_lines[i].active = true;
 			m_lines[i].speedX = ( h ? speed : 0.f) * d;
 			m_lines[i].speedY = (!h ? speed : 0.f) * d;
-			m_lines[i].sx =  h ? random((float)m_minSize, (float)m_maxSize) : m_thickness;
-			m_lines[i].sy = !h ? random((float)m_minSize, (float)m_maxSize) : m_thickness;
+			m_lines[i].sx =  h ? random(m_minSize.get(), m_maxSize.get()) : m_thickness.get();
+			m_lines[i].sy = !h ? random(m_minSize.get(), m_maxSize.get()) : m_thickness.get();
 			m_lines[i].x =  h ? (d > 0 ? -m_lines[i].sx : GFX_SX) : (rand() % GFX_SX);
 			m_lines[i].y = !h ? (d > 0 ? -m_lines[i].sy : GFX_SY) : (rand() % GFX_SY);
-			m_lines[i].c = random((float)m_color1, (float)m_color2);
+			m_lines[i].c = random(m_color1.get(), m_color2.get());
 
 			break;
 		}
@@ -2181,20 +2181,20 @@ void Effect_Lines::spawnLine()
 
 void Effect_Lines::tick(const float dt)
 {
-	const float spawnRate = m_spawnRate;
+	const float spawnRate = m_spawnRate.get();
 
 	if (spawnRate > 0)
 	{
 		const float spawnTime = 1.f / spawnRate;
 
-		while (m_spawnTimer >= spawnTime)
+		while (m_spawnTimer.get() >= spawnTime)
 		{
-			m_spawnTimer = m_spawnTimer - spawnTime;
+			m_spawnTimer = m_spawnTimer.get() - spawnTime;
 
 			spawnLine();
 		}
 	
-		m_spawnTimer = m_spawnTimer + dt;
+		m_spawnTimer = m_spawnTimer.get() + dt;
 	}
 
 	for (size_t i = 0; i < m_lines.size(); ++i)
@@ -2224,7 +2224,7 @@ void Effect_Lines::draw(DrawableList & list)
 
 void Effect_Lines::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	for (size_t i = 0; i < m_lines.size(); ++i)
@@ -2235,7 +2235,7 @@ void Effect_Lines::draw()
 				m_lines[i].c,
 				m_lines[i].c,
 				m_lines[i].c,
-				m_alpha);
+				m_alpha.get());
 
 			drawRect(
 				m_lines[i].x,
@@ -2303,12 +2303,12 @@ void Effect_Bars::initializeBars()
 
 		while (x < GFX_SX)
 		{
-			const float t = powf(random(0.f, 1.f), m_sizePow);
+			const float t = powf(random(0.f, 1.f), m_sizePow.get());
 
 			Bar bar;
 
 		#if 1
-			bar.skipSize = Calc::Lerp(m_minSize, m_maxSize, t);
+			bar.skipSize = Calc::Lerp(m_minSize.get(), m_maxSize.get(), t);
 			bar.drawSize = bar.skipSize;
 		#else
 			if (layer == 0)
@@ -2358,25 +2358,25 @@ void Effect_Bars::tick(const float dt)
 	if (m_bars[0].empty())
 		initializeBars();
 
-	const float shuffleRate = m_shuffleRate;
+	const float shuffleRate = m_shuffleRate.get();
 
 	if (shuffleRate > 0)
 	{
 		const float shuffleTime = 1.f / shuffleRate;
 
-		while (m_shuffleTimer >= shuffleTime)
+		while (m_shuffleTimer.get() >= shuffleTime)
 		{
-			m_shuffleTimer = m_shuffleTimer - shuffleTime;
+			m_shuffleTimer = m_shuffleTimer.get() - shuffleTime;
 
-			m_shuffle = m_shuffle + 1.f;
+			m_shuffle = m_shuffle.get() + 1.f;
 		}
 
-		m_shuffleTimer = m_shuffleTimer + dt;
+		m_shuffleTimer = m_shuffleTimer.get() + dt;
 	}
 
-	while (m_shuffle >= 0.f)
+	while (m_shuffle.get() >= 0.f)
 	{
-		m_shuffle = m_shuffle - 1;
+		m_shuffle = m_shuffle.get() - 1;
 
 		for (int i = 0; i < kNumLayers; ++i)
 			shuffleBar(i);
@@ -2390,7 +2390,7 @@ void Effect_Bars::draw(DrawableList & list)
 
 void Effect_Bars::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	gxBegin(GX_QUADS);
@@ -2407,10 +2407,10 @@ void Effect_Bars::draw()
 
 				x += b.skipSize/2.f;
 
-				gxColor4f(color.r, color.g, color.b, m_topAlpha * m_alpha);
+				gxColor4f(color.r, color.g, color.b, m_topAlpha.get() * m_alpha.get());
 				gxVertex2f(x - b.drawSize/2.f, 0.f);
 				gxVertex2f(x + b.drawSize/2.f, 0.f);
-				gxColor4f(color.r, color.g, color.b, m_bottomAlpha * m_alpha);
+				gxColor4f(color.r, color.g, color.b, m_bottomAlpha.get() * m_alpha.get());
 				gxVertex2f(x + b.drawSize/2.f, GFX_SY);
 				gxVertex2f(x - b.drawSize/2.f, GFX_SY);
 
@@ -2467,12 +2467,12 @@ void Effect_Text::draw(DrawableList & list)
 
 void Effect_Text::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
-	setColorf(m_color.r, m_color.g, m_color.b, m_color.a * m_alpha);
+	setColorf(m_color.r, m_color.g, m_color.b, m_color.a * m_alpha.get());
 	setFont(m_font.c_str());
-	drawText(screenX, screenY, m_fontSize, m_textAlignX, m_textAlignY, "%s", m_text.c_str());
+	drawText(screenX.get(), screenY.get(), m_fontSize, m_textAlignX.get(), m_textAlignY.get(), "%s", m_text.c_str());
 }
 
 //
@@ -2568,7 +2568,7 @@ static float mixValue(const float t1, const float t2, const float o, const float
 
 void Effect_Bezier::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
 	for (auto & s : segments)
@@ -2580,7 +2580,7 @@ void Effect_Bezier::draw()
 
 		Color baseColor;
 		colorCurve.sample(t, baseColor);
-		baseColor.a *= m_alpha;
+		baseColor.a *= m_alpha.get();
 
 		std::vector<BezierNode> nodes;
 		nodes.resize(s.nodes.size());
@@ -2902,11 +2902,11 @@ void Effect_Smoke::draw()
 		captureSurface();
 	}
 
-	if (m_alpha > 0.f)
+	if (m_alpha.get() > 0.f)
 	{
 		// draw the current surface
 
-		setColorf(1.f, 1.f, 1.f, m_alpha);
+		setColorf(1.f, 1.f, 1.f, m_alpha.get());
 		gxSetTexture(m_surface->getTexture());
 		drawRect(0, 0, g_currentSurface->getWidth(), g_currentSurface->getHeight());
 		gxSetTexture(0);
@@ -2929,10 +2929,10 @@ void Effect_Smoke::draw()
 		ShaderBuffer buffer;
 		SmokeData data;
 		data.alpha = 1.f;
-		data.strength = m_strength;
-		data.darken = m_darken;
-		data.darkenAlpha = m_darkenAlpha;
-		data.mul = m_multiply;
+		data.strength = m_strength.get();
+		data.darken = m_darken.get();
+		data.darkenAlpha = m_darkenAlpha.get();
+		data.mul = m_multiply.get();
 		buffer.alloc(sizeof(data));
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("SmokeBlock", buffer);
@@ -3021,16 +3021,16 @@ void Effect_Beams::tick(const float dt)
 			const float as = Calc::mPI * 4/4;
 			b.angle = random(-as/2, +as/2);
 			b.thickness = random(3.f, 6.f);
-			b.offsetX = random(-m_beamOffset, +m_beamOffset);
-			b.offsetY = random(-m_beamOffset, +m_beamOffset);
+			b.offsetX = random(-m_beamOffset.get(), +m_beamOffset.get());
+			b.offsetY = random(-m_beamOffset.get(), +m_beamOffset.get());
 			b.length2Speed = random(.8f, 1.f);
 			m_beams.push_back(b);
 		}
 
-		if (m_beamTime > 0.f)
+		if (m_beamTime.get() > 0.f)
 		{
 			// next beam
-			const float duration = lerp(m_beamTime/2.f, (float)m_beamTime, random(0.f, 1.f));
+			const float duration = lerp(m_beamTime.get()/2.f, m_beamTime.get(), random(0.f, 1.f));
 			m_beamTimer = duration;
 			m_beamTimerRcp = 1.f / duration;
 		}
@@ -3043,13 +3043,13 @@ void Effect_Beams::tick(const float dt)
 
 	for (auto & b : m_beams)
 	{
-		b.length += dt * m_beamSpeed * b.length1Speed;
+		b.length += dt * m_beamSpeed.get() * b.length1Speed;
 		if (b.length > 1.f)
 			b.length = 1.f;
 
 		if (m_beamTimerRcp == 0.f)
 		{
-			b.length2 += dt * m_beamSpeed * b.length2Speed;
+			b.length2 += dt * m_beamSpeed.get() * b.length2Speed;
 			if (b.length2 > 1.f)
 				b.length2 = 1.f;
 		}
@@ -3063,13 +3063,13 @@ void Effect_Beams::draw(DrawableList & list)
 
 void Effect_Beams::draw()
 {
-	if (m_alpha <= 0.f)
+	if (m_alpha.get() <= 0.f)
 		return;
 
-	const float size1 = m_beamSize1;
-	const float size2 = m_beamSize2;
+	const float size1 = m_beamSize1.get();
+	const float size2 = m_beamSize2.get();
 
-	setColorf(1, 1, 1, m_alpha);
+	setColorf(1, 1, 1, m_alpha.get());
 
 	for (auto & b : m_beams)
 	{
@@ -3192,7 +3192,7 @@ Effect_Fireworks::P * Effect_Fireworks::nextParticle()
 
 void Effect_Fireworks::tick(const float dt)
 {
-	if (spawnRate == 0.f)
+	if (spawnRate.get() == 0.f)
 	{
 		spawnValue = 0.f;
 	}
@@ -3200,7 +3200,7 @@ void Effect_Fireworks::tick(const float dt)
 	{
 		spawnValue += dt;
 		
-		const float spawnInterval = 1.f / spawnRate;
+		const float spawnInterval = 1.f / spawnRate.get();
 
 		while (spawnValue >= spawnInterval)
 		{
@@ -3211,14 +3211,14 @@ void Effect_Fireworks::tick(const float dt)
 			const float h = pow(random(0.f, 1.f), .5f);
 			const float r = Calc::DegToRad(35);
 			const float a = Calc::m2PI*3/4 + random(-r/2, +r/2);
-			const float v = lerp(float(m_rootSpeed), float(m_rootSpeed + m_rootSpeedVar), h);
+			const float v = lerp(m_rootSpeed.get(), m_rootSpeed.get() + m_rootSpeedVar.get(), h);
 
 			p.type = kPT_Root;
 			p.x = GFX_SX/2.f + random(-80.f, +80.f);
 			p.y = GFX_SY;
 			p.oldX = p.x;
 			p.oldY = p.y;
-			p.life = m_rootLife;
+			p.life = m_rootLife.get();
 			p.lifeRcp = 1.f / p.life;
 			p.vx = std::cos(a) * v;
 			p.vy = std::sin(a) * v;
@@ -3251,7 +3251,7 @@ void Effect_Fireworks::tick(const float dt)
 						P & pc = *nextParticle();
 
 						const float a = random(0.f, Calc::m2PI);
-						const float v = random(float(m_child1Speed), float(m_child1Speed + m_child1SpeedVar));
+						const float v = random(m_child1Speed.get(), m_child1Speed.get() + m_child1SpeedVar.get());
 
 						const float pv = .05f;
 
@@ -3260,7 +3260,7 @@ void Effect_Fireworks::tick(const float dt)
 						pc.y = p.y;
 						pc.oldX = pc.x;
 						pc.oldY = pc.y;
-						pc.life = m_child1Life;
+						pc.life = m_child1Life.get();
 						pc.lifeRcp = 1.f / pc.life;
 						pc.vx = std::cos(a) * v + p.vx * pv;
 						pc.vy = std::sin(a) * v + p.vy * pv;
@@ -3282,14 +3282,14 @@ void Effect_Fireworks::tick(const float dt)
 							P & pc = *nextParticle();
 
 							const float a = random(0.f, Calc::m2PI);
-							const float v = random(float(m_child2Speed), float(m_child2Speed + m_child2SpeedVar));
+							const float v = random(m_child2Speed.get(), m_child2Speed.get() + m_child2SpeedVar.get());
 							
 							pc.type = kPT_Child2;
 							pc.x = p.x;
 							pc.y = p.y;
 							pc.oldX = pc.x;
 							pc.oldY = pc.y;
-							pc.life = m_child2Life;
+							pc.life = m_child2Life.get();
 							pc.lifeRcp = 1.f / pc.life;
 							pc.vx = std::cos(a) * v;
 							pc.vy = std::sin(a) * v - 10.f;
@@ -3416,7 +3416,7 @@ void Effect_Sparklies::draw()
 				const float x = m_particleSystem.x[i];
 				const float y = m_particleSystem.y[i];
 
-				gxColor4f(x, y, 1.f, (1.f - cosf(value * Calc::m2PI)) / 2.f * m_alpha);
+				gxColor4f(x, y, 1.f, (1.f - cosf(value * Calc::m2PI)) / 2.f * m_alpha.get());
 
 				const float s = sinf(m_particleSystem.angle[i]);
 				const float c = cosf(m_particleSystem.angle[i]);
@@ -3626,7 +3626,7 @@ void Effect_Wobbly::tick(const float dt)
 	const double vRetainPerSecond = 0.99 * (1.0 - fade.falloff);
 	const double pRetainPerSecond = 0.99 * (1.0 - fade.falloff);
 	
-	const int numIterations = std::max(1, int(m_numIterations));
+	const int numIterations = std::max(1, int(m_numIterations.get()));
 	
 	const double dtSub = double(dt) / numIterations;
 	
@@ -3657,17 +3657,17 @@ void Effect_Wobbly::tick(const float dt)
 		}
 	}
 	
-	const bool closedEnds = m_closedEnds != 0.f;
+	const bool closedEnds = m_closedEnds.get() != 0.f;
 	
 	for (int i = 0; i < numIterations; ++i)
 	{
-		m_waterSim->tick(dtSub, m_wobbliness, vRetainPerSecond, pRetainPerSecond, closedEnds);
+		m_waterSim->tick(dtSub, m_wobbliness.get(), vRetainPerSecond, pRetainPerSecond, closedEnds);
 		
 		for (auto w = m_waterDrops.begin(); w != m_waterDrops.end(); )
 		{
 			auto & drop = *w;
 			
-			drop.tick(dtSub, m_stretch, *m_waterSim);
+			drop.tick(dtSub, m_stretch.get(), *m_waterSim);
 			
 			if (drop.isAlive)
 				++w;
@@ -3725,15 +3725,15 @@ void Effect_Wobbly::draw()
 		shader.setTexture("video1", 2, video1Texture, true, true);
 		shader.setTexture("video2", 3, video2Texture, true, true);
 		shader.setImmediate("colormapSize", GFX_SX, GFX_SY);
-		shader.setImmediate("stretch", m_stretch);
+		shader.setImmediate("stretch", m_stretch.get());
 		shader.setImmediate("distort", .05f, .05f);
-		shader.setImmediate("alpha", m_alpha);
+		shader.setImmediate("alpha", m_alpha.get());
 		
 		drawRect(0.f, 0.f, GFX_SX, GFX_SY);
 	}
 	clearShader();
 	
-	if (m_showDrops)
+	if (m_showDrops.get())
 	{
 		for (auto & drop : m_waterDrops)
 		{

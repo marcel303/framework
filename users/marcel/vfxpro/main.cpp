@@ -1772,7 +1772,7 @@ int main(int argc, char * argv[])
 			g_fftTexture.upload(powerValues, 4, 0);
 			
 			static float powerValuesWithFade[kFFTComplexSize] = { };
-			const float fftFadeA = powf(g_scene->m_fftFade, dtReal);
+			const float fftFadeA = powf(g_scene->m_fftFade.get(), dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
 			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
@@ -2133,7 +2133,7 @@ int main(int argc, char * argv[])
 									y += spacingY;
 
 									setColor(var.isActive() ? colorYellow : colorWhite);
-									drawText(x, y, fontSize, +1.f, +1.f, "%.2f", (float)var);
+									drawText(x, y, fontSize, +1.f, +1.f, "%.2f", var.get());
 									y += spacingY;
 
 									x += 150.f;
