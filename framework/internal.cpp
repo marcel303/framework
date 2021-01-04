@@ -482,7 +482,8 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 			// todo : try to see if there's a meta data file for this texture,
 			//        if so, load texture settings from this file (similar to Sprite)
 			//     _OR_ when getTexture is called on a .txt file, load the .txt
-			//        file and reference the texture from the .txt file or by replacing the extension
+			//        file and reference the texture from the .txt file or by replacing the extension <-- this doesn't seem like a good idea. we want people to be able to override texture settings (for instance through refine) without the code needing to change
+			//    idea : for refine : make sure most resources have reflection data. load/save of meta data files would be much easier this way. also, enables an 'advanced' section inside the resource editor, which lets one inspect and modify the entire reflected structure. eg, the sprite editor would have a nice UI for changing the scale & flipped flags, and an advanced section for setting grid divisions, animation definitions
 			//    -> use meta data to see if mipmaps should be enabled, and for filter settings
 			
 			for (int i = 0; i < numTextures; ++i)
