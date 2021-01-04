@@ -253,6 +253,10 @@ bool Framework::init(int sx, int sy)
 		SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	}
 	
+#if !ENABLE_DISPLAY_SIZE_SCALING
+	minification = 1;
+#endif
+
 	int flags = 0;
 
 #if defined(IPHONEOS)
@@ -2703,7 +2707,9 @@ WindowData * Framework::findWindowDataById(const int id)
 
 // -----
 
-static Stack<std::string, 32> s_shaderOutputsStack;
+#include "FixedSizeString.h"
+
+static Stack<FixedSizeString<16>, 32> s_shaderOutputsStack;
 
 // -----
 
@@ -3457,14 +3463,16 @@ static void getCurrentViewportSize(int & sx, int & sy)
 	{
 		// or when no render target is active, the size of the current window
 	
+	#if ENABLE_DISPLAY_SIZE_SCALING
 		// todo : fix for case with fullscreen desktop mode
 		// fixme : add specific code for setting screen matrix
-		if (globals.currentWindow == globals.mainWindow && false)
+		if (globals.currentWindow == globals.mainWindow)
 		{
 			sx = globals.displaySize[0];
 			sy = globals.displaySize[1];
 		}
 		else
+	#endif
 		{
 			sx = globals.currentWindow->getWidth() * framework.minification;
 			sy = globals.currentWindow->getHeight() * framework.minification;
