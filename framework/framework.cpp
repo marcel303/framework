@@ -1901,7 +1901,7 @@ void Framework::endDraw()
 	{
 		// for vr mode, the user is responsible for calling present() themselves
 		if (vrMode == false)
-		present();
+			present();
 	}
 }
 
@@ -3515,13 +3515,29 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		#if ENABLE_METAL
 			// in Metal clip-space, (-1, -1) is the bottom-left corner, (+1, +1) is top-right
 			// flip Y axis so the vertical axis runs top to bottom
+			// note : the origin for textures is actually the top-left corner. so by flipping
+			//        the Y axis here we align rendering coordinates with texture coordinates
 			gxScalef(1.f, -1.f, 1.f);
 		#endif
 		
 		#if ENABLE_OPENGL
 			if (s_renderPassIsBackbufferPass)
 			{
+				// in OpenGL clip-space, (-1, -1) is the bottom-left corner, (+1, +1) is top-right
 				// flip Y axis so the vertical axis runs top to bottom
+				// note : we only do this for the back buffer pass, as for
+				//        rendering to textures, we actually want the result
+				//        to be flipped. this is because the origin for textures
+				//        is defined to be the bottom-left corner as well. by
+				//        rendering to textures upside-down, we can sample them
+				//        as if the texture origin is actually the top-left
+				//        corner. this normalizes the behavior across different
+				//        graphics apis, and we don't need to be api-aware in
+				//        each and every shader. we normalize the texture origin
+				//        to be at the top-left corner, aligning texture
+				//        coordinates with render coordinates, which has the
+				//        added benefit is simplifying drawing textured quads
+				//        onto the screen, without having to flip Y coordinates
 				gxScalef(1.f, -1.f, 1.f);
 			}
 		#endif
