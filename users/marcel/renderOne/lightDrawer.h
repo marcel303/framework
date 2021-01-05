@@ -20,8 +20,6 @@ namespace rOne
 			int colorTextureId = 0;
 			int specularColorTextureId = 0;
 			int specularExponentTextureId = 0;
-			int viewSx = 0;
-			int viewSy = 0;
 			bool enableStencilVolumes = false;
 		};
 		

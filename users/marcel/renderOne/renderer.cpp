@@ -1038,7 +1038,28 @@ namespace rOne
 			: nullptr, false,
 			"Light");
 		{
-			projectScreen2d();
+			// note : these are the matrices used when drawing
+			//        the 2D quads for the lights. we use identity
+			//        matrices, so we can directly use clip-space
+			//        coordinates when drawing those quads from
+			//        (-1, -1) to (+1, +1)
+			//        in a previous version, it would use the 2D
+			//        screen projection matrix (projectScreen2d())
+			//        which has the down side that it may or may
+			//        not flip the Y axis. we want the stenciled
+			//        pixels (used to cull pixels not intersecting
+			//        the light at all) to correctly match up with
+			//        sampling the geometry buffer textures (normal,
+			//        depth). the optional Y axis inversion makes
+			//        that process a lot more tedious. using clip-
+			//        space coordinates keeps things simple
+			gxMatrixMode(GX_PROJECTION);
+			gxLoadIdentity();
+			gxMatrixMode(GX_MODELVIEW);
+			gxLoadIdentity();
+		#if !ENABLE_OPENGL
+			gxScalef(1, -1, 1);
+		#endif
 			
 			renderLightBuffer(
 				renderFunctions,
