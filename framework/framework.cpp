@@ -1899,6 +1899,8 @@ void Framework::endDraw()
 	
 	if (globals.currentWindow->hasSurface() == false)
 	{
+		// for vr mode, the user is responsible for calling present() themselves
+		if (vrMode == false)
 		present();
 	}
 }
