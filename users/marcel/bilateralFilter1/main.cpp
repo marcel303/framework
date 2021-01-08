@@ -667,11 +667,11 @@ static bool testBf2()
 	return true;
 }
 
-static bool testRecursiveBf()
+static bool testRecursiveBf_1ch()
 {
 	// load the source image
 	
-    ImageData * image = loadImage("lenna-color.png");
+	ImageData * image = loadImage("lenna.png");
 	
     if (image == nullptr)
     {
@@ -681,6 +681,13 @@ static bool testRecursiveBf()
 	
     // calculate luminance
 	
+	MatI luminance;
+	luminance.alloc(image->sx, image->sy, false);
+	
+	for (int y = 0; y < image->sy; ++y)
+		for (int x = 0; x < image->sx; ++x)
+			luminance.at(x, y) = image->getLine(y)[x].r;
+	
 	// filter the image
 	
 	ImageData filteredImage;
@@ -688,33 +695,115 @@ static bool testRecursiveBf()
 	filteredImage.sx = image->sx;
 	filteredImage.sy = image->sy;
 	
+	MatI filteredLuminance;
+	filteredLuminance.alloc(luminance.sx, luminance.sy, false);
+	
+	float * buffer = recursive_bf_buffer_alloc(image->sx, image->sy, 1);
+	
 	{
-		Benchmark bm("bilateralFilter-recursive");
+		Benchmark bm("bilateralFilter-recursive (1ch)");
 		
-		uint8_t * dst = (uint8_t*)filteredImage.imageData;
-		
-		recursive_bf<4>(
-			(uint8_t*)image->imageData,
-			(uint8_t*)image->imageData,
-			dst,
-			30.0/256,
-			20.0/256,
+		recursive_bf<1>(
+			luminance.values,
+			luminance.values,
+			filteredLuminance.values,
+			12.0,
+			24.0,
 			image->sx,
-			image->sy);
+			image->sy,
+			buffer);
 	}
-
-	for (int y = 0; y < filteredImage.sy; ++y)
+	
+	recursive_bf_buffer_free(buffer);
+	
+	for (int y = 0; y < image->sy; ++y)
 	{
-		ImageData::Pixel * line = filteredImage.getLine(y);
-		for (int x = 0; x < filteredImage.sx; ++x)
+		for (int x = 0; x < image->sx; ++x)
 		{
-			line[x].a = 255;
+			filteredImage.getLine(y)[x].r = filteredLuminance.at(x, y);
+			filteredImage.getLine(y)[x].g = filteredLuminance.at(x, y);
+			filteredImage.getLine(y)[x].b = filteredLuminance.at(x, y);
+			filteredImage.getLine(y)[x].a = 255;
 		}
 	}
 	
 	// convert and save the filtered image
 	
-	saveImage(&filteredImage, "lenna-filtered-recursive-bf.png");
+	saveImage(&filteredImage, "lenna-filtered-recursive-bf-grays.png");
+	
+	delete image;
+	image = nullptr;
+	
+	return true;
+}
+
+static bool testRecursiveBf_4ch()
+{
+	// load the source image
+	
+	ImageData * image = loadImage("lenna-color.png");
+	
+    if (image == nullptr)
+    {
+        logError("failed to load image");
+        return false;
+    }
+	
+    // calculate luminance
+	
+	MatI luminance;
+	luminance.alloc(image->sx, image->sy, false);
+	
+	for (int y = 0; y < image->sy; ++y)
+	{
+		for (int x = 0; x < image->sx; ++x)
+		{
+			luminance.at(x, y) =
+				(
+					image->getLine(y)[x].r +
+					image->getLine(y)[x].g * 2 +
+					image->getLine(y)[x].b
+				) / 4;
+		}
+	}
+	
+	// filter the image
+	
+	ImageData filteredImage;
+	filteredImage.imageData = new ImageData::Pixel[image->sx * image->sy];
+	filteredImage.sx = image->sx;
+	filteredImage.sy = image->sy;
+	
+	float * buffer = recursive_bf_buffer_alloc(image->sx, image->sy, 4);
+	
+	{
+		Benchmark bm("bilateralFilter-recursive (4ch)");
+		
+		recursive_bf<4>(
+			(uint8_t*)image->imageData,
+			luminance.values,
+			(uint8_t*)filteredImage.imageData,
+			12.0,
+			24.0,
+			image->sx,
+			image->sy,
+			buffer);
+	}
+	
+	recursive_bf_buffer_free(buffer);
+	
+	// patch the alpha channel
+	
+	for (int y = 0; y < filteredImage.sy; ++y)
+	{
+		ImageData::Pixel * line = filteredImage.getLine(y);
+		for (int x = 0; x < filteredImage.sx; ++x)
+			line[x].a = 255;
+	}
+	
+	// save the filtered image
+	
+	saveImage(&filteredImage, "lenna-filtered-recursive-bf-color.png");
 	
 	delete image;
 	image = nullptr;
@@ -728,7 +817,8 @@ int main(int argc, char * argv[])
 	
 	testBf2();
 	
-	testRecursiveBf();
+	testRecursiveBf_1ch();
+	testRecursiveBf_4ch();
 	
 	// load the source image
 	

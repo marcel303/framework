@@ -1,8 +1,8 @@
 #ifndef INCLUDE_RBF
 #define INCLUDE_RBF
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
-#define QX_DEF_CHAR_MAX 255
 
 /* ======================================================================
 
@@ -28,8 +28,8 @@ Usage:      // ----------------------------------------------------------
             // Basic Usage
             // ----------------------------------------------------------
 
-            unsigned char * img = ...;                    // input image
-            unsigned char * img_out = 0;            // output image
+            uint8_t * img = ...;                    // input image
+            uint8_t * img_out = 0;            // output image
             int width = ..., height = ..., channel = ...; // image size
             recursive_bf(img, img_out, 
                          sigma_spatial, sigma_range, 
@@ -39,8 +39,8 @@ Usage:      // ----------------------------------------------------------
             // Advanced: using external buffer for better performance
             // ----------------------------------------------------------
 
-            unsigned char * img = ...;                    // input image
-            unsigned char * img_out = 0;            // output image
+            uint8_t * img = ...;                    // input image
+            uint8_t * img_out = 0;            // output image
             int width = ..., height = ..., channel = ...; // image size
             float * buffer = new float[                   // external buf
                                  ( width * height* channel 
@@ -65,233 +65,325 @@ Reference:  Qingxiong Yang, Recursive Bilateral Filtering,
 
 ====================================================================== */
 
+template <int channel>
 inline void recursive_bf(
-    unsigned char * img_in, 
-    unsigned char *& img_out, 
-    float sigma_spatial, float sigma_range, 
-    int width, int height, int channel, 
-    float * buffer /*= 0*/);
+    const uint8_t * img_in,
+    const uint8_t * lum_in,
+    uint8_t * img_out,
+    const float sigma_spatial,
+    const float sigma_range,
+    const int width,
+    const int height,
+    float * buffer = 0);
 
 // ----------------------------------------------------------------------
 
+inline float * recursive_bf_buffer_alloc(
+	const int width,
+    const int height,
+    const int channel)
+{
+    const int width_height = width * height;
+    const int width_channel = width * channel;
+    const int width_height_channel = width * height * channel;
+
+	float * buffer = new float[
+		(
+			width_height_channel +
+			width_height +
+			width_channel +
+			width
+		) * 2];
+	
+	return buffer;
+}
+
+inline void recursive_bf_buffer_free(float * buffer)
+{
+	delete [] buffer;
+}
+
+template <int channel>
 inline void _recursive_bf(
-    unsigned char * img,
-    float sigma_spatial, float sigma_range, 
-    int width, int height, int channel,
+    uint8_t * img,
+    const uint8_t * lum,
+    const float sigma_spatial,
+    const float sigma_range,
+    const int width,
+    const int height,
     float * buffer = 0)
 {
     const int width_height = width * height;
     const int width_channel = width * channel;
     const int width_height_channel = width * height * channel;
 
-    bool is_buffer_internal = (buffer == 0);
+    const bool is_buffer_internal = (buffer == nullptr);
+	
     if (is_buffer_internal)
-        buffer = new float[(width_height_channel + width_height 
-                            + width_channel + width) * 2];
-
-    float * img_out_f = buffer;
-    float * img_temp = &img_out_f[width_height_channel];
-    float * map_factor_a = &img_temp[width_height_channel];
-    float * map_factor_b = &map_factor_a[width_height]; 
-    float * slice_factor_a = &map_factor_b[width_height];
-    float * slice_factor_b = &slice_factor_a[width_channel];
-    float * line_factor_a = &slice_factor_b[width_channel];
-    float * line_factor_b = &line_factor_a[width];
+    {
+        buffer = new float[
+        	(
+        		width_height_channel +
+        		width_height +
+        		width_channel +
+        		width
+			) * 2];
+	}
+	
+    float * __restrict img_out_f      = buffer;
+    float * __restrict img_temp       = &img_out_f[width_height_channel];
+    float * __restrict map_factor_a   = &img_temp[width_height_channel];
+    float * __restrict map_factor_b   = &map_factor_a[width_height];
+    float * __restrict slice_factor_a = &map_factor_b[width_height];
+    float * __restrict slice_factor_b = &slice_factor_a[width_channel];
+    float * __restrict line_factor_a  = &slice_factor_b[width_channel];
+    float * __restrict line_factor_b  = &line_factor_a[width];
     
-    //compute a lookup table
-    float range_table[QX_DEF_CHAR_MAX + 1];
-    float inv_sigma_range = 1.0f / (sigma_range * QX_DEF_CHAR_MAX);
-    for (int i = 0; i <= QX_DEF_CHAR_MAX; i++) 
-        range_table[i] = static_cast<float>(exp(-i * inv_sigma_range));
+    // compute a lookup table
+    float range_table[256];
+    float inv_sigma_range = 1.0f / sigma_range;
+    for (int i = 0; i < 256; i++) 
+        range_table[i] = static_cast<float>(expf(-i * inv_sigma_range));
 
-    float alpha = static_cast<float>(exp(-sqrt(2.0) / (sigma_spatial * width)));
-    float ypr, ypg, ypb, ycr, ycg, ycb;
-    float fp, fc;
-    float inv_alpha_ = 1 - alpha;
+    const float alpha = static_cast<float>(expf(-sqrtf(2.f) / sigma_spatial));
+	const float inv_alpha_ = 1 - alpha;
+	
     for (int y = 0; y < height; y++)
     {
-        float * temp_x = &img_temp[y * width_channel];
-        unsigned char * in_x = &img[y * width_channel];
-        unsigned char * texture_x = &img[y * width_channel];
-        *temp_x++ = ypr = *in_x++; 
-        *temp_x++ = ypg = *in_x++; 
-        *temp_x++ = ypb = *in_x++;
-        unsigned char tpr = *texture_x++; 
-        unsigned char tpg = *texture_x++;
-        unsigned char tpb = *texture_x++;
-
-        float * temp_factor_x = &map_factor_a[y * width];
+        const uint8_t * __restrict in_x = &img[y * width_channel];
+        const uint8_t * __restrict luminance_x = &lum[y * width];
+		
+        float * __restrict temp_x = &img_temp[y * width_channel];
+        float * __restrict temp_factor_x = &map_factor_a[y * width];
+		
+		float yp[channel];
+        for (int i = 0; i < channel; ++i)
+        	*temp_x++ = yp[i] = *in_x++;
+		
+		uint8_t lp = *luminance_x++;
+		
+		float fp;
         *temp_factor_x++ = fp = 1;
 
         // from left to right
-        for (int x = 1; x < width; x++) 
+        for (int x = 1; x < width; x++)
         {
-            unsigned char tcr = *texture_x++; 
-            unsigned char tcg = *texture_x++; 
-            unsigned char tcb = *texture_x++;
-            unsigned char dr = abs(tcr - tpr);
-            unsigned char dg = abs(tcg - tpg);
-            unsigned char db = abs(tcb - tpb);
-            int range_dist = (((dr << 1) + dg + db) >> 2);
-            float weight = range_table[range_dist];
-            float alpha_ = weight*alpha;
-            *temp_x++ = ycr = inv_alpha_*(*in_x++) + alpha_*ypr; 
-            *temp_x++ = ycg = inv_alpha_*(*in_x++) + alpha_*ypg; 
-            *temp_x++ = ycb = inv_alpha_*(*in_x++) + alpha_*ypb;
-            tpr = tcr; tpg = tcg; tpb = tcb;
-            ypr = ycr; ypg = ycg; ypb = ycb;
-            *temp_factor_x++ = fc = inv_alpha_ + alpha_*fp;
+			const uint8_t lc = *luminance_x++;
+            const uint8_t range_dist = abs(lc - lp);
+            const float weight = range_table[range_dist];
+            const float alpha_ = weight * alpha;
+			
+            for (int i = 0; i < channel; ++i)
+            {
+            	const float yc =
+            		inv_alpha_ * (*in_x) +
+            		alpha_ * yp[i];
+				
+            	*temp_x = yc;
+            	yp[i] = yc;
+				
+            	temp_x++;
+            	in_x++;
+			}
+			
+			lp = lc;
+
+			const float fc =
+				inv_alpha_ +
+				alpha_ * fp;
+			
+            *temp_factor_x++ = fc;
             fp = fc;
         }
-        *--temp_x; *temp_x = 0.5f*((*temp_x) + (*--in_x));
-        *--temp_x; *temp_x = 0.5f*((*temp_x) + (*--in_x));
-        *--temp_x; *temp_x = 0.5f*((*temp_x) + (*--in_x));
-        tpr = *--texture_x; 
-        tpg = *--texture_x; 
-        tpb = *--texture_x;
-        ypr = *in_x; ypg = *in_x; ypb = *in_x;
+		
+		for (int i = 0; i < channel; ++i)
+		{
+			--in_x;
+			--temp_x;
+			
+			*temp_x = 0.5f * ((*temp_x) + (*in_x));
+        	yp[i] = *in_x;
+		}
+		
+		--luminance_x;
+		lp = *luminance_x;
 
-        *--temp_factor_x; *temp_factor_x = 0.5f*((*temp_factor_x) + 1);
+        --temp_factor_x;
+        *temp_factor_x = 0.5f * ((*temp_factor_x) + 1);
+		
         fp = 1;
 
         // from right to left
         for (int x = width - 2; x >= 0; x--) 
         {
-            unsigned char tcr = *--texture_x; 
-            unsigned char tcg = *--texture_x; 
-            unsigned char tcb = *--texture_x;
-            unsigned char dr = abs(tcr - tpr);
-            unsigned char dg = abs(tcg - tpg);
-            unsigned char db = abs(tcb - tpb);
-            int range_dist = (((dr << 1) + dg + db) >> 2);
-            float weight = range_table[range_dist];
-            float alpha_ = weight * alpha;
+        	--luminance_x;
+			
+			const uint8_t lc = *luminance_x;
+            const uint8_t range_dist = abs(lc - lp);
+            const float weight = range_table[range_dist];
+            const float alpha_ = weight * alpha;
 
-            ycr = inv_alpha_ * (*--in_x) + alpha_ * ypr; 
-            ycg = inv_alpha_ * (*--in_x) + alpha_ * ypg; 
-            ycb = inv_alpha_ * (*--in_x) + alpha_ * ypb;
-            *--temp_x; *temp_x = 0.5f*((*temp_x) + ycr);
-            *--temp_x; *temp_x = 0.5f*((*temp_x) + ycg);
-            *--temp_x; *temp_x = 0.5f*((*temp_x) + ycb);
-            tpr = tcr; tpg = tcg; tpb = tcb;
-            ypr = ycr; ypg = ycg; ypb = ycb;
+			for (int i = 0; i < channel; ++i)
+			{
+				--in_x;
+				--temp_x;
+				
+				const float yc =
+					inv_alpha_ * (*in_x) +
+					alpha_ * yp[i];
+				
+            	*temp_x = 0.5f * ((*temp_x) + yc);
+            	yp[i] = yc;
+			}
+			
+			lp = lc;
 
-            fc = inv_alpha_ + alpha_*fp;
-            *--temp_factor_x; 
-            *temp_factor_x = 0.5f*((*temp_factor_x) + fc);
+            const float fc =
+            	inv_alpha_ +
+            	alpha_ * fp;
+			
+            --temp_factor_x;
+            *temp_factor_x = 0.5f * ((*temp_factor_x) + fc);
             fp = fc;
         }
     }
-    alpha = static_cast<float>(exp(-sqrt(2.0) / (sigma_spatial * height)));
-    inv_alpha_ = 1 - alpha;
-    float * ycy, * ypy, * xcy;
-    unsigned char * tcy, * tpy;
-    memcpy(img_out_f, img_temp, sizeof(float)* width_channel);
+	
+    memcpy(img_out_f, img_temp, sizeof(float) * width_channel);
 
-    float * in_factor = map_factor_a;
-    float*ycf, *ypf, *xcf;
+    float * __restrict in_factor = map_factor_a;
     memcpy(map_factor_b, in_factor, sizeof(float) * width);
+	
     for (int y = 1; y < height; y++)
     {
-        tpy = &img[(y - 1) * width_channel];
-        tcy = &img[y * width_channel];
-        xcy = &img_temp[y * width_channel];
-        ypy = &img_out_f[(y - 1) * width_channel];
-        ycy = &img_out_f[y * width_channel];
+        const uint8_t * __restrict tpy = &lum[(y - 1) * width];
+        const uint8_t * __restrict tcy = &lum[y * width];
+		
+        float * __restrict xcy = &img_temp[y * width_channel];
+        float * __restrict ypy = &img_out_f[(y - 1) * width_channel];
+        float * __restrict ycy = &img_out_f[y * width_channel];
 
-        xcf = &in_factor[y * width];
-        ypf = &map_factor_b[(y - 1) * width];
-        ycf = &map_factor_b[y * width];
+        float * __restrict xcf = &in_factor[y * width];
+        float * __restrict ypf = &map_factor_b[(y - 1) * width];
+        float * __restrict ycf = &map_factor_b[y * width];
+		
         for (int x = 0; x < width; x++)
         {
-            unsigned char dr = abs((*tcy++) - (*tpy++));
-            unsigned char dg = abs((*tcy++) - (*tpy++));
-            unsigned char db = abs((*tcy++) - (*tpy++));
-            int range_dist = (((dr << 1) + dg + db) >> 2);
-            float weight = range_table[range_dist];
-            float alpha_ = weight*alpha;
-            for (int c = 0; c < channel; c++) 
-                *ycy++ = inv_alpha_*(*xcy++) + alpha_*(*ypy++);
-            *ycf++ = inv_alpha_*(*xcf++) + alpha_*(*ypf++);
+            const uint8_t range_dist = abs((*tcy++) - (*tpy++));
+            const float weight = range_table[range_dist];
+            const float alpha_ = weight * alpha;
+			
+            for (int c = 0; c < channel; c++)
+            {
+                *ycy++ =
+                	inv_alpha_ * (*xcy++) +
+                	alpha_ * (*ypy++);
+			}
+			
+            *ycf++ =
+            	inv_alpha_ * (*xcf++) +
+            	alpha_ * (*ypf++);
         }
     }
-    int h1 = height - 1;
-    ycf = line_factor_a;
-    ypf = line_factor_b;
+	
+    const int h1 = height - 1;
+    float * __restrict ycf = line_factor_a;
+    float * __restrict ypf = line_factor_b;
     memcpy(ypf, &in_factor[h1 * width], sizeof(float) * width);
-    for (int x = 0; x < width; x++) 
-        map_factor_b[h1 * width + x] = 0.5f*(map_factor_b[h1 * width + x] + ypf[x]);
+	
+    for (int x = 0; x < width; x++)
+        map_factor_b[h1 * width + x] = 0.5f * (map_factor_b[h1 * width + x] + ypf[x]);
 
-    ycy = slice_factor_a;
-    ypy = slice_factor_b;
-    memcpy(ypy, &img_temp[h1 * width_channel], sizeof(float)* width_channel);
-    int k = 0; 
-    for (int x = 0; x < width; x++) {
-        for (int c = 0; c < channel; c++) {
-            int idx = (h1 * width + x) * channel + c;
-            img_out_f[idx] = 0.5f*(img_out_f[idx] + ypy[k++]) / map_factor_b[h1 * width + x];
+    float * __restrict ycy = slice_factor_a;
+    float * __restrict ypy = slice_factor_b;
+    memcpy(ypy, &img_temp[h1 * width_channel], sizeof(float) * width_channel);
+	
+    int k = 0;
+    for (int x = 0; x < width; x++)
+    {
+        for (int c = 0; c < channel; c++)
+        {
+            const int idx = (h1 * width + x) * channel + c;
+            img_out_f[idx] = 0.5f * (img_out_f[idx] + ypy[k++]) / map_factor_b[h1 * width + x];
         }
     }
 
     for (int y = h1 - 1; y >= 0; y--)
     {
-        tpy = &img[(y + 1) * width_channel];
-        tcy = &img[y * width_channel];
-        xcy = &img_temp[y * width_channel];
-        float*ycy_ = ycy;
-        float*ypy_ = ypy;
-        float*out_ = &img_out_f[y * width_channel];
+        const uint8_t * __restrict tpy = &lum[(y + 1) * width];
+        const uint8_t * __restrict tcy = &lum[y * width];
+        float * __restrict xcy = &img_temp[y * width_channel];
+		
+        float * __restrict ycy_ = ycy;
+        float * __restrict ypy_ = ypy;
+        float * __restrict out_ = &img_out_f[y * width_channel];
 
-        xcf = &in_factor[y * width];
-        float*ycf_ = ycf;
-        float*ypf_ = ypf;
-        float*factor_ = &map_factor_b[y * width];
+        float * __restrict xcf = &in_factor[y * width];
+		
+        float * __restrict ycf_ = ycf;
+        float * __restrict ypf_ = ypf;
+        float * __restrict factor_ = &map_factor_b[y * width];
+		
         for (int x = 0; x < width; x++)
         {
-            unsigned char dr = abs((*tcy++) - (*tpy++));
-            unsigned char dg = abs((*tcy++) - (*tpy++));
-            unsigned char db = abs((*tcy++) - (*tpy++));
-            int range_dist = (((dr << 1) + dg + db) >> 2);
-            float weight = range_table[range_dist];
-            float alpha_ = weight*alpha;
+            const uint8_t range_dist = abs((*tcy++) - (*tpy++));
+            const float weight = range_table[range_dist];
+            const float alpha_ = weight * alpha;
 
-            float fcc = inv_alpha_*(*xcf++) + alpha_*(*ypf_++);
+            const float fcc =
+            	inv_alpha_ * (*xcf++) +
+            	alpha_ * (*ypf_++);
+			
             *ycf_++ = fcc;
             *factor_ = 0.5f * (*factor_ + fcc);
 
             for (int c = 0; c < channel; c++)
             {
-                float ycc = inv_alpha_*(*xcy++) + alpha_*(*ypy_++);
+                const float ycc =
+                	inv_alpha_ * (*xcy++) +
+                	alpha_ * (*ypy_++);
+				
                 *ycy_++ = ycc;
+				
                 *out_ = 0.5f * (*out_ + ycc) / (*factor_);
-                *out_++;
+                out_++;
             }
-            *factor_++;
+			
+            factor_++;
         }
+		
         memcpy(ypy, ycy, sizeof(float) * width_channel);
         memcpy(ypf, ycf, sizeof(float) * width);
     }
 
     for (int i = 0; i < width_height_channel; ++i)
-        img[i] = static_cast<unsigned char>(img_out_f[i]);
+        img[i] = static_cast<uint8_t>(img_out_f[i]);
 
     if (is_buffer_internal)
-        delete[] buffer;
+        delete [] buffer;
 }
 
-
+template <int channel>
 inline void recursive_bf(
-    unsigned char * img_in,
-    unsigned char *& img_out,
-    float sigma_spatial, float sigma_range,
-    int width, int height, int channel,
-    float * buffer = 0)
+    const uint8_t * img_in,
+    const uint8_t * lum_in,
+    uint8_t * img_out,
+    const float sigma_spatial,
+    const float sigma_range,
+    const int width,
+    const int height,
+    float * buffer)
 {
-    if (img_out == 0)
-        img_out = new unsigned char[width * height * channel];
     for (int i = 0; i < width * height * channel; ++i)
         img_out[i] = img_in[i];
-    _recursive_bf(img_out, sigma_spatial, sigma_range, width, height, channel, buffer);
+	
+    _recursive_bf<channel>(
+    	img_out,
+    	lum_in,
+    	sigma_spatial,
+    	sigma_range,
+    	width,
+    	height,
+    	buffer);
 }
 
 #endif // INCLUDE_RBF

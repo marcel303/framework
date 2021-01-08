@@ -1,4 +1,5 @@
 app marcel-bilateralFilter1
 	depend_library framework
 	add_files main.cpp
+	add_files recursive-bf.hpp
 	resource_path data
