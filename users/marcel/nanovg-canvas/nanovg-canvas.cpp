@@ -11,6 +11,8 @@ namespace NvgCanvasFunctions
 
 NvgCanvas::~NvgCanvas()
 {
+	AssertMsg(ctx == nullptr, "please call shut() on the canvas explicitly");
+
 	shut();
 }
 
