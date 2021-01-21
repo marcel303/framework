@@ -18,11 +18,16 @@ namespace rOne
 	
 	ForwardLightingHelper::~ForwardLightingHelper()
 	{
+		free();
+	}
+
+	void ForwardLightingHelper::free()
+	{
 		reset();
-		
+
 		lightParamsBuffer.free();
 		lightExtrasBuffer.free();
-		
+
 		indexTexture.free();
 	}
 
