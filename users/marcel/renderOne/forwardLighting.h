@@ -59,6 +59,8 @@ namespace rOne
 		ForwardLightingHelper();
 		~ForwardLightingHelper();
 		
+		void free();
+
 		void addLight(const Light & light);
 		void addPointLight(
 			Vec3Arg position,

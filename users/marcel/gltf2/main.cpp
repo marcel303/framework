@@ -307,6 +307,12 @@ int main(int argc, char * argv[])
 		shadowMapDrawer.reset();
 	}
 	
+	colorGradingLookupTexture.free();
+
+	shadowMapDrawer.free();
+
+	helper.free();
+	
 	framework.shutdown();
 	
 	return 0;
