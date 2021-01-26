@@ -289,7 +289,7 @@ public:
 		#endif
 		else
 		{
-		#ifdef WIN32
+		#if ENABLE_EVENTS_WORKAROUND
 			std::reverse(events, events + numEvents);
 			for (int i = 0; i < eventIndex; ++i)
 				numEvents--;
