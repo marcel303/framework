@@ -95,7 +95,7 @@
 #endif
 
 #ifdef WIN32
-	#define ENABLE_EVENTS_WORKAROUND 1
+	#define ENABLE_EVENTS_WORKAROUND 0 // todo : remove this code, if it turns out memory corruption is fixed with the Stack<T> memory corruption fix
 #else
 	#define ENABLE_EVENTS_WORKAROUND 0
 #endif
