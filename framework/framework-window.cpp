@@ -68,7 +68,6 @@ Window::Window(SDL_Window * window)
 #endif
 	
 	m_windowData = new WindowData();
-	memset(m_windowData, 0, sizeof(WindowData));
 	
 	framework.registerWindow(this);
 }
@@ -127,7 +126,6 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 #endif
 	
 	m_windowData = new WindowData();
-	memset(m_windowData, 0, sizeof(WindowData));
 	
 	framework.registerWindow(this);
 }

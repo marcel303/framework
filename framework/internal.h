@@ -392,6 +392,15 @@ public:
 	std::vector<SDL_Event> keyEvents;
 	std::vector<SDL_Event> pendingKeyEvents;
 	
+	WindowData()
+		: isActive(false)
+		, quitRequested(false)
+		, keyDownCount(0)
+		, keyChangeCount(0)
+		, keyRepeatCount(0)
+	{
+	}
+
 	void keyData_beginProcess()
 	{
 		keyChangeCount = 0;
