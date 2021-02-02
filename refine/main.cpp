@@ -273,6 +273,8 @@ int main(int argc, char * argv[])
 		else if (extension == "mpg" ||
 			extension == "mpeg" ||
 			extension == "mp4" ||
+			extension == "mkv" ||
+			extension == "flv" ||
 			extension == "avi" ||
 			extension == "mov")
 		{
@@ -686,6 +688,8 @@ int main(int argc, char * argv[])
 	fileBrowser.shut();
 	
 	guiContext.shut();
+
+	shutUi();
 
 	Font("calibri.ttf").saveCache();
 	

@@ -10,44 +10,36 @@
 #if 0
 	// todo : add screenshot functionality
 
+	#include "image.h"
 	#include <SDL2/SDL_opengl.h>
-	#include "ImageLoader_Tga.h"
 
-	static bool firstFrame = true;
-	if (firstFrame)
+	void screenshot()
 	{
-		firstFrame = false;
-		
 		Surface * surface = new Surface(8000, 6000, false);
 		
 		pushSurface(surface);
 		{
-			surface->clearf(
-				monitorGui.visibility.backgroundColor.r,
-				monitorGui.visibility.backgroundColor.g,
-				monitorGui.visibility.backgroundColor.b,
-				1.f);
+			surface->clearf(0.f, 0.f, 0.f, 1.f);
 			pushLineSmooth(true);
-			draw();
+			// -> draw();
 			popLineSmooth();
 			
 			// fetch the pixel data
 	
-			uint8_t * bytes = new uint8_t[surface->getWidth() * surface->getHeight() * 4];
+			ImageData imageData;
+			imageData.sx = surface->getWidth();
+			imageData.sy = surface->getHeight();
+			imageData.imageData = new ImageData::Pixel[imageData.sx * imageData.sy];
 			
 			glReadPixels(
 				0, 0,
 				surface->getWidth(),
 				surface->getHeight(),
-				GL_BGRA, GL_UNSIGNED_BYTE,
-				bytes);
+				GL_RGBA, GL_UNSIGNED_BYTE,
+				imageData.imageData);
 			checkErrorGL();
 			
-			ImageLoader_Tga tgaLoader;
-			tgaLoader.SaveBGRA_vflipped(bytes, surface->getWidth(), surface->getHeight(), "test.tga", false);
-			
-			delete [] bytes;
-			bytes = nullptr;
+			saveImage(&imageData, "test.png");
 		}
 		popSurface();
 		
@@ -1046,7 +1038,28 @@ namespace rOne
 			: nullptr, false,
 			"Light");
 		{
-			projectScreen2d();
+			// note : these are the matrices used when drawing
+			//        the 2D quads for the lights. we use identity
+			//        matrices, so we can directly use clip-space
+			//        coordinates when drawing those quads from
+			//        (-1, -1) to (+1, +1)
+			//        in a previous version, it would use the 2D
+			//        screen projection matrix (projectScreen2d())
+			//        which has the down side that it may or may
+			//        not flip the Y axis. we want the stenciled
+			//        pixels (used to cull pixels not intersecting
+			//        the light at all) to correctly match up with
+			//        sampling the geometry buffer textures (normal,
+			//        depth). the optional Y axis inversion makes
+			//        that process a lot more tedious. using clip-
+			//        space coordinates keeps things simple
+			gxMatrixMode(GX_PROJECTION);
+			gxLoadIdentity();
+			gxMatrixMode(GX_MODELVIEW);
+			gxLoadIdentity();
+		#if !ENABLE_OPENGL
+			gxScalef(1, -1, 1);
+		#endif
 			
 			renderLightBuffer(
 				renderFunctions,

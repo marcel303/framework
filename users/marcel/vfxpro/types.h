@@ -1,7 +1,5 @@
 #pragma once
 
-#define TWEENFLOAT_ALLOW_IMPLICIT_CONVERSION 1
-
 #include "Debugging.h"
 #include "Ease.h"
 #include "framework.h"

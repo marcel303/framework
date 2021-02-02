@@ -30,10 +30,6 @@ namespace rOne
 		drawDeferredInfo.specularColorTextureId = specularColorTextureId;
 		drawDeferredInfo.specularExponentTextureId = specularExponentTextureId;
 		drawDeferredInfo.enableStencilVolumes = enableStencilVolumes;
-		
-		framework.getCurrentViewportSize(
-			drawDeferredInfo.viewSx,
-			drawDeferredInfo.viewSy);
 	}
 
 	void LightDrawer::drawDeferredEnd()
@@ -56,7 +52,7 @@ namespace rOne
 		shader.setTexture("specularExponentTexture", 4, drawDeferredInfo.specularExponentTextureId, false, true);
 		shader.setImmediateMatrix4x4("projectionToView", drawDeferredInfo.projectionToView.m_v);
 		shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
-		drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+		drawRect(-1, -1, +1, +1);
 		clearShader();
 	}
 
@@ -83,7 +79,7 @@ namespace rOne
 		shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
 		shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
 		shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
-		drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+		drawRect(-1, -1, +1, +1);
 		clearShader();
 	}
 
@@ -96,9 +92,7 @@ namespace rOne
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(viewToProjection.m_v);
-	#if ENABLE_OPENGL
 		gxScalef(1, -1, 1);
-	#endif
 		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
@@ -162,7 +156,7 @@ namespace rOne
 			stencilVolumeTestBegin();
 		
 			//setColor(0, 127, 0);
-			//drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+			//drawRect(-1, -1, +1, +1);
 		}
 	#endif
 		
@@ -181,7 +175,7 @@ namespace rOne
 		shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
 		shader.setImmediate("lightAttenuationParams", lightAttenuationBegin, lightAttenuationEnd);
 		{
-			drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+			drawRect(-1, -1, +1, +1);
 		}
 		clearShader();
 		
@@ -222,7 +216,7 @@ namespace rOne
 			stencilVolumeTestBegin();
 		
 			//setColor(0, 127, 0);
-			//drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+			//drawRect(-1, -1, +1, +1);
 		}
 	#endif
 		
@@ -243,7 +237,7 @@ namespace rOne
 		shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
 		shader.setImmediate("lightAttenuationParams", lightAttenuationBegin, lightAttenuationEnd, cosf(lightAngle / 2.f));
 		{
-			drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+			drawRect(-1, -1, +1, +1);
 		}
 		clearShader();
 		

@@ -521,16 +521,16 @@ void SceneLayer::draw()
 	{
 		if (g_currentSurface)
 		{
-			if (m_copyPreviousLayerAlpha > 0.f)
+			if (m_copyPreviousLayerAlpha.get() > 0.f)
 			{
 				pushSurface(m_surface);
 				{
-					if (m_copyPreviousLayerAlpha == 1.f)
+					if (m_copyPreviousLayerAlpha.get() == 1.f)
 						setBlend(BLEND_OPAQUE);
 					else
 						setBlend(BLEND_ALPHA);
 					gxSetTexture(g_currentSurface->getTexture());
-					gxColor4f(1.f, 1.f, 1.f, m_copyPreviousLayerAlpha);
+					gxColor4f(1.f, 1.f, 1.f, m_copyPreviousLayerAlpha.get());
 					drawRect(0, 0, m_surface->getWidth(), m_surface->getHeight());
 					gxSetTexture(0);
 				}
@@ -560,7 +560,7 @@ void SceneLayer::draw()
 	}
 	popSurface();
 
-	if (m_visible > 0.f)
+	if (m_visible.get() > 0.f)
 	{
 		// compose
 
@@ -572,23 +572,23 @@ void SceneLayer::draw()
 			{
 			case kBlendMode_Add:
 				setBlend(BLEND_ADD_OPAQUE);
-				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
+				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity.get());
 				break;
 			case kBlendMode_Subtract:
 				setBlend(BLEND_SUBTRACT);
-				setColorf(1.f, 1.f, 1.f, m_opacity);
+				setColorf(1.f, 1.f, 1.f, m_opacity.get());
 				break;
 			case kBlendMode_Alpha:
 				setBlend(BLEND_ALPHA);
-				setColorf(1.f, 1.f, 1.f, m_opacity);
+				setColorf(1.f, 1.f, 1.f, m_opacity.get());
 				break;
 			case kBlendMode_PremultipliedAlpha:
 				setBlend(BLEND_PREMULTIPLIED_ALPHA);
-				setColorf(m_opacity, m_opacity, m_opacity, m_opacity);
+				setColorf(m_opacity.get(), m_opacity.get(), m_opacity.get(), m_opacity.get());
 				break;
 			case kBlendMode_Opaque:
 				setBlend(BLEND_OPAQUE);
-				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity);
+				setColorf(1.f, 1.f, 1.f, 1.f, m_opacity.get());
 				break;
 			case kBlendMode_AlphaTest:
 				setBlend(BLEND_OPAQUE);
@@ -1015,7 +1015,7 @@ void Scene::tick(const float dt)
 	// process global variables
 
 	m_varTime = m_time;
-	m_varTimeStep = m_varTimeStep + dt;
+	m_varTimeStep = m_varTimeStep.get() + dt;
 
 #if ENABLE_LEAPMOTION
 	m_varPalmX = g_leapState.palmX;

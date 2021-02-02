@@ -170,7 +170,7 @@ bool Worker::initImpl(const char * url)
 
 		if (WinHttpQueryDataAvailable(hRequest, &numBytesAvailable) == FALSE)
 		{
-			handleError("failed to qeury WinHTTP data");
+			handleError("failed to query WinHTTP data");
 			return false;
 		}
 

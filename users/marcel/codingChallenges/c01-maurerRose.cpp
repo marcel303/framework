@@ -15,6 +15,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(sx, sy))
 		return -1;
 	
+	canvas.init();
+
 	float d = 71;
 
 	for (;;)
@@ -71,6 +73,8 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+
+	canvas.shut();
 	
 	framework.shutdown();
 	

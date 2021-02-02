@@ -9,6 +9,11 @@ struct DebugDraw : public b2Draw
 {
 	b2Transform xform;
 	
+	DebugDraw()
+	{
+		xform.SetIdentity();
+	}
+
 	void pushTransform()
 	{
 		gxPushMatrix();

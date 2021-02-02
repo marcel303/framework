@@ -312,10 +312,10 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 
 		float apply(const float value) const
 		{
-			const float v1 = applyOp(value, applyRange(*mod));
+			const float v1 = applyOp(value, applyRange(mod->get()));
 			const float v2 = value;
 			
-			const float t1 = str;
+			const float t1 = str.get();
 			const float t2 = 1.f - t1;
 
 			const float result = v1 * t1 + v2 * t2;

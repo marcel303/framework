@@ -95,7 +95,7 @@
 #endif
 
 #ifdef WIN32
-	#define ENABLE_EVENTS_WORKAROUND 1
+	#define ENABLE_EVENTS_WORKAROUND 0 // todo : remove this code, if it turns out memory corruption is fixed with the Stack<T> memory corruption fix
 #else
 	#define ENABLE_EVENTS_WORKAROUND 0
 #endif
@@ -289,7 +289,7 @@ public:
 		#endif
 		else
 		{
-		#ifdef WIN32
+		#if ENABLE_EVENTS_WORKAROUND
 			std::reverse(events, events + numEvents);
 			for (int i = 0; i < eventIndex; ++i)
 				numEvents--;
@@ -392,6 +392,15 @@ public:
 	std::vector<SDL_Event> keyEvents;
 	std::vector<SDL_Event> pendingKeyEvents;
 	
+	WindowData()
+		: isActive(false)
+		, quitRequested(false)
+		, keyDownCount(0)
+		, keyChangeCount(0)
+		, keyRepeatCount(0)
+	{
+	}
+
 	void keyData_beginProcess()
 	{
 		keyChangeCount = 0;

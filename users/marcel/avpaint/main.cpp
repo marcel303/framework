@@ -677,17 +677,17 @@ struct GrooopLogo : TweenFloatCollection
 	
 	void draw() const
 	{
-		const float circleFade = (float)unfold;
+		const float circleFade = unfold.get();
 		
 		gxPushMatrix();
 		{
 			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
 			
-			setColorf(1.f, 1.f, 1.f, kMixLogoOpacity * (float)opacity);
+			setColorf(1.f, 1.f, 1.f, kMixLogoOpacity * opacity.get());
 			
 			hqBegin(HQ_STROKED_CIRCLES);
 			{
-				hqStrokeCircle(0.f, 0.f, 100.f * (float)scale, 10.f);
+				hqStrokeCircle(0.f, 0.f, 100.f * scale.get(), 10.f);
 			}
 			hqEnd();
 			
@@ -695,7 +695,7 @@ struct GrooopLogo : TweenFloatCollection
 			{
 				hqBegin(HQ_STROKED_CIRCLES);
 				{
-					hqStrokeCircle(i * 60 * circleFade, 0.f, 25.f * (float)scale, 10.f);
+					hqStrokeCircle(i * 60 * circleFade, 0.f, 25.f * scale.get(), 10.f);
 				}
 				hqEnd();
 			}
