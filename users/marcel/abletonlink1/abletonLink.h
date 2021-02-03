@@ -5,7 +5,7 @@
 /*
 Ableton Link wrapper.
 
-This wrapper is mainly in existence due to the fact the official Ableton Link library is a header-only library, that introduces almost four seconds (on my system) of additional compile time to each file where its included in. This wrapper includes a minimum of header files to keep compilation speedy.
+This wrapper is mainly in existence due to the fact the official Ableton Link library is a header-only library, that introduces almost four seconds (on my system) of additional compile time to each file where it's included in. This wrapper includes a minimum of header files to keep compilation speedy.
 */
 
 // forward declaration of the Ableton Link object
@@ -43,7 +43,7 @@ struct AbletonLink
 		void commitAudio() const;
 	};
 	
-	// Ableton Link object. If you want to calls methods on it directly, you'll have to include <ableton/Link.hpp> first.
+	// Ableton Link object. If you want to call methods on it directly, you'll have to include <ableton/Link.hpp> first.
 	
 	ableton::Link * link = nullptr;
 	
