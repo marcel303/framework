@@ -1962,10 +1962,10 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 
 	Assert(eyeIndex == 0);
 	beginDraw(
-		scale255(clearColor.r),
-		scale255(clearColor.g),
-		scale255(clearColor.b),
-		scale255(clearColor.a));
+		clearColor.r * 255.f,
+		clearColor.g * 255.f,
+		clearColor.b * 255.f,
+		clearColor.a * 255.f);
 	
 	if (vrMode)
 	{
