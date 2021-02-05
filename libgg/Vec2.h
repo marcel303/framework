@@ -116,6 +116,16 @@ public:
 		
 		return r;
 	}
+
+	inline Vec2 Abs() const
+	{
+		Vec2 r;
+
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+
+		return r;
+	}
 	
 	inline Vec2 operator+(const Vec2 & v) const
 	{

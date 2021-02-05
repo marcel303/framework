@@ -133,6 +133,17 @@ public:
 		return r;
 	}
 
+	inline Vec3 Abs() const
+	{
+		Vec3 r;
+
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+		r[2] = fabsf(m_v[2]);
+
+		return r;
+	}
+
 	inline Vec3 operator+(const Vec3 & v) const
 	{
 		Vec3 r;

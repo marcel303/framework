@@ -140,6 +140,17 @@ public:
 		return r;
 	}
 
+	inline Vec4 Abs() const
+	{
+		Vec4 r;
+
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+		r[2] = fabsf(m_v[2]);
+		r[3] = fabsf(m_v[3]);
+
+		return r;
+	}
 
 	inline const Vec3 XYZ() const
 	{
