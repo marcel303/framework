@@ -251,7 +251,7 @@ void AudioStreamWave::Open(const char* fileName, bool loop)
 
 	if (headers.hasData == false)
 	{
-		LOG_ERR("Wave Audio Stream: missing DATA chunk. cannot load WAVE data when we don't know the format yet");
+		LOG_ERR("Wave Audio Stream: missing DATA chunk");
 		Close();
 		return;
 	}

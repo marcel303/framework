@@ -77,7 +77,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 			chunk = kChunk_RIFF;
 		else if (checkId(id, "data"))
 			chunk = kChunk_DATA;
-		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact") || checkId(id, "attn"))
+		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact") || checkId(id, "attn") || checkId(id, "_PMX"))
 			chunk = kChunk_OTHER;
 		else
 		{
@@ -123,10 +123,10 @@ bool WaveHeadersReader::read(FILE * file)
 			ok &= r.read(fmtBlockAlign);
 			ok &= r.read(fmtBitDepth);
 			
-			if (fmtCompressionType != 1)
+			//if (fmtCompressionType != 1)
 				ok &= r.read(fmtExtraLength);
-			else
-				fmtExtraLength = 0;
+			//else
+			//	fmtExtraLength = 0;
 			
 			if (fmtCompressionType == WAVE_FORMAT_EXTENSIBLE)
 			{

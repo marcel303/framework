@@ -58,7 +58,7 @@ SoundData * loadSound_WAV(const char * filename)
 
 	if (headers.hasData == false)
 	{
-		LOG_ERR("missing DATA chunk. cannot load WAVE data when we don't know the format yet");
+		LOG_ERR("missing DATA chunk");
 		return nullptr;
 	}
 	
