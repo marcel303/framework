@@ -108,6 +108,11 @@ uint64_t AbletonLink::getClockTick() const
 	return link->clock().ticks();
 }
 
+uint64_t AbletonLink::getClockTicksPerSecond() const
+{
+	return link->clock().microsToTicks(ableton::Link::Clock::Micros(1000000));
+}
+
 AbletonLink::SessionState AbletonLink::captureAppSessionState() const
 {
 	SessionState result;

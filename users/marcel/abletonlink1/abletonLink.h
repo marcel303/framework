@@ -60,6 +60,7 @@ struct AbletonLink
 	bool isEnabled() const;
 
 	uint64_t getClockTick() const;
+	uint64_t getClockTicksPerSecond() const;
 	
 	SessionState captureAppSessionState() const;
 	SessionState captureAudioSessionState() const;
