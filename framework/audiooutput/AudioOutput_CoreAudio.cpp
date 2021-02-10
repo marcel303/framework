@@ -328,6 +328,8 @@ OSStatus AudioOutput_CoreAudio::outputCallback(
 	
 	Assert(ioData->mNumberBuffers == 1);
 	
+	self->m_bufferPresentTime = inTimeStamp->mHostTime;
+	
 	for (int i = 0; i < ioData->mNumberBuffers && i < 1; ++i)
 	{
 		auto & buffer = ioData->mBuffers[i];
