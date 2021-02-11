@@ -30,6 +30,10 @@
 #include "AudioOutput_CoreAudio.h"
 #include "framework.h"
 
+#if defined(IPHONEOS)
+	#include "AVFoundation/AVAudioSession.h"
+#endif
+
 /*
 
 from : https://developer.apple.com/library/archive/documentation/MusicAudio/Conceptual/AudioUnitHostingGuide_iOS/AudioUnitHostingFundamentals/AudioUnitHostingFundamentals.html#//apple_ref/doc/uid/TP40009492-CH3-SW11,
@@ -253,7 +257,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// set the hardware buffer size
 		
-		UInt32 bufferSize = 256;
+		UInt32 bufferSize = 256; // todo : use specified buffer size or try multiples thereof. make sure during Provide to use the specified buffer size!
 	
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -291,6 +295,11 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	status = AudioOutputUnitStart(m_audioUnit);
 	if (checkStatus(status) == false)
 		return false;
+
+#if defined(IPHONEOS)
+	[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:NULL];
+    [[AVAudioSession sharedInstance] setActive:TRUE error:nullptr];
+#endif
 
 	return true;
 }
@@ -494,6 +503,18 @@ bool AudioOutput_CoreAudio::HasFinished_get()
 double AudioOutput_CoreAudio::PlaybackPosition_get()
 {
 	return m_position / double(m_sampleRate);
+}
+
+uint64_t AudioOutput_CoreAudio::getBufferPresentTime(const bool addOutputLatency) const
+{
+	uint64_t result = m_bufferPresentTime;
+	
+#if defined(IPHONEOS)
+	if (addOutputLatency)
+		result += [AVAudioSession sharedInstance].outputLatency;
+#endif
+
+	return result;
 }
 
 #endif

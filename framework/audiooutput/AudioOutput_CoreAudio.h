@@ -79,7 +79,7 @@ public:
 	virtual bool HasFinished_get() override;
 	virtual double PlaybackPosition_get() override;
 	
-	uint64_t getBufferPresentTime() const { return m_bufferPresentTime; }
+	uint64_t getBufferPresentTime(const bool addOutputLatency) const;
 };
 
 #endif

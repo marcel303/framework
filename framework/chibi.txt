@@ -97,6 +97,9 @@ library framework
 	scan_files cpp path audiooutput group audiooutput
 	scan_files h   path audiooutput group audiooutput
 
+	with_platform macos    scan_files mm path audiooutput group audiooutput
+	with_platform iphoneos scan_files mm path audiooutput group audiooutput
+
 	with_platform macos|linux|windows|iphoneos|android scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform macos|linux|windows|iphoneos|android scan_files h   path gx-opengl group gx-opengl
 
@@ -144,6 +147,7 @@ library framework
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
 
+	with_platform iphoneos depend_library AVFoundation find
 	with_platform iphoneos depend_library FreeImage
 	with_platform iphoneos depend_library Metal find
 	with_platform iphoneos depend_library QuartzCore find
