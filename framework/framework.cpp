@@ -263,7 +263,7 @@ bool Framework::init(int sx, int sy)
 	if (portraitMode)
 		SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
 	else
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+		SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
 #if ENABLE_OPENGL
