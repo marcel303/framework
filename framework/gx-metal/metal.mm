@@ -245,15 +245,20 @@ void metal_draw_end()
 
 void metal_present()
 {
-	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
-	
-	[cmdbuf presentDrawable:activeWindowData->current_drawable];
-	
-	[activeWindowData->current_drawable release];
-	activeWindowData->current_drawable = nullptr;
-	
-	[cmdbuf commit];
-	cmdbuf = nil;
+	@autoreleasepool
+	{
+		id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+		
+		// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
+		
+		[cmdbuf presentDrawable:activeWindowData->current_drawable];
+		
+		[activeWindowData->current_drawable release];
+		activeWindowData->current_drawable = nullptr;
+		
+		[cmdbuf commit];
+		cmdbuf = nil;
+	}
 }
 
 void metal_set_viewport(const int sx, const int sy)
