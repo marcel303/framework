@@ -543,6 +543,8 @@ public:
 	Vec3 vrOrigin;
 	bool enableVrMovement;
 	
+	bool backgrounded;
+	
 private:
 	uint64_t m_lastTick;
 	

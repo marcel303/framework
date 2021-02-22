@@ -202,6 +202,8 @@ Framework::Framework()
 	vrOrigin.Set(0, 0, 0);
 	enableVrMovement = true;
 	
+	backgrounded = false;
+	
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
@@ -884,6 +886,8 @@ bool Framework::shutdown()
 	vrOrigin.Set(0, 0, 0);
 	enableVrMovement = true;
 	
+	backgrounded = false;
+	
 	m_lastTick = -1;
 	
 	return result;
@@ -1180,6 +1184,14 @@ void Framework::process()
 		else if (e.type == SDL_QUIT)
 		{
 			quitRequested = true;
+		}
+		else if (e.type == SDL_APP_WILLENTERBACKGROUND)
+		{
+			backgrounded = true;
+		}
+		else if (e.type == SDL_APP_WILLENTERFOREGROUND)
+		{
+			backgrounded = false;
 		}
 	}
 
