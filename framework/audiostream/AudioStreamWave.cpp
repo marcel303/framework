@@ -86,12 +86,12 @@ int AudioStreamWave::Provide(int numFrames, AudioSample* __restrict buffer)
 		// read source values and convert them into int16 destination values
 		// we will convert this data to stereo later on
 		
-		const int numFramesRemaining = mDurationInFrames - mPositionInFrames;
+		const int64_t numFramesRemaining = mDurationInFrames - mPositionInFrames;
 		
 		const int numFramesToRead =
 			numFramesRemaining > numFramesTodo
 				? numFramesTodo
-				: numFramesRemaining;
+				: (int)numFramesRemaining;
 		
 		const int numSamplesToRead = numFramesToRead * mNumChannels;
 		
@@ -321,14 +321,4 @@ void AudioStreamWave::Close()
 	
 	mFileName.clear();
 	mPositionInFrames = 0;
-}
-
-int AudioStreamWave::Position_get() const
-{
-	return mPositionInFrames;
-}
-
-bool AudioStreamWave::HasLooped_get() const
-{
-	return mHasLooped;
 }

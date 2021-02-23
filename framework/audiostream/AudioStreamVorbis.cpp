@@ -195,16 +195,6 @@ void AudioStream_Vorbis::Close()
 	mPosition = 0;
 }
 
-int AudioStream_Vorbis::Position_get() const
-{
-	return mPosition;
-}
-
-bool AudioStream_Vorbis::HasLooped_get() const
-{
-	return mHasLooped;
-}
-
 //
 
 static void DuplicateInPlace(short * buffer, int numFrames)
