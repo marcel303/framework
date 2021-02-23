@@ -140,17 +140,78 @@ struct Member_Scalar : Member
 
 #include "reflection-vector.h" // support for std::vector<T> is defined in a separate file to keep things a bit more tidy
 
+struct TypeFlagBase
+{
+	TypeFlagBase * next;
+	
+	std::type_index typeIndex;
+	
+	template <typename T>
+	bool isType() const
+	{
+		return std::type_index(typeid(T)) == typeIndex;
+	}
+	
+	TypeFlagBase(const std::type_index & in_typeIndex)
+		: next(nullptr)
+		, typeIndex(in_typeIndex)
+	{
+	}
+};
+
+template <typename T>
+struct TypeFlag : TypeFlagBase
+{
+	TypeFlag()
+		: TypeFlagBase(std::type_index(typeid(T)))
+	{
+	}
+};
+
 struct Type
 {
 	bool isStructured;
 
+	TypeFlagBase * flags;
+	
 	Type(const bool in_isStructured)
 		: isStructured(in_isStructured)
+		, flags(nullptr)
 	{
 	}
 	
 	virtual ~Type()
 	{
+	}
+	
+	void addFlag(TypeFlagBase * flag)
+	{
+		flag->next = flags;
+		flags = flag;
+	}
+	
+	template <typename T>
+	const T * findFlag() const
+	{
+		const std::type_index typeIndex(typeid(T));
+		
+		for (auto * flag = flags; flag != nullptr; flag = flag->next)
+			if (flag->typeIndex == typeIndex)
+				return static_cast<const T*>(flag);
+		
+		return nullptr;
+	}
+	
+	template <typename T>
+	const bool hasFlag() const
+	{
+		const std::type_index typeIndex(typeid(T));
+		
+		for (auto * flag = flags; flag != nullptr; flag = flag->next)
+			if (flag->typeIndex == typeIndex)
+				return true;
+		
+		return false;
 	}
 };
 
@@ -275,6 +336,22 @@ struct StructuredType : Type
 	{
 		T * flag = new T();
 		addFlag(flag);
+		
+		return *this;
+	}
+	
+	StructuredType & typeFlag(TypeFlagBase * flag)
+	{
+		Type::addFlag(flag);
+		
+		return *this;
+	}
+	
+	template <typename T>
+	StructuredType & typeFlag()
+	{
+		T * flag = new T();
+		typeFlag(flag);
 		
 		return *this;
 	}
