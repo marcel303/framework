@@ -835,7 +835,7 @@ void drawTextArea(float x, float y, float sx, float size, const char * format, .
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 
-	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, text);
+	drawTextArea(x, y, sx, 0.f, size, +1.f, +1.f, "%s", text);
 }
 
 void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...)
@@ -857,7 +857,7 @@ void drawTextArea(float x, float y, float sx, float sy, float size, float alignX
 
 	for (int i = 0; i < data.numLines; ++i)
 	{
-		drawText(x, y, size, alignX, 1, data.lines[i]);
+		drawText(x, y, size, alignX, 1, "%s", data.lines[i]);
 		y += size;
 	}
 }
