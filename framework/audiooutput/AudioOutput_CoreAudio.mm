@@ -100,6 +100,8 @@ void AudioOutput_CoreAudio::unlock()
 bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampleRate, const int bufferSize)
 {
 	{
+		// create the output/remoteio audio component
+		
 		AudioComponentDescription desc;
 		memset(&desc, 0, sizeof(desc));
 		
@@ -117,15 +119,15 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		
 		if (m_audioComponent == nullptr)
 			return false;
-	}
-	
-	{
+		
 		auto status = AudioComponentInstanceNew(m_audioComponent, &m_audioUnit);
 		if (checkStatus(status) == false)
 			return false;
 	}
 
 	{
+		// set the stream format on the output component
+		
 		AudioStreamBasicDescription sdesc;
 		memset(&sdesc, 0, sizeof(sdesc));
 		
@@ -204,6 +206,8 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 
 #if defined(IPHONEOS)
 	{
+		// set input/output enables
+		
 		// verified correctness : https://developer.apple.com/library/archive/samplecode/aurioTouch/Listings/Classes_AudioController_mm.html#//apple_ref/doc/uid/DTS40007770-Classes_AudioController_mm-DontLinkElementID_4
 		
 		UInt32 flag = 1;
@@ -237,11 +241,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// set maximum frame count
 	
-	#if defined(IPHONEOS)
-		UInt32 maxFramesPerSlice = bufferSize;
-	#else
-		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size when in power saving mode
-	#endif
+		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size (4096) when in power saving mode
 		
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -291,15 +291,6 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	
 	m_numChannels = numChannels;
 	m_sampleRate = sampleRate;
-	
-	status = AudioOutputUnitStart(m_audioUnit);
-	if (checkStatus(status) == false)
-		return false;
-
-#if defined(IPHONEOS)
-	[[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:NULL];
-    [[AVAudioSession sharedInstance] setActive:TRUE error:nullptr];
-#endif
 
 	return true;
 }
@@ -308,12 +299,11 @@ bool AudioOutput_CoreAudio::shutCoreAudio()
 {
 	bool result = true;
 	
+	Stop();
+	
 	if (m_audioUnit != nullptr)
 	{
-		auto status = AudioOutputUnitStop(m_audioUnit);
-		result &= checkStatus(status);
-		
-		status = AudioComponentInstanceDispose(m_audioUnit);
+		auto status = AudioComponentInstanceDispose(m_audioUnit);
 		result &= checkStatus(status);
 		
 		m_audioUnit = nullptr;
@@ -463,10 +453,16 @@ void AudioOutput_CoreAudio::Play(AudioStream * stream)
 		m_stream = stream;
 	}
 	unlock();
+	
+	if (checkStatus(AudioOutputUnitStart(m_audioUnit)) == false)
+		logError("failed to start audio unit");
 }
 
 void AudioOutput_CoreAudio::Stop()
 {
+	if (checkStatus(AudioOutputUnitStop(m_audioUnit)) == false)
+		logError("failed to stop audio unit");
+		
 	lock();
 	{
 		m_isPlaying = false;

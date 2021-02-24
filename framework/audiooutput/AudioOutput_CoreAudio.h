@@ -80,6 +80,8 @@ public:
 	virtual double PlaybackPosition_get() override;
 	
 	uint64_t getBufferPresentTime(const bool addOutputLatency) const;
+	
+	AudioComponentInstance __nullable getAudioUnit() const { return m_audioUnit; }
 };
 
 #endif
