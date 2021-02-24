@@ -1185,11 +1185,11 @@ void Framework::process()
 		{
 			quitRequested = true;
 		}
-		else if (e.type == SDL_APP_WILLENTERBACKGROUND)
+		else if (e.type == SDL_APP_DIDENTERBACKGROUND)
 		{
 			backgrounded = true;
 		}
-		else if (e.type == SDL_APP_WILLENTERFOREGROUND)
+		else if (e.type == SDL_APP_DIDENTERFOREGROUND || e.type == SDL_APP_WILLENTERFOREGROUND)
 		{
 			backgrounded = false;
 		}
