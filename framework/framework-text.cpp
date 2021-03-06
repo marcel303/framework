@@ -498,6 +498,8 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 
 void measureText(float size, float & sx, float & sy, const char * format, ...)
 {
+	Assert(globals.font != nullptr);
+	
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
@@ -512,7 +514,12 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 	const size_t textLength = strlen(_text);
 #endif
 
-	if (globals.fontMode == FONT_BITMAP)
+	if (globals.font == nullptr)
+	{
+		sx = 0;
+		sy = 0;
+	}
+	else if (globals.fontMode == FONT_BITMAP)
 	{
 	#if USE_STBFONT
 		const int sizei = int(ceilf(size));
@@ -645,6 +652,8 @@ void endTextBatch()
 
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...)
 {
+	Assert(globals.font != nullptr);
+	
 	char _text[MAX_TEXT_LENGTH];
 	va_list args;
 	va_start(args, format);
@@ -659,7 +668,10 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	const size_t textLength = strlen(_text);
 #endif
 	
-	if (globals.fontMode == FONT_BITMAP)
+	if (globals.font == nullptr)
+	{
+	}
+	else if (globals.fontMode == FONT_BITMAP)
 	{
 		const int sizei = int(ceilf(size));
 		
