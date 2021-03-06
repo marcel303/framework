@@ -103,6 +103,11 @@ bool AbletonLink::isEnabled() const
 	return link->isEnabled();
 }
 
+int AbletonLink::numPeers() const
+{
+	return (int)link->numPeers();
+}
+
 uint64_t AbletonLink::getClockTick() const
 {
 	return link->clock().ticks();

@@ -58,6 +58,8 @@ struct AbletonLink
 	void enableStartStopSync(const bool enable);
 
 	bool isEnabled() const;
+	
+	int numPeers() const;
 
 	uint64_t getClockTick() const;
 	uint64_t getClockTicksPerSecond() const;
