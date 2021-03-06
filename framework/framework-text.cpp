@@ -792,7 +792,7 @@ static void prepareTextArea(const float size, const char * text, const float max
 	while (textptr != textend && data.numLines < TextAreaData::kMaxLines)
 	{
 		const char * nextptr = eatWord(textptr);
-		while (*nextptr && *nextptr != '\n')
+		do
 		{
 			const char * tempptr = eatWord(nextptr);
 			
@@ -812,6 +812,7 @@ static void prepareTextArea(const float size, const char * text, const float max
 			
 			nextptr = tempptr;
 		}
+		while (*nextptr && *nextptr != '\n');
 
 		const char temp = *nextptr;
 		*(char*)nextptr = 0;
