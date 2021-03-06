@@ -299,8 +299,6 @@ bool AudioOutput_CoreAudio::shutCoreAudio()
 {
 	bool result = true;
 	
-	Stop();
-	
 	if (m_audioUnit != nullptr)
 	{
 		auto status = AudioComponentInstanceDispose(m_audioUnit);
@@ -454,14 +452,20 @@ void AudioOutput_CoreAudio::Play(AudioStream * stream)
 	}
 	unlock();
 	
-	if (checkStatus(AudioOutputUnitStart(m_audioUnit)) == false)
-		logError("failed to start audio unit");
+	if (m_audioUnit != nullptr)
+	{
+		if (checkStatus(AudioOutputUnitStart(m_audioUnit)) == false)
+			logError("failed to start audio unit");
+	}
 }
 
 void AudioOutput_CoreAudio::Stop()
 {
-	if (checkStatus(AudioOutputUnitStop(m_audioUnit)) == false)
-		logError("failed to stop audio unit");
+	if (m_audioUnit != nullptr)
+	{
+		if (checkStatus(AudioOutputUnitStop(m_audioUnit)) == false)
+			logError("failed to stop audio unit");
+	}
 		
 	lock();
 	{
