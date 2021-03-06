@@ -200,7 +200,7 @@ public:
 	explicit FbxValueArray();
 
 	bool isValid() const;
-	inline int getNumValues() const { return values.size(); }
+	inline int getNumValues() const { return (int)values.size(); }
 	inline double getDouble(const int index) const { return values[index]; }
 };
 
