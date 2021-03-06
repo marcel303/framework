@@ -1285,7 +1285,7 @@ public:
 			
 			if (!normalIndices.empty())
 			{
-				const int lookupIndex =
+				const size_t lookupIndex =
 					normalMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1314,7 +1314,7 @@ public:
 			}
 			else
 			{
-				const int normalIndex =
+				const size_t normalIndex =
 					normalMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1339,7 +1339,7 @@ public:
 			
 			if (!uvIndices.empty())
 			{
-				const int lookupIndex =
+				const size_t lookupIndex =
 					uvMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1363,7 +1363,7 @@ public:
 			}
 			else
 			{
-				const int uvIndex =
+				const size_t uvIndex =
 					uvMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1956,7 +1956,7 @@ namespace AnimModel
 	#if 0
 		// purge objects that aren't connected to the scene
 		
-	// todo : restore garbage collection or remove this code. purging dead objects no longer works, as the nw fangled node connection handling works differently from before
+	// todo : restore garbage collection or remove this code. purging dead objects no longer works, as the new fangled node connection handling works differently from before
 	
 		using ObjectList = std::vector<FbxObject*>;
 		ObjectList garbage;

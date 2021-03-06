@@ -454,7 +454,7 @@ namespace spriter
 		{
 			resetAllocators();
 
-			const int numBoneKeys = mainKey.boneRefs.size();
+			const size_t numBoneKeys = mainKey.boneRefs.size();
 			TransformedBoneKey * transformedBoneKeys = (TransformedBoneKey*)alloca(numBoneKeys * sizeof(TransformedBoneKey));
 
 			for (size_t b = 0; b < mainKey.boneRefs.size(); ++b)
@@ -708,7 +708,7 @@ namespace spriter
 	{
 		for (size_t i = 0; i < m_animations.size(); ++i)
 			if (m_animations[i]->name == name)
-				return i;
+				return (int)i;
 		logWarning("failed to find animation: %s", name);
 		return -1;
 	}
@@ -812,7 +812,7 @@ namespace spriter
 
 		float newTime = time;
 		const MainlineKey & mainlineKey = animation->getAnimationDataAtTime_step1(newTime);
-		const int numKeys = mainlineKey.objectRefs.size();
+		const size_t numKeys = mainlineKey.objectRefs.size();
 		TransformedObjectKey * keys = (TransformedObjectKey*)alloca(numKeys * sizeof(TransformedObjectKey));
 		animation->getAnimationDataAtTime_step2(keys, numKeys, this, time, mainlineKey);
 
@@ -1170,7 +1170,7 @@ namespace spriter
 	{
 		for (size_t i = 0; i < m_entities.size(); ++i)
 			if (m_entities[i]->m_name == name)
-				return i;
+				return (int)i;
 		return -1;
 	}
 
@@ -1180,7 +1180,7 @@ namespace spriter
 
 		for (size_t i = 0; i < m_fileCaches.size(); ++i)
 			if (m_fileCaches[i]->name == name)
-				index = i;
+				index = (int)i;
 
 		return index;
 	}

@@ -195,7 +195,7 @@ public:
 	
 #if ENABLE_EVENTS_WORKAROUND
 	SDL_Event events[32];
-	int numEvents = 0;
+	size_t numEvents = 0;
 #else
 	std::vector<SDL_Event> events;
 #endif
@@ -227,7 +227,7 @@ public:
 	void processEvents()
 	{
 	#if !ENABLE_EVENTS_WORKAROUND
-		const int numEvents = events.size();
+		const size_t numEvents = events.size();
 	#endif
 	
 		if (numEvents == 0)
@@ -291,12 +291,12 @@ public:
 		{
 		#if ENABLE_EVENTS_WORKAROUND
 			std::reverse(events, events + numEvents);
-			for (int i = 0; i < eventIndex; ++i)
+			for (size_t i = 0; i < eventIndex; ++i)
 				numEvents--;
 			std::reverse(events, events + numEvents);
 		#if 0
 			printf("size: %d\n", (int)events.size());
-			for (int i = 0; i < eventIndex; ++i)
+			for (size_t i = 0; i < eventIndex; ++i)
 			{
 				auto itr = events.begin();
 				events.erase(itr);
