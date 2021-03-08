@@ -1745,10 +1745,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			FILE * file;
 			if (fopen_s(&file, f, "rb") == 0)
 			{
-				fseek(file, 0, SEEK_END);
-				const int size = ftell(file);
+				Verify(fseek(file, 0, SEEK_END) == 0);
+				const ssize_t size = ftell(file);
 				fclose(file);
-				if (size <= 512*1024)
+				if (size >=0 && size <= 512*1024)
 					g_soundCache.findOrCreate(f);
 			}
 		}

@@ -663,7 +663,7 @@ class StbFont
 {
 public:
 	uint8_t * buffer;
-	int bufferSize;
+	size_t bufferSize;
 	
 	stbtt_fontinfo fontInfo;
 	

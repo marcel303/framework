@@ -145,7 +145,7 @@ static void fbxLog(int logIndent, LogLevel logLevel, const char * fmt, ...)
 
 static int getTimeMS()
 {
-	return clock() * 1000 / CLOCKS_PER_SEC;
+	return int(clock() * 1000 / CLOCKS_PER_SEC);
 }
 
 static RotationType convertRotationOrder(int order)
@@ -850,7 +850,7 @@ static FbxMesh * readFbxMeshProperties(int & logIndent, const FbxRecord & mesh, 
 			{
 				if (propertyValue_index < values.size())
 				{
-					rotationOrder = values[propertyValue_index].getInt();
+					rotationOrder = (int)values[propertyValue_index].getInt();
 					if (rotationOrder != 0)
 						fbxLogWrn(logIndent, "rotation order is not XYZ");
 				}
@@ -1728,10 +1728,13 @@ namespace AnimModel
 		}
 		else
 		{
-			const size_t p1 = ftell(file);
-			fseek(file, 0, SEEK_END);
-			const size_t p2 = ftell(file);
-			fseek(file, 0, SEEK_SET);
+			const ssize_t p1 = ftell(file);
+			Verify(fseek(file, 0, SEEK_END) == 0);
+			
+			const ssize_t p2 = ftell(file);
+			Verify(fseek(file, 0, SEEK_SET) == 0);
+			
+			Assert(p1 >= 0 && p2 >= 0);
 			
 			const size_t numBytes = p2 - p1;
 			bytes.resize(numBytes);
@@ -2192,14 +2195,14 @@ namespace AnimModel
 			
 			mesh->m_name = meshName;
 			
-			mesh->allocateVB(meshBuilder.m_vertices.size());
+			mesh->allocateVB(int(meshBuilder.m_vertices.size()));
 			
 			if (!meshBuilder.m_vertices.empty())
 			{
 				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
 			}
 			
-			mesh->allocateIB(meshBuilder.m_indices.size());
+			mesh->allocateIB(int(meshBuilder.m_indices.size()));
 			
 			for (size_t j = 0; j < meshBuilder.m_indices.size(); ++j)
 			{
@@ -2217,7 +2220,7 @@ namespace AnimModel
 		// create mesh set
 		
 		MeshSet * meshSet = new MeshSet();
-		meshSet->allocate(meshes2.size());
+		meshSet->allocate(int(meshes2.size()));
 		
 		for (size_t i = 0; i < meshes2.size(); ++i)
 		{
@@ -2492,7 +2495,7 @@ namespace AnimModel
 		
 		BoneSet * boneSet = new BoneSet();
 		
-		boneSet->allocate(modelNameToBoneIndex.size());
+		boneSet->allocate(int(modelNameToBoneIndex.size()));
 		
 		for (ModelNameToBoneIndex::iterator i = modelNameToBoneIndex.begin(); i != modelNameToBoneIndex.end(); ++i)
 		{
@@ -2639,13 +2642,13 @@ namespace AnimModel
 			
 			Anim * animation = new Anim();
 			
-			animation->allocate(boneNameToBoneIndex.size(), numAnimKeys, RotationType_Quat, false);
+			animation->allocate(int(boneNameToBoneIndex.size()), numAnimKeys, RotationType_Quat, false);
 			
 			AnimKey * finalAnimKey = animation->m_keys;
 			
 			for (size_t boneIndex = 0; boneIndex < boneNameToBoneIndex.size(); ++boneIndex)
 			{
-				const std::map<int, const FbxAnimTransform*>::iterator i = boneIndexToAnimTransform.find(boneIndex);
+				const std::map<int, const FbxAnimTransform*>::iterator i = boneIndexToAnimTransform.find(int(boneIndex));
 				
 				if (i != boneIndexToAnimTransform.end())
 				{
@@ -2657,7 +2660,7 @@ namespace AnimModel
 						*finalAnimKey++ = animKeys[j];
 					}
 					
-					animation->m_numKeys[boneIndex] = animKeys.size();
+					animation->m_numKeys[boneIndex] = int(animKeys.size());
 				}
 				else
 				{

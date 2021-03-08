@@ -295,7 +295,7 @@ bool BoxAtlas::optimize()
 		
 		temp.cacheMy = 0;
 		
-		if (temp.tryAlloc(e->sx, e->sy, e - elems) == nullptr)
+		if (temp.tryAlloc(e->sx, e->sy, int(e - elems)) == nullptr)
 		{
 			return false;
 		}

@@ -45,7 +45,7 @@ Shader::Shader(const char * name, const char * outputs)
 {
 	m_cacheElem = nullptr;
 
-	const int name_length = strlen(name);
+	const int name_length = (int)strlen(name);
 	const int file_length = name_length + 3 + 1;
 	
 	char * vs = (char*)alloca(file_length * sizeof(char));

@@ -44,7 +44,7 @@
 
 #if USE_STBFONT
 
-static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const int numGlyphs, float & sx, float & sy, float & yTop)
+static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const size_t numGlyphs, float & sx, float & sy, float & yTop)
 {
 	int x1 = 0;
 	int y1 = 0;
@@ -108,7 +108,7 @@ static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheEl
 
 #elif USE_FREETYPE
 
-static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const size_t numGlyphs, float & sx, float & sy, float & yTop)
 {
 	float minX = std::numeric_limits<float>::max();
 	float minY = std::numeric_limits<float>::max();
@@ -167,7 +167,7 @@ static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem **
 
 #if USE_STBFONT
 
-static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const int numGlyphs, float x, float y)
+static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const size_t numGlyphs, float x, float y)
 {
 	if (globals.isInTextBatch == false)
 	{
@@ -234,7 +234,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 
 #elif USE_FREETYPE
 
-static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
+static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const size_t numGlyphs, float x, float y)
 {
 	// the (0,0) coordinate represents the lower left corner of a glyph
 	// we want to render the glyph using its top left corner at (0,0)
@@ -342,7 +342,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 
 #if ENABLE_MSDF_FONTS
 
-static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
+static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const size_t numGlyphs, float & sx, float & sy, float & yTop)
 
 {
 	int x1 = 0;
@@ -412,7 +412,7 @@ static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, 
 	yTop = y1 * scale;
 }
 
-static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs)
+static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const size_t numGlyphs)
 {
 	if (globals.isInTextBatchMSDF == false)
 	{

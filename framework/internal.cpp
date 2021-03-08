@@ -199,9 +199,13 @@ bool StbFont::load(const char * filename)
 	{
 		// load source from file
 
-		fseek(file, 0, SEEK_END);
-		bufferSize = ftell(file);
-		fseek(file, 0, SEEK_SET);
+		Verify(fseek(file, 0, SEEK_END) == 0);
+		{
+			const ssize_t fileSize = ftell(file);
+			Assert(fileSize >= 0);
+			bufferSize = (size_t)fileSize;
+		}
+		Verify(fseek(file, 0, SEEK_SET) == 0);
 
 		buffer = new uint8_t[bufferSize];
 
@@ -710,25 +714,33 @@ void splitString(const std::string & str, std::vector<std::string> & result, Pol
 	if (str.empty())
 		return;
 		
-	int start = -1;
+	size_t start = -1;
+	bool foundStart = false;
 	
 	for (size_t i = 0; i <= str.size(); ++i)
 	{
 		const char c = i < str.size() ? str[i] : policy.getBreakChar();
 		
-		if (start == -1)
+		if (foundStart == false)
 		{
 			// found start
 			if (!policy.isBreak(c))
+			{
 				start = i;
+				foundStart = true;
+			}
 			else if (keepEmptyElements)
+			{
 				result.push_back(std::string());
+			}
 		}
 		else if (policy.isBreak(c))
 		{
 			// found end
 			result.push_back(str.substr(start, i - start));
+			
 			start = -1;
+			foundStart = false;
 		}
 	}
 }
@@ -1993,7 +2005,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	{
 		// save glyphs
 		
-		const int32_t numGlyphs = m_map.size();
+		const int32_t numGlyphs = (int32_t)m_map.size();
 		
 		result &= fwrite(&numGlyphs, 4, 1, file) == 1;
 		

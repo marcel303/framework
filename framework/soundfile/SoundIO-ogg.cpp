@@ -35,7 +35,7 @@
 
 SoundData * loadSound_OGG(const char * filename)
 {
-	static const int kMaxSamples = (1 << 14) * sizeof(short);
+	static const int kMaxSamples = 1 << 14;
 	AudioSample samples[kMaxSamples];
 	
 	std::vector<AudioSample> readBuffer;
@@ -65,8 +65,8 @@ SoundData * loadSound_OGG(const char * filename)
 	
 	stream.Close();
 	
-	const int numSamples = readBuffer.size();
-	const int numBytes = numSamples * sizeof(AudioSample);
+	const size_t numSamples = readBuffer.size();
+	const size_t numBytes = numSamples * sizeof(AudioSample);
 	void * bytes = nullptr;
 	
 	if (numBytes > 0)
@@ -78,7 +78,7 @@ SoundData * loadSound_OGG(const char * filename)
 	SoundData * soundData = new SoundData();
 	soundData->channelSize = 2;
 	soundData->channelCount = 2;
-	soundData->sampleCount = numSamples;
+	soundData->sampleCount = (int)numSamples;
 	soundData->sampleRate = sampleRate;
 	soundData->sampleData = bytes;
 	

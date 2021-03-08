@@ -52,9 +52,13 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	{
 		// load source from file
 
-		fseek(file, 0, SEEK_END);
-		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
+		Verify(fseek(file, 0, SEEK_END) == 0);
+		{
+			const ssize_t fileSize = ftell(file);
+			Assert(fileSize >= 0 && fileSize <= INT_MAX);
+			numBytes = (int)fileSize;
+		}
+		Verify(fseek(file, 0, SEEK_SET) == 0);
 
 		bytes = new char[numBytes];
 
@@ -70,7 +74,7 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 		const size_t textLength = strlen(text);
 
 		bytes = new char[textLength];
-		numBytes = textLength;
+		numBytes = (int)textLength;
 
 		memcpy(bytes, text, textLength * sizeof(char));
 	}
@@ -134,7 +138,7 @@ bool preprocessShader(
 	{
 		if ((flags & kPreprocessShader_AddOpenglLineAndFileMarkers) != 0 && i == 0)
 		{
-			addLineAndFileMarker(destination, i, fileId);
+			addLineAndFileMarker(destination, int(i), fileId);
 		}
 		
 		const std::string & line = lines[i];
@@ -176,7 +180,7 @@ bool preprocessShader(
 				
 				if ((flags & kPreprocessShader_AddOpenglLineAndFileMarkers) != 0)
 				{
-					addLineAndFileMarker(destination, i + 1, fileId);
+					addLineAndFileMarker(destination, int(i + 1), fileId);
 				}
 			}
 		}
