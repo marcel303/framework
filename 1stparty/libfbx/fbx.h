@@ -200,8 +200,8 @@ public:
 	explicit FbxValueArray();
 
 	bool isValid() const;
-	inline int getNumValues() const { return (int)values.size(); }
-	inline double getDouble(const int index) const { return values[index]; }
+	inline size_t getNumValues() const { return values.size(); }
+	inline double getDouble(const size_t index) const { return values[index]; }
 };
 
 /* --------------------------------------------------------------------------------

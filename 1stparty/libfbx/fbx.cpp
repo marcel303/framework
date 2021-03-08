@@ -268,7 +268,7 @@ FbxValue::FbxValue(const char * value)
 {
 	type = TYPE_STRING;
 
-	const int length = strlen(value) + 1;
+	const size_t length = strlen(value) + 1;
 	String = new char[length];
 	memcpy(String, value, length);
 }
@@ -289,7 +289,7 @@ FbxValue & FbxValue::operator=(const FbxValue & value)
 
 	if (type == TYPE_STRING)
 	{
-		const int length = strlen(value.String) + 1;
+		const size_t length = strlen(value.String) + 1;
 		String = new char[length];
 		memcpy(String, value.String, length);
 	}
@@ -409,7 +409,7 @@ template <typename T> void FbxReader::read(const bool isSize, size_t & offset, T
 			return;
 		}
 		
-		result = result64;
+		result = (T)result64;
 	}
 	else
 	{
