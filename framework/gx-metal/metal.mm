@@ -43,6 +43,8 @@
 #import <SDL2/SDL_syswm.h>
 #import <vector>
 
+#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 1
+
 #define INDEX_TYPE uint32_t
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
@@ -60,6 +62,12 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 MetalWindowData * activeWindowData = nullptr;
 
 static id<MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
+
+#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
+static NSAutoreleasePool * s_autoreleasePool = nullptr;
+#endif
+
+static RenderPipelineState renderState;
 
 //
 
@@ -97,20 +105,16 @@ static RenderPassData * s_activeRenderPass = nullptr;
 
 //
 
-static id <MTLFence> waitForBlit = nullptr;
-
-//
-
 void metal_init()
 {
-	device = MTLCreateSystemDefaultDevice();
-	
-	queue = [device newCommandQueue];
-	
-	// pre-create all possible sampler states
-	
 	@autoreleasepool
 	{
+		device = MTLCreateSystemDefaultDevice();
+	
+		queue = [device newCommandQueue];
+	
+		// pre-create all possible sampler states
+		
 		for (int filter = 0; filter < 3; ++filter)
 		{
 			for (int clamp = 0; clamp < 2; ++clamp)
@@ -145,6 +149,31 @@ void metal_init()
 	}
 }
 
+void metal_shut()
+{
+	@autoreleasepool
+	{
+		// free all possible sampler states
+		
+		for (int filter = 0; filter < 3; ++filter)
+		{
+			for (int clamp = 0; clamp < 2; ++clamp)
+			{
+				const int index = (filter << 1) | clamp;
+				
+				[samplerStates[index] release];
+				samplerStates[index] = nil;
+			}
+		}
+		
+		[queue release];
+		queue = nil;
+		
+		[device release];
+		device = nil;
+	}
+}
+
 void metal_attach(SDL_Window * window)
 {
 	@autoreleasepool
@@ -156,7 +185,13 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:framework.enableDepthBuffer wantsVsync:framework.enableVsync];
+		windowData->metalview =
+			[[MetalView alloc]
+				initWithFrame:sdl_view.frame
+				device:device
+				wantsDepthBuffer:framework.enableDepthBuffer
+				wantsVsync:framework.enableVsync];
+				
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;
@@ -224,23 +259,28 @@ void metal_acquire_drawable()
 		Always release a drawable as soon as possible; preferably, immediately after finalizing a frame’s CPU work. It is highly advisable to contain your rendering loop within an autorelease pool block to avoid possible deadlock situations with multiple drawables."
 	*/
 	
-	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
-	[activeWindowData->current_drawable retain];
-}
-
-void metal_draw_end()
-{
-	auto & pd = *s_activeRenderPass;
-
-	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is schedule (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
-	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
+	@autoreleasepool
+	{
+		Assert(activeWindowData->current_drawable == nullptr);
+		
+		for (;;)
+		{
+			activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
+			if (activeWindowData->current_drawable != nullptr)
+				break;
+				
+			framework.waitForEvents = true;
+			framework.process();
+			framework.waitForEvents = false;
+		}
+			
+		
+		[activeWindowData->current_drawable retain];
+	}
 	
-	popRenderPass();
-	
-	Assert(s_renderPasses.empty());
-	
-	[activeWindowData->current_drawable release];
-	activeWindowData->current_drawable = nullptr;
+#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
+	s_autoreleasePool = [NSAutoreleasePool new];
+#endif
 }
 
 void metal_present()
@@ -259,6 +299,11 @@ void metal_present()
 		[cmdbuf commit];
 		cmdbuf = nil;
 	}
+	
+#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
+	[s_autoreleasePool release];
+	s_autoreleasePool = nil;
+#endif
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -266,9 +311,45 @@ void metal_set_viewport(const int sx, const int sy)
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
-void metal_set_scissor(const int x, const int y, const int sx, const int sy)
+void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const int in_sy)
 {
-	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
+	// clip coords to be within render target size
+	
+	int x = in_x;
+	int y = in_y;
+	int sx = in_sx;
+	int sy = in_sy;
+	
+	if (x < 0)
+	{
+		sx += x;
+		x = 0;
+	}
+	else if (x >= s_activeRenderPass->viewportSx)
+	{
+		x = 0;
+		sx = 0;
+	}
+	else if (x + sx > s_activeRenderPass->viewportSx)
+		sx += s_activeRenderPass->viewportSx - (x + sx);
+	
+	if (y < 0)
+	{
+		sy += y;
+		y = 0;
+	}
+	else if (y >= s_activeRenderPass->viewportSy)
+	{
+		y = 0;
+		sy = 0;
+	}
+	else if (y + sy > s_activeRenderPass->viewportSy)
+		sy += s_activeRenderPass->viewportSy - (y + sy);
+	
+	if (sx < 0)
+		sx = 0;
+	if (sy < 0)
+		sy = 0;
 	
 	Assert(
 		x >= 0 &&
@@ -278,15 +359,25 @@ void metal_set_scissor(const int x, const int y, const int sx, const int sy)
 		x + sx <= s_activeRenderPass->viewportSx &&
 		y + sy <= s_activeRenderPass->viewportSy);
 
-// todo : clip coords to be within render target size
-
+	const MTLScissorRect rect = {
+		(NSUInteger)x,
+		(NSUInteger)y,
+		(NSUInteger)sx,
+		(NSUInteger)sy };
+	
 	[s_activeRenderPass->encoder setScissorRect:rect];
 }
 
 void metal_clear_scissor()
 {
-	const NSUInteger sx = s_activeRenderPass->renderdesc.colorAttachments[0].texture.width;
-	const NSUInteger sy = s_activeRenderPass->renderdesc.colorAttachments[0].texture.height;
+	const NSUInteger sx =
+		s_activeRenderPass->renderdesc.depthAttachment != nil
+			? s_activeRenderPass->renderdesc.depthAttachment.texture.width
+			: s_activeRenderPass->renderdesc.colorAttachments[0].texture.width;
+	const NSUInteger sy =
+		s_activeRenderPass->renderdesc.depthAttachment != nil
+			? s_activeRenderPass->renderdesc.depthAttachment.texture.height
+			: s_activeRenderPass->renderdesc.colorAttachments[0].texture.height;
 	
 	const MTLScissorRect rect = { 0, 0, sx, sy };
 	
@@ -301,6 +392,11 @@ id <MTLDevice> metal_get_device()
 id <MTLCommandQueue> metal_get_command_queue()
 {
 	return queue;
+}
+
+id <MTLCommandBuffer> metal_get_command_buffer()
+{
+	return s_activeRenderPass->cmdbuf;
 }
 
 bool metal_is_encoding_draw_commands()
@@ -323,42 +419,36 @@ void metal_upload_texture_area(
 		id <MTLTexture> src_texture = [device newTextureWithDescriptor:descriptor];
 		
 		const MTLOrigin src_origin = { 0, 0, 0 };
-		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
-		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
+		const MTLSize   src_size   = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
+		const MTLOrigin dst_origin = { (NSUInteger)dstX,  (NSUInteger)dstY,  0 };
 		
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		
+		id <MTLFence> waitForDraw = nil;
+		id <MTLFence> waitForBlit = nil;
+		
 		if (s_activeRenderPass != nullptr)
 		{
-			id <MTLFence> waitForDraw = [device newFence];
-			id <MTLFence> waitForBlit = [device newFence];
+			waitForDraw = [[device newFence] autorelease];
+			waitForBlit = [[device newFence] autorelease];
 			
+			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
-			{
-				[blit_encoder waitForFence:waitForDraw];
-				[blit_encoder
-					copyFromTexture:src_texture
-					sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
-					toTexture:dst
-					destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
-				[blit_encoder updateFence:waitForBlit];
-			}
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
-			
-			[waitForDraw release];
-			[waitForBlit release];
 		}
-		else
-		{
-			[blit_encoder
-				copyFromTexture:src_texture
-				sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
-				toTexture:dst
-				destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+		
+		if (waitForDraw != nil)
+			[blit_encoder waitForFence:waitForDraw];
 			
-			metal_make_render_wait_for_blit(blit_encoder);
-		}
+		[blit_encoder
+			copyFromTexture:src_texture
+			sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
+			toTexture:dst
+			destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+		
+		if (waitForBlit != nil)
+			[blit_encoder updateFence:waitForBlit];
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
@@ -385,42 +475,39 @@ void metal_copy_texture_to_texture(
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		
+		id <MTLFence> waitForDraw = nil;
+		id <MTLFence> waitForBlit = nil;
+			
 		if (s_activeRenderPass != nullptr)
 		{
-			id <MTLFence> waitForDraw = [device newFence];
-			id <MTLFence> waitForBlit = [device newFence];
+			waitForDraw = [[device newFence] autorelease];
+			waitForBlit = [[device newFence] autorelease];
 			
+			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
-			{
-				[blit_encoder waitForFence:waitForDraw];
-				[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
-				[blit_encoder updateFence:waitForBlit];
-			}
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+		}
+		
+		if (waitForDraw != nil)
+			[blit_encoder waitForFence:waitForDraw];
 			
-			[waitForDraw release];
-			[waitForBlit release];
-		}
-		else
-		{
-			[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
-				
-			metal_make_render_wait_for_blit(blit_encoder);
-		}
+		[blit_encoder
+			copyFromTexture:src
+			sourceSlice:0
+			sourceLevel:0
+			sourceOrigin:src_origin
+			sourceSize:src_size
+			toTexture:dst
+			destinationSlice:0
+			destinationLevel:0
+			destinationOrigin:dst_origin];
+		
+		if (waitForBlit != nil)
+			[blit_encoder updateFence:waitForBlit];
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}
-}
-
-static id<MTLCommandBuffer> s_sync_blit_to_render_cmdbuf = nullptr;
-static id<MTLRenderCommandEncoder> s_sync_blit_to_render_encoder = nullptr;
-
-void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder)
-{
-	[waitForBlit release];
-	
-	waitForBlit = [device newFence];
 }
 
 void metal_generate_mipmaps(id <MTLTexture> texture)
@@ -430,28 +517,26 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		
+		id <MTLFence> waitForDraw = nil;
+		id <MTLFence> waitForBlit = nil;
+			
 		if (s_activeRenderPass != nullptr)
 		{
-			id <MTLFence> waitForDraw = [device newFence];
-			id <MTLFence> waitForBlit = [device newFence];
+			waitForDraw = [[device newFence] autorelease];
+			waitForBlit = [[device newFence] autorelease];
 			
+			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
-			{
-				[blit_encoder waitForFence:waitForDraw];
-				[blit_encoder generateMipmapsForTexture:texture];
-				[blit_encoder updateFence:waitForBlit];
-			}
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
-			
-			[waitForDraw release];
-			[waitForBlit release];
 		}
-		else
-		{
-			[blit_encoder generateMipmapsForTexture:texture];
-			
-			metal_make_render_wait_for_blit(blit_encoder);
-		}
+		
+		if (waitForDraw != nil)
+			[blit_encoder waitForFence:waitForDraw];
+				
+		[blit_encoder generateMipmapsForTexture:texture];
+				
+		if (waitForBlit != nil)
+			[blit_encoder updateFence:waitForBlit];
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
@@ -555,16 +640,6 @@ void beginRenderPass(
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
 		
-		// wait for blit operations (if any)
-		
-		if (waitForBlit != nullptr)
-		{
-			[pd.encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
-			
-			[waitForBlit release];
-			waitForBlit = nullptr;
-		}
-		
 		renderState.renderPass = pd.renderPass;
 		
 		s_renderPassData = pd;
@@ -601,21 +676,24 @@ void endRenderPass()
 	
 	gxEndDraw();
 	
-	auto & pd = *s_activeRenderPass;
-	
-	[pd.encoder endEncoding];
-	
-	[pd.cmdbuf commit];
-	
-	//
-	
-	[pd.encoder release];
-	[pd.renderdesc release];
-	[pd.cmdbuf release];
-	
-	s_activeRenderPass = nullptr;
-	
-	renderState.renderPass = RenderPipelineState::RenderPass();
+	@autoreleasepool
+	{
+		auto & pd = *s_activeRenderPass;
+		
+		[pd.encoder endEncoding];
+		
+		[pd.cmdbuf commit];
+		
+		//
+		
+		[pd.encoder release];
+		[pd.renderdesc release];
+		[pd.cmdbuf release];
+		
+		s_activeRenderPass = nullptr;
+		
+		renderState.renderPass = RenderPipelineState::RenderPass();
+	}
 }
 
 // --- render passes stack ---
@@ -744,8 +822,6 @@ bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
 // -- render states --
 
 static Stack<int, 32> colorWriteStack(0xf);
-
-RenderPipelineState renderState;
 
 // render states affecting render pipeline state
 
@@ -921,6 +997,8 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	globals.depthTest = test;
 	globals.depthTestWriteEnabled = writeEnabled;
 	
+// todo : do we need an autorelease pool surrounding this code? (setDepthTest)
+
 	// update depth-stencil state
 	
 	if (globals.stencilEnabled == false)
@@ -936,7 +1014,7 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		{
 			// create the depth-stencil state when it isn't cached yet
 			
-			MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+			MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
 			fillDepthStencilDescriptor(descriptor);
 	
 			state = [device newDepthStencilStateWithDescriptor:descriptor];
@@ -950,7 +1028,7 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	{
 		// for stencil-enabled depth-stencil states.. we create a new depth-stencil descriptor, each and every time. caching can be implemented if we calculate the hash or a composite-key of the state and use it as the lookup key into a map
 		
-		MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
 		fillDepthStencilDescriptor(descriptor);
 		
 		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
@@ -1068,6 +1146,8 @@ void clearStencilTest()
 {
 	globals.stencilEnabled = false;
 	
+// todo : do we need an autoreleasepool surrounding this code? (clearStencilTest)
+
 	// update depth-stencil state
 	
 	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
@@ -1121,7 +1201,12 @@ static GxTextureId createTexture(
 {
 	@autoreleasepool
 	{
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat width:sx height:sy mipmapped:NO];
+		MTLTextureDescriptor * descriptor =
+			[MTLTextureDescriptor
+				texture2DDescriptorWithPixelFormat:pixelFormat
+				width:sx
+				height:sy
+				mipmapped:NO];
 		
 		id <MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
 		
@@ -1221,7 +1306,12 @@ GxTextureId copyTexture(const GxTextureId source)
 			
 			const GxTextureId textureId = s_nextTextureId++;
 			
-			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:src.pixelFormat width:src.width height:src.height mipmapped:NO];
+			MTLTextureDescriptor * descriptor =
+				[MTLTextureDescriptor
+					texture2DDescriptorWithPixelFormat:src.pixelFormat
+					width:src.width
+					height:src.height
+					mipmapped:NO];
 			
 			id <MTLTexture> dst = [device newTextureWithDescriptor:descriptor];
 			
@@ -1477,19 +1567,6 @@ void gxValidateMatrices()
 				s_gxProjection.get().m_v);
 			//printf("validate4\n");
 		}
-		
-		// set vertex stage uniform buffers
-		
-		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-		{
-			if (shaderElem.vsInfo.uniformBufferSize[i] == 0)
-				continue;
-			
-			[s_activeRenderPass->encoder
-				setVertexBytes:shaderElem.vsUniformData[i]
-				length:shaderElem.vsInfo.uniformBufferSize[i]
-				atIndex:i];
-		}
 	}
 
 	s_gxModelView.isDirty = false;
@@ -1545,7 +1622,7 @@ static float scale255(const float v)
 	return v * m;
 }
 
-void gxValidateShaderResources(const bool useGenericShader);
+static void gxValidateShaderResources(const bool useGenericShader);
 
 void gxInitialize()
 {
@@ -1589,7 +1666,11 @@ void gxInitialize()
 			baseIndex += 4;
 		}
 		
-		s_gxIndexBufferForQuads = [device newBufferWithBytes:indices length:numIndices*sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
+		s_gxIndexBufferForQuads =
+			[device
+				newBufferWithBytes:indices
+				length:numIndices * sizeof(INDEX_TYPE)
+				options:MTLResourceCPUCacheModeWriteCombined];
 		
 		delete [] indices;
 		indices = nullptr;
@@ -1617,7 +1698,11 @@ void gxInitialize()
 			baseIndex += 1;
 		}
 		
-		s_gxIndexBufferForTriangleFans = [device newBufferWithBytes:indices length:numIndices*sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
+		s_gxIndexBufferForTriangleFans =
+			[device
+				newBufferWithBytes:indices
+				length:numIndices * sizeof(INDEX_TYPE)
+				options:MTLResourceCPUCacheModeWriteCombined];
 		
 		delete [] indices;
 		indices = nullptr;
@@ -1727,7 +1812,11 @@ namespace xxHash
 				index += 16;
 			} while (index <= limit);
 
-			h32 = rotateLeft<1>(v1) + rotateLeft<7>(v2) + rotateLeft<12>(v3) + rotateLeft<18>(v4);
+			h32 =
+				rotateLeft<1>(v1) +
+				rotateLeft<7>(v2) +
+				rotateLeft<12>(v3) +
+				rotateLeft<18>(v4);
 		}
 		else
 		{
@@ -1764,7 +1853,9 @@ static id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
 
 static void gxValidatePipelineState()
 {
-	if (globals.shader == nullptr || globals.shader->getType() != SHADER_VSPS || !globals.shader->isValid())
+	if (globals.shader == nullptr ||
+		globals.shader->getType() != SHADER_VSPS ||
+		globals.shader->isValid() == false)
 	{
 		return;
 	}
@@ -2159,13 +2250,18 @@ static void gxFlush(bool endOfBatch)
 		if (vertexDataSize <= 4096)
 		{
 			// optimize using setVertexBytes when the draw call is small
-			[s_activeRenderPass->encoder setVertexBytes:s_gxVertices length:vertexDataSize atIndex:0];
+			
+			[s_activeRenderPass->encoder
+				setVertexBytes:s_gxVertices
+				length:vertexDataSize
+				atIndex:0];
 		}
 		else
 		{
-		// note : keep a reference to the current buffer and allocate vertices from the same buffer
-		//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
-		//        add the completion handler
+			// note : keep a reference to the current buffer and allocate vertices from the same buffer
+			//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
+			//        add the completion handler
+			
 			const int remaining = (s_gxVertexBufferElem == nullptr) ? 0 : (s_gxVertexBufferPool.m_numBytesPerBuffer - s_gxVertexBufferElemOffset);
 			
 			if (vertexDataSize > remaining)
@@ -2190,7 +2286,11 @@ static void gxFlush(bool endOfBatch)
 			}
 			
 			memcpy((uint8_t*)s_gxVertexBufferElem->m_buffer.contents + s_gxVertexBufferElemOffset, s_gxVertices, vertexDataSize);
-			[s_activeRenderPass->encoder setVertexBuffer:s_gxVertexBufferElem->m_buffer offset:s_gxVertexBufferElemOffset atIndex:0];
+			
+			[s_activeRenderPass->encoder
+				setVertexBuffer:s_gxVertexBufferElem->m_buffer
+				offset:s_gxVertexBufferElemOffset
+				atIndex:0];
 			
 			s_gxVertexBufferElemOffset += vertexDataSize;
 		}
@@ -2272,6 +2372,8 @@ static void gxFlush(bool endOfBatch)
 	{
 		s_gxVertices = nullptr;
 		s_gxVertexCount = 0;
+		
+		s_gxHasFirstVertex = false;
 	}
 	else
 	{
@@ -2307,6 +2409,11 @@ static void gxFlush(bool endOfBatch)
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 {
+	Assert(
+		s_gxVertices == nullptr &&
+		s_gxVertexCount == 0 &&
+		s_gxHasFirstVertex == false);
+		
 	s_gxPrimitiveType = primitiveType;
 	s_gxVertices = s_gxVertexBuffer;
 	
@@ -2343,8 +2450,6 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 	}
 	
 	fassert(s_gxVertexCount == 0);
-	
-	s_gxHasFirstVertex = false;
 }
 
 void gxEnd()
@@ -2365,8 +2470,7 @@ static void gxEndDraw()
 			[s_activeRenderPass->cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)
 				{
-					if (vb_elem != nullptr)
-						s_gxVertexBufferPool.freeBuffer(vb_elem);
+					s_gxVertexBufferPool.freeBuffer(vb_elem);
 				}];
 		}
 		if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
@@ -2390,9 +2494,15 @@ static void gxEndDraw()
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
-	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
+	fassert(
+		primitiveType == GX_POINTS ||
+		primitiveType == GX_LINES ||
+		primitiveType == GX_TRIANGLES ||
+		primitiveType == GX_TRIANGLE_STRIP);
 	
-	bindVsInputs(nullptr, 0, 0);
+// todo : clean up bindVsInputs on gxEmitVertices
+	//bindVsInputs(nullptr, 0, 0);
+	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 	Shader genericShader;
 	
@@ -2440,7 +2550,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 }
 
-void gxEmitVertex()
+static void gxEmitVertex()
 {
 	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
 	
@@ -2581,12 +2691,18 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	const int maxVsInputs = sizeof(renderState.vertexInputs) / sizeof(renderState.vertexInputs[0]);
-	Assert(numVsInputs <= maxVsInputs);
-	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
+	Assert(numVsInputs <= kMaxVertexInputs);
+	
+	const int numVsInputsToCopy = numVsInputs < kMaxVertexInputs ? numVsInputs : kMaxVertexInputs;
 	memcpy(renderState.vertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
-	if (numVsInputsToCopy < maxVsInputs)
-		memset(renderState.vertexInputs + numVsInputsToCopy, 0, (maxVsInputs - numVsInputsToCopy) * sizeof(GxVertexInput)); // set the remainder of the inputs to zero, to ensure the contents of the render state struct stays deterministics, so we can hash it to look up pipeline states
+	
+	if (numVsInputsToCopy < kMaxVertexInputs)
+	{
+		// set the remainder of the inputs to zero, to ensure the contents of the render state struct stays deterministic,
+		// so we can hash it to look up pipeline states
+		memset(renderState.vertexInputs + numVsInputsToCopy, 0, (kMaxVertexInputs - numVsInputsToCopy) * sizeof(GxVertexInput));
+	}
+	
 	renderState.vertexInputCount = numVsInputsToCopy;
 	renderState.vertexStride = vsStride;
 }
@@ -2873,12 +2989,12 @@ void gxClearCaptureCallback()
 
 //
 
-void gxValidateShaderResources(const bool useGenericShader)
+static void gxValidateShaderResources(const bool useGenericShader)
 {
 	auto * shader = static_cast<Shader*>(globals.shader);
 	auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
-	if (useGenericShader && s_gxTextureEnabled)
+	if (useGenericShader && s_gxTextureEnabled) // todo : does this if statement make sense ?
 	{
 		// todo : avoid setting textures when not needed
 		//        needed when: texture changed
@@ -2902,7 +3018,7 @@ void gxValidateShaderResources(const bool useGenericShader)
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
 		
-	#if 0
+	#if 0 // todo : keep one or the other. also, consider changing vs texture setting
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
@@ -2929,24 +3045,66 @@ void gxValidateShaderResources(const bool useGenericShader)
 				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
 			}
 		}
+	}
+	
+	// set vertex stage uniform buffers
+	
+	// note : for the vertex stage, we need to preserve any buffers bound as
+	//        inputs for vertex data. so instead of using setVertexBuffers (as
+	//        we do below for the fragment stage), we call setVertexBuffer, only
+	//        for those buffers which have associated uniforms and a buffer set
+	// note : we could easily unify this with vertex data input buffers, if we
+	//        maintain a global list of all buffers. however, it may perhaps be
+	//        more efficient to do what we do here, for the more common use cases
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (cacheElem.vsInfo.uniformBufferSize[i] != 0 &&
+			cacheElem.vsBuffers[i] != nullptr)
+		{
+			[s_activeRenderPass->encoder
+				setVertexBuffer:cacheElem.vsBuffers[i]
+				offset:0
+				atIndex:i];
+		}
+	}
+	
+	if (cacheElem.vsMainUniformBufferIndex != -1)
+	{
+		// use setVertexBytes for the main uniform buffer
 		
-		NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
-		[s_activeRenderPass->encoder setFragmentBuffers:cacheElem.psBuffers offsets:offsets withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxBuffers)];
+		const int i = cacheElem.vsMainUniformBufferIndex;
+		
+		if (cacheElem.vsInfo.uniformBufferSize[i] != 0)
+		{
+			[s_activeRenderPass->encoder
+				setVertexBytes:cacheElem.vsUniformData[i]
+				length:cacheElem.vsInfo.uniformBufferSize[i]
+				atIndex:i];
+		}
 	}
 	
 	// set fragment stage uniform buffers
 
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
+	[s_activeRenderPass->encoder
+		setFragmentBuffers:cacheElem.psBuffers
+		offsets:offsets
+		withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxBuffers)];
+	
+	if (cacheElem.psMainUniformBufferIndex != -1)
 	{
-		if (cacheElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		if (cacheElem.psBuffers[i] != nullptr)
-			continue;
+		// use setFragmentBytes for the main uniform buffer
 		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:cacheElem.psUniformData[i]
-			length:cacheElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
+		const int i = cacheElem.psMainUniformBufferIndex;
+		
+		if (cacheElem.psInfo.uniformBufferSize[i] != 0)
+		{
+			[s_activeRenderPass->encoder
+				setFragmentBytes:cacheElem.psUniformData[i]
+				length:cacheElem.psInfo.uniformBufferSize[i]
+				atIndex:i];
+		}
 	}
 }
 
