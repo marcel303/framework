@@ -162,7 +162,7 @@ SoundData * loadSound_WAV(const char * filename)
 	SoundData * soundData = new SoundData();
 	soundData->channelSize = headers.fmtBitDepth / 8;
 	soundData->channelCount = headers.fmtChannelCount;
-	soundData->sampleCount = int(numBytes / (headers.fmtBitDepth / 8 * headers.fmtChannelCount)); // todo : size_t for soundData->sampleCount ?
+	soundData->sampleCount = numBytes / (headers.fmtBitDepth / 8 * headers.fmtChannelCount);
 	soundData->sampleRate = headers.fmtSampleRate;
 	soundData->sampleData = bytes;
 	

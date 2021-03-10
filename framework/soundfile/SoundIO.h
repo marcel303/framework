@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 class SoundData
 {
 public:
@@ -39,10 +41,10 @@ public:
 		}
 	}
 	
-	int channelSize = 0;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
-	int channelCount = 0; // 1 for mono, 2 for stereo
-	int sampleCount = 0;
-	int sampleRate = 0;
+	uint16_t channelSize  = 0; // 1 or 2 bytes = int8 or int16, 4 bytes = float32
+	uint16_t channelCount = 0; // 1 for mono, 2 for stereo
+	uint32_t sampleRate   = 0;
+	uint64_t sampleCount  = 0;
 	
 	void * sampleData = nullptr;
 };

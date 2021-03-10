@@ -148,7 +148,7 @@ static bool convertSoundDataToHRIR(const SoundData & soundData, float * __restri
 	// however, clamp the number of samples in case the sound data contains more samples,
 	// and pad with zeroes in case it's less
 	
-	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
+	const int numSamplesToCopy = std::min(int(soundData.sampleCount), HRTF_BUFFER_SIZE);
 	
 	if (soundData.channelSize == 2)
 	{
