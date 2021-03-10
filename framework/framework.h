@@ -1019,6 +1019,7 @@ public:
 	
 #if ENABLE_OPENGL
 	uint32_t getOpenglBufferId() const { return m_bufferId; }
+	int getBufferSize() const { return m_bufferSize; }
 #endif
 #if ENABLE_METAL
 	void markMetalBufferIsUsed() const;

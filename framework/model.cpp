@@ -816,8 +816,6 @@ void Model::ctor()
 	
 	if (m_autoUpdate)
 		framework.registerModel(this);
-	
-	skinningMatrices.alloc(32 * sizeof(Mat4x4));
 }
 
 void Model::ctorEnd()
@@ -828,6 +826,8 @@ void Model::ctorEnd()
 	
 	for (int i = 0; i < numBones; ++i)
 		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+	
+	skinningMatrices.alloc(64 * sizeof(Mat4x4));
 }
 
 Model::~Model()
@@ -930,7 +930,6 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
-		skinningMatrices.alloc(sizeof(Mat4x4) * numBones);
 		skinningMatrices.setData(globalMatrices, sizeof(Mat4x4) * numBones);
 		
 		const Shader * previousShader = nullptr;

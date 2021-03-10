@@ -76,7 +76,8 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 		makeGaussianKernel(kernelSize, values, sigma);
 	}
 	
-	kernel.alloc(sizeof(float) * 32*4);
+	if (kernel.getBufferSize() == 0)
+		kernel.alloc(sizeof(float) * 32*4);
 	kernel.setData(values, sizeof(float) * kernelSize);
 }
 
