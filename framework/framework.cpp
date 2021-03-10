@@ -29,6 +29,10 @@
 	#define NOMINMAX
 #endif
 
+#if defined(MACOS) || defined(IPHONEOS)
+	#define GLES_SILENCE_DEPRECATION
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <inttypes.h>
