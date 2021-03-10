@@ -301,9 +301,9 @@ void bilateralFilter_Separate(
 	const Mat & source,
 	Mat & temp,
 	Mat & filteredImage,
-	int diameter,
-	double sigmaI,
-	double sigmaS)
+	const int diameter,
+	const double sigmaI,
+	const double sigmaS)
 {
 	Benchmark bm("bilateralFilter");
 	
@@ -417,7 +417,7 @@ void gkernel(
 	const float sigma,
 	const int numBins,
 	const float R,
-	float * h)
+	float * __restrict h)
 {
     float hSum = 0.f;
 	
@@ -434,18 +434,18 @@ void gkernel(
 }
 
 static void integralImage2(
-	const uint8_t * values,
+	const uint8_t * __restrict values,
 	const int sx,
 	const int sy,
-	int64_t * dstValues)
+	int64_t * __restrict dstValues)
 {
 	for (int i = 0; i < sx * sy; ++i)
 		dstValues[i] = values[i];
 	
 	for (int y = 0; y < sy; ++y)
 	{
-		int64_t * valueLine0 = dstValues + (y - 1) * sx - 1;
-		int64_t * valueLine1 = dstValues + (y - 0) * sx - 1;
+		int64_t * __restrict valueLine0 = dstValues + (y - 1) * sx - 1;
+		int64_t * __restrict valueLine1 = dstValues + (y - 0) * sx - 1;
 
 		for (int x = 0; x < sx; ++x)
 		{
@@ -569,7 +569,7 @@ void bf2(
 					+ Ibins_int[Bidx(b,minY-1,minX-1)]; // -     top-left
 			#else
 				const int s =
-					+ Ibins_int[Bidx(b,eR+1,eC+1,eP+1)]
+					+ Ibins_int[Bidx(b,eR+1,eC+1,eP+1)] // 3D version
 					- Ibins_int[Bidx(b,eR+1,eC+1,sP  )]
 					- Ibins_int[Bidx(b,eR+1,sC  ,eP+1)]
 					- Ibins_int[Bidx(b,sR  ,eC+1,eP+1)]
