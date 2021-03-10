@@ -2724,8 +2724,14 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 		if (vsStride == 0)
 		{
 			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			
 			for (int i = 0; i < numVsInputs; ++i)
-				[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:vsInputs[i].offset atIndex:i];
+			{
+				[s_activeRenderPass->encoder
+					setVertexBuffer:metalBuffer
+					offset:vsInputs[i].offset
+					atIndex:i];
+			}
 		}
 		else
 		{

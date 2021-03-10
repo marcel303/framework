@@ -1075,7 +1075,8 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
 	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
-	buffer.validateMetalBuffer();
+	buffer.markMetalBufferIsUsed();
+	
 	id<MTLBuffer> metal_buffer = (id<MTLBuffer>)buffer.getMetalBuffer();
 	
 	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);

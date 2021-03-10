@@ -998,7 +998,7 @@ class ShaderBuffer
 {
 #if ENABLE_METAL
 	mutable void * m_bufferPoolElem;
-	mutable void * m_bufferPoolElemToRetire;
+	mutable bool   m_bufferPoolElemIsUsed; // if true, setData is required to allocate a new buffer
 	uint32_t m_bufferSize;
 #endif
 
@@ -1020,7 +1020,7 @@ public:
 	uint32_t getOpenglBufferId() const { return m_bufferId; }
 #endif
 #if ENABLE_METAL
-	void validateMetalBuffer() const;
+	void markMetalBufferIsUsed() const;
 	void * getMetalBuffer() const;
 	int getBufferSize() const { return m_bufferSize; }
 #endif

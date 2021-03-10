@@ -35,9 +35,37 @@
 
 static DynamicBufferPool s_bufferPool;
 
+static void freeBufferAfterRenderingIsDone(DynamicBufferPool & bufferPool, DynamicBufferPool::PoolElem * bufferPoolElem)
+{
+	// the buffer may still be in use.. wait for the render commands to finish
+	
+	@autoreleasepool
+	{
+		id <MTLCommandBuffer> cmdbuf = nil;
+		
+		if (metal_is_encoding_draw_commands())
+			cmdbuf = metal_get_command_buffer();
+		else
+			cmdbuf = [metal_get_command_queue() commandBuffer];
+			
+		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
+		{
+			[cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					bufferPool.freeBuffer(bufferPoolElem);
+				}];
+		}
+		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
+		
+		if (metal_is_encoding_draw_commands() == false)
+			[cmdbuf commit];
+	}
+}
+		
 ShaderBuffer::ShaderBuffer()
 	: m_bufferPoolElem(nullptr)
-	, m_bufferPoolElemToRetire(nullptr)
+	, m_bufferPoolElemIsUsed(false)
 	, m_bufferSize(0)
 {
 	static bool s_isInit = false; // fixme : this is not thread safe. decide whether to do this during metal_init or keep a buffer pool per shader buffer
@@ -56,68 +84,74 @@ ShaderBuffer::~ShaderBuffer()
 
 void ShaderBuffer::alloc(int numBytes)
 {
-	m_bufferSize = numBytes;
+	Assert(m_bufferPoolElem == nullptr);
+	Assert(m_bufferPoolElemIsUsed == false);
+	Assert(m_bufferSize == 0);
 	
-	setData(nullptr, 0);
+	m_bufferSize = numBytes;
 }
 
 void ShaderBuffer::free()
 {
-	if (m_bufferPoolElemToRetire != nullptr)
-		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire);
+	auto * bufferPoolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
 
-// fixme : the buffer may still be in use..
-	if (m_bufferPoolElem != nullptr)
-		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElem);
+	if (bufferPoolElem != nullptr)
+	{
+		if (m_bufferPoolElemIsUsed == false)
+		{
+			s_bufferPool.freeBuffer(bufferPoolElem);
+			m_bufferPoolElem = nullptr;
+		}
+		else
+		{
+			freeBufferAfterRenderingIsDone(s_bufferPool, bufferPoolElem);
+			
+			m_bufferPoolElem = nullptr;
+			m_bufferPoolElemIsUsed = false;
+		}
+	}
 	
 	m_bufferSize = 0;
+	
+	Assert(m_bufferPoolElem == nullptr);
+	Assert(m_bufferPoolElemIsUsed == false);
+	Assert(m_bufferSize == 0);
 }
 
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
 	fassert(numBytes <= m_bufferSize);
 	
-	if (m_bufferPoolElemToRetire != nullptr)
-		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire);
+	if (m_bufferPoolElem == nullptr || m_bufferPoolElemIsUsed)
+	{
+		if (m_bufferPoolElemIsUsed)
+		{
+			Assert(m_bufferPoolElem != nullptr);
+			freeBufferAfterRenderingIsDone(s_bufferPool, (DynamicBufferPool::PoolElem*)m_bufferPoolElem);
+		}
+		else
+			Assert(m_bufferPoolElem == nullptr);
+			
+		m_bufferPoolElem = s_bufferPool.allocBuffer();
+		m_bufferPoolElemIsUsed = false;
+	}
 	
-	m_bufferPoolElemToRetire = m_bufferPoolElem;
-	
-	m_bufferPoolElem = s_bufferPool.allocBuffer();
+	Assert(m_bufferPoolElem != nullptr && m_bufferPoolElemIsUsed == false);
 	
 	auto * poolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
 	
-	id<MTLBuffer> & buffer = poolElem->m_buffer;
+	id <MTLBuffer> & buffer = poolElem->m_buffer;
 	
 	fassert(numBytes <= buffer.length);
+	
 	memcpy(buffer.contents, bytes, numBytes);
+	
 	//[buffer didModifyRange:NSMakeRange(0, numBytes)];
 }
 
-void ShaderBuffer::validateMetalBuffer() const
+void ShaderBuffer::markMetalBufferIsUsed() const
 {
-	//if (!metal_is_encoding_draw_commands()) // fixme : remove. perhaps we should kick a small command buffer just for deferred releasing the buffer.. ?
-	//	return;
-		
-	Assert(metal_is_encoding_draw_commands());
-	
-	DynamicBufferPool::PoolElem * elemToRetire = (DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire;
-	
-	if (elemToRetire != nullptr)
-	{
-		id<MTLCommandBuffer> cmdbuf = metal_get_command_buffer();
-		
-		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
-		{
-			[cmdbuf addCompletedHandler:
-				^(id<MTLCommandBuffer> _Nonnull)
-				{
-					s_bufferPool.freeBuffer(elemToRetire);
-				}];
-		}
-		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
-		
-		m_bufferPoolElemToRetire = nullptr;
-	}
+	m_bufferPoolElemIsUsed = true;
 }
 
 void * ShaderBuffer::getMetalBuffer() const

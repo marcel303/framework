@@ -53,8 +53,9 @@ void metal_clear_scissor();
 // --- private data and helper functions ---
 
 #import <Metal/Metal.h>
-#include "gx_mesh.h"
+#import "gx_mesh.h"
 
+static const int kMaxVertexInputs = 8;
 static const int kMaxColorTargets = 8;
 
 struct RenderPipelineState
@@ -63,7 +64,7 @@ struct RenderPipelineState
 	uint8_t colorWriteMask = 0xf;
 	bool alphaToCoverageEnabled = false;
 	
-	GxVertexInput vertexInputs[8] = { };
+	GxVertexInput vertexInputs[kMaxVertexInputs] = { };
 	uint8_t vertexInputCount = 0;
 	uint8_t vertexStride = 0;
 	
@@ -74,8 +75,6 @@ struct RenderPipelineState
 		uint16_t stencilFormat = 0;
 	} renderPass;
 };
-
-extern RenderPipelineState renderState;
 
 id <MTLDevice> metal_get_device();
 id <MTLCommandQueue> metal_get_command_queue();

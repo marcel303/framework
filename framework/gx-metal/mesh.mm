@@ -48,7 +48,7 @@ GxVertexBuffer::~GxVertexBuffer()
 
 void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 {
-	Assert(m_buffer == nullptr);
+	AssertMsg(m_buffer == nullptr, "GxVertexBuffer is a static resource and as such may be allocated only once (before use)");
 	
 	id <MTLDevice> device = metal_get_device();
 	
@@ -66,6 +66,7 @@ void GxVertexBuffer::free()
 {
 	// free buffer
 	
+// todo : this should ensure the buffer is no longer used..
 	if (m_buffer != nullptr)
 	{
 		id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
@@ -119,7 +120,7 @@ GxIndexBuffer::~GxIndexBuffer()
 
 void GxIndexBuffer::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 {
-	Assert(m_buffer == nullptr);
+	AssertMsg(m_buffer == nullptr, "GxIndexBuffer is a static resource and as such may be allocated only once (before use)");
 	
 	m_numIndices = numIndices;
 	m_format = format;
@@ -160,6 +161,7 @@ void GxIndexBuffer::free()
 {
 	// free buffer
 	
+// todo : this should ensure the buffer is no longer used..
 	if (m_buffer != nullptr)
 	{
 		id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
