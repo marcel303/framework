@@ -91,6 +91,11 @@ namespace PsdCompression
 					}
 				}
 				
+				// did we reach the end?
+					
+				if (x == sx)
+					continue;
+				
 				// find # repeating bytes
 				
 				count = RleRepeatCount(bytes, x, sx);
