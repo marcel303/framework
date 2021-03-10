@@ -997,8 +997,9 @@ public:
 class ShaderBuffer
 {
 #if ENABLE_METAL
-	mutable void * m_bufferPoolElem;
-	mutable bool   m_bufferPoolElemIsUsed; // if true, setData is required to allocate a new buffer
+	mutable class DynamicBufferPool * m_bufferPool;
+	mutable class DynamicBufferPoolElem * m_bufferPoolElem;
+	mutable bool m_bufferPoolElemIsUsed; // if true, setData is required to allocate a new buffer
 	uint32_t m_bufferSize;
 #endif
 

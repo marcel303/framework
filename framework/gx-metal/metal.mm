@@ -386,11 +386,15 @@ void metal_clear_scissor()
 
 id <MTLDevice> metal_get_device()
 {
+	Assert(device != nil);
+	
 	return device;
 }
 
 id <MTLCommandQueue> metal_get_command_queue()
 {
+	Assert(queue != nil);
+	
 	return queue;
 }
 
@@ -1599,7 +1603,7 @@ static GxVertex s_gxFirstVertex;
 static bool s_gxHasFirstVertex = false;
 
 static DynamicBufferPool s_gxVertexBufferPool;
-static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
+static DynamicBufferPoolElem * s_gxVertexBufferElem = nullptr;
 static int s_gxVertexBufferElemOffset = 0;
 
 static id <MTLBuffer> s_gxIndexBufferForQuads = nil;
@@ -1717,7 +1721,7 @@ void gxShutdown()
 	[s_gxIndexBufferForTriangleFans release];
 	s_gxIndexBufferForTriangleFans = nil;
 	
-	s_gxVertexBufferPool.free();
+	s_gxVertexBufferPool.shut();
 
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;

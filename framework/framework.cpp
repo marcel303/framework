@@ -790,6 +790,8 @@ bool Framework::shutdown()
 	// destroy metal context
 	
 	metal_detach(globals.mainWindow->getWindow());
+	
+	metal_shut();
 #endif
 
 #if ENABLE_OPENGL

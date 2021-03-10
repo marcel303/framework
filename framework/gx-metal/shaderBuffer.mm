@@ -35,7 +35,7 @@
 
 static DynamicBufferPool s_bufferPool;
 
-static void freeBufferAfterRenderingIsDone(DynamicBufferPool & bufferPool, DynamicBufferPool::PoolElem * bufferPoolElem)
+static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool, DynamicBufferPoolElem * bufferPoolElem)
 {
 	// the buffer may still be in use.. wait for the render commands to finish
 	
@@ -53,7 +53,7 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool & bufferPool, Dynam
 			[cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)
 				{
-					bufferPool.freeBuffer(bufferPoolElem);
+					bufferPool->freeBuffer(bufferPoolElem);
 				}];
 		}
 		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
@@ -62,19 +62,42 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool & bufferPool, Dynam
 			[cmdbuf commit];
 	}
 }
+
+static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool)
+{
+	// the buffer pool may still be in use.. wait for the render commands to finish
+	
+	@autoreleasepool
+	{
+		id <MTLCommandBuffer> cmdbuf = nil;
 		
+		if (metal_is_encoding_draw_commands())
+			cmdbuf = metal_get_command_buffer();
+		else
+			cmdbuf = [metal_get_command_queue() commandBuffer];
+			
+		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
+		{
+			[cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					bufferPool->shut();
+					delete bufferPool;
+				}];
+		}
+		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
+		
+		if (metal_is_encoding_draw_commands() == false)
+			[cmdbuf commit];
+	}
+}
+
 ShaderBuffer::ShaderBuffer()
-	: m_bufferPoolElem(nullptr)
+	: m_bufferPool(nullptr)
+	, m_bufferPoolElem(nullptr)
 	, m_bufferPoolElemIsUsed(false)
 	, m_bufferSize(0)
 {
-	static bool s_isInit = false; // fixme : this is not thread safe. decide whether to do this during metal_init or keep a buffer pool per shader buffer
-	
-	if (!s_isInit)
-	{
-		s_isInit = true;
-		s_bufferPool.init(1 << 16); // fixme : use a separate pool (with the correct buffer size) per shader buffer ?
-	}
 }
 
 ShaderBuffer::~ShaderBuffer()
@@ -84,35 +107,44 @@ ShaderBuffer::~ShaderBuffer()
 
 void ShaderBuffer::alloc(int numBytes)
 {
+	Assert(m_bufferPool == nullptr);
 	Assert(m_bufferPoolElem == nullptr);
 	Assert(m_bufferPoolElemIsUsed == false);
 	Assert(m_bufferSize == 0);
 	
+	m_bufferPool = new DynamicBufferPool();
+	m_bufferPool->init(numBytes);
 	m_bufferSize = numBytes;
 }
 
 void ShaderBuffer::free()
 {
-	auto * bufferPoolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
-
-	if (bufferPoolElem != nullptr)
+	if (m_bufferPoolElem != nullptr)
 	{
 		if (m_bufferPoolElemIsUsed == false)
 		{
-			s_bufferPool.freeBuffer(bufferPoolElem);
+			s_bufferPool.freeBuffer(m_bufferPoolElem);
 			m_bufferPoolElem = nullptr;
 		}
 		else
 		{
-			freeBufferAfterRenderingIsDone(s_bufferPool, bufferPoolElem);
+			freeBufferAfterRenderingIsDone(m_bufferPool, m_bufferPoolElem);
 			
 			m_bufferPoolElem = nullptr;
 			m_bufferPoolElemIsUsed = false;
 		}
 	}
 	
+	if (m_bufferPool != nullptr)
+	{
+		freeBufferAfterRenderingIsDone(m_bufferPool);
+		
+		m_bufferPool = nullptr;
+	}
+	
 	m_bufferSize = 0;
 	
+	Assert(m_bufferPool == nullptr);
 	Assert(m_bufferPoolElem == nullptr);
 	Assert(m_bufferPoolElemIsUsed == false);
 	Assert(m_bufferSize == 0);
@@ -127,23 +159,21 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 		if (m_bufferPoolElemIsUsed)
 		{
 			Assert(m_bufferPoolElem != nullptr);
-			freeBufferAfterRenderingIsDone(s_bufferPool, (DynamicBufferPool::PoolElem*)m_bufferPoolElem);
+			freeBufferAfterRenderingIsDone(m_bufferPool, m_bufferPoolElem);
 		}
 		else
 			Assert(m_bufferPoolElem == nullptr);
 			
-		m_bufferPoolElem = s_bufferPool.allocBuffer();
+		m_bufferPoolElem = m_bufferPool->allocBuffer();
 		m_bufferPoolElemIsUsed = false;
 	}
 	
 	Assert(m_bufferPoolElem != nullptr && m_bufferPoolElemIsUsed == false);
 	
-	auto * poolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
-	
-	id <MTLBuffer> & buffer = poolElem->m_buffer;
+	id <MTLBuffer> & buffer = m_bufferPoolElem->m_buffer;
 	
 	fassert(numBytes <= buffer.length);
-	
+
 	memcpy(buffer.contents, bytes, numBytes);
 	
 	//[buffer didModifyRange:NSMakeRange(0, numBytes)];
@@ -156,9 +186,7 @@ void ShaderBuffer::markMetalBufferIsUsed() const
 
 void * ShaderBuffer::getMetalBuffer() const
 {
-	DynamicBufferPool::PoolElem * poolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
-	
-	return poolElem->m_buffer;
+	return m_bufferPoolElem->m_buffer;
 }
 
 //
