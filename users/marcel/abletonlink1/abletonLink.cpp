@@ -78,14 +78,25 @@ void AbletonLink::SessionState::commitAudio() const
 bool AbletonLink::init(const double bpm)
 {
 	link = new ableton::Link(bpm);
+	ownsLink = true;
+	
+	return true;
+}
+
+bool AbletonLink::init(ableton::Link * in_link)
+{
+	link = in_link;
+	ownsLink = false;
 	
 	return true;
 }
 
 void AbletonLink::shut()
 {
-	delete link;
+	if (ownsLink)
+		delete link;
 	link = nullptr;
+	ownsLink = false;
 }
 
 void AbletonLink::enable(const bool enable)

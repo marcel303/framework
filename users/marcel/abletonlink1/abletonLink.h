@@ -46,10 +46,12 @@ struct AbletonLink
 	// Ableton Link object. If you want to call methods on it directly, you'll have to include <ableton/Link.hpp> first.
 	
 	ableton::Link * link = nullptr;
+	bool ownsLink = false;
 	
 	// Creation and destruction of the Ableton Link object.
 
 	bool init(const double bpm);
+	bool init(ableton::Link * link);
 	void shut();
 
 	// Ableton Link interface.
