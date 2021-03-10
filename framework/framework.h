@@ -328,7 +328,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 // GX types
 
 typedef int32_t GxImmediateIndex;
-typedef uint32_t GxShaderBufferId;
 
 #if USE_LEGACY_OPENGL
 
@@ -997,8 +996,16 @@ public:
 
 class ShaderBuffer
 {
-	GxShaderBufferId m_buffer;
-	int m_bufferSize;
+#if ENABLE_METAL
+	mutable void * m_bufferPoolElem;
+	mutable void * m_bufferPoolElemToRetire;
+	uint32_t m_bufferSize;
+#endif
+
+#if ENABLE_OPENGL
+	uint32_t m_bufferId;
+	uint32_t m_bufferSize;
+#endif
 	
 public:
 	ShaderBuffer();
@@ -1010,10 +1017,12 @@ public:
 	void setData(const void * bytes, int numBytes);
 	
 #if ENABLE_OPENGL
-	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
+	uint32_t getOpenglBufferId() const { return m_bufferId; }
 #endif
 #if ENABLE_METAL
-	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
+	void validateMetalBuffer() const;
+	void * getMetalBuffer() const;
+	int getBufferSize() const { return m_bufferSize; }
 #endif
 };
 
@@ -1021,7 +1030,7 @@ public:
 
 class ShaderBufferRw
 {
-	GxShaderBufferId m_buffer;
+	uint32_t m_bufferId;
 
 public:
 	ShaderBufferRw();
@@ -1036,10 +1045,10 @@ public:
 	}
 	
 #if ENABLE_OPENGL
-	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
+	uint32_t getOpenglBufferId() const { return m_bufferId; }
 #endif
 #if ENABLE_METAL
-	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
+	uint32_t getMetalBufferId() const { return m_bufferId; }
 #endif
 };
 

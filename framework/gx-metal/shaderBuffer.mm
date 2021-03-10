@@ -29,100 +29,108 @@
 
 #if ENABLE_METAL
 
+#include "bufferPool.h"
 #include "metal.h"
 #include <map>
 
-id <MTLDevice> metal_get_device();
-
-static std::map<int, id<MTLBuffer>> s_buffers;
-static int s_nextBufferId = 1;
-
-id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId)
-{
-	auto i = s_buffers.find(bufferId);
-	
-	fassert(i != s_buffers.end());
-	if (i != s_buffers.end())
-		return i->second;
-	else
-		return nil;
-}
+static DynamicBufferPool s_bufferPool;
 
 ShaderBuffer::ShaderBuffer()
-	: m_buffer(0)
+	: m_bufferPoolElem(nullptr)
+	, m_bufferPoolElemToRetire(nullptr)
+	, m_bufferSize(0)
 {
-	m_buffer = s_nextBufferId++;
+	static bool s_isInit = false; // fixme : this is not thread safe. decide whether to do this during metal_init or keep a buffer pool per shader buffer
 	
-	fassert(s_buffers[m_buffer] == nil);
-	s_buffers[m_buffer] = nil;
+	if (!s_isInit)
+	{
+		s_isInit = true;
+		s_bufferPool.init(1 << 16); // fixme : use a separate pool (with the correct buffer size) per shader buffer ?
+	}
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
-	auto i = s_buffers.find(m_buffer);
-	
-	fassert(i != s_buffers.end());
-	if (i != s_buffers.end())
-	{
-		id<MTLBuffer> buffer = i->second;
-		
-		if (buffer != nil)
-		{
-			[buffer release];
-			buffer = nil;
-		}
-		
-		s_buffers.erase(i);
-	}
+	free();
 }
 
 void ShaderBuffer::alloc(int numBytes)
 {
-	fassert(m_buffer);
+	m_bufferSize = numBytes;
 	
-	id<MTLDevice> device = metal_get_device();
-	
-	id<MTLBuffer> & buffer = s_buffers[m_buffer];
-	
-	if (buffer != nil && buffer.length == numBytes)
-		return;
-	
-	if (buffer != nil)
-	{
-		[buffer release];
-		buffer = nil;
-	}
-	
-	buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+	setData(nullptr, 0);
 }
 
 void ShaderBuffer::free()
 {
-	id<MTLBuffer> & buffer = s_buffers[m_buffer];
+	if (m_bufferPoolElemToRetire != nullptr)
+		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire);
+
+// fixme : the buffer may still be in use..
+	if (m_bufferPoolElem != nullptr)
+		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElem);
 	
-	[buffer release];
-	buffer = nil;
+	m_bufferSize = 0;
 }
 
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
-	fassert(m_buffer);
+	fassert(numBytes <= m_bufferSize);
 	
-	id<MTLBuffer> & buffer = s_buffers[m_buffer];
+	if (m_bufferPoolElemToRetire != nullptr)
+		s_bufferPool.freeBuffer((DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire);
 	
-	fassert(buffer != nil);
-	if (buffer == nil)
-		return;
+	m_bufferPoolElemToRetire = m_bufferPoolElem;
+	
+	m_bufferPoolElem = s_bufferPool.allocBuffer();
+	
+	auto * poolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
+	
+	id<MTLBuffer> & buffer = poolElem->m_buffer;
 	
 	fassert(numBytes <= buffer.length);
 	memcpy(buffer.contents, bytes, numBytes);
-	[buffer didModifyRange:NSMakeRange(0, numBytes)];
+	//[buffer didModifyRange:NSMakeRange(0, numBytes)];
+}
+
+void ShaderBuffer::validateMetalBuffer() const
+{
+	//if (!metal_is_encoding_draw_commands()) // fixme : remove. perhaps we should kick a small command buffer just for deferred releasing the buffer.. ?
+	//	return;
+		
+	Assert(metal_is_encoding_draw_commands());
+	
+	DynamicBufferPool::PoolElem * elemToRetire = (DynamicBufferPool::PoolElem*)m_bufferPoolElemToRetire;
+	
+	if (elemToRetire != nullptr)
+	{
+		id<MTLCommandBuffer> cmdbuf = metal_get_command_buffer();
+		
+		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
+		{
+			[cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					s_bufferPool.freeBuffer(elemToRetire);
+				}];
+		}
+		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
+		
+		m_bufferPoolElemToRetire = nullptr;
+	}
+}
+
+void * ShaderBuffer::getMetalBuffer() const
+{
+	DynamicBufferPool::PoolElem * poolElem = (DynamicBufferPool::PoolElem*)m_bufferPoolElem;
+	
+	return poolElem->m_buffer;
 }
 
 //
 
 ShaderBufferRw::ShaderBufferRw()
-	: m_buffer(0)
+	: m_bufferId(0)
 {
 }
 
@@ -132,7 +140,7 @@ ShaderBufferRw::~ShaderBufferRw()
 
 void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 {
-	fassert(m_buffer);
+	fassert(m_bufferId);
 }
 
 #endif

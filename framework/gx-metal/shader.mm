@@ -1069,33 +1069,36 @@ void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool
 	}
 }
 
-id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId);
+id<MTLBuffer> metal_get_buffer(const uint32_t bufferId);
 
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
-// todo : optimize buffers. for now (to keep things simple so we can get up and running quickly), we just do a memcpy, when we should be setting the MTLBuffer directly
-
 	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
-	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getMetalBuffer());
+	buffer.validateMetalBuffer();
+	id<MTLBuffer> metal_buffer = (id<MTLBuffer>)buffer.getMetalBuffer();
 	
 	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);
 	const int psIndex = m_cacheElem->psInfo.getBufferIndex(name);
 	
 	if (vsIndex >= 0)
 	{
-		const int shaderBufferLength = m_cacheElem->vsInfo.uniformBufferSize[vsIndex];
-		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the vs expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
-		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
-		memcpy(m_cacheElem->vsUniformData[vsIndex], metal_buffer.contents, copySize);
+		AssertMsg(
+			buffer.getBufferSize() <= m_cacheElem->vsInfo.uniformBufferSize[vsIndex],
+			"the buffer is larger than what the vs expects. length=%d, expected=%d",
+			buffer.getBufferSize(),
+			m_cacheElem->vsInfo.uniformBufferSize[vsIndex]);
+		
+		m_cacheElem->vsBuffers[vsIndex] = metal_buffer;
 	}
 	
 	if (psIndex >= 0)
 	{
-		const int shaderBufferLength = m_cacheElem->psInfo.uniformBufferSize[psIndex];
-		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the ps expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
-		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
-		memcpy(m_cacheElem->psUniformData[psIndex], metal_buffer.contents, copySize);
+		AssertMsg(
+			buffer.getBufferSize() <= m_cacheElem->psInfo.uniformBufferSize[psIndex],
+			"the buffer is larger than what the ps expects. length=%d, expected=%d",
+			buffer.getBufferSize(),
+			m_cacheElem->psInfo.uniformBufferSize[psIndex]);
 		
 		m_cacheElem->psBuffers[psIndex] = metal_buffer;
 	}
