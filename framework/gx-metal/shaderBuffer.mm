@@ -114,6 +114,8 @@ void ShaderBuffer::alloc(int numBytes)
 	
 	m_bufferPool = new DynamicBufferPool();
 	m_bufferPool->init(numBytes);
+	m_bufferPoolElem = m_bufferPool->allocBuffer();
+	m_bufferPoolElemIsUsed = false;
 	m_bufferSize = numBytes;
 }
 
