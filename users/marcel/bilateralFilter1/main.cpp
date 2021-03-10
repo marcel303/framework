@@ -727,6 +727,10 @@ static bool testRecursiveBf_1ch()
 		}
 	}
 	
+	filteredLuminance.free();
+	
+	luminance.free();
+	
 	// convert and save the filtered image
 	
 	saveImage(&filteredImage, "lenna-filtered-recursive-bf-grays.png");
@@ -800,6 +804,8 @@ static bool testRecursiveBf_4ch()
 		for (int x = 0; x < filteredImage.sx; ++x)
 			line[x].a = 255;
 	}
+	
+	luminance.free();
 	
 	// save the filtered image
 	
