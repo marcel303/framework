@@ -1038,14 +1038,14 @@ static FbxDeformer * readFbxDeformer(int & logIndent, const FbxRecord & deformer
 
 //
 
-template <typename Key, typename Value, unsigned int PoolSize>
+template <typename Key, typename Value, uint32_t PoolSize>
 class HashMap
 {
 	class Node
 	{
 	public:
 		Node * next;
-		unsigned int hash;
+		uint32_t hash;
 		Key key;
 		Value value;
 	};
@@ -1057,7 +1057,7 @@ class HashMap
 		public:
 			Block * next;
 			Node nodes[PoolSize];
-			unsigned int numNodes;
+			uint32_t numNodes;
 			
 			Block()
 			{
@@ -1117,19 +1117,19 @@ class HashMap
 	};
 	
 	Node ** m_buckets;
-	unsigned int m_bucketCount;
+	uint32_t m_bucketCount;
 	
 	Allocator m_nodeAlloc;
 	Node * m_currentAlloc;
 	
-	template <typename T> static unsigned int calcHash(const T & value)
+	template <typename T> static uint32_t calcHash(const T & value)
 	{
 		if (sizeof(T) < 4)
 		{
 			const int numBytes = sizeof(T);
 			const uint8_t * bytes = (uint8_t*)&value;
 			
-			unsigned int result = 0;
+			uint32_t result = 0;
 			
 			for (int i = 0; i < numBytes; ++i)
 				result = result * 17 + bytes[i];
@@ -1141,7 +1141,7 @@ class HashMap
 			const int numWords = sizeof(T) >> 2;
 			const uint32_t * words = (uint32_t*)&value;
 			
-			unsigned int result = 0;
+			uint32_t result = 0;
 			
 			for (int i = 0; i < numWords; ++i)
 				result = result * 982451653 + words[i];
@@ -1151,11 +1151,11 @@ class HashMap
 	}
 	
 public:
-	HashMap(unsigned int bucketCount)
+	HashMap(uint32_t bucketCount)
 	{
 		m_buckets = new Node*[bucketCount];
 		m_bucketCount = bucketCount;
-		for (unsigned int i = 0; i < bucketCount; ++i)
+		for (uint32_t i = 0; i < bucketCount; ++i)
 			m_buckets[i] = 0;
 		
 		m_currentAlloc = 0;
@@ -1177,8 +1177,8 @@ public:
 	
 	bool allocOrFetchValue(Value & value)
 	{
-		const unsigned int hash = calcHash(m_currentAlloc->key);
-		const unsigned int bucketIndex = hash % m_bucketCount;
+		const uint32_t hash = calcHash(m_currentAlloc->key);
+		const uint32_t bucketIndex = hash % m_bucketCount;
 		
 		for (const Node * node = m_buckets[bucketIndex]; node != 0; node = node->next)
 		{
