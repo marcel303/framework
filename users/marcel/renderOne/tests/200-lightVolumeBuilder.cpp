@@ -321,6 +321,8 @@ int main(int argc, char * argv[])
 		helper.reset();
 	}
 	
+	helper.free();
+	
 	framework.shutdown();
 	
 	return 0;

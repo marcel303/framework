@@ -615,6 +615,7 @@ int main(int argc, char * argv[])
 	skyTarget.free();
 	
 	shadowMapDrawer.free();
+	helper.free();
 	
 	renderer.free();
 	

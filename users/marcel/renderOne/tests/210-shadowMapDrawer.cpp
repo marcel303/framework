@@ -341,6 +341,8 @@ int main(int argc, char * argv[])
 		d.reset();
 	}
 	
+	helper.free();
+	
 	d.free();
 	
 	framework.shutdown();
