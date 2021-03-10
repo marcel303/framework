@@ -1257,7 +1257,7 @@ public:
 		m_indices.reserve(vertexIndices.size());
 		
 		using WeldVertices = HashMap<Vertex, int, 1024>;
-		WeldVertices weldVertices((vertexIndices.size() + 2) / 3);
+		WeldVertices weldVertices((int(vertexIndices.size()) + 2) / 3);
 		
 		for (size_t i = 0; i < vertexIndices.size(); ++i)
 		{

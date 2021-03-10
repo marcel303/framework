@@ -48,7 +48,7 @@ public:
 		return fread(&dst, sizeof(dst), 1, file) == 1;
 	}
 	
-	bool read(void * dst, int numBytes)
+	bool read(void * dst, size_t numBytes)
 	{
 		return fread(dst, numBytes, 1, file) == 1;
 	}
@@ -65,7 +65,7 @@ public:
 		}
 	}
 	
-	bool skip(int numBytes)
+	bool skip(size_t numBytes)
 	{
 		return fseek(file, numBytes, SEEK_CUR) == 0;
 	}

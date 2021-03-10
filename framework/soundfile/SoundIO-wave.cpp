@@ -69,7 +69,7 @@ SoundData * loadSound_WAV(const char * filename)
 	}
 	
 	uint8_t * bytes = new uint8_t[headers.dataLength];
-	int numBytes = headers.dataLength;
+	size_t numBytes = headers.dataLength;
 
 	if (!r.read(bytes, numBytes))
 	{
@@ -88,9 +88,9 @@ SoundData * loadSound_WAV(const char * filename)
 			
 			const uint8_t * srcValues = bytes;
 			int8_t * dstValues = (int8_t*)bytes;
-			const int numValues = numBytes;
+			const size_t numValues = numBytes;
 			
-			for (int i = 0; i < numValues; ++i)
+			for (size_t i = 0; i < numValues; ++i)
 			{
 				const int value = int(srcValues[i]) - 128;
 				
@@ -103,10 +103,10 @@ SoundData * loadSound_WAV(const char * filename)
 		}
 		else if (headers.fmtBitDepth == 24)
 		{
-			const int sampleCount = numBytes / 3;
+			const size_t sampleCount = numBytes / 3;
 			float * samplesData = new float[sampleCount];
 			
-			for (int i = 0; i < sampleCount; ++i)
+			for (size_t i = 0; i < sampleCount; ++i)
 			{
 				int32_t value =
 					(bytes[i * 3 + 0] << 8) |
@@ -131,9 +131,9 @@ SoundData * loadSound_WAV(const char * filename)
 		{
 			const int32_t * srcValues = (int32_t*)bytes;
 			float * dstValues = (float*)bytes;
-			const int numValues = numBytes / 4;
+			const size_t numValues = numBytes / 4;
 			
-			for (int i = 0; i < numValues; ++i)
+			for (size_t i = 0; i < numValues; ++i)
 			{
 				dstValues[i] = float(srcValues[i] / double(1 << 31));
 			}
@@ -162,7 +162,7 @@ SoundData * loadSound_WAV(const char * filename)
 	SoundData * soundData = new SoundData();
 	soundData->channelSize = headers.fmtBitDepth / 8;
 	soundData->channelCount = headers.fmtChannelCount;
-	soundData->sampleCount = numBytes / (headers.fmtBitDepth / 8 * headers.fmtChannelCount);
+	soundData->sampleCount = int(numBytes / (headers.fmtBitDepth / 8 * headers.fmtChannelCount)); // todo : size_t for soundData->sampleCount ?
 	soundData->sampleRate = headers.fmtSampleRate;
 	soundData->sampleData = bytes;
 	
