@@ -71,11 +71,14 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
 					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
-					logDebug("found vs uniform buffer: %s", bufferName);
+					logDebug("found vs uniform buffer: %s @%d", bufferName, arg.index);
 					vsInfo.bufferName[arg.index] = bufferName;
 					
 					vsInfo.initUniforms(arg);
 					addUniforms(arg, 'v');
+					
+					if (strcmp(bufferName, "ShaderUniforms") == 0)
+						vsMainUniformBufferIndex = arg.index;
 					
 					Assert(vsUniformData[arg.index] == nullptr);
 					vsUniformData[arg.index] = malloc(arg.bufferDataSize);
@@ -101,11 +104,14 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
 					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
-					logDebug("found ps uniform buffer: %s", bufferName);
+					logDebug("found ps uniform buffer: %s @%d", bufferName, arg.index);
 					psInfo.bufferName[arg.index] = bufferName;
 					
 					psInfo.initUniforms(arg);
 					addUniforms(arg, 'p');
+					
+					if (strcmp(bufferName, "ShaderUniforms") == 0)
+						psMainUniformBufferIndex = arg.index;
 					
 					Assert(psUniformData[arg.index] == nullptr);
 					psUniformData[arg.index] = malloc(arg.bufferDataSize);

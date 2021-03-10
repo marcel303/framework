@@ -137,6 +137,10 @@ public:
 	void * vsUniformData[kMaxBuffers] = { };
 	void * psUniformData[kMaxBuffers] = { };
 	
+	int vsMainUniformBufferIndex = -1;
+	int psMainUniformBufferIndex = -1;
+	
+	id <MTLBuffer> vsBuffers[kMaxBuffers] = { };
 	id <MTLBuffer> psBuffers[kMaxBuffers] = { };
 	
 	std::vector<TextureInfo> textureInfos;
