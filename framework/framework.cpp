@@ -1752,7 +1752,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			if (fopen_s(&file, f, "rb") == 0)
 			{
 				Verify(fseek(file, 0, SEEK_END) == 0);
-				const ssize_t size = ftell(file);
+				const int64_t size = ftell(file);
 				fclose(file);
 				if (size >=0 && size <= 512*1024)
 					g_soundCache.findOrCreate(f);

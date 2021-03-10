@@ -54,7 +54,7 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 		Verify(fseek(file, 0, SEEK_END) == 0);
 		{
-			const ssize_t fileSize = ftell(file);
+			const int64_t fileSize = ftell(file);
 			Assert(fileSize >= 0 && fileSize <= INT_MAX);
 			numBytes = (int)fileSize;
 		}

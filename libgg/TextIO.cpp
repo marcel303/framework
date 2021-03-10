@@ -207,7 +207,7 @@ namespace TextIO
 		if (fseek(file, 0, SEEK_END) != 0)
 			goto cleanup;
 
-		ssize_t ssize = ftell(file);
+		int64_t ssize = ftell(file);
 		
 		if (ssize < 0)
 			goto cleanup;

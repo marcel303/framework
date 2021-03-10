@@ -201,7 +201,7 @@ bool StbFont::load(const char * filename)
 
 		Verify(fseek(file, 0, SEEK_END) == 0);
 		{
-			const ssize_t fileSize = ftell(file);
+			const int64_t fileSize = ftell(file);
 			Assert(fileSize >= 0);
 			bufferSize = (size_t)fileSize;
 		}

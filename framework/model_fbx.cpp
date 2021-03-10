@@ -1728,10 +1728,10 @@ namespace AnimModel
 		}
 		else
 		{
-			const ssize_t p1 = ftell(file);
+			const int64_t p1 = ftell(file);
 			Verify(fseek(file, 0, SEEK_END) == 0);
 			
-			const ssize_t p2 = ftell(file);
+			const int64_t p2 = ftell(file);
 			Verify(fseek(file, 0, SEEK_SET) == 0);
 			
 			Assert(p1 >= 0 && p2 >= 0);
