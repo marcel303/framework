@@ -1,6 +1,14 @@
 #include "framework.h"
 
-#define SAMPLE_RATE 44100.f
+#include <string.h> // memset
+
+#define SAMPLE_RATE 44100
+//#define SAMPLE_RATE 48000
+//#define SAMPLE_RATE 96000
+//#define SAMPLE_RATE 192000
+
+#define BaseSampleRate 44100 // freeverb constants assume 44.1kHz
+#define ScaleBufferSize(bufferSize) ((bufferSize) * SAMPLE_RATE / BaseSampleRate)
 
 /*
     == SOUL example code ==
@@ -10,12 +18,28 @@
 /// Title: An implementation of the classic Freeverb reverb algorithm.
 
 //==============================================================================
-static const float allpassFilter_retainValue = powf(0.5f, 44100 / float(SAMPLE_RATE));
+static const float allpassFilter_retainValue = 0.5f; // default Freeverb
+//static const float allpassFilter_retainValue = 0.618f; // golden ration, true allpass
 
-template <int bufferSize>
+// https://ccrma.stanford.edu/~jos/pasp/Schroeder_Reverberators.html#14451:
+/* As discussed above in §3.4.2, the allpass filters provide ``colorless'' high-density echoes in the late impulse response of the reverberator [420,421]. These allpass filters may also be referred to as diffusers. While allpass filters are ``colorless'' in theory, perceptually, their impulse responses are only colorless when they are extremely short (less than 10 ms or so). Longer allpass impulse responses sound similar to feedback comb-filters. For steady-state tones, however, such as sinusoids, the allpass property gives the same gain at every frequency, unlike comb filters. */
 struct AllpassFilter
 {
-	float buffer[bufferSize] = { };
+	AllpassFilter(const int in_bufferSize)
+		: buffer(new float[ScaleBufferSize(in_bufferSize)])
+		, bufferSize(ScaleBufferSize(in_bufferSize))
+	{
+		memset(buffer, 0, bufferSize * sizeof(buffer[0]));
+	}
+	
+	~AllpassFilter()
+	{
+		delete [] buffer;
+		buffer = nullptr;
+	}
+	
+	float * buffer = nullptr;
+	int bufferSize = 0;
 
 	int bufferIndex = 0;
 	
@@ -34,12 +58,30 @@ struct AllpassFilter
 };
 
 //==============================================================================
-static const float combFilter_gain = powf(0.015f, 44100 / float(SAMPLE_RATE));
+static const float combFilter_gain = 0.015f;
 
-template <int bufferSize>
+// https://ccrma.stanford.edu/~jos/pasp/Schroeder_Reverberators.html#14451:
+/* The parallel comb-filter bank is intended to give a psychoacoustically appropriate fluctuation in the reverberator frequency response. As discussed in Chapter 2 (§2.6.2), a feedback comb filter can simulate a pair of parallel walls, so one could choose the delay-line length in each comb filter to be the number of samples it takes for a plane wave to propagate from one wall to the opposite wall and back. However, in his original paper [415], Schroeder describes a more psychoacoustically motivated approach: */
 struct CombFilter
 {
-    float buffer[bufferSize] = { };
+	// note : 'room size' should modulate the buffer size here to be properly called
+	//        'room size', otherwise 'room size' is more like a 'liveness' or 'reflectivity' factor
+	
+	CombFilter(const int in_bufferSize)
+		: buffer(new float[ScaleBufferSize(in_bufferSize)])
+		, bufferSize(ScaleBufferSize(in_bufferSize))
+	{
+		memset(buffer, 0, bufferSize * sizeof(buffer[0]));
+	}
+	
+	~CombFilter()
+	{
+		delete [] buffer;
+		buffer = nullptr;
+	}
+	
+    float * buffer = nullptr;
+    int bufferSize = 0;
 
 	int bufferIndex = 0;
 	
@@ -71,7 +113,8 @@ struct Mixer
     void process(
 		const float audioInLeftWet,
 		const float audioInRightWet,
-		const float audioInDry,
+		const float audioInDry1,
+		const float audioInDry2,
 		const float dryIn,
 		const float wet1In,
 		const float wet2In,
@@ -81,8 +124,8 @@ struct Mixer
 		const float left  = (audioInLeftWet  * wet1In) + (audioInRightWet * wet2In);
 		const float right = (audioInRightWet * wet1In) + (audioInLeftWet  * wet2In);
 
-		audioOut1 = left + audioInDry * dryIn;
-		audioOut2 = right + audioInDry * dryIn;
+		audioOut1 = left + audioInDry1 * dryIn;
+		audioOut2 = right + audioInDry2 * dryIn;
     }
 };
 
@@ -162,7 +205,7 @@ struct ReverbParameterProcessorParam
     event damping  { [this](float newValue)
 		{
 			dampingScaled  = newValue / 100.0f;
-			dampingScaled = powf(dampingScaled, 44100 / float(SAMPLE_RATE));
+			dampingScaled = powf(dampingScaled, BaseSampleRate / float(SAMPLE_RATE));
 			onUpdate();
 		} };
     event wetLevel { [this](float newValue)    { wetLevelScaled = newValue / 100.0f; onUpdate(); } };
@@ -204,19 +247,19 @@ struct ReverbChannel
 	// see: https://ccrma.stanford.edu/~jos/pasp/Freeverb.html
 	// for the magical offset constants used
 	
-	AllpassFilter<225 + offset> allpass_1;
-	AllpassFilter<341 + offset> allpass_2;
-	AllpassFilter<441 + offset> allpass_3;
-	AllpassFilter<556 + offset> allpass_4;
+	AllpassFilter allpass_1 { 225 + offset };
+	AllpassFilter allpass_2 { 341 + offset };
+	AllpassFilter allpass_3 { 441 + offset };
+	AllpassFilter allpass_4 { 556 + offset };
 
-	CombFilter<1116 + offset> comb_1;
-	CombFilter<1188 + offset> comb_2;
-	CombFilter<1277 + offset> comb_3;
-	CombFilter<1356 + offset> comb_4;
-	CombFilter<1422 + offset> comb_5;
-	CombFilter<1491 + offset> comb_6;
-	CombFilter<1557 + offset> comb_7;
-	CombFilter<1617 + offset> comb_8;
+	CombFilter comb_1 { 1116 + offset };
+	CombFilter comb_2 { 1188 + offset };
+	CombFilter comb_3 { 1277 + offset };
+	CombFilter comb_4 { 1356 + offset };
+	CombFilter comb_5 { 1422 + offset };
+	CombFilter comb_6 { 1491 + offset };
+	CombFilter comb_7 { 1557 + offset };
+	CombFilter comb_8 { 1617 + offset };
 
     float process(
 		const float audioIn,
@@ -241,18 +284,6 @@ struct ReverbChannel
 		audioOut = allpass_3.process(audioOut);
 		audioOut = allpass_4.process(audioOut);
 
-/*
-		// todo : does this branch out and sum the results individually ? or are all comb results summed instead ?
-        comb_1,
-        comb_2,
-        comb_3,
-        comb_4,
-        comb_5,
-        comb_6,
-        comb_7,
-        comb_8  -> allpass_1 -> allpass_2 -> allpass_3 -> allpass_4 -> audioOut;
-*/
-
 		return audioOut;
     }
 };
@@ -269,7 +300,6 @@ struct UiBinding
 	std::string text;
 	std::string unit;
 	float step;
-	
 	float value;
 	
 	void operator=(const float in_value)
@@ -325,60 +355,97 @@ struct Reverb
 	ReverbChannel <0> reverbChannelLeft;
 	ReverbChannel <23> reverbChannelRight;
 
-    void process(float audioIn, float & audioOut1, float & audioOut2)
+    void process(
+		const float audioIn1,
+		const float audioIn2,
+		float & audioOut1,
+		float & audioOut2)
     {
-        // Parameter outputs to smoothing processors
+		// Parameter outputs to smoothing processors
 		dryGainParameterRamp.updateParameter(param.dryGainOut);
         wetGain1ParameterRamp.updateParameter(param.wetGain1Out);
         wetGain2ParameterRamp.updateParameter(param.wetGain2Out);
         dampingParameterRamp.updateParameter(param.dampingOut);
         feedbackParameterRamp.updateParameter(param.feedbackOut);
-        
-        // Sum the audio
-        // todo : audioIn -> Mixer.audioInDry;
 
 		const float damping = dampingParameterRamp.process();
 		const float feedback = feedbackParameterRamp.process();
 		
+		const float audioIn = (audioIn1 + audioIn2) * 0.5f;
+		
         // Left channel
         const float audioInLeftWet = reverbChannelLeft.process(audioIn, damping, feedback);
-        // todo : reverbChannelLeft                  -> Mixer.audioInLeftWet;
 
         // Right channel
         const float audioInRightWet = reverbChannelRight.process(audioIn, damping, feedback);
-        // todo : reverbChannelRight        -> Mixer.audioInRightWet;
 
 		Mixer mixer;
-		mixer.process(audioInLeftWet, audioInRightWet, audioIn, dryGainParameterRamp.process(), wetGain1ParameterRamp.process(), wetGain2ParameterRamp.process(), audioOut1, audioOut2);
+		mixer.process(
+			audioInLeftWet,
+			audioInRightWet,
+			audioIn1,
+			audioIn2,
+			dryGainParameterRamp.process(),
+			wetGain1ParameterRamp.process(),
+			wetGain2ParameterRamp.process(),
+			audioOut1,
+			audioOut2);
     }
 };
 
 #include "audiooutput/AudioOutput_Native.h"
+#include "audiostream/AudioStreamWave.h"
 
 struct AudioStream_ReverbTest : AudioStream
 {
+	AudioStreamWave source;
+	
 	Reverb reverb;
 	
 	int noiseSamplesLeft = 0;
+	double noisePhase = 0.0f;
+	
+	AudioStream_ReverbTest()
+	{
+		//source.Open("snare.wav", true);
+		source.Open("4 - Omake 8 - Thunder Force IV.wav", true);
+		//source.Open("3 - Hydrocity Zone Act 2 - Sonic the Hedgehog 3.wav", true);
+	}
 	
 	virtual int Provide(int numSamples, AudioSample * samples) override
 	{
+		const int numSourceSamples = source.Provide(numSamples, samples);
+		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			float audioIn = 0.f;
+			float audioIn1 = 0.f;
+			float audioIn2 = 0.f;
 			
 			if (noiseSamplesLeft > 0)
 			{
 				noiseSamplesLeft--;
-				audioIn = random<float>(-.1f, +.1f);
+			#if 1
+				noisePhase = fmod(noisePhase + 440.0 / SAMPLE_RATE, 1.0);
+				audioIn1 = (noisePhase - 0.5) * 2.0 * 0.1 * float(1 << 15);
+				audioIn2 = (noisePhase - 0.5) * 2.0 * 0.1 * float(1 << 15);
+			#else
+				audioIn1 = random<float>(-.1f, +.1f) * float(1 << 15);
+				audioIn2 = random<float>(-.1f, +.1f) * float(1 << 15);
+			#endif
 			}
-		
+			
+			if (i < numSourceSamples)
+			{
+				audioIn1 += float(samples[i].channel[0]);
+				audioIn2 += float(samples[i].channel[1]);
+			}
+			
 			float audioOut1;
 			float audioOut2;
-			reverb.process(audioIn, audioOut1, audioOut2);
+			reverb.process(audioIn1, audioIn2, audioOut1, audioOut2);
 			
-			samples[i].channel[0] = audioOut1 * (1 << 15);
-			samples[i].channel[1] = audioOut2 * (1 << 15);
+			samples[i].channel[0] = int16_t(audioOut1);
+			samples[i].channel[1] = int16_t(audioOut2);
 		}
 		
 		return numSamples;
@@ -394,9 +461,10 @@ int main(int argc, char * argv[])
 	initUi();
 	UiState uiState;
 	uiState.font = "engine/fonts/Roboto-Regular.ttf"; // fixme : don't let UiState define a font by default, or ensure the font exists
+	uiState.sx = 400;
 	
 	AudioOutput_Native audioOutput;
-	audioOutput.Initialize(2, 44100, 256);
+	audioOutput.Initialize(2, SAMPLE_RATE, 256);
 	
 	AudioStream_ReverbTest audioStream;
 	audioOutput.Play(&audioStream);
@@ -410,12 +478,14 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 			
+	#if 0
 		if (mouse.isDown(BUTTON_LEFT))
 		{
 			// fixme : unsafe
 			
 			audioStream.noiseSamplesLeft = SAMPLE_RATE / 20;
 		}
+	#endif
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
