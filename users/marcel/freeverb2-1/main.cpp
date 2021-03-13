@@ -436,8 +436,9 @@ struct AudioStream_ReverbTest : AudioStream
 			
 			if (i < numSourceSamples)
 			{
-				audioIn1 += float(samples[i].channel[0]);
-				audioIn2 += float(samples[i].channel[1]);
+				const float gain = .25f; 
+				audioIn1 += float(samples[i].channel[0]) * gain;
+				audioIn2 += float(samples[i].channel[1]) * gain;
 			}
 			
 			float audioOut1;
@@ -460,7 +461,9 @@ int main(int argc, char * argv[])
 	
 	initUi();
 	UiState uiState;
-	uiState.font = "engine/fonts/Roboto-Regular.ttf"; // fixme : don't let UiState define a font by default, or ensure the font exists
+	uiState.font = "engine/fonts/Roboto-Regular.ttf"; // fixme : don't let UiState define a font by default, or ensure the font exists. or add calibri.ttf as a resource to libparticle-ui
+	uiState.x = 100;
+	uiState.y = 100;
 	uiState.sx = 400;
 	
 	AudioOutput_Native audioOutput;
