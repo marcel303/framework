@@ -4414,7 +4414,11 @@ SDL_Surface * getWindowSurface()
 void setupPaths(const char * chibiResourcePaths)
 {
 #if FRAMEWORK_USE_SDL
-	changeDirectory(SDL_GetBasePath());
+	char * basePath = SDL_GetBasePath();
+	
+	changeDirectory(basePath);
+	
+	SDL_free(basePath);
 #endif
 	
 	if (chibiResourcePaths != nullptr)
