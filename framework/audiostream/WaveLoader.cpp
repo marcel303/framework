@@ -77,7 +77,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 			chunk = kChunk_RIFF;
 		else if (checkId(id, "data"))
 			chunk = kChunk_DATA;
-		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact") || checkId(id, "attn") || checkId(id, "_PMX"))
+		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact") || checkId(id, "attn") || checkId(id, "_PMX") || checkId(id, "PEAK"))
 			chunk = kChunk_OTHER;
 		else
 		{
@@ -123,42 +123,42 @@ bool WaveHeadersReader::read(FILE * file)
 			ok &= r.read(fmtBlockAlign);
 			ok &= r.read(fmtBitDepth);
 			
-			//if (fmtCompressionType != 1)
-				ok &= r.read(fmtExtraLength);
-			//else
-			//	fmtExtraLength = 0;
-			
-			if (fmtCompressionType == WAVE_FORMAT_EXTENSIBLE)
+			if (fmtLength > 16)
 			{
-				// read WAVEFORMATEXTENSIBLE structure and change format accordingly
+				ok &= r.read(fmtExtraLength);
 				
-				int16_t numValidBits;
-				int32_t channelMask;
-				int32_t guidFormatTag;
-				int8_t guidRemainder[12];
-				
-				ok &= r.read(numValidBits);
-				ok &= r.read(channelMask);
-				ok &= r.read(guidFormatTag);
-				ok &= r.read(guidRemainder, 12);
-				
-				if (guidFormatTag == WAVE_FORMAT_PCM)
+				if (fmtCompressionType == WAVE_FORMAT_EXTENSIBLE)
 				{
-					fmtCompressionType = WAVE_FORMAT_PCM;
-				}
-				else if (guidFormatTag == WAVE_FORMAT_IEEE_FLOAT)
-				{
-					fmtCompressionType = WAVE_FORMAT_IEEE_FLOAT;
+					// read WAVEFORMATEXTENSIBLE structure and change format accordingly
+					
+					int16_t numValidBits;
+					int32_t channelMask;
+					int32_t guidFormatTag;
+					int8_t guidRemainder[12];
+					
+					ok &= r.read(numValidBits);
+					ok &= r.read(channelMask);
+					ok &= r.read(guidFormatTag);
+					ok &= r.read(guidRemainder, 12);
+					
+					if (guidFormatTag == WAVE_FORMAT_PCM)
+					{
+						fmtCompressionType = WAVE_FORMAT_PCM;
+					}
+					else if (guidFormatTag == WAVE_FORMAT_IEEE_FLOAT)
+					{
+						fmtCompressionType = WAVE_FORMAT_IEEE_FLOAT;
+					}
+					else
+					{
+						LOG_ERR("unknown format found in WAVEFORMATEXTENSIBLE");
+						ok = false;
+					}
 				}
 				else
 				{
-					LOG_ERR("unknown format found in WAVEFORMATEXTENSIBLE");
-					ok = false;
+					ok &= r.skip(fmtExtraLength);
 				}
-			}
-			else
-			{
-				ok &= r.skip(fmtExtraLength);
 			}
 			
 			if (!ok)

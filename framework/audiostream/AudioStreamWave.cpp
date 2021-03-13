@@ -165,7 +165,9 @@ int AudioStreamWave::Provide(int numFrames, AudioSample* __restrict buffer)
 				
 				for (int i = 0; i < numSamplesToRead; ++i)
 				{
-					dst[i] =
+					uint32_t & dst_u32 = (uint32_t&)dst[i];
+					
+					dst_u32 =
 						(src[i * 4 + 0] << 0) |
 						(src[i * 4 + 1] << 8) |
 						(src[i * 4 + 2] << 16) |
