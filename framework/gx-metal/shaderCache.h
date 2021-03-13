@@ -183,7 +183,7 @@ public:
 			return nullptr;
 	}
 	
-	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
+	void addPipelineState(const uint32_t hash, __unsafe_unretained id <MTLRenderPipelineState> state) const
 	{
 		m_pipelines[hash] = state;
 	}

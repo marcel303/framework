@@ -92,7 +92,7 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 			MTLTextureUsageShaderRead |
 			MTLTextureUsagePixelFormatView;
 		
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		id <MTLTexture> colorTexture = [device newTextureWithDescriptor:descriptor];
 
 		if (colorTexture == nullptr)
@@ -176,7 +176,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
 		descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		id <MTLTexture> depthTexture = [device newTextureWithDescriptor:descriptor];
 
 		if (depthTexture == nullptr)

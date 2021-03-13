@@ -476,7 +476,7 @@ void metal_upload_texture_area(
 	const void * src,
 	const int srcPitch,
 	const int srcSx, const int srcSy,
-	id <MTLTexture> dst,
+	__unsafe_unretained id <MTLTexture> dst,
 	const int dstX, const int dstY,
 	const MTLPixelFormat pixelFormat)
 {
@@ -539,10 +539,10 @@ void metal_upload_texture_area(
 }
 
 void metal_copy_texture_to_texture(
-	id <MTLTexture> src,
+	__unsafe_unretained id <MTLTexture> src,
 	const int srcX, const int srcY, const int srcZ,
 	const int srcSx, const int srcSy, const int srcSz,
-	id <MTLTexture> dst,
+	__unsafe_unretained id <MTLTexture> dst,
 	const int dstX, const int dstY, const int dstZ,
 	const MTLPixelFormat pixelFormat)
 {
@@ -600,7 +600,7 @@ void metal_copy_texture_to_texture(
 	}
 }
 
-void metal_generate_mipmaps(id <MTLTexture> texture)
+void metal_generate_mipmaps(__unsafe_unretained id <MTLTexture> texture)
 {
 	@autoreleasepool
 	{
@@ -653,7 +653,14 @@ void beginRenderPass(
 	const char * passName,
 	const int backingScale)
 {
-	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
+	beginRenderPass(
+		&target,
+		target == nullptr ? 0 : 1,
+		clearColor,
+		depthTarget,
+		clearDepth,
+		passName,
+		backingScale);
 }
 
 void beginRenderPass(
@@ -1121,7 +1128,7 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		// lookup cached depth-stencil state
 		
 	// todo : is it a performance win to use __weak here ?
-		id <MTLDepthStencilState> state = s_depthStencilStates
+		__unsafe_unretained id <MTLDepthStencilState> state = s_depthStencilStates
 			[globals.depthTestWriteEnabled]
 			[globals.depthTest]
 			[globals.depthTestEnabled];
@@ -1783,7 +1790,7 @@ void gxInitialize()
 	// generate index buffer for drawing quads
 	
 	{
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		
 		const int numQuads = s_gxMaxVertexCount / 4;
 		const int numIndices = numQuads * 6;
@@ -1819,7 +1826,7 @@ void gxInitialize()
 	// generate index buffer for drawing triangle fans
 	
 	{
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		
 		const int numTriangles = s_gxMaxVertexCount - 2;
 		const int numIndices = numTriangles * 3;
@@ -1993,7 +2000,7 @@ namespace xxHash
 	}
 }
 
-static id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
+static __unsafe_unretained id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
 
 static void gxValidatePipelineState()
 {
@@ -2020,14 +2027,14 @@ static void gxValidatePipelineState()
 	
 	const uint32_t hash = xxHash::hash32(&renderState, sizeof(renderState));
 	
-	id <MTLRenderPipelineState> pipelineState = shaderElem.findPipelineState(hash);
+	__unsafe_unretained id <MTLRenderPipelineState> pipelineState = shaderElem.findPipelineState(hash);
 
 	if (pipelineState == nullptr)
 	{
 		@autoreleasepool
 		{
-			id <MTLFunction> vsFunction = (id <MTLFunction>)shaderElem.vsFunction;
-			id <MTLFunction> psFunction = (id <MTLFunction>)shaderElem.psFunction;
+			__unsafe_unretained id <MTLFunction> vsFunction = (id <MTLFunction>)shaderElem.vsFunction;
+			__unsafe_unretained id <MTLFunction> psFunction = (id <MTLFunction>)shaderElem.psFunction;
 		
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 		
@@ -2269,13 +2276,15 @@ static void gxValidatePipelineState()
 			}
 
 			NSError * error;
-			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+			id <MTLRenderPipelineState> newPipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
 			if (error != nullptr)
 				NSLog(@"%@", error);
 			
 			//NSLog(@"%@", pipelineState);
 			
-			shaderElem.addPipelineState(hash, pipelineState);
+			shaderElem.addPipelineState(hash, newPipelineState);
+			
+			pipelineState = newPipelineState;
 		}
 	}
 	
@@ -2464,7 +2473,7 @@ static void gxFlush(bool endOfBatch)
 	
 		gxValidateShaderResources(useGenericShader);
 	
-		id <MTLBuffer> indexBuffer = nil;
+		__unsafe_unretained id <MTLBuffer> indexBuffer = nil;
 		int numElements = s_gxVertexCount;
 
 		// convert quads to triangles
@@ -2870,7 +2879,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	
 		if (vsStride == 0)
 		{
-			id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
+			__unsafe_unretained id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
 			
 			for (int i = 0; i < numVsInputs; ++i)
 			{
@@ -2882,7 +2891,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 		}
 		else
 		{
-			id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
+			__unsafe_unretained id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
 			[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
 		}
 	}
@@ -2930,7 +2939,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
 		
 		const int indexSize =
 			indexBuffer->getFormat() == GX_INDEX_16
@@ -3048,7 +3057,7 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
 		
 		const int indexSize =
 			indexBuffer->getFormat() == GX_INDEX_16
@@ -3161,7 +3170,7 @@ static void gxValidateShaderResources(const bool useGenericShader)
 			auto & texture = i->second;
 			[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			
-			id<MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
+			__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
 			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
 		}
 	}
@@ -3187,14 +3196,14 @@ static void gxValidateShaderResources(const bool useGenericShader)
 			if (textureInfo.vsOffset != -1)
 			{
 				const int i = textureInfo.vsOffset;
-				id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+				__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
 				[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
 			}
 			
 			if (textureInfo.psOffset != -1)
 			{
 				const int i = textureInfo.psOffset;
-				id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+				__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
 				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
 			}
 		}

@@ -81,25 +81,25 @@ id <MTLCommandQueue> metal_get_command_queue();
 id <MTLCommandBuffer> metal_get_command_buffer();
 bool metal_is_encoding_draw_commands();
 
-void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder);
+void metal_make_render_wait_for_blit(__unsafe_unretained id <MTLBlitCommandEncoder> blit_encoder);
 
 void metal_upload_texture_area(
 	const void * src,
 	const int srcPitch,
 	const int srcSx, const int srcSy,
-	id <MTLTexture> dst,
+	__unsafe_unretained id <MTLTexture> dst,
 	const int dstX, const int dstY,
 	const MTLPixelFormat pixelFormat);
 
 void metal_copy_texture_to_texture(
-	id <MTLTexture> src,
+	__unsafe_unretained id <MTLTexture> src,
 	const int srcX, const int srcY, const int srcZ,
 	const int srcSx, const int srcSy, const int srcSz,
-	id <MTLTexture> dst,
+	__unsafe_unretained id <MTLTexture> dst,
 	const int dstX, const int dstY, const int dstZ,
 	const MTLPixelFormat pixelFormat);
 
-void metal_generate_mipmaps(id <MTLTexture> texture);
+void metal_generate_mipmaps(__unsafe_unretained id <MTLTexture> texture);
 
 #endif
 

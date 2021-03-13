@@ -78,7 +78,7 @@ DynamicBufferPoolElem * DynamicBufferPool::allocBuffer()
 	
 	if (elem == nullptr)
 	{
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		
 		elem = new DynamicBufferPoolElem();
 		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];

@@ -189,7 +189,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 	{
 		@autoreleasepool
 		{
-			id <MTLDevice> device = metal_get_device();
+			__unsafe_unretained id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
 			
@@ -1090,15 +1090,13 @@ void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool
 	}
 }
 
-id<MTLBuffer> metal_get_buffer(const uint32_t bufferId);
-
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
 	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	buffer.markMetalBufferIsUsed();
 	
-	id<MTLBuffer> metal_buffer = (__bridge id<MTLBuffer>)buffer.getMetalBuffer();
+	__unsafe_unretained id <MTLBuffer> metal_buffer = (__bridge id <MTLBuffer>)buffer.getMetalBuffer();
 	
 	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);
 	const int psIndex = m_cacheElem->psInfo.getBufferIndex(name);

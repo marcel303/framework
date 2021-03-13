@@ -41,7 +41,7 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool, Dynam
 	
 	@autoreleasepool
 	{
-		id <MTLCommandBuffer> cmdbuf = nil;
+		__unsafe_unretained id <MTLCommandBuffer> cmdbuf = nil;
 		
 		if (metal_is_encoding_draw_commands())
 			cmdbuf = metal_get_command_buffer();
@@ -69,7 +69,7 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool)
 	
 	@autoreleasepool
 	{
-		id <MTLCommandBuffer> cmdbuf = nil;
+		__unsafe_unretained id <MTLCommandBuffer> cmdbuf = nil;
 		
 		if (metal_is_encoding_draw_commands())
 			cmdbuf = metal_get_command_buffer();
@@ -172,7 +172,7 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 	
 	Assert(m_bufferPoolElem != nullptr && m_bufferPoolElemIsUsed == false);
 	
-	id <MTLBuffer> buffer = m_bufferPoolElem->m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = m_bufferPoolElem->m_buffer;
 	
 	fassert(numBytes <= buffer.length);
 

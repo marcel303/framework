@@ -50,7 +50,7 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 {
 	AssertMsg(m_buffer == nullptr, "GxVertexBuffer is a static resource and as such may be allocated only once (before use)");
 	
-	id <MTLDevice> device = metal_get_device();
+	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
 #if ENABLE_METAL_UNIFIED_MEMORY
 	if (numBytes > 0)
@@ -92,7 +92,7 @@ void GxVertexBuffer::free()
 
 int GxVertexBuffer::getNumBytes() const
 {
-	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	if (buffer == nullptr)
 		return 0;
@@ -104,7 +104,7 @@ void * GxVertexBuffer::updateBegin()
 {
 // todo : assert this is a dynamic vertex buffer (not allocated with bytes)
 
-	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
@@ -112,7 +112,7 @@ void * GxVertexBuffer::updateBegin()
 void GxVertexBuffer::updateEnd(const int firstByte, const int numBytes)
 {
 #if !ENABLE_METAL_UNIFIED_MEMORY
-	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	NSRange range;
 	range.location = firstByte;
@@ -145,7 +145,7 @@ void GxIndexBuffer::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
 	const int numBytes = numIndices * indexSize;
 	
-	id <MTLDevice> device = metal_get_device();
+	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
 #if ENABLE_METAL_UNIFIED_MEMORY
 	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeShared];
@@ -166,7 +166,7 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
 	const int numBytes = numIndices * indexSize;
 	
-	id <MTLDevice> device = metal_get_device();
+	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
 #if ENABLE_METAL_UNIFIED_MEMORY
 	if (numBytes > 0)
@@ -209,7 +209,7 @@ void * GxIndexBuffer::updateBegin()
 {
 // todo : assert this is a dynamic index buffer (not allocated with bytes)
 
-	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
@@ -217,7 +217,7 @@ void * GxIndexBuffer::updateBegin()
 void GxIndexBuffer::updateEnd(const int firstIndex, const int numIndices)
 {
 #if !ENABLE_METAL_UNIFIED_MEMORY
-	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
 	const int firstByte = firstIndex * indexSize;
