@@ -2521,21 +2521,24 @@ static void gxFlush(bool endOfBatch)
 	
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
 
-		if (indexBuffer != nil)
+		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
 		{
-			[s_activeRenderPass->encoder
-				drawIndexedPrimitives:metalPrimitiveType
-				indexCount:numElements
-				indexType:MTLIndexTypeUInt32
-				indexBuffer:indexBuffer
-				indexBufferOffset:0];
-		}
-		else
-		{
-			[s_activeRenderPass->encoder
-				drawPrimitives:metalPrimitiveType
-				vertexStart:0
-				vertexCount:numElements];
+			if (indexBuffer != nil)
+			{
+				[s_activeRenderPass->encoder
+					drawIndexedPrimitives:metalPrimitiveType
+					indexCount:numElements
+					indexType:MTLIndexTypeUInt32
+					indexBuffer:indexBuffer
+					indexBufferOffset:0];
+			}
+			else
+			{
+				[s_activeRenderPass->encoder
+					drawPrimitives:metalPrimitiveType
+					vertexStart:0
+					vertexCount:numElements];
+			}
 		}
 	}
 	
@@ -2713,8 +2716,11 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
 
-	[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
-
+	@autoreleasepool
+	{
+		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
+	}
+	
 	globals.gxShaderIsDirty = false;
 	
 // todo : bind VS inputs on gxBegin call ?
@@ -2962,15 +2968,18 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 				: 4;
 		const int indexOffset = firstIndex * indexSize;
 		
-		[s_activeRenderPass->encoder
-			drawIndexedPrimitives:metalPrimitiveType
-			indexCount:numIndices
-			indexType:
-				indexBuffer->getFormat() == GX_INDEX_16
-				? MTLIndexTypeUInt16
-				: MTLIndexTypeUInt32
-			indexBuffer:buffer
-			indexBufferOffset:indexOffset];
+		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
+		{
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numIndices
+				indexType:
+					indexBuffer->getFormat() == GX_INDEX_16
+					? MTLIndexTypeUInt16
+					: MTLIndexTypeUInt32
+				indexBuffer:buffer
+				indexBufferOffset:indexOffset];
+		}
 	}
 	else
 	{
@@ -3020,7 +3029,10 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
+		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
+		{
+			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
+		}
 	}
 	else
 	{
@@ -3080,16 +3092,19 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 				: 4;
 		const int indexOffset = firstIndex * indexSize;
 		
-		[s_activeRenderPass->encoder
-			drawIndexedPrimitives:metalPrimitiveType
-			indexCount:numIndices
-			indexType:
-				indexBuffer->getFormat() == GX_INDEX_16
-				? MTLIndexTypeUInt16
-				: MTLIndexTypeUInt32
-			indexBuffer:buffer
-			indexBufferOffset:indexOffset
-			instanceCount:numInstances];
+		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
+		{
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numIndices
+				indexType:
+					indexBuffer->getFormat() == GX_INDEX_16
+					? MTLIndexTypeUInt16
+					: MTLIndexTypeUInt32
+				indexBuffer:buffer
+				indexBufferOffset:indexOffset
+				instanceCount:numInstances];
+		}
 	}
 	else
 	{
@@ -3139,11 +3154,14 @@ void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE t
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		[s_activeRenderPass->encoder
-			drawPrimitives:metalPrimitiveType
-			vertexStart:firstVertex
-			vertexCount:numVertices
-			instanceCount:numInstances];
+		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
+		{
+			[s_activeRenderPass->encoder
+				drawPrimitives:metalPrimitiveType
+				vertexStart:firstVertex
+				vertexCount:numVertices
+				instanceCount:numInstances];
+		}
 	}
 	else
 	{
