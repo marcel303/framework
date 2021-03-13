@@ -731,8 +731,12 @@ void beginRenderPass(
 			if (depthattachment.texture.height > viewportSy)
 				viewportSy = depthattachment.texture.height;
 			
+		#if defined(IPHONEOS)
+			if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
+		#else
 			if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth24Unorm_Stencil8 ||
 				depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
+		#endif
 			{
 				MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
 				stencilattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
