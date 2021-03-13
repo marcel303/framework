@@ -1123,15 +1123,12 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	globals.depthTest = test;
 	globals.depthTestWriteEnabled = writeEnabled;
 	
-// todo : do we need an autorelease pool surrounding this code? (setDepthTest)
-
 	// update depth-stencil state
 	
 	if (globals.stencilEnabled == false)
 	{
 		// lookup cached depth-stencil state
 		
-	// todo : is it a performance win to use __weak here ?
 		__unsafe_unretained id <MTLDepthStencilState> state = s_depthStencilStates
 			[globals.depthTestWriteEnabled]
 			[globals.depthTest]
@@ -1304,7 +1301,6 @@ void clearStencilTest()
 {
 	globals.stencilEnabled = false;
 	
-// todo : do we need an autoreleasepool surrounding this code? (clearStencilTest)
 	@autoreleasepool
 	{
 		// update depth-stencil state

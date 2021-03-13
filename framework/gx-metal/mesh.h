@@ -36,10 +36,13 @@
 class GxVertexBuffer : public GxVertexBufferBase
 {
 	void * m_buffer;
+	bool m_isDynamic;
 	
 public:
 	GxVertexBuffer();
 	virtual ~GxVertexBuffer() override final;
+	
+	void alloc(const int numBytes);
 	
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
@@ -58,6 +61,7 @@ class GxIndexBuffer : public GxIndexBufferBase
 	GX_INDEX_FORMAT m_format;
 	
 	void * m_buffer;
+	bool m_isDynamic;
 	
 public:
 	GxIndexBuffer();
