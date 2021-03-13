@@ -172,7 +172,7 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 	
 	Assert(m_bufferPoolElem != nullptr && m_bufferPoolElemIsUsed == false);
 	
-	id <MTLBuffer> & buffer = m_bufferPoolElem->m_buffer;
+	id <MTLBuffer> buffer = m_bufferPoolElem->m_buffer;
 	
 	fassert(numBytes <= buffer.length);
 
@@ -188,7 +188,7 @@ void ShaderBuffer::markMetalBufferIsUsed() const
 
 void * ShaderBuffer::getMetalBuffer() const
 {
-	return m_bufferPoolElem->m_buffer;
+	return (__bridge void*)m_bufferPoolElem->m_buffer;
 }
 
 //

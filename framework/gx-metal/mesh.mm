@@ -52,34 +52,47 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	
 	id <MTLDevice> device = metal_get_device();
 	
+#if ENABLE_METAL_UNIFIED_MEMORY
 	if (numBytes > 0)
 	{
-		m_buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	// todo : unifiedmem : copy bytes
+		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeShared]; // todo : use private. but need to know if updateBegin/updateEnd may be called (static vs dynamic)
 	}
 	else
 	{
-		m_buffer = [device newBufferWithLength:1 options:MTLResourceStorageModeManaged];
+		m_buffer = (__bridge void*)[device newBufferWithLength:1 options:MTLResourceStorageModePrivate];
 	}
+#else
+	if (numBytes > 0)
+	{
+		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	}
+	else
+	{
+		m_buffer = (__bridge void*)[device newBufferWithLength:1 options:MTLResourceStorageModeManaged];
+	}
+#endif
 }
 
 void GxVertexBuffer::free()
 {
 	// free buffer
 	
-// todo : this should ensure the buffer is no longer used..
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 		
+	#if !ENABLE_METAL_ARC
 		[buffer release];
-		
+	#endif
+
 		m_buffer = nullptr;
 	}
 }
 
 int GxVertexBuffer::getNumBytes() const
 {
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	if (buffer == nullptr)
 		return 0;
@@ -89,19 +102,23 @@ int GxVertexBuffer::getNumBytes() const
 
 void * GxVertexBuffer::updateBegin()
 {
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+// todo : assert this is a dynamic vertex buffer (not allocated with bytes)
+
+	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
 
 void GxVertexBuffer::updateEnd(const int firstByte, const int numBytes)
 {
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+#if !ENABLE_METAL_UNIFIED_MEMORY
+	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	NSRange range;
 	range.location = firstByte;
 	range.length = numBytes;
 	[buffer didModifyRange:range];
+#endif
 }
 
 //
@@ -130,9 +147,13 @@ void GxIndexBuffer::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 	
 	id <MTLDevice> device = metal_get_device();
 	
+#if ENABLE_METAL_UNIFIED_MEMORY
+	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeShared];
+#else
 	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+#endif
 	
-	m_buffer = buffer;
+	m_buffer = (__bridge void*)buffer;
 }
 
 void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
@@ -147,26 +168,38 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	id <MTLDevice> device = metal_get_device();
 	
+#if ENABLE_METAL_UNIFIED_MEMORY
 	if (numBytes > 0)
 	{
-		m_buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
 	}
 	else
 	{
-		m_buffer = [device newBufferWithLength:4 options:MTLResourceStorageModeManaged];
+		m_buffer = (__bridge void*)[device newBufferWithLength:4 options:MTLResourceStorageModePrivate];
 	}
+#else
+	if (numBytes > 0)
+	{
+		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	}
+	else
+	{
+		m_buffer = (__bridge void*)[device newBufferWithLength:4 options:MTLResourceStorageModeManaged];
+	}
+#endif
 }
 
 void GxIndexBuffer::free()
 {
 	// free buffer
 	
-// todo : this should ensure the buffer is no longer used..
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 		
+	#if !ENABLE_METAL_ARC
 		[buffer release];
+	#endif
 		
 		m_buffer = nullptr;
 	}
@@ -174,14 +207,17 @@ void GxIndexBuffer::free()
 
 void * GxIndexBuffer::updateBegin()
 {
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+// todo : assert this is a dynamic index buffer (not allocated with bytes)
+
+	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
 
 void GxIndexBuffer::updateEnd(const int firstIndex, const int numIndices)
 {
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+#if !ENABLE_METAL_UNIFIED_MEMORY
+	id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
 	
 	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
 	const int firstByte = firstIndex * indexSize;
@@ -191,7 +227,8 @@ void GxIndexBuffer::updateEnd(const int firstIndex, const int numIndices)
 	range.location = firstByte;
 	range.length = numBytes;
 	[buffer didModifyRange:range];
-}
+#endif
+} 
 
 int GxIndexBuffer::getNumIndices() const
 {

@@ -43,7 +43,11 @@
 #import <SDL2/SDL_syswm.h>
 #import <vector>
 
-#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 1
+#if ENABLE_METAL_ARC
+	#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 0 // do not alter
+#else
+	#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 1
+#endif
 
 #define INDEX_TYPE uint32_t
 
@@ -61,7 +65,7 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
 
-static id<MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
+static id <MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
 
 #if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
 static NSAutoreleasePool * s_autoreleasePool = nullptr;
@@ -119,7 +123,10 @@ void metal_init()
 		{
 			for (int clamp = 0; clamp < 2; ++clamp)
 			{
-				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
+				auto * descriptor = [MTLSamplerDescriptor new];
+			#if !ENABLE_METAL_ARC
+				[descriptor autorelease];
+			#endif
 				
 				descriptor.minFilter =
 					(filter == 0)
@@ -161,15 +168,21 @@ void metal_shut()
 			{
 				const int index = (filter << 1) | clamp;
 				
+			#if !ENABLE_METAL_ARC
 				[samplerStates[index] release];
+			#endif
 				samplerStates[index] = nil;
 			}
 		}
 		
+	#if !ENABLE_METAL_ARC
 		[queue release];
+	#endif
 		queue = nil;
 		
+	#if !ENABLE_METAL_ARC
 		[device release];
+	#endif
 		device = nil;
 	}
 }
@@ -216,8 +229,11 @@ void metal_detach(SDL_Window * window)
 			
 			[sdl_view willRemoveSubview:windowData->metalview];
 
+		#if !ENABLE_METAL_ARC
 			[windowData->metalview release];
+		#endif
 			windowData->metalview = nullptr;
+		#endif
 			
 			delete windowData;
 			windowData = nullptr;
@@ -274,8 +290,9 @@ void metal_acquire_drawable()
 			framework.waitForEvents = false;
 		}
 			
-		
+	#if !ENABLE_METAL_ARC
 		[activeWindowData->current_drawable retain];
+	#endif
 	}
 	
 #if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
@@ -293,7 +310,9 @@ void metal_present()
 		
 		[cmdbuf presentDrawable:activeWindowData->current_drawable];
 		
+	#if !ENABLE_METAL_ARC
 		[activeWindowData->current_drawable release];
+	#endif
 		activeWindowData->current_drawable = nullptr;
 		
 		[cmdbuf commit];
@@ -434,9 +453,14 @@ void metal_upload_texture_area(
 		
 		if (s_activeRenderPass != nullptr)
 		{
-			waitForDraw = [[device newFence] autorelease];
-			waitForBlit = [[device newFence] autorelease];
+			waitForDraw = [device newFence];
+			waitForBlit = [device newFence];
 			
+		#if !ENABLE_METAL_ARC
+			[waitForDraw autorelease];
+			[waitForBlit autorelease];
+		#endif
+		
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -454,10 +478,17 @@ void metal_upload_texture_area(
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
 		
+	#if ENABLE_METAL_ARC
+		waitForDraw = nil;
+		waitForBlit = nil;
+	#endif
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 		
+	#if !ENABLE_METAL_ARC
 		[src_texture release];
+	#endif
 		src_texture = nullptr;
 	}
 }
@@ -484,8 +515,13 @@ void metal_copy_texture_to_texture(
 			
 		if (s_activeRenderPass != nullptr)
 		{
-			waitForDraw = [[device newFence] autorelease];
-			waitForBlit = [[device newFence] autorelease];
+			waitForDraw = [device newFence];
+			waitForBlit = [device newFence];
+		
+		#if !ENABLE_METAL_ARC
+			[waitForDraw autorelease];
+			[waitForBlit autorelease];
+		#endif
 			
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
@@ -509,6 +545,11 @@ void metal_copy_texture_to_texture(
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
 		
+	#if ENABLE_METAL_ARC
+		waitForDraw = nil;
+		waitForBlit = nil;
+	#endif
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}
@@ -526,9 +567,14 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 			
 		if (s_activeRenderPass != nullptr)
 		{
-			waitForDraw = [[device newFence] autorelease];
-			waitForBlit = [[device newFence] autorelease];
+			waitForDraw = [device newFence];
+			waitForBlit = [device newFence];
 			
+		#if !ENABLE_METAL_ARC
+			[waitForDraw autorelease];
+			[waitForBlit autorelease];
+		#endif
+		
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -541,6 +587,11 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 				
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
+		
+	#if ENABLE_METAL_ARC
+		waitForDraw = nil;
+		waitForBlit = nil;
+	#endif
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
@@ -575,9 +626,15 @@ void beginRenderPass(
 	{
 		RenderPassData pd;
 		
-		pd.cmdbuf = [[queue commandBuffer] retain];
-
-	 	pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
+		pd.cmdbuf = [queue commandBuffer];
+	#if !ENABLE_METAL_ARC
+		[pd.cmdbuf retain];
+	#endif
+	
+	 	pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+	#if !ENABLE_METAL_ARC
+		[pd.renderdesc retain];
+	#endif
 		
 		int viewportSx = 0;
 		int viewportSy = 0;
@@ -587,7 +644,7 @@ void beginRenderPass(
 		for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		{
 			MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[i];
-			colorattachment.texture = (id <MTLTexture>)targets[i]->getMetalTexture();
+			colorattachment.texture = (__bridge id <MTLTexture>)targets[i]->getMetalTexture();
 			
 			const Color & clearColor = targets[i]->getClearColor();
 			
@@ -610,7 +667,7 @@ void beginRenderPass(
 		if (depthTarget != nullptr)
 		{
 			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
-			depthattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
+			depthattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
 			depthattachment.clearDepth = depthTarget->getClearDepth();
 			depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
 			depthattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
@@ -626,7 +683,7 @@ void beginRenderPass(
 				depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
 			{
 				MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
-				stencilattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
+				stencilattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
 				stencilattachment.clearStencil = 0x00;
 				stencilattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
 				stencilattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
@@ -641,7 +698,10 @@ void beginRenderPass(
 		
 		// begin encoding
 		
-		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
+		pd.encoder = [pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc];
+	#if !ENABLE_METAL_ARC
+		[pd.encoder retain];
+	#endif
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
 		
 		renderState.renderPass = pd.renderPass;
@@ -659,10 +719,10 @@ void beginRenderPass(
 
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
-	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
+	ColorTarget colorTarget((__bridge void*)activeWindowData->current_drawable.texture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
 	
-	DepthTarget depthTarget(activeWindowData->metalview.depthTexture);
+	DepthTarget depthTarget((__bridge void*)activeWindowData->metalview.depthTexture);
 	depthTarget.setClearDepth(depth);
 	
 	beginRenderPass(
@@ -690,9 +750,15 @@ void endRenderPass()
 		
 		//
 		
+	#if ENABLE_METAL_ARC
+		pd.encoder = nil;
+		pd.renderdesc = nil;
+		pd.cmdbuf = nil;
+	#else
 		[pd.encoder release];
 		[pd.renderdesc release];
 		[pd.cmdbuf release];
+	#endif
 		
 		s_activeRenderPass = nullptr;
 		
@@ -1009,7 +1075,8 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	{
 		// lookup cached depth-stencil state
 		
-		id <MTLDepthStencilState> & state = s_depthStencilStates
+	// todo : is it a performance win to use __weak here ?
+		id <MTLDepthStencilState> state = s_depthStencilStates
 			[globals.depthTestWriteEnabled]
 			[globals.depthTest]
 			[globals.depthTestEnabled];
@@ -1022,6 +1089,11 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 			fillDepthStencilDescriptor(descriptor);
 	
 			state = [device newDepthStencilStateWithDescriptor:descriptor];
+			
+			s_depthStencilStates
+				[globals.depthTestWriteEnabled]
+				[globals.depthTest]
+				[globals.depthTestEnabled] = state;
 		}
 		
 		// set the depth-stencil state
@@ -1038,10 +1110,14 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 		[s_activeRenderPass->encoder setDepthStencilState:state];
 		
+	#if !ENABLE_METAL_ARC
 		[state release];
+	#endif
 		state = nullptr;
 		
+	#if !ENABLE_METAL_ARC
 		[descriptor release];
+	#endif
 		descriptor = nullptr;
 	}
 }
@@ -1129,21 +1205,28 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 	globals.frontStencilState = front;
 	globals.backStencilState = back;
 	
-	// update depth-stencil state
-	
-	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	fillDepthStencilDescriptor(descriptor);
-	
-	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	[s_activeRenderPass->encoder setDepthStencilState:state];
-	
-	[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
-	
-	[state release];
-	state = nullptr;
-	
-	[descriptor release];
-	descriptor = nullptr;
+	@autoreleasepool
+	{
+		// update depth-stencil state
+		
+		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+		fillDepthStencilDescriptor(descriptor);
+		
+		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+		
+		[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
+		
+	#if !ENABLE_METAL_ARC
+		[state release];
+	#endif
+		state = nullptr;
+		
+	#if !ENABLE_METAL_ARC
+		[descriptor release];
+	#endif
+		descriptor = nullptr;
+	}
 }
 
 void clearStencilTest()
@@ -1151,20 +1234,26 @@ void clearStencilTest()
 	globals.stencilEnabled = false;
 	
 // todo : do we need an autoreleasepool surrounding this code? (clearStencilTest)
-
-	// update depth-stencil state
-	
-	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	fillDepthStencilDescriptor(descriptor);
-	
-	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	[s_activeRenderPass->encoder setDepthStencilState:state];
-	
-	[state release];
-	state = nullptr;
-	
-	[descriptor release];
-	descriptor = nullptr;
+	@autoreleasepool
+	{
+		// update depth-stencil state
+		
+		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+		fillDepthStencilDescriptor(descriptor);
+		
+		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+		
+	#if !ENABLE_METAL_ARC
+		[state release];
+	#endif
+		state = nullptr;
+		
+	#if !ENABLE_METAL_ARC
+		[descriptor release];
+	#endif
+		descriptor = nullptr;
+	}
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
@@ -1349,7 +1438,9 @@ void freeTexture(GxTextureId & textureId)
 		{
 			auto & texture = i->second;
 			
+		#if !ENABLE_METAL_ARC
 			[texture release];
+		#endif
 			texture = nullptr;
 			
 			s_textures.erase(i);
@@ -1715,10 +1806,14 @@ void gxInitialize()
 
 void gxShutdown()
 {
+#if !ENABLE_METAL_ARC
 	[s_gxIndexBufferForQuads release];
+#endif
 	s_gxIndexBufferForQuads = nil;
 	
+#if !ENABLE_METAL_ARC
 	[s_gxIndexBufferForTriangleFans release];
+#endif
 	s_gxIndexBufferForTriangleFans = nil;
 	
 	s_gxVertexBufferPool.shut();
@@ -1976,7 +2071,10 @@ static void gxValidatePipelineState()
 				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 			}
 		
-			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
+			MTLRenderPipelineDescriptor * pipelineDescriptor = [MTLRenderPipelineDescriptor new];
+		#if !ENABLE_METAL_ARC
+			[pipelineDescriptor autorelease];
+		#endif
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
 			pipelineDescriptor.vertexFunction = vsFunction;
@@ -2727,7 +2825,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	
 		if (vsStride == 0)
 		{
-			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
 			
 			for (int i = 0; i < numVsInputs; ++i)
 			{
@@ -2739,7 +2837,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 		}
 		else
 		{
-			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			id <MTLBuffer> metalBuffer = (__bridge id <MTLBuffer>)buffer->getMetalBuffer();
 			[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
 		}
 	}
@@ -2787,7 +2885,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
 		
 		const int indexSize =
 			indexBuffer->getFormat() == GX_INDEX_16
@@ -2905,7 +3003,7 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)indexBuffer->getMetalBuffer();
 		
 		const int indexSize =
 			indexBuffer->getFormat() == GX_INDEX_16
