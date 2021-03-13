@@ -107,9 +107,9 @@ library framework
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
 
-	#with_platform iphoneos scan_files cpp path gx-metal group gx-metal
-	#with_platform iphoneos scan_files h   path gx-metal group gx-metal
-	#with_platform iphoneos scan_files mm  path gx-metal group gx-metal
+	with_platform iphoneos scan_files cpp path gx-metal group gx-metal
+	with_platform iphoneos scan_files h   path gx-metal group gx-metal
+	with_platform iphoneos scan_files mm  path gx-metal group gx-metal
 
 	header_path . expose
 

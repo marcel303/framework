@@ -35,7 +35,7 @@
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
+static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, size_t & numBytes)
 {
 	bool result = true;
 
@@ -52,9 +52,9 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	{
 		// load source from file
 
-		fseek(file, 0, SEEK_END);
+		Verify(fseek(file, 0, SEEK_END) == 0);
 		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
+		Verify(fseek(file, 0, SEEK_SET) == 0);
 
 		bytes = new char[numBytes];
 
@@ -137,7 +137,7 @@ bool preprocessShader(
 			includedFiles.push_back(filename);
 			
 			char * bytes;
-			int numBytes;
+			size_t numBytes;
 
 			if (!loadFileContents(filename, true, bytes, numBytes))
 			{
@@ -183,7 +183,7 @@ bool preprocessShaderFromFile(
 	bool result = true;
 	
 	char * bytes;
-	int numBytes;
+	size_t numBytes;
 
 	if (!loadFileContents(filename, true, bytes, numBytes))
 	{
