@@ -46,6 +46,20 @@ EnumType & EnumType::add(const char * key, const int value)
 	return *this;
 }
 
+EnumType::~EnumType()
+{
+	EnumElem * elem = firstElem;
+	
+	while (elem != nullptr)
+	{
+		EnumElem * next_elem = elem->next;
+		
+		delete elem;
+		
+		elem = next_elem;
+	}
+}
+
 bool EnumType::set(void * object, const char * key) const
 {
 	for (const EnumElem * elem = firstElem; elem != nullptr; elem = elem->next)

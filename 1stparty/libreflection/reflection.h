@@ -48,6 +48,10 @@ struct MemberFlagBase
 		, typeIndex(in_typeIndex)
 	{
 	}
+	
+	virtual ~MemberFlagBase()
+	{
+	}
 };
 
 template <typename T>
@@ -157,6 +161,10 @@ struct TypeFlagBase
 		, typeIndex(in_typeIndex)
 	{
 	}
+	
+	virtual ~TypeFlagBase()
+	{
+	}
 };
 
 template <typename T>
@@ -182,6 +190,14 @@ struct Type
 	
 	virtual ~Type()
 	{
+		for (auto * flag = flags; flag != nullptr; )
+		{
+			auto * next_flag = flag->next;
+			
+			delete flag;
+			
+			flag = next_flag;
+		}
 	}
 	
 	void addFlag(TypeFlagBase * flag)
@@ -273,6 +289,8 @@ struct EnumType : PlainType
 		, firstElem(nullptr)
 	{
 	}
+	
+	virtual ~EnumType() override;
 	
 	EnumType & add(const char * key, const int value);
 	
