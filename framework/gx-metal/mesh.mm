@@ -32,6 +32,14 @@
 #import "gx_mesh.h"
 #import <Metal/Metal.h>
 
+#if defined(MACOS)
+	#define ENABLE_METAL_UNIFIED_MEMORY 0
+#else
+	#define ENABLE_METAL_UNIFIED_MEMORY 1
+#endif
+
+//
+
 id <MTLDevice> metal_get_device();
 
 //
