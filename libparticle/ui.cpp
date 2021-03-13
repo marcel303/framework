@@ -1112,6 +1112,81 @@ void doBreak()
 	g_drawY += kPadding;
 }
 
+void doSlider(float & value, const float min, const float max, const char * name, const float smoothness, const float dt)
+{
+	UiElem & elem = g_menu->getElem(name);
+	
+	bool & isDragging = elem.getBool(0, false);
+	float & desiredValue = elem.getFloat(1, value);
+	
+	const int sx = g_uiState->sx;
+	const int sy = 16;
+	
+	const int x1 = g_drawX;
+	const int y1 = g_drawY;
+	const int x2 = x1 + sx;
+	const int y2 = y1 + sy - 1;
+	
+	if (g_doActions)
+	{
+		elem.tick(x1, y1, x2, y2);
+		
+		if (elem.isActive)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				isDragging = true;
+			}
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				isDragging = false;
+			}
+			
+			if (isDragging)
+			{
+				desiredValue = lerp(min, max, saturate((mouse.x - x1) / float(x2 - x1)));
+			}
+		}
+		else
+		{
+			isDragging = false;
+		}
+		
+		//
+		
+		if (smoothness > 0.f)
+		{
+			const float retain = powf(smoothness, dt);
+			
+			value = lerp(desiredValue, value, retain);
+		}
+		else
+		{
+			value = desiredValue;
+		}
+	}
+	
+	if (g_doDraw)
+	{
+		setColor(0, 0, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * (desiredValue - min) / (max - min), y2);
+		
+		pushBlend(BLEND_ADD);
+		setColor(0, 100, 255/2);
+		drawRect(x1, y1, x1 + (x2 - x1) * (value - min) / (max - min), y2);
+		popBlend();
+		
+		setColor(colorWhite);
+		drawTextArea(x1, y1, x2 - x1, y2 - y1, 12, 0, 0, "%s", name);
+		
+		setColor(0, 0, 255);
+		drawRectLine(x1, y1, x2, y2);
+	}
+	
+	g_drawY += sy;
+}
+
 void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
 {
 	AssertMsg(g_menu != nullptr, "pushMenu must be called first!");

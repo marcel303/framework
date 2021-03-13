@@ -160,6 +160,8 @@ bool doDrawer(bool & value, const char * name);
 void doLabel(const char * text, const float xAlign);
 void doBreak();
 
+void doSlider(float & value, const float min, const float max, const char * name, const float smoothness, const float dt);
+
 struct EnumValue
 {
 	EnumValue()
