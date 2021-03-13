@@ -366,16 +366,6 @@ Quat Quat::slerp(const Quat & quat, float t) const
 	return result;
 }
 
-/*
-
-todo : add taylor series expansion approximation, which is faster than slerp and more accurate than nlerp
-
-	float t_approx = t + (1.f - dot(a, b)) / 3.f * t * (-2.f * t * t + 3.f * t - 1.f);
-
-	return nlerp(quat, t_approx);
-
-*/
-
 Quat Quat::nlerp(const Quat & quat, float t) const
 {
 	// nlerp
