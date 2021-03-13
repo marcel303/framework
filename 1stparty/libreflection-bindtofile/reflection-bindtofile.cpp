@@ -199,6 +199,9 @@ static bool loadObjectFromJsonFile(const TypeDB & typeDB, const Type * type, voi
 	rapidjson::Document document;
 
 	document.Parse(text, textSize);
+	
+	delete [] text;
+	text = nullptr;
 
 	if (document.HasParseError())
 	{
