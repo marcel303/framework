@@ -54,7 +54,7 @@ library soundfile
 
 pop_group
 
-library framework
+library framework objc-arc
 
 	depend_library libgg
 	depend_library libfbx
