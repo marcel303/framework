@@ -58,6 +58,10 @@
 
 #define INDEX_TYPE uint32_t
 
+#if ENABLE_METAL_ARC && ! __has_feature(objc_arc)
+	#error "ARC is off!"
+#endif
+
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 static void gxEndDraw();
