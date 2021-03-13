@@ -25,58 +25,20 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(IPHONEOS) && 0
+#pragma once
 
-#import "framework.h"
-
-#if ENABLE_METAL
-
-// todo : for MSAA we would need to create an additional backing layer, and resolve it on endDraw
-
-#import "metalView-mtk.h"
-
-#import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
+#import <UIKit/UIView.h>
 
-@implementation MetalView
+@interface MetalView : UIView
 
-+ (Class)layerClass
-{
-    return [CAMetalLayer class];
-}
+@property (nonatomic, assign) CAMetalLayer *metalLayer;
+@property (nonatomic, assign) bool wantsDepthBuffer;
 
-- (BOOL)wantsUpdateLayer
-{
-    return YES;
-}
+@property (nonatomic, assign) id <MTLTexture> depthTexture;
 
-- (CALayer*)makeBackingLayer
-{
-    return [self.class.layerClass layer];
-}
+@property (nonatomic, assign) UIView *otherView;
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync
-{
-    if ((self = [super initWithFrame:frame]))
-    {
-		self.depthTexture = nil;
-		
-    	self.opaque = YES;
-    	self.device = device;
-    	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-    	self.framebufferOnly = YES;
-		
-    	if (wantsDepthBuffer)
-    	{
-			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-		}
-    }
-
-    return self;
-}
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
 
 @end
-
-#endif
-
-#endif

@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(IPHONEOS) && 0
+#if defined(IPHONEOS)
 
 #import "framework.h"
 
@@ -33,7 +33,7 @@
 
 // todo : for MSAA we would need to create an additional backing layer, and resolve it on endDraw
 
-#import "metalView-mtk.h"
+#import "metalView-uikit.h"
 
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -59,20 +59,65 @@
 {
     if ((self = [super initWithFrame:frame]))
     {
+		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
 		
-    	self.opaque = YES;
-    	self.device = device;
-    	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
-    	self.framebufferOnly = YES;
+        self.metalLayer = (CAMetalLayer *)self.layer;
+        self.metalLayer.opaque = YES;
+        self.metalLayer.device = device;
+        self.metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 		
-    	if (wantsDepthBuffer)
-    	{
-			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-		}
+		// avoid ever getting a null drawable from [metalLayer nextDrawable]
+        if (@available(macOS 10.13, iOS 11.0, *))
+			self.metalLayer.allowsNextDrawableTimeout = NO;
+		
+		//if (@available(macOS 10.13.2, *))
+		//	self.metalLayer.maximumDrawableCount = 2; // this may hang the app (on older iOS devices?), getting stuck on nextDrawable
+		
+		self.metalLayer.framebufferOnly = YES;
+		
+        [self updateDrawableSize];
     }
 
     return self;
+}
+
+- (void)updateDrawableSize
+{
+    CGSize size  = self.bounds.size;
+    size.width  *= self.layer.contentsScale;
+    size.height *= self.layer.contentsScale;
+
+    self.metalLayer.drawableSize = size;
+	
+	if (self.wantsDepthBuffer)
+	{
+		@autoreleasepool
+		{
+		#if !ENABLE_METAL_ARC
+			[self.depthTexture release];
+		#endif
+			self.depthTexture = nullptr;
+			
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:size.width height:size.height mipmapped:NO];
+			descriptor.resourceOptions = MTLResourceStorageModePrivate;
+			descriptor.usage = MTLTextureUsageRenderTarget;
+			
+			self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+		}
+	}
+	
+    //NSLog(@"updateDrawableSize");
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
+{
+	return nil;
+}
+
+- (BOOL)pointInside:(CGPoint)point withEvent:(nullable UIEvent *)event
+{
+	return NO;
 }
 
 @end

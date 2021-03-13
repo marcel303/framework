@@ -37,11 +37,18 @@
 #import "StringEx.h" // strcpy_s
 #import "texture.h"
 #import "window_data.h"
-#import <Cocoa/Cocoa.h>
 #import <map>
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
 #import <vector>
+
+#if defined(MACOS)
+	#import <Cocoa/Cocoa.h> // NSView
+#endif
+
+#if defined(IPHONEOS)
+	#import <UIKit/UIKit.h> // UIView
+#endif
 
 #if ENABLE_METAL_ARC
 	#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 0 // do not alter
@@ -191,6 +198,7 @@ void metal_attach(SDL_Window * window)
 {
 	@autoreleasepool
 	{
+	#if defined(MACOS)
 		SDL_SysWMinfo info;
 		SDL_VERSION(&info.version);
 		SDL_GetWindowWMInfo(window, &info);
@@ -208,6 +216,27 @@ void metal_attach(SDL_Window * window)
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;
+	#endif
+	
+	#if defined(IPHONEOS)
+		SDL_SysWMinfo info;
+		SDL_VERSION(&info.version);
+		SDL_GetWindowWMInfo(window, &info);
+		
+		UIView * sdl_view = info.info.uikit.window.rootViewController.view;
+
+		MetalWindowData * windowData = new MetalWindowData();
+		windowData->metalview =
+			[[MetalView alloc]
+				initWithFrame:sdl_view.frame
+				device:device
+				wantsDepthBuffer:framework.enableDepthBuffer
+				wantsVsync:framework.enableVsync];
+				
+		[sdl_view addSubview:windowData->metalview];
+
+		windowDatas[window] = windowData;
+	#endif
 	}
 }
 
@@ -221,11 +250,27 @@ void metal_detach(SDL_Window * window)
 		{
 			auto * windowData = i->second;
 			
+		#if defined(MACOS)
 			SDL_SysWMinfo info;
 			SDL_VERSION(&info.version);
 			SDL_GetWindowWMInfo(window, &info);
 			
 			NSView * sdl_view = info.info.cocoa.window.contentView;
+			
+			[sdl_view willRemoveSubview:windowData->metalview];
+
+		#if !ENABLE_METAL_ARC
+			[windowData->metalview release];
+		#endif
+			windowData->metalview = nullptr;
+		#endif
+		
+		#if defined(IPHONEOS)
+			SDL_SysWMinfo info;
+			SDL_VERSION(&info.version);
+			SDL_GetWindowWMInfo(window, &info);
+			
+			UIView * sdl_view = info.info.uikit.window;
 			
 			[sdl_view willRemoveSubview:windowData->metalview];
 
