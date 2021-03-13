@@ -48,15 +48,15 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool, Dynam
 		else
 			cmdbuf = [metal_get_command_queue() commandBuffer];
 			
-		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
+		if (@available(macOS 10.13, iOS 11.0, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
 		{
 			[cmdbuf addCompletedHandler:
-				^(id<MTLCommandBuffer> _Nonnull)
+				^(id <MTLCommandBuffer> _Nonnull)
 				{
 					bufferPool->freeBuffer(bufferPoolElem);
 				}];
 		}
-		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
+		if (@available(macOS 10.13, iOS 11.0, *)) [cmdbuf popDebugGroup];
 		
 		if (metal_is_encoding_draw_commands() == false)
 			[cmdbuf commit];
@@ -76,16 +76,16 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool)
 		else
 			cmdbuf = [metal_get_command_queue() commandBuffer];
 			
-		if (@available(macOS 10.13, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
+		if (@available(macOS 10.13, iOS 11.0, *)) [cmdbuf pushDebugGroup:@"GxBufferPool Release (free)"];
 		{
 			[cmdbuf addCompletedHandler:
-				^(id<MTLCommandBuffer> _Nonnull)
+				^(id <MTLCommandBuffer> _Nonnull)
 				{
 					bufferPool->shut();
 					delete bufferPool;
 				}];
 		}
-		if (@available(macOS 10.13, *)) [cmdbuf popDebugGroup];
+		if (@available(macOS 10.13, iOS 11.0, *)) [cmdbuf popDebugGroup];
 		
 		if (metal_is_encoding_draw_commands() == false)
 			[cmdbuf commit];
