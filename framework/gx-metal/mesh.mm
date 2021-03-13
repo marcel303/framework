@@ -77,13 +77,19 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	
 	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
+#if ENABLE_METAL_UNIFIED_MEMORY
+	const NSUInteger options = MTLResourceStorageModePrivate;
+#else
+	const NSUInteger options = MTLResourceStorageModeManaged;
+#endif
+
 	if (numBytes > 0)
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
 	}
 	else
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
 	}
 }
 
@@ -187,13 +193,19 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
+#if ENABLE_METAL_UNIFIED_MEMORY
+	const NSUInteger options = MTLResourceStorageModePrivate;
+#else
+	const NSUInteger options = MTLResourceStorageModeManaged;
+#endif
+
 	if (numBytes > 0)
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
 	}
 	else
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:4 options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:4 options:options];
 	}
 }
 
