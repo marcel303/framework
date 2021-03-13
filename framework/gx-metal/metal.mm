@@ -1135,17 +1135,29 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		
 		if (state == nil)
 		{
-			// create the depth-stencil state when it isn't cached yet
-			
-			MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-			fillDepthStencilDescriptor(descriptor);
-	
-			state = [device newDepthStencilStateWithDescriptor:descriptor];
-			
-			s_depthStencilStates
-				[globals.depthTestWriteEnabled]
-				[globals.depthTest]
-				[globals.depthTestEnabled] = state;
+			@autoreleasepool
+			{
+				// create the depth-stencil state when it isn't cached yet
+				
+				MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+				fillDepthStencilDescriptor(descriptor);
+				
+				s_depthStencilStates
+					[globals.depthTestWriteEnabled]
+					[globals.depthTest]
+					[globals.depthTestEnabled] =
+						[device newDepthStencilStateWithDescriptor:descriptor];
+				
+				state = s_depthStencilStates
+					[globals.depthTestWriteEnabled]
+					[globals.depthTest]
+					[globals.depthTestEnabled];
+				
+			#if !ENABLE_METAL_ARC
+				[descriptor release];
+			#endif
+				descriptor = nullptr;
+			}
 		}
 		
 		// set the depth-stencil state
@@ -1156,21 +1168,24 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	{
 		// for stencil-enabled depth-stencil states.. we create a new depth-stencil descriptor, each and every time. caching can be implemented if we calculate the hash or a composite-key of the state and use it as the lookup key into a map
 		
-		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-		fillDepthStencilDescriptor(descriptor);
-		
-		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-		[s_activeRenderPass->encoder setDepthStencilState:state];
-		
-	#if !ENABLE_METAL_ARC
-		[state release];
-	#endif
-		state = nullptr;
-		
-	#if !ENABLE_METAL_ARC
-		[descriptor release];
-	#endif
-		descriptor = nullptr;
+		@autoreleasepool
+		{
+			MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+			fillDepthStencilDescriptor(descriptor);
+			
+			id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+			[s_activeRenderPass->encoder setDepthStencilState:state];
+			
+		#if !ENABLE_METAL_ARC
+			[state release];
+		#endif
+			state = nullptr;
+			
+		#if !ENABLE_METAL_ARC
+			[descriptor release];
+		#endif
+			descriptor = nullptr;
+		}
 	}
 }
 
