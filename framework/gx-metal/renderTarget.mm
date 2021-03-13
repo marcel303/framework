@@ -99,11 +99,11 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 			result = false;
 		else
 		{
-			m_colorTexture = (__bridge void*)colorTexture;
+			m_colorTexture = (__bridge_retained void*)colorTexture;
 			
 			// create texture view, for when used as a render target
 			id <MTLTexture> colorTextureView = [colorTexture newTextureViewWithPixelFormat:pixelFormatForView];
-			m_colorTextureView = (__bridge void*)colorTextureView;
+			m_colorTextureView = (__bridge_retained void*)colorTextureView;
 			m_colorTextureId = s_nextTextureId++;
 			s_textures[m_colorTextureId] = colorTextureView;
 		}
@@ -116,13 +116,13 @@ void ColorTarget::free()
 {
 	if (m_ownsTexture && m_colorTexture != nullptr)
 	{
-		id <MTLTexture> colorTextureView = (__bridge id <MTLTexture>)m_colorTextureView;
+		id <MTLTexture> colorTextureView = (__bridge_transfer id <MTLTexture>)m_colorTextureView;
 	#if !ENABLE_METAL_ARC
 		[colorTextureView release];
 	#endif
 		colorTextureView = nullptr;
 		
-		id <MTLTexture> colorTexture = (__bridge id <MTLTexture>)m_colorTexture;
+		id <MTLTexture> colorTexture = (__bridge_transfer id <MTLTexture>)m_colorTexture;
 	#if !ENABLE_METAL_ARC
 		[colorTexture release];
 	#endif
@@ -183,7 +183,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 			result = false;
 		else
 		{
-			m_depthTexture = (__bridge void*)depthTexture;
+			m_depthTexture = (__bridge_retained void*)depthTexture;
 			m_depthTextureId = s_nextTextureId++;
 			s_textures[m_depthTextureId] = depthTexture;
 		}
@@ -196,7 +196,7 @@ void DepthTarget::free()
 {
 	if (m_ownsTexture && m_depthTexture != nullptr)
 	{
-		id <MTLTexture> depthTexture = (__bridge id <MTLTexture>)m_depthTexture;
+		id <MTLTexture> depthTexture = (__bridge_transfer id <MTLTexture>)m_depthTexture;
 	#if !ENABLE_METAL_ARC
 		[depthTexture release];
 	#endif

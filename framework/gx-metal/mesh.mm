@@ -61,11 +61,11 @@ void GxVertexBuffer::alloc(const int numBytes)
 
 	if (numBytes > 0)
 	{
-		m_buffer = (__bridge void*)[device newBufferWithLength:numBytes options:options];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:numBytes options:options];
 	}
 	else
 	{
-		m_buffer = (__bridge void*)[device newBufferWithLength:1 options:options];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
 	}
 	
 	m_isDynamic = true;
@@ -79,11 +79,11 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	
 	if (numBytes > 0)
 	{
-		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
 	}
 	else
 	{
-		m_buffer = (__bridge void*)[device newBufferWithLength:1 options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:MTLResourceStorageModePrivate];
 	}
 }
 
@@ -93,11 +93,12 @@ void GxVertexBuffer::free()
 	
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
 		
 	#if !ENABLE_METAL_ARC
 		[buffer release];
 	#endif
+		buffer = nullptr;
 
 		m_buffer = nullptr;
 		m_isDynamic = false;
@@ -170,7 +171,7 @@ void GxIndexBuffer::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 	const NSUInteger options = MTLResourceStorageModeManaged;
 #endif
 
-	m_buffer = (__bridge void*)[device newBufferWithLength:numBytes options:options];
+	m_buffer = (__bridge_retained void*)[device newBufferWithLength:numBytes options:options];
 	m_isDynamic = true;
 }
 
@@ -188,11 +189,11 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	if (numBytes > 0)
 	{
-		m_buffer = (__bridge void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModePrivate];
 	}
 	else
 	{
-		m_buffer = (__bridge void*)[device newBufferWithLength:4 options:MTLResourceStorageModePrivate];
+		m_buffer = (__bridge_retained void*)[device newBufferWithLength:4 options:MTLResourceStorageModePrivate];
 	}
 }
 
@@ -202,11 +203,12 @@ void GxIndexBuffer::free()
 	
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
+		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
 		
 	#if !ENABLE_METAL_ARC
 		[buffer release];
 	#endif
+		buffer = nullptr;
 		
 		m_buffer = nullptr;
 		m_isDynamic = false;
