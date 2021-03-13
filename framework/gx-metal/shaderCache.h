@@ -140,13 +140,13 @@ public:
 	int vsMainUniformBufferIndex = -1;
 	int psMainUniformBufferIndex = -1;
 	
-	id <MTLBuffer> vsBuffers[kMaxBuffers] = { };
-	id <MTLBuffer> psBuffers[kMaxBuffers] = { };
+	__unsafe_unretained id <MTLBuffer> vsBuffers[kMaxBuffers] = { };
+	__unsafe_unretained id <MTLBuffer> psBuffers[kMaxBuffers] = { };
 	
 	std::vector<TextureInfo> textureInfos;
 	
-	id <MTLTexture> vsTextures[kMaxVsTextures] = { };
-	id <MTLTexture> psTextures[kMaxPsTextures] = { };
+	__unsafe_unretained id <MTLTexture> vsTextures[kMaxVsTextures] = { };
+	__unsafe_unretained id <MTLTexture> psTextures[kMaxPsTextures] = { };
 	
 	uint8_t vsTextureSamplers[kMaxPsTextures] = { };
 	uint8_t psTextureSamplers[kMaxPsTextures] = { };
