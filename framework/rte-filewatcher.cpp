@@ -118,6 +118,9 @@ void rteFileWatcher_OSX::init(const char * in_path)
 	
 	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 	FSEventStreamStart(stream);
+	
+	CFRelease(paths);
+	CFRelease(arg);
 }
 
 void rteFileWatcher_OSX::shut()
