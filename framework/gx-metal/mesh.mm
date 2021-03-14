@@ -86,7 +86,7 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
 #if ENABLE_METAL_UNIFIED_MEMORY
-	const NSUInteger options = MTLResourceStorageModePrivate;
+	const NSUInteger options = MTLResourceStorageModeShared;
 #else
 	const NSUInteger options = MTLResourceStorageModeManaged;
 #endif
@@ -199,7 +199,7 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	__unsafe_unretained id <MTLDevice> device = metal_get_device();
 	
 #if ENABLE_METAL_UNIFIED_MEMORY
-	const NSUInteger options = MTLResourceStorageModePrivate;
+	const NSUInteger options = MTLResourceStorageModeShared;
 #else
 	const NSUInteger options = MTLResourceStorageModeManaged;
 #endif
