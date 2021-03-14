@@ -130,7 +130,7 @@ struct Graph_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const OutputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const OutputSocket & socket) const;
 	};
 	
 	struct OutputSocket
@@ -156,7 +156,7 @@ struct Graph_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const InputSocket & socket) const;
 	};
 	
 	struct ResourceEditor

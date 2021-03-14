@@ -60,7 +60,7 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override;
+	virtual void nodeAdd(const GraphNode & node) override;
 	virtual void nodeRemove(const GraphNodeId nodeId) override;
 
 	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;

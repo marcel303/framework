@@ -59,10 +59,10 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 			instance->realTimeConnection->loadEnd(graphEdit);
 	}
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override
+	virtual void nodeAdd(const GraphNode & node) override
 	{
 		for (auto & instance : file->instanceList)
-			instance->realTimeConnection->nodeAdd(nodeId, typeName);
+			instance->realTimeConnection->nodeAdd(node);
 	}
 
 	virtual void nodeRemove(const GraphNodeId nodeId) override

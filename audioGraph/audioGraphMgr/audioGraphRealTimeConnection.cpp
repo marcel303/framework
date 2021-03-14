@@ -267,7 +267,7 @@ void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	audioMutex->unlock();
 }
 
-void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+void AudioRealTimeConnection::nodeAdd(const GraphNode & node)
 {
 	if (isLoading)
 		return;
@@ -278,7 +278,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	if (audioGraph == nullptr)
 		return;
 	
-	auto nodeItr = audioGraph->nodes.find(nodeId);
+	auto nodeItr = audioGraph->nodes.find(node.id);
 	
 	Assert(nodeItr == audioGraph->nodes.end());
 	if (nodeItr != audioGraph->nodes.end())
@@ -286,17 +286,11 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	
 	//
 	
-	GraphNode node;
-	node.id = nodeId;
-	node.typeName = typeName;
-	
-	//
-	
 	AUDIO_SCOPE;
 	
 	pushAudioGraph(audioGraph);
 	{
-		AudioNodeBase * audioNode = createAudioNode(nodeId, typeName, audioGraph);
+		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
 	
 		if (audioNode != nullptr)
 		{

@@ -171,11 +171,11 @@ void Graph::addNode(const GraphNode & node)
 	Assert(node.id != kGraphNodeIdInvalid);
 	Assert(nodes.find(node.id) == nodes.end());
 	
-	nodes.insert(std::pair<GraphNodeId, GraphNode>(node.id, node));
+	auto nodeItr = nodes.insert(std::pair<GraphNodeId, GraphNode>(node.id, node));
 	
 	if (graphEditConnection != nullptr)
 	{
-		graphEditConnection->nodeAdd(node.id, node.typeName);
+		graphEditConnection->nodeAdd(nodeItr.first->second);
 	}
 }
 

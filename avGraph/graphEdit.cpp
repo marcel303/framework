@@ -36,6 +36,9 @@
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include "particle_ui.h"
+
+#include "nfd.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -2627,7 +2630,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						newNode.id = graph->allocNodeId();
 						newNode.isPassthrough = false;
 						newNode.inputValues.clear();
-						newNode.editorValue.clear();
 						
 						graph->addNode(newNode);
 						
@@ -2635,18 +2637,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						Assert(newNodeData != nullptr);
 						if (newNodeData != nullptr)
 						{
-							*newNodeData = *nodeData;
-							
 							newNodeData->x = nodeData->x + kGridSize;
 							newNodeData->y = nodeData->y + kGridSize;
 							newNodeData->zKey = nextZKey++;
+							newNodeData->displayName = nodeData->displayName;
+							newNodeData->isFolded = nodeData->isFolded;
 						}
 						
 						newSelectedNodes.insert(newNode.id);
 						
 						oldToNewNodeIds.insert({ node->id, newNode.id});
 						
-						if (commandMod())
+						if (commandMod() == false)
 						{
 							auto * newNodePtr = tryGetNode(newNode.id);
 							Assert(newNodePtr != nullptr);
@@ -2656,22 +2658,23 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(newNode.typeName);
 							Assert(typeDefinition != nullptr);
 							
-							// let real-time editing know the socket values have changed
+							// set immediate input values
+							
 							for (auto & inputValueItr : node->inputValues)
 							{
 								auto & srcSocketName = inputValueItr.first;
 								auto & srcSocketValue = inputValueItr.second;
 								
-								newNodePtr->inputValues[srcSocketName] = srcSocketValue;
-								
 								if (typeDefinition != nullptr)
 								{
-									auto & inputSockets = getInputSockets(*typeDefinition, *nodeData);
+									auto & inputSockets = getInputSockets(*typeDefinition, *newNodeData);
 									
 									for (auto & srcSocket : inputSockets)
 									{
 										if (srcSocket.name == srcSocketName)
 										{
+											newNodePtr->inputValues[srcSocketName] = srcSocketValue;
+											
 											if (realTimeConnection != nullptr)
 											{
 												realTimeConnection->setSrcSocketValue(newNode.id, srcSocket.index, srcSocket.name, srcSocketValue);
@@ -4275,8 +4278,15 @@ void GraphEdit::doMenu(const float dt)
 		{
 			const std::string filename = documentInfo.filename.c_str();
 			
-			load(filename.c_str());
-			showNotification("Loaded '%s'", documentInfo.filename.c_str());
+			nfdchar_t * path = nullptr;
+			if (NFD_OpenDialog("xml", filename.c_str(), &path) == NFD_OKAY)
+			{
+				load(path);
+				showNotification("Loaded '%s'", documentInfo.filename.c_str());
+				
+				free(path);
+				path = nullptr;
+			}
 		}
 		
 		if (doButton("save", size * 1, size, false))
@@ -4285,11 +4295,19 @@ void GraphEdit::doMenu(const float dt)
 			showNotification("Saved '%s'", documentInfo.filename.c_str());
 		}
 		
-	// todo : present a file dialog
 		if (doButton("save as", size * 2, size, true))
 		{
-			save(documentInfo.filename.c_str());
-			showNotification("Saved as '%s'", documentInfo.filename.c_str());
+			const std::string filename = documentInfo.filename.c_str();
+			
+			nfdchar_t * path = nullptr;
+			if (NFD_SaveDialog("xml", filename.c_str(), &path) == NFD_OKAY)
+			{
+				save(path);
+				showNotification("Saved as '%s'", documentInfo.filename.c_str());
+				
+				free(path);
+				path = nullptr;
+			}
 		}
 		
 		if (doTextBox(documentInfo.filename, "filename", dt))
@@ -6409,16 +6427,14 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	return true;
 }
 
-void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+void GraphEdit::nodeAdd(const GraphNode & node)
 {
-	Assert(tryGetNode(nodeId) != nullptr);
-	
 	// allocate nodeData
-	nodeDatas[nodeId];
+	nodeDatas[node.id];
 	
 	if (realTimeConnection != nullptr)
 	{
-		realTimeConnection->nodeAdd(nodeId, typeName);
+		realTimeConnection->nodeAdd(node);
 	}
 }
 

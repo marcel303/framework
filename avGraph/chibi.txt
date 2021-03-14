@@ -10,8 +10,9 @@ library libavgraph-core
 
 library libavgraph
 
-	depend_library libavgraph-core
 	depend_library framework
+	depend_library libavgraph-core
+	depend_library libnfd
 # todo : remove particle.h dependency
 	depend_library libparticle
 	depend_library libparticle-ui
@@ -19,6 +20,7 @@ library libavgraph
 	add_files graphEdit.cpp graphEdit.h
 	add_files graphEdit_nodeResourceEditorWindow.cpp graphEdit_nodeResourceEditorWindow.h
 	add_files graphEdit_nodeTypeSelect.cpp graphEdit_nodeTypeSelect.h
+	add_files graphEdit_realTimeConnection.h
 
 	header_path . expose
 

@@ -127,11 +127,13 @@ struct GraphLink
 
 struct GraphEditConnection
 {
+	// GraphEditConnection is how the graph communicates changes to its structure to the editor
+	
 	virtual ~GraphEditConnection()
 	{
 	}
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+	virtual void nodeAdd(const GraphNode & node)
 	{
 	}
 	
