@@ -3212,26 +3212,38 @@ static void gxValidateShaderResources(const bool useGenericShader)
 	auto * shader = static_cast<Shader*>(globals.shader);
 	auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
-	if (useGenericShader && s_gxTextureEnabled) // todo : does this if statement make sense ?
+	if (useGenericShader) // todo : does this if statement make sense ?
 	{
-		// todo : avoid setting textures when not needed
-		//        needed when: texture changed
-		//                  or shader changed
-		
-		auto i = s_textures.find(s_gxTexture);
-		
-		Assert(i != s_textures.end());
-		if (i != s_textures.end())
+		if (s_gxTextureEnabled)
 		{
-			auto & texture = i->second;
-			[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
+			// todo : avoid setting textures when not needed
+			//        needed when: texture changed
+			//                  or shader changed
 			
-			__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
-			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
+			auto i = s_textures.find(s_gxTexture);
+			
+			Assert(i != s_textures.end());
+			if (i != s_textures.end())
+			{
+				auto & texture = i->second;
+				[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
+			}
 		}
+		
+		__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
+		[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
 	}
-	else
+	else if (!cacheElem.textureInfos.empty()) // avoid texture setting when the shader doesn't use textures
 	{
+		// todo : don't set textures when not used by the shader
+		// todo : only set texture slots used by the shader
+	#if 0 // todo : something like this..
+		const uint16_t vsTextureSettingMask =
+			globals.gxShaderIsDirty
+				? cacheElem.vsTextureUsageMask
+				: cacheElem.vsTextureDirtyMask;
+	#endif
+	
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
@@ -3304,12 +3316,26 @@ static void gxValidateShaderResources(const bool useGenericShader)
 	
 	// set fragment stage uniform buffers
 
+#if 1 // todo : cleanup. keep one or the other
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (cacheElem.psInfo.uniformBufferSize[i] != 0 &&
+			cacheElem.psBuffers[i] != nullptr)
+		{
+			[s_activeRenderPass->encoder
+				setVertexBuffer:cacheElem.psBuffers[i]
+				offset:0
+				atIndex:i];
+		}
+	}
+#else
 	NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
 	[s_activeRenderPass->encoder
 		setFragmentBuffers:cacheElem.psBuffers
 		offsets:offsets
 		withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxBuffers)];
-	
+#endif
+
 	if (cacheElem.psMainUniformBufferIndex != -1)
 	{
 		// use setFragmentBytes for the main uniform buffer
