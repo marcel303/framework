@@ -1782,6 +1782,8 @@ static const GxVertexInput s_gxVsInputs[] =
 	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) }
 };
 
+static bool s_gxVsInputsAreGeneric = false;
+
 static float scale255(const float v)
 {
 	static const float m = 1.f / 255.f;
@@ -2470,8 +2472,6 @@ static void gxFlush(bool endOfBatch)
 			s_gxVertexBufferElemOffset += vertexDataSize;
 		}
 	
-		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
-	
 		setShader(shader);
 		
 		// set shader parameters for the generic shader
@@ -2678,10 +2678,6 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 		primitiveType == GX_TRIANGLES ||
 		primitiveType == GX_TRIANGLE_STRIP);
 	
-// todo : clean up bindVsInputs on gxEmitVertices
-	//bindVsInputs(nullptr, 0, 0);
-	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
-	
 	Shader genericShader;
 	
 	const bool useGenericShader = (globals.shader == nullptr);
@@ -2718,6 +2714,30 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 	
+	if (s_gxVsInputsAreGeneric)
+	{
+		// note : when the generic VS inputs are bound, we need to make sure
+		//        to set some dummy data for the generic VS inputs the shader
+		//        will expect. if we don't, the Metal validation layer will
+		//        assert we didn't bind buffer 0
+		//        the regular GX draw functions and shaders using GenericVS for
+		//        its VS inputs make it really easy to create and use shaders,
+		//        without having to worry about binding vertex buffers. GX will
+		//        manage this itself. for custom vertex layouts, gxSetVertexBuffer
+		//        is used to specify the VS buffers and vertex layout. in this
+		//        case, the user has full control over the vertex data and
+		//        its layout
+		//        binding this data here makes sense.. as for the case where the
+		//        user doesn't specify a custom vertex layout, we are required
+		//        to at least set _something_ for the VS inputs
+		[s_activeRenderPass->encoder
+			setVertexBytes:s_gxVertices
+			length:sizeof(GxVertex)
+			atIndex:0];
+	}
+	
+	//
+	
 	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
 
 	@autoreleasepool
@@ -2726,9 +2746,6 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	}
 	
 	globals.gxShaderIsDirty = false;
-	
-// todo : bind VS inputs on gxBegin call ?
-	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 }
 
 static void gxEmitVertex()
@@ -2886,6 +2903,8 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 	
 	renderState.vertexInputCount = numVsInputsToCopy;
 	renderState.vertexStride = vsStride;
+	
+	s_gxVsInputsAreGeneric = (vsInputs == s_gxVsInputs);
 }
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
