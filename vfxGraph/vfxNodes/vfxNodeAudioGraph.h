@@ -102,6 +102,8 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	
 	virtual ~VfxNodeAudioGraph() override;
 	
+	virtual void init(const GraphNode & node) override;
+	
 	void updateDynamicInputs();
 	void updateDynamicOutputs(const int numSamples, const int numChannels);
 	

@@ -143,6 +143,8 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	VfxNodeAudioGraphPoly();
 	virtual ~VfxNodeAudioGraphPoly() override;
 	
+	virtual void init(const GraphNode & node) override;
+	
 	void updateDynamicInputs();
 	void listChannels(const VfxChannel ** channels, const VfxChannel * volume, int & numChannels, const int maxChannels);
 	void addHistoryElem(const HistoryType type, const float value);

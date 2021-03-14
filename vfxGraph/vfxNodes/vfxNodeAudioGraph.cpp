@@ -35,7 +35,7 @@
 
 #include "framework.h"
 
-AudioMutexBase * g_vfxAudioMutex = nullptr;
+AudioMutexBase * g_vfxAudioMutex = nullptr; // todo : this is way too easy to forgot not to create .. should be part of a system
 
 /*
 
@@ -106,7 +106,10 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_Limit, kVfxPlugType_Bool);
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
-	
+}
+
+void VfxNodeAudioGraph::init(const GraphNode & node)
+{
 	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
 	auto * audioVoiceMgr = g_currentVfxGraph->context->tryGetSystem<AudioVoiceManager>();
 	
@@ -136,7 +139,7 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	
 	if (context != nullptr)
 	{
-		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+		// note : some of our instances may still be fading out (if they had voices with a fade out time set on them). quite conveniently, freeContext will prune any instances still left fading out that reference our context
 		audioGraphMgr->freeContext(context);
 	}
 }

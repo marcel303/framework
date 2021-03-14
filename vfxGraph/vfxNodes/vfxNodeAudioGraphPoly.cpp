@@ -87,7 +87,10 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	addOutput(kOutput_Voices, kVfxPlugType_Channel, &voicesOutput);
 	
 	memset(instances, 0, sizeof(instances));
-	
+}
+
+void VfxNodeAudioGraphPoly::init(const GraphNode & node)
+{
 	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
 	auto * audioVoiceMgr = g_currentVfxGraph->context->tryGetSystem<AudioVoiceManager>();
 	
@@ -115,7 +118,7 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 	
 	if (context != nullptr)
 	{
-		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+		// note : some of our instances may still be fading out (if they had voices with a fade out time set on them). quite conveniently, freeContext will prune any instances still left fading out that reference our context
 		audioGraphMgr->freeContext(context);
 	}
 }
