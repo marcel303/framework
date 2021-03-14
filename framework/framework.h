@@ -43,6 +43,7 @@
 #include "Vec4.h"
 
 #if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL_main.h>
 	#include <SDL2/SDL_mutex.h>
 	#include <SDL2/SDL_thread.h>
 	#include <SDL2/SDL_timer.h>
