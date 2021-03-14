@@ -38,6 +38,6 @@ void doVfxMemEditor(VfxGraph & vfxGraph, const float dt);
 
 //
 
-struct MemoryComponent;
+struct VfxMemoryComponent;
 
-void doMemEditor(MemoryComponent & memory, const float dt);
+void doVfxMemEditor(VfxMemoryComponent & memory, const float dt);

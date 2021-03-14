@@ -92,12 +92,12 @@ bool doVfxGraphInstanceSelect(VfxGraphManager_RTE & vfxGraphMgr, std::string & a
 
 void doVfxMemEditor(VfxGraph & vfxGraph, const float dt)
 {
-	doMemEditor(vfxGraph.memory, dt);
+	doVfxMemEditor(vfxGraph.memory, dt);
 }
 
 //
 
-void doMemEditor(MemoryComponent & memory, const float dt)
+void doVfxMemEditor(VfxMemoryComponent & memory, const float dt)
 {
 	auto oldOffset = g_uiState->textBoxTextOffset;
 	

@@ -103,7 +103,7 @@ void createVfxEnumTypeDefinitions(
 		}
 		
 		// create additional elems if the enum has dynamic elements
-		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enum dynamically
+		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enums dynamically
 		
 		if (registration->getElems != nullptr)
 		{

@@ -1,5 +1,9 @@
 library vfxgraph
 
+	# note : we depend on framework, due to VfxImage_Texture
+	depend_library framework
+	
+	# note : not libavgraph-core, as vfxGraphManager has dependencies on graphEdit
 	depend_library libavgraph
 
 	header_path . expose
@@ -9,6 +13,19 @@ library vfxgraph
 
 	exclude_files vfxNodes_all.cpp
 	exclude_files vfxNodes_all-mac.mm
+	
+	exclude_files vfxUi.cpp
+	exclude_files vfxUi.h
+
+library vfxgraph-ui
+
+	depend_library libavgraph
+	depend_library libparticle-ui
+
+	header_path . expose
+
+	add_files vfxUi.cpp
+	add_files vfxUi.h
 
 library vfxgraph-nodes
 

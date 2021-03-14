@@ -25,12 +25,14 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h" // log
 #include "graphEdit.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
 
+#include "framework.h" // for color <-> string
+
+#include "Log.h"
 #include "Parse.h"
 #include "StringEx.h"
 
@@ -44,8 +46,8 @@
 
 struct SavedVfxMemory
 {
-	std::map<std::string, MemoryComponent::Memf> memf;
-	std::map<std::string, MemoryComponent::Mems> mems;
+	std::map<std::string, VfxMemoryComponent::Memf> memf;
+	std::map<std::string, VfxMemoryComponent::Mems> mems;
 };
 
 void RealTimeConnection::loadBegin()
@@ -114,43 +116,37 @@ void RealTimeConnection::saveBegin(GraphEdit & graphEdit)
 	}
 }
 
-void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+void RealTimeConnection::nodeAdd(const GraphNode & node)
 {
 	if (isLoading)
 		return;
 	
-	logDebug("nodeAdd");
+	LOG_DBG("nodeAdd");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
 		return;
 	
-	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	auto nodeItr = vfxGraph->nodes.find(node.id);
 	
 	Assert(nodeItr == vfxGraph->nodes.end());
 	if (nodeItr != vfxGraph->nodes.end())
 		return;
 	
-	//
-	
-	GraphNode node;
-	node.id = nodeId;
-	node.typeName = typeName;
+	VfxNodeBase * vfxNode = createVfxNode(node.id, node.typeName);
 	
 	//
 	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = vfxGraph;
 	{
-		VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName);
-		
 		if (vfxNode == nullptr)
 		{
-			vfxGraph->nodesFailedToCreate.insert(nodeId);
+			vfxGraph->nodesFailedToCreate.insert(node.id);
 		}
 		else
 		{
-			vfxNode->id = nodeId;
+			vfxNode->id = node.id;
 			
 			vfxNode->initSelf(node);
 			
@@ -169,7 +165,7 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	if (isLoading)
 		return;
 	
-	logDebug("nodeRemove");
+	LOG_DBG("nodeRemove");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -226,7 +222,7 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	if (isLoading)
 		return;
 	
-	logDebug("linkAdd");
+	LOG_DBG("linkAdd");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -239,9 +235,9 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	if (srcNodeItr == vfxGraph->nodes.end() || dstNodeItr == vfxGraph->nodes.end())
 	{
 		if (srcNodeItr == vfxGraph->nodes.end())
-			logError("source node doesn't exist");
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == vfxGraph->nodes.end())
-			logError("destination node doesn't exist");
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}
@@ -257,7 +253,7 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 	
 	if (isDynamicLink)
 	{
-		logDebug("adding dynamic link");
+		LOG_DBG("adding dynamic link");
 		
 		VfxDynamicLink link;
 		
@@ -295,9 +291,9 @@ void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId src
 		Assert(input != nullptr && output != nullptr);
 		
 		if (input == nullptr)
-			logError("input node socket doesn't exist");
+			LOG_ERR("input node socket doesn't exist");
 		if (output == nullptr)
-			logError("output node socket doesn't exist");
+			LOG_ERR("output node socket doesn't exist");
 	}
 	
 	// note : this may add the same node multiple times to the list of predeps. note that this
@@ -324,7 +320,7 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 	if (isLoading)
 		return;
 	
-	logDebug("linkRemove");
+	LOG_DBG("linkRemove");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -337,9 +333,9 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 	if (srcNodeItr == vfxGraph->nodes.end() || dstNodeItr == vfxGraph->nodes.end())
 	{
 		if (srcNodeItr == vfxGraph->nodes.end())
-			logError("source node doesn't exist");
+			LOG_ERR("source node doesn't exist");
 		if (dstNodeItr == vfxGraph->nodes.end())
-			logError("destination node doesn't exist");
+			LOG_ERR("destination node doesn't exist");
 		
 		return;
 	}
@@ -412,7 +408,7 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 			
 			if (link.linkId == linkId)
 			{
-				logDebug("removing dynamic link");
+				LOG_DBG("removing dynamic link");
 				
 				vfxGraph->dynamicData->links.erase(i);
 				break;
@@ -426,7 +422,7 @@ void RealTimeConnection::setLinkParameter(const GraphLinkId linkId, const GraphN
 	if (isLoading)
 		return;
 	
-	logDebug("setLinkParameter");
+	LOG_DBG("setLinkParameter");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -494,7 +490,7 @@ void RealTimeConnection::setLinkParameter(const GraphLinkId linkId, const GraphN
 		{
 			link.params[name] = value;
 			
-			logDebug("setLinkParameter: set dynamic link parameter. count=%d", link.params.size());
+			LOG_DBG("setLinkParameter: set dynamic link parameter. count=%d", link.params.size());
 		}
 	}
 }
@@ -504,7 +500,7 @@ void RealTimeConnection::clearLinkParameter(const GraphLinkId linkId, const Grap
 	if (isLoading)
 		return;
 	
-	logDebug("clearLinkParameter");
+	LOG_DBG("clearLinkParameter");
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -585,7 +581,7 @@ void RealTimeConnection::clearLinkParameter(const GraphLinkId linkId, const Grap
 		{
 			link.params.erase(name);
 			
-			logDebug("clearLinkParameter: cleared dynamic link parameter. count=%d", link.params.size());
+			LOG_DBG("clearLinkParameter: cleared dynamic link parameter. count=%d", link.params.size());
 		}
 	}
 }
@@ -595,7 +591,7 @@ void RealTimeConnection::setNodeIsPassthrough(const GraphNodeId nodeId, const bo
 	if (isLoading)
 		return;
 	
-	//logDebug("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
+	//LOG_DBG("setNodeIsPassthrough called for nodeId=%d, isPassthrough=%d", int(nodeId), int(isPassthrough));
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -762,7 +758,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 	if (isLoading)
 		return;
 	
-	//logDebug("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+	//LOG_DBG("setSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -787,7 +783,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 		{
 			if (inputSocketValue.nodeId == nodeId && inputSocketValue.socketName == srcSocketName)
 			{
-				logDebug("updating dynamic input socket value. socketName=%d, socketValue=%s",
+				LOG_DBG("updating dynamic input socket value. socketName=%d, socketValue=%s",
 					srcSocketName.c_str(),
 					value.c_str());
 				
@@ -800,7 +796,7 @@ void RealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const int s
 		
 		if (found == false)
 		{
-			logDebug("adding dynamic input socket value. socketName=%d, socketValue=%s",
+			LOG_DBG("adding dynamic input socket value. socketName=%d, socketValue=%s",
 				srcSocketName.c_str(),
 				value.c_str());
 			
@@ -865,7 +861,7 @@ void RealTimeConnection::setDstSocketValue(const GraphNodeId nodeId, const int d
 	if (isLoading)
 		return;
 	
-	//logDebug("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
+	//LOG_DBG("setDstSocketValue called for nodeId=%d, dstSocket=%s", int(nodeId), dstSocketName.c_str());
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -921,7 +917,7 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 	if (isLoading)
 		return;
 	
-	//logDebug("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
+	//LOG_DBG("clearSrcSocketValue called for nodeId=%d, srcSocket=%s", int(nodeId), srcSocketName.c_str());
 	
 	Assert(vfxGraph != nullptr);
 	if (vfxGraph == nullptr)
@@ -946,7 +942,7 @@ void RealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, const int
 			
 			if (inputSocketValue.nodeId == nodeId && inputSocketValue.socketName == srcSocketName)
 			{
-				logDebug("removing dynamic input socket value");
+				LOG_DBG("removing dynamic input socket value");
 				
 				vfxGraph->dynamicData->inputSocketValues.erase(i);
 				break;
