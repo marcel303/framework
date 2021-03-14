@@ -41,7 +41,7 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool, Dynam
 	
 	@autoreleasepool
 	{
-		__unsafe_unretained id <MTLCommandBuffer> cmdbuf = nil;
+		id <MTLCommandBuffer> cmdbuf = nil;
 		
 		if (metal_is_encoding_draw_commands())
 			cmdbuf = metal_get_command_buffer();
@@ -69,7 +69,7 @@ static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool)
 	
 	@autoreleasepool
 	{
-		__unsafe_unretained id <MTLCommandBuffer> cmdbuf = nil;
+		id <MTLCommandBuffer> cmdbuf = nil;
 		
 		if (metal_is_encoding_draw_commands())
 			cmdbuf = metal_get_command_buffer();
