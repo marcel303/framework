@@ -51,9 +51,6 @@ void DynamicBufferPool::shut()
 {
 	while (m_freeList != nullptr)
 	{
-	#if !ENABLE_METAL_ARC
-		[m_freeList->m_buffer release];
-	#endif
 		m_freeList->m_buffer = nullptr;
 		
 		DynamicBufferPoolElem * next = m_freeList->m_next;

@@ -133,9 +133,6 @@ void ShaderCacheElem_Metal::shut()
 	
 	for (auto & pipeline : m_pipelines)
 	{
-	#if !ENABLE_METAL_ARC
-		[pipeline.second release];
-	#endif
 		pipeline.second = nullptr;
 	}
 	
@@ -167,10 +164,6 @@ void ShaderCacheElem_Metal::shut()
 	vsInfo = StageInfo();
 	psInfo = StageInfo();
 	
-#if !ENABLE_METAL_ARC
-	[vsFunction release];
-	[psFunction release];
-#endif
 	vsFunction = nullptr;
 	psFunction = nullptr;
 	
@@ -254,11 +247,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			{
 				// get reflection info for this shader
 				
-			#if ENABLE_METAL_ARC
 				MTLRenderPipelineDescriptor * pipelineDescriptor = [MTLRenderPipelineDescriptor new];
-			#else
-				MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-			#endif
 				pipelineDescriptor.label = @"reflection pipeline";
 				pipelineDescriptor.vertexFunction = vsFunction;
 				pipelineDescriptor.fragmentFunction = psFunction;
@@ -296,24 +285,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 					NSLog(@"%@", error);
 				}
 				
-			#if !ENABLE_METAL_ARC
-				[pipelineState release];
-			#endif
 				pipelineState = nil;
 			}
-			
-		#if 1
-			//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-		#if !ENABLE_METAL_ARC
-			[library_vs release];
-			[library_ps release];
-		#endif
-			//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-			library_vs = nil;
-			library_vs = nil;
-		#endif
 			
 			//
 			

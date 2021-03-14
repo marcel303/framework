@@ -117,15 +117,9 @@ void ColorTarget::free()
 	if (m_ownsTexture && m_colorTexture != nullptr)
 	{
 		id <MTLTexture> colorTextureView = (__bridge_transfer id <MTLTexture>)m_colorTextureView;
-	#if !ENABLE_METAL_ARC
-		[colorTextureView release];
-	#endif
 		colorTextureView = nullptr;
 		
 		id <MTLTexture> colorTexture = (__bridge_transfer id <MTLTexture>)m_colorTexture;
-	#if !ENABLE_METAL_ARC
-		[colorTexture release];
-	#endif
 		colorTexture = nullptr;
 		m_colorTexture = nullptr;
 		
@@ -197,9 +191,6 @@ void DepthTarget::free()
 	if (m_ownsTexture && m_depthTexture != nullptr)
 	{
 		id <MTLTexture> depthTexture = (__bridge_transfer id <MTLTexture>)m_depthTexture;
-	#if !ENABLE_METAL_ARC
-		[depthTexture release];
-	#endif
 		depthTexture = nullptr;
 		m_depthTexture = nullptr;
 		

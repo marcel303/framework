@@ -153,9 +153,6 @@ void GxTexture::free()
 	{
 		auto & texture = s_textures[id];
 		
-	#if !ENABLE_METAL_ARC
-		[texture release];
-	#endif
 		texture = nullptr;
 		
 		s_textures.erase(id);
@@ -363,9 +360,6 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int i
 			dstX, dstY, 0,
 			metalFormat);
 		
-	#if !ENABLE_METAL_ARC
-		[src_texture release];
-	#endif
 		src_texture = nullptr;
 	}
 }
@@ -536,11 +530,7 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 		
 		auto device = metal_get_device();
 		
-	#if ENABLE_METAL_ARC
 		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
-	#else
-		MTLTextureDescriptor * descriptor = [[MTLTextureDescriptor new] autorelease];
-	#endif
 		descriptor.textureType = MTLTextureType3D;
 		descriptor.pixelFormat = metalFormat;
 		descriptor.width = sx;
@@ -559,9 +549,6 @@ void GxTexture3d::free()
 	{
 		auto & texture = s_textures[id];
 		
-	#if !ENABLE_METAL_ARC
-		[texture release];
-	#endif
 		texture = nullptr;
 		
 		s_textures.erase(id);
@@ -609,11 +596,7 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 		
 		const MTLPixelFormat metalFormat = toMetalFormat(format);
 
-	#if ENABLE_METAL_ARC
 		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
-	#else
-		MTLTextureDescriptor * descriptor = [[MTLTextureDescriptor new] autorelease];
-	#endif
 		descriptor.textureType = MTLTextureType3D;
 		descriptor.pixelFormat = metalFormat;
 		descriptor.width = srcSx;
@@ -666,9 +649,6 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 			dstX, dstY, dstZ,
 			metalFormat);
 		
-	#if !ENABLE_METAL_ARC
-		[src_texture release];
-	#endif
 		src_texture = nullptr;
 	}
 	

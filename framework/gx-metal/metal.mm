@@ -50,15 +50,9 @@
 	#import <UIKit/UIKit.h> // UIView
 #endif
 
-#if ENABLE_METAL_ARC
-	#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 0 // do not alter
-#else
-	#define ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW 1
-#endif
-
 #define INDEX_TYPE uint32_t
 
-#if ENABLE_METAL_ARC && ! __has_feature(objc_arc)
+#if !__has_feature(objc_arc)
 	#error "ARC is off!"
 #endif
 
@@ -77,10 +71,6 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 MetalWindowData * activeWindowData = nullptr;
 
 static id <MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
-
-#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
-static NSAutoreleasePool * s_autoreleasePool = nullptr;
-#endif
 
 static RenderPipelineState renderState;
 
@@ -135,9 +125,6 @@ void metal_init()
 			for (int clamp = 0; clamp < 2; ++clamp)
 			{
 				auto * descriptor = [MTLSamplerDescriptor new];
-			#if !ENABLE_METAL_ARC
-				[descriptor autorelease];
-			#endif
 				
 				descriptor.minFilter =
 					(filter == 0)
@@ -179,21 +166,12 @@ void metal_shut()
 			{
 				const int index = (filter << 1) | clamp;
 				
-			#if !ENABLE_METAL_ARC
-				[samplerStates[index] release];
-			#endif
 				samplerStates[index] = nil;
 			}
 		}
 		
-	#if !ENABLE_METAL_ARC
-		[queue release];
-	#endif
 		queue = nil;
 		
-	#if !ENABLE_METAL_ARC
-		[device release];
-	#endif
 		device = nil;
 	}
 }
@@ -263,9 +241,6 @@ void metal_detach(SDL_Window * window)
 			
 			[sdl_view willRemoveSubview:windowData->metalview];
 
-		#if !ENABLE_METAL_ARC
-			[windowData->metalview release];
-		#endif
 			windowData->metalview = nullptr;
 		#endif
 		
@@ -278,9 +253,6 @@ void metal_detach(SDL_Window * window)
 			
 			[sdl_view willRemoveSubview:windowData->metalview];
 
-		#if !ENABLE_METAL_ARC
-			[windowData->metalview release];
-		#endif
 			windowData->metalview = nullptr;
 		#endif
 			
@@ -338,15 +310,7 @@ void metal_acquire_drawable()
 			framework.process();
 			framework.waitForEvents = false;
 		}
-			
-	#if !ENABLE_METAL_ARC
-		[activeWindowData->current_drawable retain];
-	#endif
 	}
-	
-#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
-	s_autoreleasePool = [NSAutoreleasePool new];
-#endif
 }
 
 void metal_present()
@@ -359,19 +323,11 @@ void metal_present()
 		
 		[cmdbuf presentDrawable:activeWindowData->current_drawable];
 		
-	#if !ENABLE_METAL_ARC
-		[activeWindowData->current_drawable release];
-	#endif
 		activeWindowData->current_drawable = nullptr;
 		
 		[cmdbuf commit];
 		cmdbuf = nil;
 	}
-	
-#if ENABLE_AUTORELEASEPOOL_SURROUNDING_DRAW
-	[s_autoreleasePool release];
-	s_autoreleasePool = nil;
-#endif
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -505,11 +461,6 @@ void metal_upload_texture_area(
 			waitForDraw = [device newFence];
 			waitForBlit = [device newFence];
 			
-		#if !ENABLE_METAL_ARC
-			[waitForDraw autorelease];
-			[waitForBlit autorelease];
-		#endif
-		
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -527,17 +478,12 @@ void metal_upload_texture_area(
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
 		
-	#if ENABLE_METAL_ARC
 		waitForDraw = nil;
 		waitForBlit = nil;
-	#endif
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 		
-	#if !ENABLE_METAL_ARC
-		[src_texture release];
-	#endif
 		src_texture = nullptr;
 	}
 }
@@ -567,11 +513,6 @@ void metal_copy_texture_to_texture(
 			waitForDraw = [device newFence];
 			waitForBlit = [device newFence];
 		
-		#if !ENABLE_METAL_ARC
-			[waitForDraw autorelease];
-			[waitForBlit autorelease];
-		#endif
-			
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -594,10 +535,8 @@ void metal_copy_texture_to_texture(
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
 		
-	#if ENABLE_METAL_ARC
 		waitForDraw = nil;
 		waitForBlit = nil;
-	#endif
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
@@ -619,11 +558,6 @@ void metal_generate_mipmaps(__unsafe_unretained id <MTLTexture> texture)
 			waitForDraw = [device newFence];
 			waitForBlit = [device newFence];
 			
-		#if !ENABLE_METAL_ARC
-			[waitForDraw autorelease];
-			[waitForBlit autorelease];
-		#endif
-		
 			// make the render thread signal the blit may commence, and wait for the blit to finish
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -637,10 +571,8 @@ void metal_generate_mipmaps(__unsafe_unretained id <MTLTexture> texture)
 		if (waitForBlit != nil)
 			[blit_encoder updateFence:waitForBlit];
 		
-	#if ENABLE_METAL_ARC
 		waitForDraw = nil;
 		waitForBlit = nil;
-	#endif
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
@@ -683,14 +615,8 @@ void beginRenderPass(
 		RenderPassData pd;
 		
 		pd.cmdbuf = [queue commandBuffer];
-	#if !ENABLE_METAL_ARC
-		[pd.cmdbuf retain];
-	#endif
 	
 	 	pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-	#if !ENABLE_METAL_ARC
-		[pd.renderdesc retain];
-	#endif
 		
 		int viewportSx = 0;
 		int viewportSy = 0;
@@ -759,9 +685,6 @@ void beginRenderPass(
 		// begin encoding
 		
 		pd.encoder = [pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc];
-	#if !ENABLE_METAL_ARC
-		[pd.encoder retain];
-	#endif
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
 		
 		renderState.renderPass = pd.renderPass;
@@ -810,15 +733,9 @@ void endRenderPass()
 		
 		//
 		
-	#if ENABLE_METAL_ARC
 		pd.encoder = nil;
 		pd.renderdesc = nil;
 		pd.cmdbuf = nil;
-	#else
-		[pd.encoder release];
-		[pd.renderdesc release];
-		[pd.cmdbuf release];
-	#endif
 		
 		s_activeRenderPass = nullptr;
 		
@@ -1158,9 +1075,6 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 					[globals.depthTest]
 					[globals.depthTestEnabled];
 				
-			#if !ENABLE_METAL_ARC
-				[descriptor release];
-			#endif
 				descriptor = nullptr;
 			}
 		}
@@ -1181,14 +1095,8 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 			id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 			[s_activeRenderPass->encoder setDepthStencilState:state];
 			
-		#if !ENABLE_METAL_ARC
-			[state release];
-		#endif
 			state = nullptr;
 			
-		#if !ENABLE_METAL_ARC
-			[descriptor release];
-		#endif
 			descriptor = nullptr;
 		}
 	}
@@ -1289,14 +1197,8 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 		
 		[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
 		
-	#if !ENABLE_METAL_ARC
-		[state release];
-	#endif
 		state = nullptr;
 		
-	#if !ENABLE_METAL_ARC
-		[descriptor release];
-	#endif
 		descriptor = nullptr;
 	}
 }
@@ -1315,14 +1217,8 @@ void clearStencilTest()
 		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 		[s_activeRenderPass->encoder setDepthStencilState:state];
 		
-	#if !ENABLE_METAL_ARC
-		[state release];
-	#endif
 		state = nullptr;
 		
-	#if !ENABLE_METAL_ARC
-		[descriptor release];
-	#endif
 		descriptor = nullptr;
 	}
 }
@@ -1509,9 +1405,6 @@ void freeTexture(GxTextureId & textureId)
 		{
 			auto & texture = i->second;
 			
-		#if !ENABLE_METAL_ARC
-			[texture release];
-		#endif
 			texture = nullptr;
 			
 			s_textures.erase(i);
@@ -1879,14 +1772,7 @@ void gxInitialize()
 
 void gxShutdown()
 {
-#if !ENABLE_METAL_ARC
-	[s_gxIndexBufferForQuads release];
-#endif
 	s_gxIndexBufferForQuads = nil;
-	
-#if !ENABLE_METAL_ARC
-	[s_gxIndexBufferForTriangleFans release];
-#endif
 	s_gxIndexBufferForTriangleFans = nil;
 	
 	s_gxVertexBufferPool.shut();
@@ -2145,9 +2031,6 @@ static void gxValidatePipelineState()
 			}
 		
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [MTLRenderPipelineDescriptor new];
-		#if !ENABLE_METAL_ARC
-			[pipelineDescriptor autorelease];
-		#endif
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
 			pipelineDescriptor.vertexFunction = vsFunction;

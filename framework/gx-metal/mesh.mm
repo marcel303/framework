@@ -109,9 +109,6 @@ void GxVertexBuffer::free()
 	{
 		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
 		
-	#if !ENABLE_METAL_ARC
-		[buffer release];
-	#endif
 		buffer = nullptr;
 
 		m_buffer = nullptr;
@@ -225,9 +222,6 @@ void GxIndexBuffer::free()
 	{
 		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
 		
-	#if !ENABLE_METAL_ARC
-		[buffer release];
-	#endif
 		buffer = nullptr;
 		
 		m_buffer = nullptr;

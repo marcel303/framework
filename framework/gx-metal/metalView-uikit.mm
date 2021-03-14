@@ -94,9 +94,6 @@
 	{
 		@autoreleasepool
 		{
-		#if !ENABLE_METAL_ARC
-			[self.depthTexture release];
-		#endif
 			self.depthTexture = nullptr;
 			
 			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:size.width height:size.height mipmapped:NO];
