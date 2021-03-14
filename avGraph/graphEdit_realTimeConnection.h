@@ -120,6 +120,10 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
+	virtual void nodeInit(const GraphNode & node)
+	{
+	}
+	
 	virtual void nodeRemove(const GraphNodeId nodeId)
 	{
 	}

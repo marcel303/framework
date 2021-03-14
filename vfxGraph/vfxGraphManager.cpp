@@ -234,6 +234,11 @@ struct VfxGraphFileRTC : GraphEdit_RealTimeConnection
 		for (auto & instance : file->instances)
 			instance->realTimeConnection->nodeAdd(node);
 	}
+	
+	virtual void nodeInit(const GraphNode & node) override
+	{
+		for (auto & instance : file->instances)
+			instance->realTimeConnection->nodeInit(node);
 	}
 
 	virtual void nodeRemove(const GraphNodeId nodeId) override

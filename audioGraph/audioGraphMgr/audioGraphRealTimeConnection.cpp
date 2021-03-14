@@ -297,11 +297,37 @@ void AudioRealTimeConnection::nodeAdd(const GraphNode & node)
 			audioNode->initSelf(node);
 			
 			audioGraph->nodes[node.id] = audioNode;
-			
-			//
-			
-			audioNode->init(node);
 		}
+	}
+	popAudioGraph();
+}
+
+void AudioRealTimeConnection::nodeInit(const GraphNode & node)
+{
+	if (isLoading)
+		return;
+	
+	//LOG_DBG("nodeInit");
+	
+	Assert(audioGraph != nullptr);
+	if (audioGraph == nullptr)
+		return;
+	
+	auto nodeItr = audioGraph->nodes.find(node.id);
+	
+	Assert(nodeItr != audioGraph->nodes.end());
+	if (nodeItr == audioGraph->nodes.end())
+		return;
+	
+	AudioNodeBase * audioNode = nodeItr->second;
+	
+	//
+	
+	AUDIO_SCOPE;
+	
+	pushAudioGraph(audioGraph);
+	{
+		audioNode->init(node);
 	}
 	popAudioGraph();
 }

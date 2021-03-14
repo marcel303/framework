@@ -6435,6 +6435,10 @@ void GraphEdit::nodeAdd(const GraphNode & node)
 	if (realTimeConnection != nullptr)
 	{
 		realTimeConnection->nodeAdd(node);
+		
+		// todo : set input literals. should probably guard in RTE handler not to connect literal when loading
+		
+		realTimeConnection->nodeInit(node);
 	}
 }
 

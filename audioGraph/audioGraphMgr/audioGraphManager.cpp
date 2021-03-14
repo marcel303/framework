@@ -65,6 +65,12 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 			instance->realTimeConnection->nodeAdd(node);
 	}
 
+	virtual void nodeInit(const GraphNode & node) override
+	{
+		for (auto & instance : file->instanceList)
+			instance->realTimeConnection->nodeInit(node);
+	}
+	
 	virtual void nodeRemove(const GraphNodeId nodeId) override
 	{
 		for (auto & instance : file->instanceList)

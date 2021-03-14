@@ -151,9 +151,41 @@ void RealTimeConnection::nodeAdd(const GraphNode & node)
 			vfxNode->initSelf(node);
 			
 			vfxGraph->nodes[node.id] = vfxNode;
-			
-			//
-			
+		}
+	}
+	g_currentVfxGraph = nullptr;
+}
+
+void RealTimeConnection::nodeInit(const GraphNode & node)
+{
+	if (isLoading)
+		return;
+	
+	LOG_DBG("nodeInit");
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return;
+	
+	auto nodeItr = vfxGraph->nodes.find(node.id);
+	
+	Assert(nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return;
+	
+	//
+	
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
+	{
+		VfxNodeBase * vfxNode = nodeItr->second;
+		
+		if (vfxNode == nullptr)
+		{
+			vfxGraph->nodesFailedToCreate.insert(node.id);
+		}
+		else
+		{
 			vfxNode->init(node);
 		}
 	}
