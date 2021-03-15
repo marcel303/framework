@@ -18,16 +18,11 @@
 //
 // ----------------------------------------------------------------------
 
-
-#include <cairo/cairo.h>
-#include <cairo/cairo-xlib.h>
-#include <math.h>
 #include "rotary.h"
 
+#include <math.h>
 
-cairo_t         *RotaryCtl::_cairotype = 0;
-cairo_surface_t *RotaryCtl::_cairosurf = 0;
-
+#if ZT_TODO
 int RotaryCtl::_wb_up = 4;
 int RotaryCtl::_wb_dn = 5;
 int RotaryCtl::_keymod = 0;
@@ -35,169 +30,96 @@ int RotaryCtl::_button = 0;
 int RotaryCtl::_rcount = 0;
 int RotaryCtl::_rx = 0;
 int RotaryCtl::_ry = 0;
+#endif
 
-
-RotaryCtl::RotaryCtl (X_window     *parent,
-                      X_callback   *cbobj,
-                      RotaryImg    *image,
-                      int  xp,
-                      int  yp,
-                      int  cbind) :
-
-    X_window (parent,
-              image->_x0 + xp, image->_y0 + yp,
-              image->_dx, image->_dy,
-              image->_backg->pixel),
-    _cbobj (cbobj),
-    _cbind (cbind),
-    _image (image),
-    _state (0),
-    _count (0),
-    _value (0),
-    _angle (0)
+RotaryCtl::RotaryCtl(
+	CtlCallback *callback,
+	RotaryImg *image,
+	int xp,
+	int yp,
+	int cbind)
+	: Ctl(image->_x0 + xp, image->_y0 + yp, callback)
+	, _cbind(cbind)
+	, _image(image)
+	, _state(0)
+	, _count(0)
+	, _value(0)
+	, _angle(0)
+	, _rcount(0)
+	, _button(0)
 {
-    x_add_events (  ExposureMask
-                  | Button1MotionMask | ButtonPressMask | ButtonReleaseMask);
 } 
 
-
-RotaryCtl::~RotaryCtl (void)
+void RotaryCtl::tick()
 {
-}
-
-
-void RotaryCtl::init (X_display *disp)
-{
-    _cairosurf = cairo_xlib_surface_create (disp->dpy (), 0, disp->dvi (), 50, 50);
-    _cairotype = cairo_create (_cairosurf);
-}
-
-
-void RotaryCtl::fini (void)
-{
-    cairo_destroy (_cairotype);
-    cairo_surface_destroy (_cairosurf);
-}
-
-
-void RotaryCtl::handle_event (XEvent *E)
-{
-    switch (E->type)
-    {
-    case Expose:
-        render ();
-        break;
- 
-    case ButtonPress:
-        bpress ((XButtonEvent *) E);
-        break;
-
-    case ButtonRelease:
-        brelse ((XButtonEvent *) E);
-        break;
-
-    case MotionNotify:
-        motion ((XMotionEvent *) E);
-        break;
-
-    default:
-        fprintf (stderr, "RotaryCtl: event %d\n", E->type );
-    }
-}
-
-
-void RotaryCtl::bpress (XButtonEvent *E)
-{
-    int    r = 0;
-    double d;
-
-    d = hypot (E->x - _image->_xref, E->y - _image->_yref);
-    if (d > _image->_rad + 3) return;
-    _keymod  = E->state;
-    if (E->button < 4)
-    {
-        _rx = E->x;
-        _ry = E->y;
-        _button = E->button;
-        r = handle_button ();
-        _rcount = _count;
-    }
-    else if (_button) return;
-    else if ((int)E->button == _wb_up)
-    {
-        r = handle_mwheel (1);
-    } 
-    else if ((int)E->button == _wb_dn) 
-    {
-        r = handle_mwheel (-1);
-    } 
-    if (r)
-    {
-        callback (r);
-        render ();
-    }
-}
-
-
-void RotaryCtl::brelse (XButtonEvent *E)
-{
-    if (_button == (int)E->button)
+	if (mouse.wentDown(BUTTON_LEFT))
+	{
+		const double d = hypot(
+			mouse.x - (_xp + _image->_xref),
+			mouse.y - (_yp + _image->_yref));
+		
+		if (d <= _image->_rad + 3)
+		{
+			_rx = mouse.x;
+			_ry = mouse.y;
+			_button = 1;
+			_rcount = _count;
+			
+			const int r = handle_button();
+			
+			if (r != 0)
+			{
+				callback(r);
+			}
+		}
+	}
+	else if (_button != 0 && mouse.wentUp(BUTTON_LEFT))
     {
         _button = 0;
-        callback (RELSE);
+        
+        callback(RELSE);
     }
-}
-
-
-void RotaryCtl::motion (XMotionEvent *E)
-{
-    int dx, dy, r;
-
-    if (_button)
+    
+    if (_button != 0)
     {
-        _keymod = E->state;
-        dx = E->x - _rx;
-        dy = E->y - _ry;
-        r = handle_motion (dx, dy);
-        if (r)
+        const int r = handle_motion(mouse.dx, mouse.dy);
+        
+        if (r != 0)
         {
-            callback (r);
-            render ();
+            callback(r);
         }
     }
 }
 
-
-void RotaryCtl::set_state (int s)
+void RotaryCtl::set_state(int s)
 {
-    _state = s;
-    render ();
+	_state = s;
 }
 
-
-void RotaryCtl::render (void)
+void RotaryCtl::draw()
 {
-    XImage  *I;
-    double  a, c, r, x, y;
+	gxPushMatrix();
+	{
+		gxTranslatef(_xp, _yp, 0);
 
-    I = _image->_image [_state];
-    XPutImage (dpy (), win (), dgc (), I,
-               _image->_x0, _image->_y0, 0, 0, _image->_dx, _image->_dy);
-    cairo_xlib_surface_set_drawable (_cairosurf, win(),
-                                     _image->_dx, _image->_dy);
-    c = _image->_lncol [_state] ? 1.0 : 0.0;
-    a = _angle * M_PI / 180;
-    r = _image->_rad;
-    x = _image->_xref;
-    y = _image->_yref;
-    cairo_new_path (_cairotype);
-    cairo_move_to (_cairotype, x, y);
-    x += r * sin (a);
-    y -= r * cos (a);
-    cairo_line_to (_cairotype, x, y);
-    cairo_set_source_rgb (_cairotype, c, c, c);
-    cairo_set_line_width (_cairotype, 1.8);
-    cairo_stroke (_cairotype);
+		const double c = _image->_lncol [_state] ? 1.0 : 0.0;
+		const double a = _angle * M_PI / 180;
+		const double r = _image->_rad;
+		const double x = _image->_xref;
+		const double y = _image->_yref;
+		
+		hqBegin(HQ_LINES);
+		{
+			setColor(c, c, c);
+			hqLine(
+				x,
+				y,
+				1.8f,
+				x + r * sinf(a),
+				y - r * cosf(a),
+				1.8f);
+		}
+		hqEnd();
+    }
+    gxPopMatrix();
 }
-
-

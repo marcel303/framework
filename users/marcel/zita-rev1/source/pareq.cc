@@ -18,45 +18,39 @@
 //
 // ----------------------------------------------------------------------
 
-
 #include <math.h>
 #include <string.h>
 #include "pareq.h"
 
-
-Pareq::Pareq (void) :
-    _touch0 (0),
-    _touch1 (0),
-    _state (BYPASS),
-    _g0 (1),
-    _g1 (1),
-    _f0 (1e3f),
-    _f1 (1e3f)
+Pareq::Pareq()
+    : _touch0(0)
+    , _touch1(0)
+    , _state(BYPASS)
+    , _g0(1)
+    , _g1(1)
+    , _f0(1e3f)
+    , _f1(1e3f)
 {
-    setfsamp (0.0f);
+    setfsamp(0.0f);
 }
 
-
-Pareq::~Pareq (void)
+Pareq::~Pareq()
 {
 }
 
-
-void Pareq::setfsamp (float fsamp)
+void Pareq::setfsamp(float fsamp)
 {
     _fsamp = fsamp;
     reset ();
 }
 
-
-void Pareq::reset (void)
+void Pareq::reset()
 {
-    memset (_z1, 0, sizeof (float) * MAXCH);
-    memset (_z2, 0, sizeof (float) * MAXCH);
+    memset(_z1, 0, sizeof(_z1));
+    memset(_z2, 0, sizeof(_z2));
 }
 
-
-void Pareq::prepare (int nsamp)
+void Pareq::prepare(int nsamp)
 {
     bool  upd = false;
     float g, f;
@@ -65,6 +59,7 @@ void Pareq::prepare (int nsamp)
     {
         g = _g0;
         f = _f0;
+        
         if (g != _g1)
         {
             upd = true;
@@ -72,6 +67,7 @@ void Pareq::prepare (int nsamp)
             else if (_g1 > 2 * g) _g1 /= 2;
             else                  _g1 = g;
         }
+        
         if (f != _f1)
         {
             upd = true;
@@ -79,6 +75,7 @@ void Pareq::prepare (int nsamp)
             else if (_f1 > 2 * f) _f1 /= 2;
             else                  _f1 = f;
         }
+        
         if (upd)
         {
             if ((_state == BYPASS) && (_g1 == 1))
@@ -94,12 +91,13 @@ void Pareq::prepare (int nsamp)
         else
         {
             _touch1 = _touch0;
-            if (fabs (_g1 - 1) < 0.001f)
+            
+            if (fabs(_g1 - 1) < 0.001f)
             {
                 _state = BYPASS;
                 reset ();
             }
-              else
+            else
             {
                 _state = STATIC;
             }
@@ -107,16 +105,17 @@ void Pareq::prepare (int nsamp)
     }
 }
 
-
-void Pareq::calcpar1 (int nsamp, float g, float f)
+void Pareq::calcpar1(int nsamp, float g, float f)
 {
     float b, c1, c2, gg;
 
     f *= float (M_PI) / _fsamp;
     b = 2 * f / sqrtf (g);
+    
     gg = 0.5f * (g - 1);
     c1 = -cosf (2 * f);
     c2 = (1 - b) / (1 + b);
+    
     if (nsamp)
     {
         _dc1 = (c1 - _c1) / nsamp + 1e-30f;
@@ -131,8 +130,7 @@ void Pareq::calcpar1 (int nsamp, float g, float f)
     }
 }
 
-
-void Pareq::process1 (int nsamp, int nchan, float *data[])
+void Pareq::process1(int nsamp, int nchan, float * data[])
 {
     int   i, j;
     float c1, c2, gg;
@@ -142,6 +140,7 @@ void Pareq::process1 (int nsamp, int nchan, float *data[])
     c1 = _c1;
     c2 = _c2;
     gg = _gg;
+    
     if (_state == SMOOTH)
     {
         for (i = 0; i < nchan; i++)
@@ -152,6 +151,7 @@ void Pareq::process1 (int nsamp, int nchan, float *data[])
             c1 = _c1;
             c2 = _c2;
             gg = _gg;
+            
             for (j = 0; j < nsamp; j++)
             {
                 c1 += _dc1;
@@ -164,9 +164,11 @@ void Pareq::process1 (int nsamp, int nchan, float *data[])
                 z2 = z1 + c1 * y;
                 z1 = y + 1e-20f;
             }
+            
             _z1 [i] = z1;
             _z2 [i] = z2;
         }
+        
         _c1 = c1;
         _c2 = c2;
         _gg = gg;
@@ -178,18 +180,21 @@ void Pareq::process1 (int nsamp, int nchan, float *data[])
             p = data [i];
             z1 = _z1 [i];
             z2 = _z2 [i];
+            
             for (j = 0; j < nsamp; j++)
             {
                 x = *p;
                 y = x - c2 * z2;
+                
                 *p++ = x - gg * (z2 + c2 * y - x);
+                
                 y -= c1 * z1;
                 z2 = z1 + c1 * y;
                 z1 = y + 1e-20f;
             }
+            
             _z1 [i] = z1;
             _z2 [i] = z2;
         }
     }
 }
-

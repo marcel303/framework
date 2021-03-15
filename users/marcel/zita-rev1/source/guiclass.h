@@ -18,39 +18,34 @@
 //
 // ----------------------------------------------------------------------
 
-
-#ifndef __GUICLASS_H
-#define __GUICLASS_H
-
+#pragma once
 
 #include "rotary.h"
 
-
-class Rlinctl : public RotaryCtl
+struct Rlinctl : RotaryCtl
 {
-public:
+    Rlinctl(
+		CtlCallback *callback,
+		RotaryImg   *image,
+		int         xp,
+		int         yp,
+		int         cm,
+		int         dd,
+		double      vmin,
+		double      vmax,
+		double      vini,
+		int         cbind = 0);
 
-    Rlinctl (X_window   *parent,
-             X_callback *cbobj,
-             RotaryImg  *image,
-             int        xp,
-             int        yp,
-             int        cm,
-             int        dd,
-             double     vmin,
-             double     vmax,
-             double     vini,
-             int        cbind = 0);
-
-    virtual void set_value (double v);
-    virtual void get_string (char *p, int n);
+    virtual void set_value(double v);
+    virtual void get_string(char *p, int n);
 
 private:
 
-    virtual int handle_button (void);
-    virtual int handle_motion (int dx, int dy);
-    virtual int handle_mwheel (int dw);
-    int set_count (int u);
+    virtual int handle_button(void);
+    virtual int handle_motion(int dx, int dy);
+    virtual int handle_mwheel(int dw);
+    
+    int set_count(int u);
 
     int         _cm;
     int         _dd;
@@ -59,32 +54,30 @@ private:
     const char *_form;
 };
 
-
-class Rlogctl : public RotaryCtl
+struct Rlogctl : RotaryCtl
 {
-public:
+    Rlogctl(
+		CtlCallback *callback,
+		RotaryImg   *image,
+		int         xp,
+		int         yp,
+		int         cm,
+		int         dd,
+		double      vmin,
+		double      vmax,
+		double      vini,
+		int         cbind = 0);
 
-    Rlogctl (X_window   *parent,
-             X_callback *cbobj,
-             RotaryImg  *image,
-             int        xp,
-             int        yp,
-             int        cm,
-             int        dd,
-             double     vmin,
-             double     vmax,
-             double     vini,
-             int        cbind = 0);
-
-    virtual void set_value (double v);
-    virtual void get_string (char *p, int n);
+    virtual void set_value(double v);
+    virtual void get_string(char *p, int n);
 
 private:
 
-    virtual int handle_button (void);
-    virtual int handle_motion (int dx, int dy);
-    virtual int handle_mwheel (int dw);
-    int set_count (int u);
+    virtual int handle_button(void);
+    virtual int handle_motion(int dx, int dy);
+    virtual int handle_mwheel(int dw);
+    
+    int set_count(int u);
 
     int         _cm;
     int         _dd;
@@ -92,7 +85,3 @@ private:
     double      _vmax;
     const char *_form;
 };
-
-
-
-#endif

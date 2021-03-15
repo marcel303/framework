@@ -18,61 +18,53 @@
 //
 // ----------------------------------------------------------------------
 
+#pragma once
 
-#ifndef __MAINWIN_H
-#define        __MAINWIN_H
-
-
-#include <clxclient.h>
 #include "guiclass.h"
 #include "jclient.h"
-#include "global.h"
 
-
-class Mainwin : public A_thread, public X_window, public X_callback
+struct Mainwin : CtlCallback
 {
-public:
+    enum
+	{
+		XSIZE = 640,
+		YSIZE = 75
+	};
 
-    enum { XSIZE = 640, YSIZE = 75 };
-
-    Mainwin (X_rootwin *parent, X_resman *xres, int xp, int yp, Jclient *jclient, bool force_ambis = false);
-    ~Mainwin (void);
-    Mainwin (const Mainwin&);
-    Mainwin& operator=(const Mainwin&);
-
-    void stop (void) { _stop = true; }
-    int process (void);
-    void load_state (void);
-    void save_state (void);
-    void set_managed (bool);
-    void set_statefile (const char *s) { sprintf(_statefile, "%s", s); }
+    Mainwin(
+		AudioStream_Reverb *jclient,
+		bool force_ambis = false);
+    ~Mainwin();
+    
+    Mainwin(const Mainwin&) = delete;
+    Mainwin& operator=(const Mainwin&) = delete;
+	
+	void tick();
+	void draw() const;
 
 private:
 
-    enum { R_DELAY, R_XOVER, R_RTLOW, R_RTMID, R_FDAMP,
-           R_EQ1FR, R_EQ1GN, R_EQ2FR, R_EQ2GN,
-           R_OPMIX, R_RGXYZ, NROTARY };
- 
-    virtual void thr_main (void) {}
+    enum
+    {
+		R_DELAY,
+		R_XOVER,
+		R_RTLOW,
+		R_RTMID,
+		R_FDAMP,
+		R_EQ1FR,
+		R_EQ1GN,
+		R_EQ2FR,
+		R_EQ2GN,
+		R_OPMIX,
+		R_RGXYZ,
+		NROTARY
+	};
 
-    void handle_time (void);
-    void handle_stop (void);
-    void handle_event (XEvent *);
-    void handle_callb (int type, X_window *W, XEvent *E);
-    void expose (XExposeEvent *E);
-    void clmesg (XClientMessageEvent *E);
-    void redraw (void);
+    virtual void handle_callb(int type, Ctl *ctl) override;
 
-    Atom            _atom;
-    bool            _stop;
-    bool            _ambis;
-    X_resman       *_xres;
-    Jclient        *_jclient;
-    RotaryCtl      *_rotary [NROTARY];
-    char            _statefile [1024];
-    bool            _dirty;
-    bool            _managed;
+    bool                _stop;
+    bool                _ambis;
+    AudioStream_Reverb *_jclient;
+    RotaryCtl          *_rotary [NROTARY];
+    bool                _dirty;
 };
-
-
-#endif

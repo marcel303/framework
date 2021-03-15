@@ -18,20 +18,17 @@
 //
 // ----------------------------------------------------------------------
 
-
 #include "styles.h"
-#include "png2img.h"
 
+#include "framework.h"
 
-XftColor      *XftColors [NXFTCOLORS];
-
-XImage    *revsect_img;
-XImage    *eq1sect_img;
-XImage    *eq2sect_img;
-XImage    *mixsect_img;
-XImage    *ambsect_img;
-XImage    *redzita_img;
-XImage    *sm_img;
+GxTextureId revsect_img;
+GxTextureId eq1sect_img;
+GxTextureId eq2sect_img;
+GxTextureId mixsect_img;
+GxTextureId ambsect_img;
+GxTextureId redzita_img;
+GxTextureId sm_img;
 
 RotaryImg  r_delay_img;
 RotaryImg  r_xover_img;
@@ -43,28 +40,24 @@ RotaryImg  r_pargn_img;
 RotaryImg  r_opmix_img;
 RotaryImg  r_rgxyz_img;
 
-
-void styles_init (X_display *disp, X_resman *xrm)
+bool styles_init()
 {
-    XftColors [C_MAIN_BG] = disp->alloc_xftcolor (0.25f, 0.25f, 0.25f, 1.0f);
-    XftColors [C_MAIN_FG] = disp->alloc_xftcolor (1.0f, 1.0f, 1.0f, 1.0f);
+    revsect_img = getTexture("revsect.png");
+    eq1sect_img = getTexture("eq1sect.png");
+    eq2sect_img = getTexture("eq2sect.png");
+    mixsect_img = getTexture("mixsect.png");
+    ambsect_img = getTexture("ambsect.png");
+    redzita_img = getTexture("redzita.png");
+    sm_img      = getTexture("sm.png");
 
-    revsect_img = png2img (SHARED"/revsect.png", disp, XftColors [C_MAIN_BG]);
-    eq1sect_img = png2img (SHARED"/eq1sect.png", disp, XftColors [C_MAIN_BG]);
-    eq2sect_img = png2img (SHARED"/eq2sect.png", disp, XftColors [C_MAIN_BG]);
-    mixsect_img = png2img (SHARED"/mixsect.png", disp, XftColors [C_MAIN_BG]);
-    ambsect_img = png2img (SHARED"/ambsect.png", disp, XftColors [C_MAIN_BG]);
-    redzita_img = png2img (SHARED"/redzita.png", disp, XftColors [C_MAIN_BG]);
-    sm_img      = png2img (SHARED"/sm.png",      disp, XftColors [C_MAIN_BG]);
-
-    if    (!revsect_img || !mixsect_img || !ambsect_img
-        || !eq1sect_img || !eq2sect_img || !redzita_img || !sm_img)
+    if (!revsect_img || !mixsect_img || !ambsect_img ||
+		!eq1sect_img || !eq2sect_img || !redzita_img ||
+		!sm_img)
     {
-        fprintf (stderr, "Can't load images from '%s'.\n", SHARED);
-        exit (1);
+        logError("can't load images");
+        return false;
     }
 
-    r_delay_img._backg = XftColors [C_MAIN_BG];
     r_delay_img._image [0] = revsect_img;
     r_delay_img._lncol [0] = 0;
     r_delay_img._x0 = 30;
@@ -75,7 +68,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_delay_img._yref = 11.5;
     r_delay_img._rad = 11;
 
-    r_xover_img._backg = XftColors [C_MAIN_BG];
     r_xover_img._image [0] = revsect_img;
     r_xover_img._lncol [0] = 0;
     r_xover_img._x0 = 92;
@@ -86,7 +78,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_xover_img._yref = 11.5;
     r_xover_img._rad = 11;
 
-    r_rtlow_img._backg = XftColors [C_MAIN_BG];
     r_rtlow_img._image [0] = revsect_img;
     r_rtlow_img._lncol [0] = 0;
     r_rtlow_img._x0 = 147;
@@ -97,7 +88,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_rtlow_img._yref = 11.5;
     r_rtlow_img._rad = 11;
 
-    r_rtmid_img._backg = XftColors [C_MAIN_BG];
     r_rtmid_img._image [0] = revsect_img;
     r_rtmid_img._lncol [0] = 0;
     r_rtmid_img._x0 = 207;
@@ -108,7 +98,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_rtmid_img._yref = 11.5;
     r_rtmid_img._rad = 11;
 
-    r_fdamp_img._backg = XftColors [C_MAIN_BG];
     r_fdamp_img._image [0] = revsect_img;
     r_fdamp_img._lncol [0] = 0;
     r_fdamp_img._x0 = 267;
@@ -119,7 +108,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_fdamp_img._yref = 11.5;
     r_fdamp_img._rad = 11;
 
-    r_parfr_img._backg = XftColors [C_MAIN_BG];
     r_parfr_img._image [0] = eq1sect_img;
     r_parfr_img._lncol [0] = 0;
     r_parfr_img._x0 = 19;
@@ -130,7 +118,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_parfr_img._yref = 11.5;
     r_parfr_img._rad = 11;
 
-    r_pargn_img._backg = XftColors [C_MAIN_BG];
     r_pargn_img._image [0] = eq1sect_img;
     r_pargn_img._lncol [0] = 1;
     r_pargn_img._x0 = 68;
@@ -141,7 +128,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_pargn_img._yref = 11.5;
     r_pargn_img._rad = 11;
 
-    r_opmix_img._backg = XftColors [C_MAIN_BG];
     r_opmix_img._image [0] = mixsect_img;
     r_opmix_img._lncol [0] = 0;
     r_opmix_img._x0 = 23;
@@ -152,7 +138,6 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_opmix_img._yref = 11.5;
     r_opmix_img._rad = 11;
 
-    r_rgxyz_img._backg = XftColors [C_MAIN_BG];
     r_rgxyz_img._image [0] = ambsect_img;
     r_rgxyz_img._lncol [0] = 0;
     r_rgxyz_img._x0 = 23;
@@ -162,22 +147,17 @@ void styles_init (X_display *disp, X_resman *xrm)
     r_rgxyz_img._xref = 11.5;
     r_rgxyz_img._yref = 11.5;
     r_rgxyz_img._rad = 11;
+    
+    return true;
 }
 
 
-void styles_fini (X_display *disp)
+void styles_fini ()
 {
-    revsect_img->data = 0;
-    mixsect_img->data = 0;
-    ambsect_img->data = 0;
-    eq1sect_img->data = 0;
-    eq2sect_img->data = 0;
-    redzita_img->data = 0;
-    XDestroyImage (revsect_img);
-    XDestroyImage (mixsect_img);
-    XDestroyImage (ambsect_img);
-    XDestroyImage (eq1sect_img);
-    XDestroyImage (eq2sect_img);
-    XDestroyImage (redzita_img);
-    XDestroyImage (sm_img);
+    revsect_img = 0;
+    mixsect_img = 0;
+    ambsect_img = 0;
+    eq1sect_img = 0;
+    eq2sect_img = 0;
+    redzita_img = 0;
 }

@@ -18,29 +18,22 @@
 //
 // -----------------------------------------------------------------------
 
-
-#ifndef __REVERB_H
-#define __REVERB_H
+#pragma once
 
 #include "pareq.h"
 
-
 // -----------------------------------------------------------------------
 
-
-class Diff1
+struct Diff1
 {
-private:
 
-    friend class Reverb;
-    
-    Diff1 (void);
-    ~Diff1 (void);
+    Diff1();
+    ~Diff1();
 
-    void  init (int size, float c);
-    void  fini (void);
+    void  init(int size, float c);
+    void  fini(void);
 
-    float process (float x)
+    float process(float x)
     {
         float z = _line [_i];
         x -= _c * z;
@@ -55,18 +48,12 @@ private:
     float  *_line;
 };
 
-
 // -----------------------------------------------------------------------
 
-
-class Filt1
+struct Filt1
 {
-private:
-
-    friend class Reverb;
-    
-    Filt1 (void) : _slo (0), _shi (0) {}
-    ~Filt1 (void) {}
+    Filt1() : _slo (0), _shi (0) { }
+    ~Filt1() {}
 
     void  set_params (float del, float tmf, float tlo, float wlo, float thi, float chi);
 
@@ -77,6 +64,7 @@ private:
         _shi += _whi * (x - _shi);
         return _gmf * _shi;
     }
+    
     float   _gmf;
     float   _glo;
     float   _wlo;
@@ -85,21 +73,15 @@ private:
     float   _shi;    
 };
 
-
 // -----------------------------------------------------------------------
 
-
-class Delay
+struct Delay
 {
-private:
+    Delay();
+    ~Delay();
 
-    friend class Reverb;
-    
-    Delay (void);
-    ~Delay (void);
-
-    void  init (int size);
-    void  fini (void);
+    void  init(int size);
+    void  fini(void);
 
     float read (void)
     {
@@ -117,18 +99,12 @@ private:
     float  *_line;
 };
 
-
 // -----------------------------------------------------------------------
 
-
-class Vdelay
+struct Vdelay
 {
-private:
-
-    friend class Reverb;
-    
-    Vdelay (void);
-    ~Vdelay (void);
+    Vdelay();
+    ~Vdelay();
 
     void  init (int size);
     void  fini (void);
@@ -153,14 +129,10 @@ private:
     float  *_line;
 };
 
-
 // -----------------------------------------------------------------------
 
-
-class Reverb
+struct Reverb
 {
-public:
-
     Reverb (void);
     ~Reverb (void);
 
@@ -181,7 +153,6 @@ public:
     void set_eq2 (float f, float g) { _pareq2.setparam (f, g); }
 
 private:
-
 
     float   _fsamp;
     bool    _ambis;
@@ -213,12 +184,8 @@ private:
     Pareq   _pareq1;
     Pareq   _pareq2;
 
-    static float _tdiff1 [8];
+    static float _tdiff1 [8]; // fixme : this isn't thread safe ?
     static float _tdelay [8];
 };
 
-
 // -----------------------------------------------------------------------
-
-
-#endif

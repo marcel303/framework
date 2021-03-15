@@ -18,140 +18,157 @@
 //
 // ----------------------------------------------------------------------
 
-
-#include <math.h>
 #include "guiclass.h"
 
+#include "framework.h"
 
-Rlinctl::Rlinctl (X_window   *parent,
-                  X_callback *cbobj,
-                  RotaryImg  *image,
-                  int        xp,
-                  int        yp,
-                  int        cm,
-                  int        dd,
-                  double     vmin,
-                  double     vmax,
-                  double     vini,
-                  int        cbind) :
-RotaryCtl (parent, cbobj, image, xp, yp, cbind),
-_cm (cm),
-_dd (dd),
-_vmin (vmin),
-_vmax (vmax),
-_form (0)
+#include <math.h>
+
+Rlinctl::Rlinctl(
+	CtlCallback *callback,
+	RotaryImg   *image,
+	int         xp,
+	int         yp,
+	int         cm,
+	int         dd,
+	double      vmin,
+	double      vmax,
+	double      vini,
+	int         cbind)
+	: RotaryCtl(callback, image, xp, yp, cbind)
+	, _cm(cm)
+	, _dd(dd)
+	, _vmin(vmin)
+	, _vmax(vmax)
+	, _form(0)
 {
     _count = -1;
-    set_value (vini);
+    
+    set_value(vini);
 }
 
-void Rlinctl::get_string (char *p, int n)
+void Rlinctl::get_string(char *p, int n)
 {
-    if (_form) snprintf (p, n, _form, _value);
-    else *p = 0;
+    if (_form)
+		snprintf (p, n, _form, _value);
+    else
+		*p = 0;
 }
 
-void Rlinctl::set_value (double v)
+void Rlinctl::set_value(double v)
 {
-    set_count ((int) floor (_cm * (v - _vmin) / (_vmax - _vmin) + 0.5));
-    render ();
+    set_count((int) floor (_cm * (v - _vmin) / (_vmax - _vmin) + 0.5));
 }
 
-int Rlinctl::handle_button (void)
+int Rlinctl::handle_button()
 {
     return PRESS;
 }
 
-int Rlinctl::handle_motion (int dx, int dy)
+int Rlinctl::handle_motion(int dx, int dy)
 {
-    return set_count (_rcount + dx - dy);
+    return set_count(_rcount + dx - dy);
 }
 
-int Rlinctl::handle_mwheel (int dw)
+int Rlinctl::handle_mwheel(int dw)
 {
-    if (! (_keymod & ShiftMask)) dw *= _dd;
-    return set_count (_count + dw);
+    if (!keyboard.isDown(SDLK_LSHIFT))
+		dw *= _dd;
+		
+    return set_count(_count + dw);
 }
 
-int Rlinctl::set_count (int u)
+int Rlinctl::set_count(int u)
 {
-    if (u <   0) u=    0;
+    if (u <   0) u =   0;
     if (u > _cm) u = _cm;
+    
     if (u != _count)
     {
         _count = u;
+        
         _value = _vmin + u * (_vmax - _vmin) / _cm;
         _angle = 270.0 * ((double) u / _cm - 0.5);
+        
         return DELTA;
     }
-    return 0;
+    else
+    {
+		return 0;
+	}
 }
 
-
-
-Rlogctl::Rlogctl (X_window   *parent,
-                  X_callback *cbobj,
-                  RotaryImg  *image,
-                  int        xp,
-                  int        yp,
-                  int        cm,
-                  int        dd,
-                  double     vmin,
-                  double     vmax,
-                  double     vini,
-                  int        cbind) :
-RotaryCtl (parent, cbobj, image, xp, yp, cbind),
-_cm (cm),
-_dd (dd),
-_form (0)
+Rlogctl::Rlogctl(
+	CtlCallback *callback,
+	RotaryImg   *image,
+	int         xp,
+	int         yp,
+	int         cm,
+	int         dd,
+	double      vmin,
+	double      vmax,
+	double      vini,
+	int         cbind)
+	: RotaryCtl(callback, image, xp, yp, cbind)
+	, _cm (cm)
+	, _dd (dd)
+	, _form (0)
 {
     _count = -1;
-    _vmin = log (vmin);
-    _vmax = log (vmax);
-    set_value (vini);
+    
+    _vmin = log(vmin);
+    _vmax = log(vmax);
+    
+    set_value(vini);
 }
 
-void Rlogctl::get_string (char *p, int n)
+void Rlogctl::get_string(char *p, int n)
 {
-    if (_form) snprintf (p, n, _form, _value);
-    else *p = 0;
+    if (_form)
+		snprintf (p, n, _form, _value);
+    else
+		*p = 0;
 }
 
-void Rlogctl::set_value (double v)
+void Rlogctl::set_value(double v)
 {
-    set_count ((int) floor (_cm * (log (v) - _vmin) / (_vmax - _vmin) + 0.5));
-    render ();
+    set_count((int) floor (_cm * (log (v) - _vmin) / (_vmax - _vmin) + 0.5));
 }
 
-int Rlogctl::handle_button (void)
+int Rlogctl::handle_button()
 {
     return PRESS;
 }
 
-int Rlogctl::handle_motion (int dx, int dy)
+int Rlogctl::handle_motion(int dx, int dy)
 {
-    return set_count (_rcount + dx - dy);
+    return set_count (_count + dx - dy);
 }
 
-int Rlogctl::handle_mwheel (int dw)
+int Rlogctl::handle_mwheel(int dw)
 {
-    if (! (_keymod & ShiftMask)) dw *= _dd;
-    return set_count (_count + dw);
+	if (!keyboard.isDown(SDLK_LSHIFT))
+		dw *= _dd;
+		
+    return set_count(_count + dw);
 }
 
-int Rlogctl::set_count (int u)
+int Rlogctl::set_count(int u)
 {
-    if (u <   0) u=    0;
+    if (u <   0) u =   0;
     if (u > _cm) u = _cm;
+    
     if (u != _count)
     {
         _count = u;
+        
         _value = exp (_vmin + u * (_vmax - _vmin) / _cm);
         _angle = 270.0 * ((double) u / _cm - 0.5);
+        
         return DELTA;
     }
-    return 0;
+    else
+    {
+		return 0;
+	}
 }
-
-
-

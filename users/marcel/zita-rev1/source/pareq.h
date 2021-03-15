@@ -18,45 +18,45 @@
 //
 // ----------------------------------------------------------------------
 
+#pragma once
 
-#ifndef __PAREQ_H
-#define __PAREQ_H
-
-
-#include <stdint.h>
 #include <math.h>
-#include "global.h"
+#include <stdint.h>
 
-
-class Pareq
+struct Pareq
 {
-public:
-
-    Pareq (void);
-    ~Pareq (void);
+    Pareq();
+    ~Pareq();
     
-    void setfsamp (float fsamp);
-    void setparam (float f, float g)
+    void setfsamp(float fsamp);
+    void setparam(float f, float g)
     {
         _f0 = f;
         _g0 = powf (10.0f, 0.05f * g);
         _touch0++;
     }
-    void reset (void);
-    void prepare (int nsamp);
-    void process (int nsamp, int nchan, float *data[])
+    void reset();
+    void prepare(int nsamp);
+    void process(int nsamp, int nchan, float * data[])
     {
-        if (_state != BYPASS) process1 (nsamp, nchan, data);
+        if (_state != BYPASS)
+        {
+			process1 (nsamp, nchan, data);
+		}
     }
 
-private:
+    enum
+	{
+		BYPASS,
+		STATIC,
+		SMOOTH,
+		MAXCH = 4
+	};
 
-    enum { BYPASS, STATIC, SMOOTH, MAXCH = 4 };
+    void calcpar1(int nsamp, float g, float f);
+    void process1(int nsamp, int nchan, float  *data[]);
 
-    void calcpar1 (int nsamp, float g, float f);
-    void process1 (int nsamp, int nchan, float *data[]);
-
-    volatile int16_t  _touch0;
+    volatile int16_t  _touch0; // todo : why volatile?
     volatile int16_t  _touch1;
     bool              _bypass;
     int               _state;
@@ -71,6 +71,3 @@ private:
     float             _z1 [MAXCH];
     float             _z2 [MAXCH];
 };
-
-
-#endif

@@ -18,50 +18,25 @@
 //
 // ----------------------------------------------------------------------
 
+#pragma once
 
-#ifndef __JCLIENT_H
-#define __JCLIENT_H
+#include "audiostream/AudioStream.h"
 
-
-#include <clthreads.h>
-#include <jack/jack.h>
-#include "global.h"
 #include "reverb.h"
 
-
-class Jclient : public A_thread
+struct AudioStream_Reverb : AudioStream
 {
-public:
+    AudioStream_Reverb(
+		const int sampleRate,
+		const bool ambis);
 
-    Jclient (const char *jname, const char *jserv, bool ambis);
-    ~Jclient (void);
+	virtual int Provide(int numSamples, AudioSample * samples) override;
 
-    const char *jname  (void) const { return _jname; }
-    Reverb     *reverb (void) const { return (Reverb *) &_reverb; }
-
-private:
-
-    void  init_jack (const char *jname, const char *jserv);
-    void  close_jack (void);
-    void  jack_shutdown (void);
-    int   jack_process (int nframes);
-
-    virtual void thr_main (void) {}
-
-    jack_client_t  *_jack_client;
-    jack_port_t    *_inpports [2];
-    jack_port_t    *_outports [4];
-    bool            _active;
-    const char     *_jname;
+	Reverb * reverb() { return &_reverb; };
+	
     unsigned int    _fsamp;
     bool            _ambis;
     int             _fragm;
     int             _nsamp;
     Reverb          _reverb;
-
-    static void jack_static_shutdown (void *arg);
-    static int  jack_static_process (jack_nframes_t nframes, void *arg);
 };
-
-
-#endif

@@ -18,53 +18,29 @@
 //
 // ----------------------------------------------------------------------
 
+#pragma once
 
-#ifndef __STYLES_H
-#define __STYLES_H
-
-#include <clxclient.h>
 #include "rotary.h"
 
+#include "framework.h"
 
-enum
-{
-    C_MAIN_BG, C_MAIN_FG,
-//    C_TEXT_BG, C_TEXT_FG,
-    NXFTCOLORS
-};
+extern GxTextureId revsect_img;
+extern GxTextureId eq1sect_img;
+extern GxTextureId eq2sect_img;
+extern GxTextureId mixsect_img;
+extern GxTextureId ambsect_img;
+extern GxTextureId redzita_img;
+extern GxTextureId sm_img;
 
-enum
-{
-//    F_TEXT, F_FILE,
-    NXFTFONTS
-};
+extern RotaryImg r_delay_img;
+extern RotaryImg r_xover_img;
+extern RotaryImg r_rtlow_img;
+extern RotaryImg r_rtmid_img;
+extern RotaryImg r_fdamp_img;
+extern RotaryImg r_parfr_img;
+extern RotaryImg r_pargn_img;
+extern RotaryImg r_opmix_img;
+extern RotaryImg r_rgxyz_img;
 
-
-extern void styles_init (X_display *disp, X_resman *xrm);
-extern void styles_fini (X_display *disp);
-
-extern XftColor  *XftColors [NXFTCOLORS];
-//extern XftFont   *XftFonts [NXFTFONTS];
-
-extern X_textln_style tstyle1;
-
-extern XImage    *revsect_img;
-extern XImage    *eq1sect_img;
-extern XImage    *eq2sect_img;
-extern XImage    *mixsect_img;
-extern XImage    *ambsect_img;
-extern XImage    *redzita_img;
-extern XImage    *sm_img;
-
-extern RotaryImg  r_delay_img;
-extern RotaryImg  r_xover_img;
-extern RotaryImg  r_rtlow_img;
-extern RotaryImg  r_rtmid_img;
-extern RotaryImg  r_fdamp_img;
-extern RotaryImg  r_parfr_img;
-extern RotaryImg  r_pargn_img;
-extern RotaryImg  r_opmix_img;
-extern RotaryImg  r_rgxyz_img;
-
-
-#endif
+bool styles_init();
+void styles_fini();

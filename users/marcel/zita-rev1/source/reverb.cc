@@ -18,28 +18,24 @@
 //
 // -----------------------------------------------------------------------
 
-
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include "reverb.h"
 
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
 
 // -----------------------------------------------------------------------
-
 
 Diff1::Diff1 (void) :
     _size (0),
     _line (0)
 {
-}    
-
+}
 
 Diff1::~Diff1 (void)
 {
     fini ();
 }
-
 
 void Diff1::init (int size, float c)
 {
@@ -50,7 +46,6 @@ void Diff1::init (int size, float c)
     _c = c;
 }
 
-
 void Diff1::fini (void)
 {
     delete[] _line;
@@ -58,9 +53,7 @@ void Diff1::fini (void)
     _line = 0;
 }
 
-
 // -----------------------------------------------------------------------
-
 
 Delay::Delay (void) :
     _size (0),
@@ -68,12 +61,10 @@ Delay::Delay (void) :
 {
 }
 
-
 Delay::~Delay (void)
 {
     fini ();
 }
-
 
 void Delay::init (int size)
 {
@@ -83,7 +74,6 @@ void Delay::init (int size)
     _i = 0;
 }
 
-
 void Delay::fini (void)
 {
     delete[] _line;
@@ -91,9 +81,7 @@ void Delay::fini (void)
     _line = 0;
 }
 
-
 // -----------------------------------------------------------------------
-
 
 Vdelay::Vdelay (void) :
     _size (0),
@@ -101,12 +89,10 @@ Vdelay::Vdelay (void) :
 {
 }
 
-
 Vdelay::~Vdelay (void)
 {
     fini ();
 }
-
 
 void Vdelay::init (int size)
 {
@@ -117,7 +103,6 @@ void Vdelay::init (int size)
     _iw = 0;
 }
 
-
 void Vdelay::fini (void)
 {
     delete[] _line;
@@ -125,16 +110,13 @@ void Vdelay::fini (void)
     _line = 0;
 }
 
-
 void Vdelay::set_delay (int del)
 {
     _ir = _iw - del;
     if (_ir < 0) _ir += _size;
 }
 
-
 // -----------------------------------------------------------------------
-
 
 void Filt1::set_params (float del, float tmf, float tlo, float wlo, float thi, float chi)
 {
@@ -148,9 +130,7 @@ void Filt1::set_params (float del, float tmf, float tlo, float wlo, float thi, f
     _whi = (sqrtf (1 + 4 * t) - 1) / (2 * t);
 } 
 
-
 // -----------------------------------------------------------------------
-
 
 float Reverb::_tdiff1 [8] = 
 {
@@ -164,8 +144,7 @@ float Reverb::_tdiff1 [8] =
     19123e-6f
 };
 
-
-float Reverb::_tdelay [8] = 
+float Reverb::_tdelay [8] =
 {
    153129e-6f,
    210389e-6f,
@@ -177,17 +156,14 @@ float Reverb::_tdelay [8] =
    219991e-6f
 };
 
-
 Reverb::Reverb (void)
 {
 }
-
 
 Reverb::~Reverb (void)
 {
     fini ();
 }
-
 
 void Reverb::init (float fsamp, bool ambis)
 {
@@ -227,12 +203,10 @@ void Reverb::init (float fsamp, bool ambis)
     _pareq2.setfsamp (fsamp);
 }
 
-
 void Reverb::fini (void)
 {
     for (int i = 0; i < 8; i++) _delay [i].fini ();
 }
-
 
 void Reverb::prepare (int nfram)
 {
@@ -284,7 +258,6 @@ void Reverb::prepare (int nfram)
     _pareq1.prepare (nfram);
     _pareq2.prepare (nfram);
 }
-
 
 void Reverb::process (int nfram, float *inp [], float *out [])
 {
@@ -371,6 +344,4 @@ void Reverb::process (int nfram, float *inp [], float *out [])
     }
 }
 
-
 // -----------------------------------------------------------------------
-
