@@ -35,12 +35,14 @@ struct Ctl
 		: _xp(xp)
 		, _yp(yp)
 		, _callback(in_callback)
+		, visible(false)
 	{
 	}
 	
 	int _xp;
 	int _yp;
 	CtlCallback * _callback;
+	bool visible;
 	
 	void callback(int type)
 	{
@@ -49,6 +51,7 @@ struct Ctl
 	
 	void show()
 	{
+		visible = true;
 	}
 };
 

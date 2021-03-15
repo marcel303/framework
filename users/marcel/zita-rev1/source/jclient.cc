@@ -20,6 +20,8 @@
 
 #include "jclient.h"
 
+#include "framework.h"
+
 AudioStream_Reverb::AudioStream_Reverb(const int in_fsamp, const bool in_ambis)
 {
 	_fsamp = in_fsamp;
@@ -33,8 +35,6 @@ AudioStream_Reverb::AudioStream_Reverb(const int in_fsamp, const bool in_ambis)
 
 int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
 {
-    int   i, k, n_inp, n_out;
-
 	float * inp[2] =
 	{
 		(float*)alloca(numSamples * sizeof(float)),
@@ -51,9 +51,20 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
 	{
 		inp[0][i] = 0.f;
 		inp[1][i] = 0.f;
+		
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			inp[0][i] = random<float>(-.02f, +.02f);
+			inp[1][i] = random<float>(-.02f, +.02f);
+		}
 	}
-			
-    for (int i = 0; i < 2; ++i)
+	
+	const int n_inp = 2;
+	const int n_out = 2;
+		
+	int numFramesLeft = numSamples;
+	
+    while (numFramesLeft != 0)
     {
         if (!_nsamp)
         {
@@ -61,22 +72,24 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
             _nsamp = _fragm;
         }
         
-        k = (_nsamp < numSamples) ? _nsamp : numSamples;
+        const int numFramesThisLoop =
+			_nsamp < numFramesLeft
+			? _nsamp
+			: numFramesLeft;
         
-        _reverb.process (k, inp, out);
+        _reverb.process(numFramesThisLoop, inp, out);
         
-	#if TZ_TODO // why is reverb processed in chunks ? to ensure prepare is called regularly ?
-        for (i = 0; i < n_inp; i++) inp [i] += k;
-        for (i = 0; i < n_out; i++) out [i] += k;
-        frames -= k;
-        _nsamp -= k;
-	#endif
+        for (int i = 0; i < n_inp; i++) inp[i] += numFramesThisLoop;
+        for (int i = 0; i < n_out; i++) out[i] += numFramesThisLoop;
+        
+        numFramesLeft -= numFramesThisLoop;
+        _nsamp        -= numFramesThisLoop;
     }
     
     for (int i = 0; i < numSamples; ++i)
     {
-		samples[i].channel[0] = 0;
-		samples[i].channel[1] = 0;
+		samples[i].channel[0] = out[0][i] * (1 << 15);
+		samples[i].channel[1] = out[1][i] * (1 << 15);
 	}
 
     return numSamples;

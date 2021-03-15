@@ -26,42 +26,57 @@
 
 struct Diff1
 {
-
-    Diff1();
     ~Diff1();
 
-    void  init(int size, float c);
-    void  fini(void);
+    void init(int size, float c);
+    void shut();
 
     float process(float x)
     {
-        float z = _line [_i];
+        const float z = _line [_i];
+        
         x -= _c * z;
+        
         _line [_i] = x;
-        if (++_i == _size) _i = 0;
+        
+        if (++_i == _size)
+			_i = 0;
+			
         return z + _c * x;
     } 
 
-    int     _i;
-    float   _c;
-    int     _size;
-    float  *_line;
+    int     _i = 0;
+    float   _c = 0.f;
+    int     _size = 0;
+    float  *_line = nullptr;
 };
 
 // -----------------------------------------------------------------------
 
 struct Filt1
 {
-    Filt1() : _slo (0), _shi (0) { }
-    ~Filt1() {}
+    Filt1()
+		: _slo (0)
+		, _shi (0)
+	{
+	}
 
-    void  set_params (float del, float tmf, float tlo, float wlo, float thi, float chi);
+    void set_params(
+		float del,
+		float tmf,
+		float tlo,
+		float wlo,
+		float thi,
+		float chi);
 
-    float process (float x)
+    float process(float x)
     {
         _slo += _wlo * (x - _slo) + 1e-10f;
+        
         x += _glo * _slo;
+        
         _shi += _whi * (x - _shi);
+        
         return _gmf * _shi;
     }
     
@@ -77,80 +92,89 @@ struct Filt1
 
 struct Delay
 {
-    Delay();
     ~Delay();
 
-    void  init(int size);
-    void  fini(void);
+    void init(int size);
+    void shut();
 
-    float read (void)
+    float read()
     {
-        return _line [_i];
+        return _line[_i];
     }
 
-    void write (float x)
+    void write(float x)
     {
-        _line [_i++] = x;
-        if (_i == _size) _i = 0;
+        _line[_i++] = x;
+        
+        if (_i == _size)
+			_i = 0;
     }
 
-    int     _i;
-    int     _size;
-    float  *_line;
+    int     _i = 0;
+    int     _size = 0;
+    float  *_line = nullptr;
 };
 
 // -----------------------------------------------------------------------
 
 struct Vdelay
 {
-    Vdelay();
     ~Vdelay();
 
-    void  init (int size);
-    void  fini (void);
-    void  set_delay (int del);
+    void init(int size);
+    void shut();
+    void set_delay(int del);
 
-    float read (void)
+    float read()
     {
         float x = _line [_ir++];
-        if (_ir == _size) _ir = 0;
+        
+        if (_ir == _size)
+			_ir = 0;
+			
         return x;
     }
 
-    void write (float x)
+    void write(float x)
     {
         _line [_iw++] = x;
-        if (_iw == _size) _iw = 0;
+        
+        if (_iw == _size)
+			_iw = 0;
     }
 
-    int     _ir;
-    int     _iw;
-    int     _size;
-    float  *_line;
+    int     _ir = 0;
+    int     _iw = 0;
+    int     _size = 0;
+    float  *_line = nullptr;
 };
 
 // -----------------------------------------------------------------------
 
 struct Reverb
 {
-    Reverb (void);
-    ~Reverb (void);
+    Reverb();
+    ~Reverb();
 
-    void init (float fsamp, bool ambis);
-    void fini (void);
+    void init(float fsamp, bool ambis);
+    void shut();
 
-    void prepare (int n);
-    void process (int n, float *inp [], float *out []);
+    void prepare(
+		const int numFrames); // note : numFrames may be bigger than numFrames during process..
+    void process(
+		const int numFrames,
+		float * src[],
+		float * dst[]);
 
-    void set_delay (float v) { _ipdel = v; _cntA1++; }
-    void set_xover (float v) { _xover = v; _cntB1++; }
-    void set_rtlow (float v) { _rtlow = v; _cntB1++; }
-    void set_rtmid (float v) { _rtmid = v; _cntB1++; _cntC1++; }
-    void set_fdamp (float v) { _fdamp = v; _cntB1++; }
-    void set_opmix (float v) { _opmix = v; _cntC1++; }
-    void set_rgxyz (float v) { _rgxyz = v; _cntC1++; }
-    void set_eq1 (float f, float g) { _pareq1.setparam (f, g); }
-    void set_eq2 (float f, float g) { _pareq2.setparam (f, g); }
+    void set_delay(float v) { _ipdel = v; _cntA1++; }
+    void set_xover(float v) { _xover = v; _cntB1++; }
+    void set_rtlow(float v) { _rtlow = v; _cntB1++; }
+    void set_rtmid(float v) { _rtmid = v; _cntB1++; _cntC1++; }
+    void set_fdamp(float v) { _fdamp = v; _cntB1++; }
+    void set_opmix(float v) { _opmix = v; _cntC1++; }
+    void set_rgxyz(float v) { _rgxyz = v; _cntC1++; }
+    void set_eq1(float f, float g) { _pareq1.setparam (f, g); }
+    void set_eq2(float f, float g) { _pareq2.setparam (f, g); }
 
 private:
 
@@ -163,7 +187,7 @@ private:
     Filt1   _filt1 [8];
     Delay   _delay [8];
     
-    volatile int _cntA1;
+    volatile int _cntA1; // todo : why are these volatile?
     volatile int _cntB1;
     volatile int _cntC1;
     int     _cntA2;
@@ -183,9 +207,6 @@ private:
 
     Pareq   _pareq1;
     Pareq   _pareq2;
-
-    static float _tdiff1 [8]; // fixme : this isn't thread safe ?
-    static float _tdelay [8];
 };
 
 // -----------------------------------------------------------------------

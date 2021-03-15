@@ -142,7 +142,7 @@ int Rlogctl::handle_button()
 
 int Rlogctl::handle_motion(int dx, int dy)
 {
-    return set_count (_count + dx - dy);
+    return set_count (_rcount + dx - dy);
 }
 
 int Rlogctl::handle_mwheel(int dw)

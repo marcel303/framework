@@ -26,113 +26,111 @@
 
 // -----------------------------------------------------------------------
 
-Diff1::Diff1 (void) :
-    _size (0),
-    _line (0)
-{
-}
-
 Diff1::~Diff1 (void)
 {
-    fini ();
+    shut();
 }
 
-void Diff1::init (int size, float c)
+void Diff1::init(int size, float c)
 {
     _size = size;
-    _line = new float [size];
-    memset (_line, 0, size * sizeof (float));
+    _line = new float[size];
+    
+    memset (_line, 0, size * sizeof(float));
+    
     _i = 0;
     _c = c;
 }
 
-void Diff1::fini (void)
+void Diff1::shut()
 {
-    delete[] _line;
+    delete [] _line;
+    _line = nullptr;
     _size = 0;
-    _line = 0;
 }
 
 // -----------------------------------------------------------------------
 
-Delay::Delay (void) :
-    _size (0),
-    _line (0)
+Delay::~Delay()
 {
+    shut();
 }
 
-Delay::~Delay (void)
-{
-    fini ();
-}
-
-void Delay::init (int size)
+void Delay::init(int size)
 {
     _size = size;
-    _line = new float [size];
-    memset (_line, 0, size * sizeof (float));
+    _line = new float[size];
+    
+    memset (_line, 0, size * sizeof(float));
+    
     _i = 0;
 }
 
-void Delay::fini (void)
+void Delay::shut()
 {
-    delete[] _line;
-    _size = 0;
+    delete [] _line;
     _line = 0;
+    _size = 0;
 }
 
 // -----------------------------------------------------------------------
 
-Vdelay::Vdelay (void) :
-    _size (0),
-    _line (0)
+Vdelay::~Vdelay()
 {
+    shut();
 }
 
-Vdelay::~Vdelay (void)
-{
-    fini ();
-}
-
-void Vdelay::init (int size)
+void Vdelay::init(int size)
 {
     _size = size;
-    _line = new float [size];
-    memset (_line, 0, size * sizeof (float));
+    _line = new float[size];
+    
+    memset (_line, 0, size * sizeof(float));
+    
     _ir = 0;
     _iw = 0;
 }
 
-void Vdelay::fini (void)
+void Vdelay::shut()
 {
-    delete[] _line;
-    _size = 0;
+    delete [] _line;
     _line = 0;
+    _size = 0;
 }
 
-void Vdelay::set_delay (int del)
+void Vdelay::set_delay(int del)
 {
     _ir = _iw - del;
-    if (_ir < 0) _ir += _size;
+    
+    if (_ir < 0)
+		_ir += _size;
 }
 
 // -----------------------------------------------------------------------
 
-void Filt1::set_params (float del, float tmf, float tlo, float wlo, float thi, float chi)
+void Filt1::set_params(
+	float del,
+	float tmf,
+	float tlo,
+	float wlo,
+	float thi,
+	float chi)
 {
     float g, t;
 
     _gmf = powf (0.001f, del / tmf);
     _glo = powf (0.001f, del / tlo) / _gmf - 1.0f;
     _wlo = wlo;
+    
     g = powf (0.001f, del / thi) / _gmf;
     t = (1 - g * g) / (2 * g * g * chi);
+    
     _whi = (sqrtf (1 + 4 * t) - 1) / (2 * t);
 } 
 
 // -----------------------------------------------------------------------
 
-float Reverb::_tdiff1 [8] = 
+static const float _tdiff1 [8] =
 {
     20346e-6f,
     24421e-6f,
@@ -144,7 +142,7 @@ float Reverb::_tdiff1 [8] =
     19123e-6f
 };
 
-float Reverb::_tdelay [8] =
+static const float _tdelay [8] =
 {
    153129e-6f,
    210389e-6f,
@@ -156,19 +154,17 @@ float Reverb::_tdelay [8] =
    219991e-6f
 };
 
-Reverb::Reverb (void)
+Reverb::Reverb()
 {
 }
 
-Reverb::~Reverb (void)
+Reverb::~Reverb()
 {
-    fini ();
+    shut();
 }
 
-void Reverb::init (float fsamp, bool ambis)
+void Reverb::init(const float fsamp, const bool ambis)
 {
-    int i, k1, k2;
-
     _fsamp = fsamp;
     _ambis = ambis;
     _cntA1 = 1;
@@ -191,36 +187,38 @@ void Reverb::init (float fsamp, bool ambis)
 
     _vdelay0.init ((int)(0.1f * _fsamp));
     _vdelay1.init ((int)(0.1f * _fsamp));
-    for (i = 0; i < 8; i++)
+    
+    for (int i = 0; i < 8; ++i)
     {
-        k1 = (int)(floorf (_tdiff1 [i] * _fsamp + 0.5f));
-        k2 = (int)(floorf (_tdelay [i] * _fsamp + 0.5f));
-        _diff1 [i].init (k1, (i & 1) ? -0.6f : 0.6f);
-        _delay [i].init (k2 - k1);
+        const int k1 = (int)(floorf(_tdiff1 [i] * _fsamp + 0.5f));
+        const int k2 = (int)(floorf(_tdelay [i] * _fsamp + 0.5f));
+        
+        _diff1[i].init (k1, (i & 1) ? -0.6f : 0.6f);
+        _delay[i].init (k2 - k1);
     }
 
     _pareq1.setfsamp (fsamp);
     _pareq2.setfsamp (fsamp);
 }
 
-void Reverb::fini (void)
+void Reverb::shut()
 {
-    for (int i = 0; i < 8; i++) _delay [i].fini ();
+    for (int i = 0; i < 8; i++)
+		_delay[i].shut();
 }
 
 void Reverb::prepare (int nfram)
 {
-    int    a, b, c, i, k;
-    float  t0, t1, wlo, chi;
-
-    a = _cntA1;
-    b = _cntB1;
-    c = _cntC1;
+// fixme : this isn't thread safe
+    const int a = _cntA1;
+    const int b = _cntB1;
+    const int c = _cntC1;
+    
     _d0 = _d1 = 0;
 
     if (a != _cntA2)
     {
-        k = (int)(floorf ((_ipdel - 0.020f) * _fsamp + 0.5f));
+        const int k = (int)(floorf ((_ipdel - 0.020f) * _fsamp + 0.5f));
         _vdelay0.set_delay (k);
         _vdelay1.set_delay (k);
         _cntA2 = a;
@@ -228,30 +226,45 @@ void Reverb::prepare (int nfram)
 
     if (b != _cntB2)
     {
-         wlo = 6.2832f * _xover / _fsamp;
-         if (_fdamp > 0.49f * _fsamp) chi = 2;
-         else chi = 1 - cosf (6.2832f * _fdamp / _fsamp);
-         for (i = 0; i < 8; i++)
+         const float wlo = 6.2832f * _xover / _fsamp;
+         const float chi =
+			_fdamp > 0.49f * _fsamp
+			? 2
+			: 1 - cosf (6.2832f * _fdamp / _fsamp);
+         
+         for (int i = 0; i < 8; ++i)
          {
-             _filt1 [i].set_params (_tdelay [i], _rtmid, _rtlow, wlo, 0.5f * _rtmid, chi);
+             _filt1[i].set_params(
+				_tdelay[i],
+				_rtmid,
+				_rtlow,
+				wlo,
+				0.5f * _rtmid,
+				chi);
          }
+         
          _cntB2 = b;
     }
 
     if (c != _cntC2)
     {
+		float t0;
+		float t1;
+		
         if (_ambis)
         {
-            t0 = 1.0f / sqrtf (_rtmid);
-            t1 = t0 * powf (10.0f, 0.05f * _rgxyz);
+            t0 = 1.0f / sqrtf(_rtmid);
+            t1 = t0 * powf(10.0f, 0.05f * _rgxyz);
         }
         else
         {
             t0 = (1 - _opmix) * (1 + _opmix);
-            t1 = 0.7f * _opmix * (2 - _opmix) / sqrtf (_rtmid);
+            t1 = 0.7f * _opmix * (2 - _opmix) / sqrtf(_rtmid);
         }
+        
         _d0 = (t0 - _g0) / nfram;
         _d1 = (t1 - _g1) / nfram;
+        
         _cntC2 = c;
     }
 
@@ -259,32 +272,33 @@ void Reverb::prepare (int nfram)
     _pareq2.prepare (nfram);
 }
 
-void Reverb::process (int nfram, float *inp [], float *out [])
+void Reverb::process(
+	const int numFrames,
+	float *inp[],
+	float *out[])
 {
-    int   i, n;
-    float *p0, *p1;
-    float *q0, *q1, *q2, *q3;
-    float t, g, x0, x1, x2, x3, x4, x5, x6, x7;
+    float * __restrict p0 = inp [0];
+    float * __restrict p1 = inp [1];
+    float * __restrict q0 = out [0];
+    float * __restrict q1 = out [1];
+    float * __restrict q2 = out [2]; // fixme : array access when stereo..
+    float * __restrict q3 = out [3];
 
-    g = sqrtf (0.125f);
+	const float g = sqrtf(0.125f);
 
-    p0 = inp [0];
-    p1 = inp [1];
-    q0 = out [0];
-    q1 = out [1];
-    q2 = out [2];
-    q3 = out [3];
-
-    for (i = 0; i < nfram; i++)
+    for (int i = 0; i < numFrames; ++i)
     {
         _vdelay0.write (p0 [i]);
         _vdelay1.write (p1 [i]);
+        
+        float t, x0, x1, x2, x3, x4, x5, x6, x7;
 
          t = 0.3f * _vdelay0.read ();
         x0 = _diff1 [0].process (_delay [0].read () + t);
         x1 = _diff1 [1].process (_delay [1].read () + t);
         x2 = _diff1 [2].process (_delay [2].read () - t);
         x3 = _diff1 [3].process (_delay [3].read () - t);
+        
          t = 0.3f * _vdelay1.read ();
         x4 = _diff1 [4].process (_delay [4].read () + t);
         x5 = _diff1 [5].process (_delay [5].read () + t);
@@ -330,14 +344,17 @@ void Reverb::process (int nfram, float *inp [], float *out [])
         _delay [7].write (_filt1 [7].process (g * x7));
     }
 
-    n = _ambis ? 4 : 2;
-    _pareq1.process (nfram, n, out);
-    _pareq2.process (nfram, n, out);
+    const int numChannels = _ambis ? 4 : 2;
+    
+    _pareq1.process (numFrames, numChannels, out);
+    _pareq2.process (numFrames, numChannels, out);
+    
     if (!_ambis)
     {
-        for (i = 0; i < nfram; i++)
+        for (int i = 0; i < numFrames; ++i)
         {
             _g0 += _d0;
+            
             q0 [i] += _g0 * p0 [i];
             q1 [i] += _g0 * p1 [i];
         }

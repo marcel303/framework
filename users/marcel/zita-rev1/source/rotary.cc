@@ -52,6 +52,9 @@ RotaryCtl::RotaryCtl(
 
 void RotaryCtl::tick()
 {
+	if (!visible)
+		return;
+		
 	if (mouse.wentDown(BUTTON_LEFT))
 	{
 		const double d = hypot(
@@ -82,7 +85,10 @@ void RotaryCtl::tick()
     
     if (_button != 0)
     {
-        const int r = handle_motion(mouse.dx, mouse.dy);
+		const int dx = mouse.x - _rx;
+        const int dy = mouse.y - _ry;
+        
+        const int r = handle_motion(dx, dy);
         
         if (r != 0)
         {
@@ -98,6 +104,9 @@ void RotaryCtl::set_state(int s)
 
 void RotaryCtl::draw()
 {
+	if (!visible)
+		return;
+		
 	gxPushMatrix();
 	{
 		gxTranslatef(_xp, _yp, 0);
