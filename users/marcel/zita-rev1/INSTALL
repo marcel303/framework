@@ -1,0 +1,18 @@
+To install, cd to this directory, make, sudo make install.
+
+To build this version, you need the shared libraries
+
+  libclthreads-2.4.0
+  libclxclient-3.6.1       
+
+and the corresponding header files. They are available at
+
+  <http://www.kokkinizita.net/linuxaudio/downloads>
+
+To install into /usr instead of /usr/local modify the
+definition of 'PREFIX' in the Makefile.
+
+Note: the 'make install' step is necessary to make
+the application work - it expects to find some files
+in $PREFIX/share/zita-rev1.
+
