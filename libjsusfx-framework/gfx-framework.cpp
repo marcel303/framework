@@ -825,7 +825,7 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	glPixelStorei(GL_PACK_ALIGNMENT, restorePackAlignment);
 	checkErrorGL();
 #else
-	AssertMsg(false, "gfx_getpixel: not implemented for current graphics api", 0);
+	//AssertMsg(false, "gfx_getpixel: not implemented for current graphics api");
 	
 	rgba[0] = 255;
 	rgba[1] = 0;
@@ -1017,7 +1017,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 	{
 		const JsusFx_Image & image = imageCache.images[img];
 		
-		Assert(image.isValid);
+		//Assert(image.isValid); // todo : use a separate ScriptAssert
 		
 		if (image.isValid)
 		{
