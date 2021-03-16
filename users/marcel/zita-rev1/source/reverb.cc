@@ -280,8 +280,8 @@ namespace ZitaRev1
 		const float * __restrict p1 = inp[1];
 		      float * __restrict q0 = out[0];
 		      float * __restrict q1 = out[1];
-		      float * __restrict q2 = out[2]; // fixme : array access when stereo..
-		      float * __restrict q3 = out[3];
+		      float * __restrict q2 = _ambis ? out[2] : nullptr;
+		      float * __restrict q3 = _ambis ? out[3] : nullptr;
 
 		const float g = sqrtf(0.125f);
 
