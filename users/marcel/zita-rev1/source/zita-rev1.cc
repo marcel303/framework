@@ -31,7 +31,7 @@ int main (int ac, char *av [])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
     
-    if (!framework.init(Mainwin::XSIZE, Mainwin::YSIZE))
+    if (!framework.init(Mainwin::XSIZE * 2, Mainwin::YSIZE * 2))
 		return -1;
 
 	if (!styles_init())
@@ -54,10 +54,19 @@ int main (int ac, char *av [])
 		if (framework.quitRequested)
 			break;
 		
-        mainwin->tick();
+		Mouse oldMouse = mouse;
+		{
+			mouse.x /= 2;
+			mouse.y /= 2;
+			
+			mainwin->tick();
+		}
+		mouse = oldMouse;
         
         framework.beginDraw(0, 0, 0, 0);
         {
+			gxScalef(2, 2, 1);
+			
 			mainwin->draw();
 		}
 		framework.endDraw();

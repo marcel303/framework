@@ -407,9 +407,7 @@ struct AudioStream_ReverbTest : AudioStream
 	
 	AudioStream_ReverbTest()
 	{
-		//source.Open("snare.wav", true);
-		source.Open("4 - Omake 8 - Thunder Force IV.wav", true);
-		//source.Open("3 - Hydrocity Zone Act 2 - Sonic the Hedgehog 3.wav", true);
+		source.Open("snare.wav", true);
 	}
 	
 	virtual int Provide(int numSamples, AudioSample * samples) override

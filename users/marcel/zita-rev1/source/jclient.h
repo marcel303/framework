@@ -21,6 +21,7 @@
 #pragma once
 
 #include "audiostream/AudioStream.h"
+#include "audiostream/AudioStreamWave.h"
 
 #include "reverb.h"
 
@@ -32,11 +33,13 @@ struct AudioStream_Reverb : AudioStream
 
 	virtual int Provide(int numSamples, AudioSample * samples) override;
 
-	Reverb * reverb() { return &_reverb; };
+	ZitaRev1::Reverb * reverb() { return &_reverb; };
 	
-    unsigned int    _fsamp;
-    bool            _ambis;
-    int             _fragm;
-    int             _nsamp;
-    Reverb          _reverb;
+	AudioStreamWave  _source;
+	
+    unsigned int     _fsamp;
+    bool             _ambis;
+    int              _fragm;
+    int              _nsamp;
+    ZitaRev1::Reverb _reverb;
 };

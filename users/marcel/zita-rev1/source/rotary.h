@@ -23,6 +23,7 @@
 #include "framework.h"
 
 struct Ctl;
+struct CtlCallback;
 
 struct CtlCallback
 {
@@ -54,6 +55,8 @@ struct Ctl
 		visible = true;
 	}
 };
+
+//
 
 struct RotaryImg
 {

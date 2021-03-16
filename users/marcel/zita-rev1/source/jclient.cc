@@ -31,6 +31,8 @@ AudioStream_Reverb::AudioStream_Reverb(const int in_fsamp, const bool in_ambis)
     _nsamp = 0;
 
     _reverb.init (_fsamp, _ambis);
+    
+    _source.Open("snare.wav", true);
 }
 
 int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
@@ -47,15 +49,19 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
 		(float*)alloca(numSamples * sizeof(float))
 	};
 	
+	memset(samples, 0, numSamples * sizeof(AudioSample));
+	_source.Provide(numSamples, samples);
+	
 	for (int i = 0; i < numSamples; ++i)
 	{
-		inp[0][i] = 0.f;
-		inp[1][i] = 0.f;
+		const float gain = .5f;
+		inp[0][i] = samples[i].channel[0] / float(1 << 15) * gain;
+		inp[1][i] = samples[i].channel[1] / float(1 << 15) * gain;
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT) && false)
 		{
-			inp[0][i] = random<float>(-.02f, +.02f);
-			inp[1][i] = random<float>(-.02f, +.02f);
+			inp[0][i] = random<float>(-.2f, +.2f);
+			inp[1][i] = random<float>(-.2f, +.2f);
 		}
 	}
 	
@@ -63,6 +69,18 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
 	const int n_out = 2;
 		
 	int numFramesLeft = numSamples;
+	
+	float * inp_ptr[2] =
+	{
+		inp[0],
+		inp[1],
+	};
+	
+	float * out_ptr[2] =
+	{
+		out[0],
+		out[1],
+	};
 	
     while (numFramesLeft != 0)
     {
@@ -77,10 +95,10 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
 			? _nsamp
 			: numFramesLeft;
         
-        _reverb.process(numFramesThisLoop, inp, out);
+        _reverb.process(numFramesThisLoop, inp_ptr, out_ptr);
         
-        for (int i = 0; i < n_inp; i++) inp[i] += numFramesThisLoop;
-        for (int i = 0; i < n_out; i++) out[i] += numFramesThisLoop;
+        for (int i = 0; i < n_inp; i++) inp_ptr[i] += numFramesThisLoop;
+        for (int i = 0; i < n_out; i++) out_ptr[i] += numFramesThisLoop;
         
         numFramesLeft -= numFramesThisLoop;
         _nsamp        -= numFramesThisLoop;

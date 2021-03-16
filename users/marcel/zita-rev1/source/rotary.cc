@@ -22,16 +22,6 @@
 
 #include <math.h>
 
-#if ZT_TODO
-int RotaryCtl::_wb_up = 4;
-int RotaryCtl::_wb_dn = 5;
-int RotaryCtl::_keymod = 0;
-int RotaryCtl::_button = 0;
-int RotaryCtl::_rcount = 0;
-int RotaryCtl::_rx = 0;
-int RotaryCtl::_ry = 0;
-#endif
-
 RotaryCtl::RotaryCtl(
 	CtlCallback *callback,
 	RotaryImg *image,
