@@ -21,7 +21,11 @@
 #pragma once
 
 #include "guiclass.h"
-#include "jclient.h"
+
+namespace ZitaRev1
+{
+	struct Reverb;
+}
 
 struct Mainwin : CtlCallback
 {
@@ -32,7 +36,7 @@ struct Mainwin : CtlCallback
 	};
 
     Mainwin(
-		AudioStream_Reverb *jclient,
+		ZitaRev1::Reverb *reverb,
 		bool force_ambis = false);
     ~Mainwin();
     
@@ -64,7 +68,7 @@ private:
 
     bool                _stop;
     bool                _ambis;
-    AudioStream_Reverb *_jclient;
+    ZitaRev1::Reverb   *_reverb;
     RotaryCtl          *_rotary [NROTARY];
     bool                _dirty;
 };

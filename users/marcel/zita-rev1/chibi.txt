@@ -1,0 +1,19 @@
+library zita-rev1
+	add_files source/pareq.cc source/pareq.h
+	add_files source/reverb.cc source/reverb.h
+	header_path source expose
+
+library zita-rev1-ui
+	depend_library framework
+	depend_library zita-rev1
+	scan_files cc path gui
+	scan_files h  path gui
+	header_path gui expose
+	resource_path gui/share
+	
+app zita-rev1-test
+	depend_library framework
+	depend_library zita-rev1-ui
+	scan_files cc path test
+	scan_files h  path test
+	resource_path test/data

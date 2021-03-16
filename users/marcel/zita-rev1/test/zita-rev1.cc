@@ -45,7 +45,7 @@ int main (int ac, char *av [])
     AudioStream_Reverb audioStream(SAMPLE_RATE, ambisonic);
     audioOutput.Play(&audioStream);
     
-    Mainwin * mainwin = new Mainwin(&audioStream, ambisonic);
+    Mainwin * mainwin = new Mainwin(audioStream.reverb(), ambisonic);
 
     for (;;)
     {

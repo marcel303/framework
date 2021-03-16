@@ -19,6 +19,7 @@
 // ----------------------------------------------------------------------
 
 #include "mainwin.h"
+#include "reverb.h"
 #include "styles.h"
 
 #include <math.h>
@@ -26,10 +27,10 @@
 #include <stdio.h>
 
 Mainwin::Mainwin (
-	AudioStream_Reverb *jclient,
+	ZitaRev1::Reverb *reverb,
 	bool force_ambis)
     : _stop (false)
-    , _jclient (jclient)
+    , _reverb (reverb)
     , _dirty (false)
 {
     char        s [256];
@@ -59,15 +60,15 @@ Mainwin::Mainwin (
     if (_ambis) _rotary [R_RGXYZ]->show();
     else        _rotary [R_OPMIX]->show();
 
-    _jclient->reverb ()->set_delay (_rotary [R_DELAY]->value ());
-    _jclient->reverb ()->set_xover (_rotary [R_XOVER]->value ());
-    _jclient->reverb ()->set_rtlow (_rotary [R_RTLOW]->value ());
-    _jclient->reverb ()->set_rtmid (_rotary [R_RTMID]->value ());
-    _jclient->reverb ()->set_fdamp (_rotary [R_FDAMP]->value ());
-    _jclient->reverb ()->set_opmix (_rotary [R_OPMIX]->value ());
-    _jclient->reverb ()->set_rgxyz (_rotary [R_RGXYZ]->value ());
-    _jclient->reverb ()->set_eq1 (_rotary [R_EQ1FR]->value (), _rotary [R_EQ1GN]->value ());
-    _jclient->reverb ()->set_eq2 (_rotary [R_EQ2FR]->value (), _rotary [R_EQ2GN]->value ());
+    _reverb->set_delay (_rotary [R_DELAY]->value ());
+    _reverb->set_xover (_rotary [R_XOVER]->value ());
+    _reverb->set_rtlow (_rotary [R_RTLOW]->value ());
+    _reverb->set_rtmid (_rotary [R_RTMID]->value ());
+    _reverb->set_fdamp (_rotary [R_FDAMP]->value ());
+    _reverb->set_opmix (_rotary [R_OPMIX]->value ());
+    _reverb->set_rgxyz (_rotary [R_RGXYZ]->value ());
+    _reverb->set_eq1 (_rotary [R_EQ1FR]->value (), _rotary [R_EQ1GN]->value ());
+    _reverb->set_eq2 (_rotary [R_EQ2FR]->value (), _rotary [R_EQ2GN]->value ());
 }
 
 Mainwin::~Mainwin()
@@ -130,33 +131,33 @@ void Mainwin::handle_callb (int type, Ctl *W)
         switch (k)
         {
         case R_DELAY:
-            _jclient->reverb ()->set_delay (_rotary [R_DELAY]->value ());
+            _reverb->set_delay (_rotary [R_DELAY]->value ());
             break;
         case R_XOVER:
-            _jclient->reverb ()->set_xover (_rotary [R_XOVER]->value ());
+            _reverb->set_xover (_rotary [R_XOVER]->value ());
             break;
         case R_RTLOW:
-            _jclient->reverb ()->set_rtlow (_rotary [R_RTLOW]->value ());
+            _reverb->set_rtlow (_rotary [R_RTLOW]->value ());
             break;
         case R_RTMID:
-            _jclient->reverb ()->set_rtmid (_rotary [R_RTMID]->value ());
+            _reverb->set_rtmid (_rotary [R_RTMID]->value ());
             break;
         case R_FDAMP:
-            _jclient->reverb ()->set_fdamp (_rotary [R_FDAMP]->value ());
+            _reverb->set_fdamp (_rotary [R_FDAMP]->value ());
             break;
         case R_OPMIX:
-            _jclient->reverb ()->set_opmix (_rotary [R_OPMIX]->value ());
+            _reverb->set_opmix (_rotary [R_OPMIX]->value ());
             break;
         case R_RGXYZ:
-            _jclient->reverb ()->set_rgxyz (_rotary [R_RGXYZ]->value ());
+            _reverb->set_rgxyz (_rotary [R_RGXYZ]->value ());
             break;
         case R_EQ1FR:
         case R_EQ1GN:
-            _jclient->reverb ()->set_eq1 (_rotary [R_EQ1FR]->value (), _rotary [R_EQ1GN]->value ());
+            _reverb->set_eq1 (_rotary [R_EQ1FR]->value (), _rotary [R_EQ1GN]->value ());
             break;
         case R_EQ2FR:
         case R_EQ2GN:
-            _jclient->reverb ()->set_eq2 (_rotary [R_EQ2FR]->value (), _rotary [R_EQ2GN]->value ());
+            _reverb->set_eq2 (_rotary [R_EQ2FR]->value (), _rotary [R_EQ2GN]->value ());
             break;
         }
         break;
