@@ -2551,8 +2551,6 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 			{
 				const char * path = i[path_index];
 				
-				logDebug("resource path: %s", path);
-				
 				registerResourcePath(path);
 				
 				if (type_index != -1)

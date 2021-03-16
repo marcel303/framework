@@ -563,9 +563,11 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		TextureCacheElem elem;
 		
-		elem.load(name, gridSx, gridSy, mipmapped);
+		elem.load(resolved_filename, gridSx, gridSy, mipmapped);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -682,9 +684,11 @@ Texture3dCacheElem & Texture3dCache::findOrCreate(const char * name)
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		Texture3dCacheElem elem;
 		
-		elem.load(name);
+		elem.load(resolved_filename);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -1013,9 +1017,11 @@ AnimCacheElem & AnimCache::findOrCreate(const char * name)
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		AnimCacheElem elem;
 		
-		elem.load(name);
+		elem.load(resolved_filename);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -1084,9 +1090,11 @@ SpriterCacheElem & SpriterCache::findOrCreate(const char * name)
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		SpriterCacheElem elem;
 		
-		elem.load(name);
+		elem.load(resolved_filename);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -1179,9 +1187,11 @@ SoundCacheElem & SoundCache::findOrCreate(const char * name)
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		SoundCacheElem elem;
 		
-		elem.load(name);
+		elem.load(resolved_filename);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
