@@ -1,6 +1,6 @@
 library zita-rev1
-	add_files source/pareq.cc source/pareq.h
-	add_files source/reverb.cc source/reverb.h
+	scan_files cc path source
+	scan_files h  path source
 	header_path source expose
 
 library zita-rev1-ui

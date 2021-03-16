@@ -25,17 +25,22 @@
 #include <math.h>
 
 Rlinctl::Rlinctl(
-	CtlCallback *callback,
-	RotaryImg   *image,
-	int         xp,
-	int         yp,
-	int         cm,
-	int         dd,
-	double      vmin,
-	double      vmax,
-	double      vini,
-	int         cbind)
-	: RotaryCtl(callback, image, xp, yp, cbind)
+	CtlCallback     * callback,
+	const RotaryImg * image,
+	const int         xp,
+	const int         yp,
+	const int         cm,
+	const int         dd,
+	const float       vmin,
+	const float       vmax,
+	const float       vini,
+	const int         cbind)
+	: RotaryCtl(
+		callback,
+		image,
+		xp,
+		yp,
+		cbind)
 	, _cm(cm)
 	, _dd(dd)
 	, _vmin(vmin)
@@ -47,17 +52,17 @@ Rlinctl::Rlinctl(
     set_value(vini);
 }
 
-void Rlinctl::get_string(char *p, int n)
+void Rlinctl::get_string(char * p, const int n)
 {
     if (_form)
-		snprintf (p, n, _form, _value);
+		snprintf(p, n, _form, _value);
     else
 		*p = 0;
 }
 
-void Rlinctl::set_value(double v)
+void Rlinctl::set_value(const float v)
 {
-    set_count((int) floor (_cm * (v - _vmin) / (_vmax - _vmin) + 0.5));
+    set_count(int(floorf(_cm * (v - _vmin) / (_vmax - _vmin) + .5f)));
 }
 
 int Rlinctl::handle_button()
@@ -65,7 +70,7 @@ int Rlinctl::handle_button()
     return PRESS;
 }
 
-int Rlinctl::handle_motion(int dx, int dy)
+int Rlinctl::handle_motion(const int dx, const int dy)
 {
     return set_count(_rcount + dx - dy);
 }
@@ -88,7 +93,7 @@ int Rlinctl::set_count(int u)
         _count = u;
         
         _value = _vmin + u * (_vmax - _vmin) / _cm;
-        _angle = 270.0 * ((double) u / _cm - 0.5);
+        _angle = 270.f * (float(u) / _cm - .5f);
         
         return DELTA;
     }
@@ -99,30 +104,34 @@ int Rlinctl::set_count(int u)
 }
 
 Rlogctl::Rlogctl(
-	CtlCallback *callback,
-	RotaryImg   *image,
-	int         xp,
-	int         yp,
-	int         cm,
-	int         dd,
-	double      vmin,
-	double      vmax,
-	double      vini,
-	int         cbind)
-	: RotaryCtl(callback, image, xp, yp, cbind)
-	, _cm (cm)
-	, _dd (dd)
-	, _form (0)
+	CtlCallback     * callback,
+	const RotaryImg * image,
+	const int         xp,
+	const int         yp,
+	const int         cm,
+	const int         dd,
+	const float       vmin,
+	const float       vmax,
+	const float       vini,
+	const int         cbind)
+	: RotaryCtl(
+		callback,
+		image,
+		xp,
+		yp,
+		cbind)
+	, _cm(cm)
+	, _dd(dd)
+	, _vmin(logf(vmin))
+    , _vmax(logf(vmax))
+	, _form(0)
 {
     _count = -1;
-    
-    _vmin = log(vmin);
-    _vmax = log(vmax);
     
     set_value(vini);
 }
 
-void Rlogctl::get_string(char *p, int n)
+void Rlogctl::get_string(char * p, const int n)
 {
     if (_form)
 		snprintf (p, n, _form, _value);
@@ -130,9 +139,9 @@ void Rlogctl::get_string(char *p, int n)
 		*p = 0;
 }
 
-void Rlogctl::set_value(double v)
+void Rlogctl::set_value(const float v)
 {
-    set_count((int) floor (_cm * (log (v) - _vmin) / (_vmax - _vmin) + 0.5));
+    set_count(int(floorf(_cm * (logf(v) - _vmin) / (_vmax - _vmin) + .5f)));
 }
 
 int Rlogctl::handle_button()
@@ -140,9 +149,9 @@ int Rlogctl::handle_button()
     return PRESS;
 }
 
-int Rlogctl::handle_motion(int dx, int dy)
+int Rlogctl::handle_motion(const int dx, const int dy)
 {
-    return set_count (_rcount + dx - dy);
+    return set_count(_rcount + dx - dy);
 }
 
 int Rlogctl::handle_mwheel(int dw)
@@ -162,8 +171,8 @@ int Rlogctl::set_count(int u)
     {
         _count = u;
         
-        _value = exp (_vmin + u * (_vmax - _vmin) / _cm);
-        _angle = 270.0 * ((double) u / _cm - 0.5);
+        _value = expf(_vmin + u * (_vmax - _vmin) / _cm);
+        _angle = 270.f * (float(u) / _cm - .5f);
         
         return DELTA;
     }

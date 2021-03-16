@@ -29,22 +29,23 @@ namespace ZitaRev1
 	{
 		Pareq();
 		
-		void setfsamp(float fsamp);
-		void setparam(float f, float g)
+		void set_fsamp(const float fsamp);
+		void set_param(const float f, const float g)
 		{
 			_f0 = f;
-			_g0 = powf (10.0f, 0.05f * g);
+			_g0 = powf(10.0f, 0.05f * g);
+			
 			_touch0++;
 		}
 		
 		void reset();
 		
 		void prepare(const int nsamp);
-		void process(const int nsamp, int nchan, float * data[])
+		void process(const int nsamp, const int nchan, float * data[])
 		{
 			if (_state != BYPASS)
 			{
-				process1 (nsamp, nchan, data);
+				process1(nsamp, nchan, data);
 			}
 		}
 
@@ -56,22 +57,23 @@ namespace ZitaRev1
 			MAXCH = 4
 		};
 
-		void calcpar1(int nsamp, float g, float f);
-		void process1(int nsamp, int nchan, float  *data[]);
+		void calcpar1(const int nsamp, const float g, const float f);
+		void process1(const int nsamp, const int nchan, float * data[]);
 
+		// -- dirty tracking
 		volatile int16_t  _touch0; // todo : why volatile?
 		volatile int16_t  _touch1;
-		bool              _bypass;
-		int               _state;
-		float             _fsamp;
+		
+		int   _state;
+		float _fsamp;
 
-		float             _g0, _g1;
-		float             _f0, _f1;
-		float             _c1, _dc1;
-		float             _c2, _dc2;
-		float             _gg, _dgg;
+		float _g0,  _g1;
+		float _f0,  _f1;
+		float _c1, _dc1;
+		float _c2, _dc2;
+		float _gg, _dgg;
 
-		float             _z1 [MAXCH];
-		float             _z2 [MAXCH];
+		float _z1[MAXCH];
+		float _z2[MAXCH];
 	};
 }

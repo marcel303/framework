@@ -18,7 +18,7 @@
 //
 // ----------------------------------------------------------------------
 
-#include "jclient.h"
+#include "audioStream_Reverb.h"
 
 #include "framework.h"
 
@@ -30,7 +30,7 @@ AudioStream_Reverb::AudioStream_Reverb(const int in_fsamp, const bool in_ambis)
     _fragm = 1024;
     _nsamp = 0;
 
-    _reverb.init (_fsamp, _ambis);
+    _reverb.init(_fsamp, _ambis);
     
     _source.Open("snare.wav", true);
 }
@@ -86,7 +86,7 @@ int AudioStream_Reverb::Provide(int numSamples, AudioSample * samples)
     {
         if (!_nsamp)
         {
-            _reverb.prepare (_fragm);
+            _reverb.prepare(_fragm);
             _nsamp = _fragm;
         }
         

@@ -19,15 +19,16 @@
 // ----------------------------------------------------------------------
 
 #include "styles.h"
-#include "jclient.h"
 #include "mainwin.h"
+
+#include "audioStream_Reverb.h"
 
 #include "audiooutput/AudioOutput_Native.h"
 #include "framework.h"
 
 #define SAMPLE_RATE 44100
 
-int main (int ac, char *av [])
+int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
     
@@ -83,6 +84,3 @@ int main (int ac, char *av [])
 
     return 0;
 }
-
-
-

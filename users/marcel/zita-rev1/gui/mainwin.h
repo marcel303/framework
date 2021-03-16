@@ -69,6 +69,6 @@ private:
     bool                _stop;
     bool                _ambis;
     ZitaRev1::Reverb   *_reverb;
-    RotaryCtl          *_rotary [NROTARY];
+    RotaryCtl          *_rotary[NROTARY];
     bool                _dirty;
 };

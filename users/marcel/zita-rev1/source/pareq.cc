@@ -33,11 +33,14 @@ namespace ZitaRev1
 		, _g1(1)
 		, _f0(1e3f)
 		, _f1(1e3f)
+		, _c1(0), _dc1(0)
+		, _c2(0), _dc2(0)
+		, _gg(0), _dgg(0)
 	{
-		setfsamp(0.0f);
+		set_fsamp(0.0f);
 	}
 	
-	void Pareq::setfsamp(float fsamp)
+	void Pareq::set_fsamp(const float fsamp)
 	{
 		_fsamp = fsamp;
 		
@@ -50,14 +53,14 @@ namespace ZitaRev1
 		memset(_z2, 0, sizeof(_z2));
 	}
 
-	void Pareq::prepare(int nsamp)
+	void Pareq::prepare(const int nsamp)
 	{
 		if (_touch1 != _touch0)
 		{
 			bool update = false;
 			
-			float g = _g0;
-			float f = _f0;
+			const float g = _g0;
+			const float f = _f0;
 			
 			if (g != _g1)
 			{
@@ -94,7 +97,7 @@ namespace ZitaRev1
 				if (fabsf(_g1 - 1.f) < 0.001f)
 				{
 					_state = BYPASS;
-					reset ();
+					reset();
 				}
 				else
 				{
@@ -104,9 +107,12 @@ namespace ZitaRev1
 		}
 	}
 
-	void Pareq::calcpar1(int nsamp, float g, float f)
+	void Pareq::calcpar1(
+		const int nsamp,
+		const float g,
+		      float f)
 	{
-		f *= float (M_PI) / _fsamp;
+		f *= float(M_PI) / _fsamp;
 		
 		const float b = 2 * f / sqrtf(g);
 		
@@ -128,7 +134,7 @@ namespace ZitaRev1
 		}
 	}
 
-	void Pareq::process1(int nsamp, int nchan, float * data[])
+	void Pareq::process1(const int nsamp, const int nchan, float * data[])
 	{
 		float c1 = _c1;
 		float c2 = _c2;
@@ -138,7 +144,7 @@ namespace ZitaRev1
 		{
 			for (int i = 0; i < nchan; i++)
 			{
-				float * p = data[i];
+				float * __restrict p = data[i];
 				float z1 = _z1[i];
 				float z2 = _z2[i];
 				c1 = _c1;
@@ -158,8 +164,8 @@ namespace ZitaRev1
 					z1 = y + 1e-20f;
 				}
 				
-				_z1 [i] = z1;
-				_z2 [i] = z2;
+				_z1[i] = z1;
+				_z2[i] = z2;
 			}
 			
 			_c1 = c1;
@@ -170,9 +176,9 @@ namespace ZitaRev1
 		{
 			for (int i = 0; i < nchan; i++)
 			{
-				float * p = data [i];
-				float z1 = _z1 [i];
-				float z2 = _z2 [i];
+				float * __restrict p = data[i];
+				float z1 = _z1[i];
+				float z2 = _z2[i];
 				
 				for (int j = 0; j < nsamp; j++)
 				{
@@ -186,8 +192,8 @@ namespace ZitaRev1
 					z1 = y + 1e-20f;
 				}
 				
-				_z1 [i] = z1;
-				_z2 [i] = z2;
+				_z1[i] = z1;
+				_z2[i] = z2;
 			}
 		}
 	}

@@ -23,15 +23,17 @@
 #include <math.h>
 
 RotaryCtl::RotaryCtl(
-	CtlCallback *callback,
-	RotaryImg *image,
-	int xp,
-	int yp,
-	int cbind)
-	: Ctl(image->_x0 + xp, image->_y0 + yp, callback)
+	CtlCallback * callback,
+	const RotaryImg * image,
+	const int xp,
+	const int yp,
+	const int cbind)
+	: Ctl(
+		image->_x0 + xp,
+		image->_y0 + yp,
+		callback)
 	, _cbind(cbind)
 	, _image(image)
-	, _state(0)
 	, _count(0)
 	, _value(0)
 	, _angle(0)
@@ -47,7 +49,7 @@ void RotaryCtl::tick()
 		
 	if (mouse.wentDown(BUTTON_LEFT))
 	{
-		const double d = hypot(
+		const float d = hypotf(
 			mouse.x - (_xp + _image->_xref),
 			mouse.y - (_yp + _image->_yref));
 		
@@ -55,8 +57,8 @@ void RotaryCtl::tick()
 		{
 			_rx = mouse.x;
 			_ry = mouse.y;
-			_button = 1;
 			_rcount = _count;
+			_button = 1;
 			
 			const int r = handle_button();
 			
@@ -87,11 +89,6 @@ void RotaryCtl::tick()
     }
 }
 
-void RotaryCtl::set_state(int s)
-{
-	_state = s;
-}
-
 void RotaryCtl::draw()
 {
 	if (!visible)
@@ -101,15 +98,14 @@ void RotaryCtl::draw()
 	{
 		gxTranslatef(_xp, _yp, 0);
 
-		const double c = _image->_lncol [_state] ? 1.0 : 0.0;
-		const double a = _angle * M_PI / 180;
-		const double r = _image->_rad;
-		const double x = _image->_xref;
-		const double y = _image->_yref;
+		const float a = _angle * float(M_PI) / 180.f;
+		const float r = _image->_rad;
+		const float x = _image->_xref;
+		const float y = _image->_yref;
 		
 		hqBegin(HQ_LINES);
 		{
-			setColor(c, c, c);
+			setColor(colorBlack);
 			hqLine(
 				x,
 				y,

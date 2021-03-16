@@ -28,46 +28,40 @@ namespace ZitaRev1
 	{
 		~Diff1();
 
-		void init(int size, float c);
+		void init(const int size, const float c);
 		void shut();
 
 		float process(float x)
 		{
-			const float z = _line [_i];
+			const float z = _line[_i];
 			
 			x -= _c * z;
 			
-			_line [_i] = x;
+			_line[_i++] = x;
 			
-			if (++_i == _size)
+			if (_i == _size)
 				_i = 0;
 				
 			return z + _c * x;
 		}
 
-		int     _i = 0;
-		float   _c = 0.f;
-		int     _size = 0;
-		float  *_line = nullptr;
+		int                _i = 0;
+		float              _c = 0.f;
+		int                _size = 0;
+		float * __restrict _line = nullptr;
 	};
 
 	//
 
 	struct Filt1
 	{
-		Filt1()
-			: _slo (0)
-			, _shi (0)
-		{
-		}
-
 		void set_params(
-			float del,
-			float tmf,
-			float tlo,
-			float wlo,
-			float thi,
-			float chi);
+			const float del,
+			const float tmf,
+			const float tlo,
+			const float wlo,
+			const float thi,
+			const float chi);
 
 		float process(float x)
 		{
@@ -80,12 +74,13 @@ namespace ZitaRev1
 			return _gmf * _shi;
 		}
 		
-		float   _gmf;
-		float   _glo;
-		float   _wlo;
-		float   _whi;
-		float   _slo;
-		float   _shi;
+		float _gmf = 0.f;
+		float _glo = 0.f;
+		float _wlo = 0.f;
+		float _whi = 0.f;
+		
+		float _slo = 0.f;
+		float _shi = 0.f;
 	};
 
 	//
@@ -94,15 +89,15 @@ namespace ZitaRev1
 	{
 		~Delay();
 
-		void init(int size);
+		void init(const int size);
 		void shut();
 
-		float read()
+		float read() const
 		{
 			return _line[_i];
 		}
 
-		void write(float x)
+		void write(const float x)
 		{
 			_line[_i++] = x;
 			
@@ -110,9 +105,9 @@ namespace ZitaRev1
 				_i = 0;
 		}
 
-		int     _i = 0;
-		int     _size = 0;
-		float  *_line = nullptr;
+		int                _i = 0;
+		int                _size = 0;
+		float * __restrict _line = nullptr;
 	};
 
 	//
@@ -121,13 +116,14 @@ namespace ZitaRev1
 	{
 		~Vdelay();
 
-		void init(int size);
+		void init(const int size);
 		void shut();
-		void set_delay(int del);
+		
+		void set_delay(const int del);
 
 		float read()
 		{
-			float x = _line [_ir++];
+			const float x = _line[_ir++];
 			
 			if (_ir == _size)
 				_ir = 0;
@@ -135,18 +131,18 @@ namespace ZitaRev1
 			return x;
 		}
 
-		void write(float x)
+		void write(const float x)
 		{
-			_line [_iw++] = x;
+			_line[_iw++] = x;
 			
 			if (_iw == _size)
 				_iw = 0;
 		}
 
-		int     _ir = 0;
-		int     _iw = 0;
-		int     _size = 0;
-		float  *_line = nullptr;
+		int                _ir = 0;
+		int                _iw = 0;
+		int                _size = 0;
+		float * __restrict _line = nullptr;
 	};
 
 	//
@@ -156,7 +152,7 @@ namespace ZitaRev1
 		Reverb();
 		~Reverb();
 
-		void init(float fsamp, bool ambis);
+		void init(const float fsamp, const bool ambis);
 		void shut();
 
 		void prepare(
@@ -166,27 +162,30 @@ namespace ZitaRev1
 			float * src[],
 			float * dst[]);
 
-		void set_delay(float v) { _ipdel = v; _cntA1++; }
-		void set_xover(float v) { _xover = v; _cntB1++; }
-		void set_rtlow(float v) { _rtlow = v; _cntB1++; }
-		void set_rtmid(float v) { _rtmid = v; _cntB1++; _cntC1++; }
-		void set_fdamp(float v) { _fdamp = v; _cntB1++; }
-		void set_opmix(float v) { _opmix = v; _cntC1++; }
-		void set_rgxyz(float v) { _rgxyz = v; _cntC1++; }
-		void set_eq1(float f, float g) { _pareq1.setparam (f, g); }
-		void set_eq2(float f, float g) { _pareq2.setparam (f, g); }
+		void set_delay(const float v) { _ipdel = v; _cntA1++; }
+		void set_xover(const float v) { _xover = v; _cntB1++; }
+		void set_rtlow(const float v) { _rtlow = v; _cntB1++; }
+		void set_rtmid(const float v) { _rtmid = v; _cntB1++; _cntC1++; }
+		void set_fdamp(const float v) { _fdamp = v; _cntB1++; }
+		void set_opmix(const float v) { _opmix = v; _cntC1++; }
+		void set_rgxyz(const float v) { _rgxyz = v; _cntC1++; }
+		void set_eq1(const float f, const float g) { _pareq1.set_param(f, g); }
+		void set_eq2(const float f, const float g) { _pareq2.set_param(f, g); }
 
 	private:
 
+		// -- audio spec
 		float   _fsamp;
 		bool    _ambis;
 
+		// -- fdn
 		Vdelay  _vdelay0;
 		Vdelay  _vdelay1;
-		Diff1   _diff1 [8];
-		Filt1   _filt1 [8];
-		Delay   _delay [8];
+		Diff1   _diff1[8];
+		Filt1   _filt1[8];
+		Delay   _delay[8];
 		
+		// -- dirty tracking
 		volatile int _cntA1; // fixme : not thread safe
 		volatile int _cntB1;
 		volatile int _cntC1;
@@ -194,6 +193,7 @@ namespace ZitaRev1
 		int     _cntB2;
 		int     _cntC2;
 
+		// -- params
 		float   _ipdel;
 		float   _xover;
 		float   _rtlow;
@@ -205,6 +205,7 @@ namespace ZitaRev1
 		float   _g0, _d0;
 		float   _g1, _d1;
 
+		// -- eq
 		Pareq   _pareq1;
 		Pareq   _pareq2;
 	};

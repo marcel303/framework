@@ -25,63 +25,63 @@
 struct Rlinctl : RotaryCtl
 {
     Rlinctl(
-		CtlCallback *callback,
-		RotaryImg   *image,
-		int         xp,
-		int         yp,
-		int         cm,
-		int         dd,
-		double      vmin,
-		double      vmax,
-		double      vini,
-		int         cbind = 0);
+		CtlCallback     * callback,
+		const RotaryImg * image,
+		const int         xp,
+		const int         yp,
+		const int         cm,
+		const int         dd,
+		const float       vmin,
+		const float       vmax,
+		const float       vini,
+		const int         cbind = 0);
 
-    virtual void set_value(double v);
-    virtual void get_string(char *p, int n);
+    virtual void set_value(const float v) override;
+    virtual void get_string(char * p, const int n) override;
 
 private:
 
-    virtual int handle_button(void);
-    virtual int handle_motion(int dx, int dy);
-    virtual int handle_mwheel(int dw);
+    virtual int handle_button() override;
+    virtual int handle_motion(const int dx, const int dy) override;
+    virtual int handle_mwheel(const int dw) override;
     
-    int set_count(int u);
+    int set_count(const int u);
 
-    int         _cm;
-    int         _dd;
-    double      _vmin;
-    double      _vmax;
-    const char *_form;
+    const int    _cm;
+    const int    _dd;
+    const float  _vmin;
+    const float  _vmax;
+    const char * _form;
 };
 
 struct Rlogctl : RotaryCtl
 {
     Rlogctl(
-		CtlCallback *callback,
-		RotaryImg   *image,
-		int         xp,
-		int         yp,
-		int         cm,
-		int         dd,
-		double      vmin,
-		double      vmax,
-		double      vini,
-		int         cbind = 0);
+		CtlCallback     * callback,
+		const RotaryImg * image,
+		const int         xp,
+		const int         yp,
+		const int         cm,
+		const int         dd,
+		const float       vmin,
+		const float       vmax,
+		const float       vini,
+		const int         cbind = 0);
 
-    virtual void set_value(double v);
-    virtual void get_string(char *p, int n);
+    virtual void set_value(const float v) override;
+    virtual void get_string(char * p, const int n) override;
 
 private:
 
-    virtual int handle_button(void);
-    virtual int handle_motion(int dx, int dy);
-    virtual int handle_mwheel(int dw);
+    virtual int handle_button() override;
+    virtual int handle_motion(const int dx, const int dy) override;
+    virtual int handle_mwheel(const int dw) override;
     
-    int set_count(int u);
+    int set_count(const int u);
 
-    int         _cm;
-    int         _dd;
-    double      _vmin;
-    double      _vmax;
-    const char *_form;
+    const int     _cm;
+    const int     _dd;
+    const float   _vmin;
+    const float   _vmax;
+    const char  * _form;
 };

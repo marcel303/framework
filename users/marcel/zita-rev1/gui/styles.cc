@@ -58,8 +58,7 @@ bool styles_init()
         return false;
     }
 
-    r_delay_img._image [0] = revsect_img;
-    r_delay_img._lncol [0] = 0;
+    r_delay_img._image[0] = revsect_img;
     r_delay_img._x0 = 30;
     r_delay_img._y0 = 32;
     r_delay_img._dx = 23;
@@ -68,8 +67,7 @@ bool styles_init()
     r_delay_img._yref = 11.5;
     r_delay_img._rad = 11;
 
-    r_xover_img._image [0] = revsect_img;
-    r_xover_img._lncol [0] = 0;
+    r_xover_img._image[0] = revsect_img;
     r_xover_img._x0 = 92;
     r_xover_img._y0 = 17;
     r_xover_img._dx = 23;
@@ -78,8 +76,7 @@ bool styles_init()
     r_xover_img._yref = 11.5;
     r_xover_img._rad = 11;
 
-    r_rtlow_img._image [0] = revsect_img;
-    r_rtlow_img._lncol [0] = 0;
+    r_rtlow_img._image[0] = revsect_img;
     r_rtlow_img._x0 = 147;
     r_rtlow_img._y0 = 17;
     r_rtlow_img._dx = 23;
@@ -88,8 +85,7 @@ bool styles_init()
     r_rtlow_img._yref = 11.5;
     r_rtlow_img._rad = 11;
 
-    r_rtmid_img._image [0] = revsect_img;
-    r_rtmid_img._lncol [0] = 0;
+    r_rtmid_img._image[0] = revsect_img;
     r_rtmid_img._x0 = 207;
     r_rtmid_img._y0 = 17;
     r_rtmid_img._dx = 23;
@@ -98,8 +94,7 @@ bool styles_init()
     r_rtmid_img._yref = 11.5;
     r_rtmid_img._rad = 11;
 
-    r_fdamp_img._image [0] = revsect_img;
-    r_fdamp_img._lncol [0] = 0;
+    r_fdamp_img._image[0] = revsect_img;
     r_fdamp_img._x0 = 267;
     r_fdamp_img._y0 = 17;
     r_fdamp_img._dx = 23;
@@ -108,8 +103,7 @@ bool styles_init()
     r_fdamp_img._yref = 11.5;
     r_fdamp_img._rad = 11;
 
-    r_parfr_img._image [0] = eq1sect_img;
-    r_parfr_img._lncol [0] = 0;
+    r_parfr_img._image[0] = eq1sect_img;
     r_parfr_img._x0 = 19;
     r_parfr_img._y0 = 32;
     r_parfr_img._dx = 23;
@@ -118,8 +112,7 @@ bool styles_init()
     r_parfr_img._yref = 11.5;
     r_parfr_img._rad = 11;
 
-    r_pargn_img._image [0] = eq1sect_img;
-    r_pargn_img._lncol [0] = 1;
+    r_pargn_img._image[0] = eq1sect_img;
     r_pargn_img._x0 = 68;
     r_pargn_img._y0 = 17;
     r_pargn_img._dx = 23;
@@ -128,8 +121,7 @@ bool styles_init()
     r_pargn_img._yref = 11.5;
     r_pargn_img._rad = 11;
 
-    r_opmix_img._image [0] = mixsect_img;
-    r_opmix_img._lncol [0] = 0;
+    r_opmix_img._image[0] = mixsect_img;
     r_opmix_img._x0 = 23;
     r_opmix_img._y0 = 32;
     r_opmix_img._dx = 23;
@@ -138,8 +130,7 @@ bool styles_init()
     r_opmix_img._yref = 11.5;
     r_opmix_img._rad = 11;
 
-    r_rgxyz_img._image [0] = ambsect_img;
-    r_rgxyz_img._lncol [0] = 0;
+    r_rgxyz_img._image[0] = ambsect_img;
     r_rgxyz_img._x0 = 23;
     r_rgxyz_img._y0 = 32;
     r_rgxyz_img._dx = 23;
@@ -151,8 +142,7 @@ bool styles_init()
     return true;
 }
 
-
-void styles_fini ()
+void styles_fini()
 {
     revsect_img = 0;
     mixsect_img = 0;
@@ -160,4 +150,5 @@ void styles_fini ()
     eq1sect_img = 0;
     eq2sect_img = 0;
     redzita_img = 0;
+    sm_img      = 0;
 }

@@ -27,12 +27,12 @@ struct CtlCallback;
 
 struct CtlCallback
 {
-	virtual void handle_callb(int type, Ctl *ctl) = 0;
+	virtual void handle_callb(const int type, Ctl * ctl) = 0;
 };
 
 struct Ctl
 {
-	Ctl(int xp, int yp, CtlCallback * in_callback)
+	Ctl(const int xp, const int yp, CtlCallback * in_callback)
 		: _xp(xp)
 		, _yp(yp)
 		, _callback(in_callback)
@@ -40,12 +40,17 @@ struct Ctl
 	{
 	}
 	
-	int _xp;
-	int _yp;
-	CtlCallback * _callback;
+	virtual ~Ctl()
+	{
+	}
+	
+	const int _xp;
+	const int _yp;
+	CtlCallback * const _callback;
+	
 	bool visible;
 	
-	void callback(int type)
+	void callback(const int type)
 	{
 		_callback->handle_callb(type, this);
 	}
@@ -60,27 +65,24 @@ struct Ctl
 
 struct RotaryImg
 {
-    GxTextureId _image [4];
-    char        _lncol [4];
+    GxTextureId _image[4];
     int         _x0;
     int         _y0;
     int         _dx;
     int         _dy;
-    double      _xref;
-    double      _yref;
-    double      _rad;
+    float       _xref;
+    float       _yref;
+    float       _rad;
 };
 
 struct RotaryCtl : Ctl
 {
     RotaryCtl(
-		CtlCallback *callback,
-		RotaryImg *image,
-		int xp,
-		int yp,
-		int cbind = 0);
-
-    virtual ~RotaryCtl() { }
+		CtlCallback * callback,
+		const RotaryImg * image,
+		const int xp,
+		const int yp,
+		const int cbind = 0);
 
     enum
 	{
@@ -90,31 +92,28 @@ struct RotaryCtl : Ctl
 		DELTA
 	};
 
-    int    cbind() { return _cbind; }
-    int    state() { return _state; }
-    double value() { return _value; }
+    int   cbind() const { return _cbind; }
+    float value() const { return _value; }
 
-    virtual void set_state(int s);
-    virtual void set_value(double v) = 0;
-    virtual void get_string(char *p, int n) { }
+    virtual void set_value(const float v) = 0;
+    virtual void get_string(char * p, const int n) { }
 
-	CtlCallback *_callback;
-    int          _cbind;
-    RotaryImg   *_image;
-    int          _state;
+	CtlCallback     * _callback;
+    const int         _cbind;
+    const RotaryImg * _image;
+    
     int          _count;
-    int          _range;
-    double       _value;
-    double       _angle;
+    float        _value;
+    float        _angle;
 
 	int          _rcount;
-    int          _button;
     int          _rx, _ry;
+    int          _button;
     
     void tick();
     void draw();
 
     virtual int handle_button() = 0;
-    virtual int handle_motion(int dx, int dy) = 0;
-    virtual int handle_mwheel(int dw) = 0;
+    virtual int handle_motion(const int dx, const int dy) = 0;
+    virtual int handle_mwheel(const int dw) = 0;
 };
