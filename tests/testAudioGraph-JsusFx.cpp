@@ -97,7 +97,7 @@ static void initAudioGraph()
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
-	s_paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
+	s_paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
 	
 	//
 	
