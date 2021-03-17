@@ -728,9 +728,14 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 		if (!slider.exists)
 			continue;
 		
-		d.add("slider %s. index=%d, default=%f, increment=%f, desc=%s", slider.name, i, slider.def, slider.inc, slider.desc);
+		d.add("slider %s: default=%f, increment=%f, desc=%s",
+			slider.name,
+			slider.def,
+			slider.inc,
+			slider.desc);
 	}
 	
+#if false
 	for (auto & sliderInput : sliderInputs)
 	{
 		d.add("registered slider input %s. socket_index=%d, slider_index=%d",
@@ -738,6 +743,7 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 			sliderInput.socketIndex,
 			sliderInput.sliderIndex);
 	}
+#endif
 }
 
 #undef SLIDER_INDEX
