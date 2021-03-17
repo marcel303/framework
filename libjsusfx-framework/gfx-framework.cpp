@@ -170,23 +170,8 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	if (*m_gfx_clear > -1.0)
 	{
-		const int a = (int)*m_gfx_clear;
-		
-		const int r = (a >>  0) & 0xff;
-		const int g = (a >>  8) & 0xff;
-		const int b = (a >> 16) & 0xff;
-		
-		if (surface != nullptr)
-		{
-			surface->clear(r, g, b, 0);
-		}
-		else
-		{
-			setColorf(r, g, b, 0.f);
-			pushBlend(BLEND_OPAQUE);
-			drawRect(0, 0, w, h);
-			popBlend();
-		}
+		needsClear = true;
+		clearColor = *m_gfx_clear;
 	}
 	
 	*m_gfx_texth = m_fontSize;
@@ -286,6 +271,30 @@ void JsusFxGfx_Framework::beginDraw()
 	pushBlend(BLEND_OPAQUE);
 	currentBlendMode = -1;
 	updateBlendMode();
+	
+	if (needsClear)
+	{
+		const int a = clearColor;
+		
+		needsClear = false;
+		clearColor = 0;
+		
+		const int r = (a >>  0) & 0xff;
+		const int g = (a >>  8) & 0xff;
+		const int b = (a >> 16) & 0xff;
+		
+		if (surface != nullptr)
+		{
+			surface->clear(r, g, b, 0);
+		}
+		else
+		{
+			setColorf(r, g, b, 0.f);
+			pushBlend(BLEND_OPAQUE);
+			drawRect(0, 0, *m_gfx_w, *m_gfx_h);
+			popBlend();
+		}
+	}
 }
 
 void JsusFxGfx_Framework::endDraw()
