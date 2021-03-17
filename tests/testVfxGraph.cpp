@@ -431,7 +431,7 @@ struct FileWindow
 	{
 		pushWindow(window);
 		{
-			const int c = framework.windowIsActive ? 50 : 20;
+			const int c = framework.windowIsActive ? 30 : 20;
 			
 			framework.beginDraw(c, c, c, 0);
 			{
@@ -445,6 +445,7 @@ struct FileWindow
 					float hoverY;
 					itemIndexToView(hoverIndex, hoverX, hoverY);
 					
+					setColor(0, 0, 255);
 					hqBegin(HQ_FILLED_ROUNDED_RECTS);
 					{
 						hqFillRoundedRect(
@@ -465,6 +466,7 @@ struct FileWindow
 					
 					for (auto & filename : filenames)
 					{
+						setAlpha(255);
 						if (itemIndex == pressIndex && pressIndex == hoverIndex)
 							setLumi(50);
 						else if (itemIndex == hoverIndex)
@@ -616,7 +618,7 @@ static void initAudioGraph()
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
-	s_paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
+	s_paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
 }
 
 static void shutAudioGraph()
