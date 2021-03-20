@@ -437,6 +437,9 @@ bool Framework::init(int sx, int sy)
 	
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
+	
+	windowSx = sx;
+	windowSy = sy;
 
 #if ENABLE_OPENGL
 	int drawableSx;
