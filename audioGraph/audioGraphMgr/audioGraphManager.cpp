@@ -298,6 +298,7 @@ void AudioGraphManager_Basic::init(AudioMutexBase * mutex, AudioVoiceManager * v
 	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 	
 	audioMutex = mutex;
+	
 	mutex_mem.init();
 	mutex_reg.init();
 	
@@ -321,6 +322,9 @@ void AudioGraphManager_Basic::shut()
 		
 		freeContext(context);
 	}
+	
+	mutex_mem.shut();
+	mutex_reg.shut();
 	
 	audioMutex = nullptr;
 	
@@ -1055,6 +1059,9 @@ void AudioGraphManager_MultiRTE::init(AudioMutexBase * mutex, AudioVoiceManager 
 	
 	audioMutex = mutex;
 	
+	mutex_mem.init();
+	mutex_reg.init();
+	
 	context = createContext(voiceMgr);
 }
 
@@ -1078,6 +1085,9 @@ void AudioGraphManager_MultiRTE::shut()
 		
 		freeContext(context);
 	}
+	
+	mutex_mem.shut();
+	mutex_reg.shut();
 	
 	audioMutex = nullptr;
 	

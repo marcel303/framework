@@ -2154,9 +2154,9 @@ int main(int argc, char * argv[])
 				//        block-process: interpolate control values. export to graph
 				//        audio-process: process audio graphs. generate audio
 					doLabel("shared memory", 0.f);
-					audioGraphMgr.context->audioMutex->lock();
+					audioGraphMgr.context->lockControlValues();
 					auto controlValues = audioGraphMgr.context->controlValues;
-					audioGraphMgr.context->audioMutex->unlock();
+					audioGraphMgr.context->unlockControlValues();
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2186,7 +2186,7 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					audioGraphMgr.context->audioMutex->lock();
+					audioGraphMgr.context->lockControlValues();
 					for (auto & srcControlValue : controlValues)
 					{
 						for (auto & dstControlValue : audioGraphMgr.context->controlValues)
@@ -2199,7 +2199,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					audioGraphMgr.context->audioMutex->unlock();
+					audioGraphMgr.context->unlockControlValues();
 					
 					// per instance control values
 					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
@@ -2208,7 +2208,7 @@ int main(int argc, char * argv[])
 						
 						audioGraph->lockControlValues();
 						{
-							auto & controlValues = audioGraph->stateDescriptor.controlValues;
+							auto & controlValues = audioGraph->controlValues;
 							
 							int padIndex = 0;
 							for (int i = 0; i < controlValues.size(); ++i)
