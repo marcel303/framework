@@ -160,7 +160,7 @@
     <link id="213" srcNodeId="121" srcNodeSocketName="source" dstNodeId="153" dstNodeSocketName="any"/>
     <link id="215" srcNodeId="154" srcNodeSocketName="channel" dstNodeId="134" dstNodeSocketName="voices"/>
     <link id="216" srcNodeId="149" srcNodeSocketName="y" dstNodeId="154" dstNodeSocketName="channel"/>
-    <link id="217" srcNodeId="155" srcNodeSocketName="channel" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="217" srcNodeId="155" srcNodeSocketName="real" dstNodeId="154" dstNodeSocketName="channel"/>
     <link id="218" srcNodeId="155" srcNodeSocketName="real" dstNodeId="154" dstNodeSocketName="channel"/>
     <link id="219" srcNodeId="157" srcNodeSocketName="real" dstNodeId="155" dstNodeSocketName="real"/>
     <link id="220" srcNodeId="157" srcNodeSocketName="imag" dstNodeId="155" dstNodeSocketName="imag"/>
@@ -251,6 +251,12 @@
             <visualizer id="167" x="1168" y="-1072" zKey="1186" nodeId="166" dstSocketName="channel" sx="216" sy="148"/>
             <visualizer id="171" x="1568" y="-560" zKey="1208" nodeId="168" dstSocketName="values" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="1" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="0" b="0" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
     </editor>
 </graph>

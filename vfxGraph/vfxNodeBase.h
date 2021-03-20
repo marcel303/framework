@@ -789,12 +789,15 @@ struct VfxNodeTypeRegistration
 		std::string enumName;
 		std::string defaultValue;
 		
+		std::vector<std::string> renames;
+		
 		Input()
 			: typeName()
 			, name()
 			, displayName()
 			, enumName()
 			, defaultValue()
+			, renames()
 		{
 		}
 	};
@@ -806,11 +809,15 @@ struct VfxNodeTypeRegistration
 		std::string displayName;
 		bool isEditable;
 		
+		std::vector<std::string> renames;
+		
+		
 		Output()
 			: typeName()
 			, name()
 			, displayName()
 			, isEditable(false)
+			, renames()
 		{
 		}
 	};
@@ -833,8 +840,11 @@ struct VfxNodeTypeRegistration
 	
 	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * displayName = "");
 	void inEnum(const char * name, const char * enumName, const char * defaultValue = "", const char * displayName = "");
+	void inRename(const char * newName, const char * oldName);
 	void out(const char * name, const char * typeName, const char * displayName = "");
 	void outEditable(const char * name);
+	void outRename(const char * newName, const char * oldName);
+	
 };
 
 #define VFX_NODE_TYPE(type) \

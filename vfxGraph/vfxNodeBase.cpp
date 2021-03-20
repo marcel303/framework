@@ -1516,3 +1516,17 @@ void VfxNodeTypeRegistration::outEditable(const char * name)
 		if (o.name == name)
 			o.isEditable = true;
 }
+
+void VfxNodeTypeRegistration::inRename(const char * newName, const char * oldName)
+{
+	for (auto & i : inputs)
+		if (i.name == newName)
+			i.renames.push_back(oldName);
+}
+
+void VfxNodeTypeRegistration::outRename(const char * newName, const char * oldName)
+{
+	for (auto & o : outputs)
+		if (o.name == newName)
+			o.renames.push_back(oldName);
+}

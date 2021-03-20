@@ -162,6 +162,7 @@ void createVfxNodeTypeDefinitions(
 			inputSocket.defaultValue = src.defaultValue;
 			inputSocket.hasDefaultValue = true;
 			inputSocket.displayName = src.displayName;
+			inputSocket.renames = src.renames;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
@@ -176,6 +177,7 @@ void createVfxNodeTypeDefinitions(
 			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
 			outputSocket.displayName = src.displayName;
+			outputSocket.renames = src.renames;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}
