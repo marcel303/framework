@@ -75,6 +75,8 @@ static void applyRamping(AudioVoice::RampInfo & rampInfo, float * __restrict sam
 		{
 			const float gainStep = -1.f / durationInSamples;
 			
+			const float dtPerSample = 1.f / float(SAMPLE_RATE);
+			
 			for (int i = 0; i < numSamples; ++i)
 			{
 				samples[i] *= rampInfo.rampValue;
@@ -85,7 +87,7 @@ static void applyRamping(AudioVoice::RampInfo & rampInfo, float * __restrict sam
 				}
 				else
 				{
-					rampInfo.rampDelay = rampInfo.rampDelay - 1.f / float(SAMPLE_RATE);
+					rampInfo.rampDelay = rampInfo.rampDelay - dtPerSample;
 					
 					if (rampInfo.rampDelay <= 0.f)
 					{
@@ -168,6 +170,8 @@ void AudioVoiceManager::generateAudio(
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
+	float * __restrict voiceSamples = (float*)alloca(numSamples * sizeof(float));
+	
 	for (int i = 0; i < numVoices; ++i)
 	{
 		auto & voice = *voices[i];
@@ -178,13 +182,6 @@ void AudioVoiceManager::generateAudio(
 		//if (voice.channelIndex != -1)
 		{
 			// generate samples
-			
-		#ifdef WIN32
-			 // cleanup : cleanup when (if ever) VS supports GCC variable array size extension
-			float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
-		#else
-			ALIGN32 float voiceSamples[numSamples];
-		#endif
 			
 			voice.source->generate(voiceSamples, numSamples);
 			
@@ -198,8 +195,6 @@ void AudioVoiceManager::generateAudio(
 			
 			if (doLimiting)
 			{
-				// todo : perform limiting before and/or after mixing ? make limits settable ?
-				
 				voice.applyLimiter(voiceSamples, numSamples, limiterPeak);
 			}
 			

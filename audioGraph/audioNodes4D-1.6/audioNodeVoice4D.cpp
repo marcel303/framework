@@ -345,7 +345,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	
 	if (g_currentAudioGraph->rampDown)
 	{
-		voice->rampInfo.rampDown(0.f, AUDIO_UPDATE_SIZE / float(SAMPLE_RATE));
+		voice->rampInfo.rampDown(0.f, dt);
 	}
 }
 

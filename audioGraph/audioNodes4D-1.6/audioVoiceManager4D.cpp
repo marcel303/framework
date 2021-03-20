@@ -304,8 +304,6 @@ void AudioVoiceManager4D::generateAudio(
 				
 				if (doLimiting)
 				{
-					// todo : perform limiting before and/or after mixing ? make limits settable ?
-					
 					voice.applyLimiter(voiceSamples, numSamples, limiterPeak);
 				}
 				
