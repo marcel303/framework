@@ -112,6 +112,10 @@ struct Graph_TypeDefinition
 		bool hasDefaultValue;
 		bool isDynamic;
 		
+		// backward compatibility
+		
+		std::vector<std::string> renames;
+		
 		// ui
 		
 		int index;
@@ -139,6 +143,10 @@ struct Graph_TypeDefinition
 		std::string name;
 		bool isEditable;
 		bool isDynamic;
+		
+		// backward compatibility
+		
+		std::vector<std::string> renames;
 		
 		// ui
 		

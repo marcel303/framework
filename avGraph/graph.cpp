@@ -389,13 +389,44 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 			
 			if (typeDefinition)
 			{
+				// try to find the src socket index
+				
 				for (auto & inputSocket : typeDefinition->inputSockets)
 				{
 					if (inputSocket.name == link.srcNodeSocketName)
 					{
-						//LOG_DBG("srcNodeSocketIndex: %d -> %d\n", link.srcNodeSocketIndex, inputSocket.index);
+						//LOG_DBG("srcNodeSocketIndex: %d -> %d", link.srcNodeSocketIndex, inputSocket.index);
 						link.srcNodeSocketIndex = inputSocket.index;
 						break;
+					}
+				}
+				
+				// if not found, check for renames
+				
+				if (link.srcNodeSocketIndex == -1)
+				{
+					for (auto & inputSocket : typeDefinition->inputSockets)
+					{
+						bool found = false;
+						
+						for (auto & rename : inputSocket.renames)
+						{
+							if (rename == link.srcNodeSocketName)
+							{
+								LOG_DBG("srcNodeSocketIndex: %d (%s) -> %d (%s)",
+									link.srcNodeSocketIndex,
+									link.srcNodeSocketName.c_str(),
+									inputSocket.index,
+									inputSocket.name.c_str());
+								link.srcNodeSocketName = inputSocket.name;
+								link.srcNodeSocketIndex = inputSocket.index;
+								found = true;
+								break;
+							}
+						}
+						
+						if (found)
+							break;
 					}
 				}
 			}
@@ -418,12 +449,41 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 				{
 					if (outputSocket.name == link.dstNodeSocketName)
 					{
-						//LOG_DBG("dstNodeSocketIndex: %d -> %d\n", link.dstNodeSocketIndex, outputSocket.index);
+						//LOG_DBG("dstNodeSocketIndex: %d -> %d", link.dstNodeSocketIndex, outputSocket.index);
 						link.dstNodeSocketIndex = outputSocket.index;
 						break;
 					}
 				}
-		}
+				
+				// if not found, check for renames
+				
+				if (link.dstNodeSocketIndex == -1)
+				{
+					for (auto & outputSocket : typeDefinition->outputSockets)
+					{
+						bool found = false;
+						
+						for (auto & rename : outputSocket.renames)
+						{
+							if (rename == link.dstNodeSocketName)
+							{
+								LOG_DBG("dstNodeSocketIndex: %d (%s) -> %d (%s)",
+									link.dstNodeSocketIndex,
+									link.dstNodeSocketName.c_str(),
+									outputSocket.index,
+									outputSocket.name.c_str());
+								link.dstNodeSocketName = outputSocket.name;
+								link.dstNodeSocketIndex = outputSocket.index;
+								found = true;
+								break;
+							}
+						}
+						
+						if (found)
+							break;
+					}
+				}
+			}
 		}
 		
 		if (link.dstNodeSocketIndex == -1 && !link.isDynamic)
