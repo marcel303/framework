@@ -418,122 +418,97 @@ void testFourier2dImpl()
 	
 	do
 	{
-	// do reference 2D fft (fast)
-	
-	real * dreal_reference = nullptr;
-	real * dimag_reference = nullptr;
-	int transformSx_reference = 0;
-	int transformSy_reference = 0;
-	
-	const uint64_t t_reference = doFourier2D_reference(
-		image,
-		dreal_reference, dimag_reference,
-		transformSx_reference, transformSy_reference,
-		false, false);
-	
-	//printf("doFourier2D_reference (fast) took %gms\n", t_reference / 1000.0);
-	
-	// do fast 2D fft
-	
-	real * dreal_fast = nullptr;
-	real * dimag_fast = nullptr;
-	int transformSx_fast = 0;
-	int transformSy_fast = 0;
-	
-	const uint64_t t_fast = doFourier2D_fast(
-		image,
-		dreal_fast, dimag_fast,
-		transformSx_fast, transformSy_fast,
-		false, false);
-	
-	fft2D_scale(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast);
-	
-	//printf("doFourier2D_fast took %gms\n", t_fast / 1000.0);
-	
-	// do slow 2D fft
-	
-	real * dreal_slow = nullptr;
-	real * dimag_slow = nullptr;
-	int transformSx_slow = 0;
-	int transformSy_slow = 0;
-	
-	const uint64_t t_slow = doFourier2D_slow(
-		image,
-		dreal_slow, dimag_slow,
-		transformSx_slow, transformSy_slow,
-		false, false);
-	
-	fft2D_scale(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow);
-	
-	//printf("doFourier2D_slow took %gms\n", t_slow / 1000.0);
-	
-#if 0
-	auto ref_t1 = g_TimerRT.TimeUS_get();
-	for (int y = 0; y < image->sy; ++y)
-	{
-		printf("%d/%d\n", y + 1, image->sy);
+		// do reference 2D fft (fast)
 		
-		for (int x = 0; x < image->sx; ++x)
+		real * dreal_reference = nullptr;
+		real * dimag_reference = nullptr;
+		int transformSx_reference = 0;
+		int transformSy_reference = 0;
+		
+		const uint64_t t_reference = doFourier2D_reference(
+			image,
+			dreal_reference, dimag_reference,
+			transformSx_reference, transformSy_reference,
+			false, false);
+		
+		//printf("doFourier2D_reference (fast) took %gms\n", t_reference / 1000.0);
+		
+		// do fast 2D fft
+		
+		real * dreal_fast = nullptr;
+		real * dimag_fast = nullptr;
+		int transformSx_fast = 0;
+		int transformSy_fast = 0;
+		
+		const uint64_t t_fast = doFourier2D_fast(
+			image,
+			dreal_fast, dimag_fast,
+			transformSx_fast, transformSy_fast,
+			false, false);
+		
+		fft2D_scale(dreal_fast, dimag_fast, transformSx_fast, transformSy_fast);
+		
+		//printf("doFourier2D_fast took %gms\n", t_fast / 1000.0);
+		
+		// do slow 2D fft
+		
+		real * dreal_slow = nullptr;
+		real * dimag_slow = nullptr;
+		int transformSx_slow = 0;
+		int transformSy_slow = 0;
+		
+		const uint64_t t_slow = doFourier2D_slow(
+			image,
+			dreal_slow, dimag_slow,
+			transformSx_slow, transformSy_slow,
+			false, false);
+		
+		fft2D_scale(dreal_slow, dimag_slow, transformSx_slow, transformSy_slow);
+		
+		//printf("doFourier2D_slow took %gms\n", t_slow / 1000.0);
+		
+	#if 0
+		auto ref_t1 = g_TimerRT.TimeUS_get();
+		for (int y = 0; y < image->sy; ++y)
 		{
-			real coss = 0.0;
-			real sins = 0.0;
+			printf("%d/%d\n", y + 1, image->sy);
 			
-			for (int v = 0; v < image->sy; ++v)
+			for (int x = 0; x < image->sx; ++x)
 			{
-				real phaseV = v * y / real(image->sy);
+				real coss = 0.0;
+				real sins = 0.0;
 				
-				for (int u = 0; u < image->sx; ++u)
+				for (int v = 0; v < image->sy; ++v)
 				{
-					real phaseU = u * x / real(image->sx);
+					real phaseV = v * y / real(image->sy);
 					
-					real phase = (2.0 * M_PI) * (phaseV + phaseU);
-					
-					real cosv = +std::cos(phase);
-					real sinv = -std::sin(phase);
-					
-					real value = image->getLine(v)[u].r + image->getLine(v)[u].g + image->getLine(v)[u].b);
-					
-					coss += cosv * value;
-					sins += sinv * value;
+					for (int u = 0; u < image->sx; ++u)
+					{
+						real phaseU = u * x / real(image->sx);
+						
+						real phase = (2.0 * M_PI) * (phaseV + phaseU);
+						
+						real cosv = +std::cos(phase);
+						real sinv = -std::sin(phase);
+						
+						real value =
+							image->getLine(v)[u].r +
+							image->getLine(v)[u].g +
+							image->getLine(v)[u].b;
+						
+						coss += cosv * value;
+						sins += sinv * value;
+					}
 				}
+				
+				dreal_reference[y * transformSx_reference + x] = coss / real(image->sx * image->sy);
+				dimag_reference[y * transformSx_reference + x] = sins / real(image->sx * image->sy);
 			}
-			
-			dreal_reference[y * transformSx_reference + x] = coss / real(image->sx * image->sy);
-			dimag_reference[y * transformSx_reference + x] = sins / real(image->sx * image->sy);
 		}
-	}
-	auto ref_t2 = g_TimerRT.TimeUS_get();
-	printf("reference fourier transform took %lluus\n", (ref_t2 - ref_t1));
-#endif
+		auto ref_t2 = g_TimerRT.TimeUS_get();
+		printf("reference fourier transform took %lluus\n", (ref_t2 - ref_t1));
+	#endif
 	
-#if 0
-	for (int y = 0; y < image->sy; ++y)
-	{
-		for (int x = 0; x < image->sx; ++x)
-		{
-			real & fc = f[y * transformSx * 2 + x * 2 + 0];
-			real & fs = f[y * transformSx * 2 + x * 2 + 1];
-			
-			const int sx = (x + image->sx/2) % image->sx;
-			const int sy = (y + image->sy/2) % image->sy;
-			
-			const real dx = sx - image->sx/2;
-			const real dy = sy - image->sy/2;
-			const real ds = std::hypot(dx, dy);
-			
-			const real w = std::pow(ds / 50.0, 4.0);
-			const real s = w < 0.0 ? 0.0 : w > 1.0 ? 1.0 : w;
-			
-			fc *= s;
-			fs *= s;
-		}
-	}
-	
-	// todo : reconstruct image from coefficients
-#endif
-	
-	do
-	{
 		framework.process();
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -568,6 +543,8 @@ void testFourier2dImpl()
 				gxPushMatrix();
 				{
 					gxTranslatef(sx/2 - sprite.getWidth()/2, kPadding * 2 + sprite.getWidth(), 0);
+					
+					setColor(colorWhite);
 					sprite.draw();
 				}
 				gxPopMatrix();
@@ -577,14 +554,13 @@ void testFourier2dImpl()
 			drawTestUi();
 		}
 		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_SPACE) && false);
-	
-	delete[] dreal_reference;
-	delete[] dimag_reference;
-	delete[] dreal_fast;
-	delete[] dimag_fast;
-	delete[] dreal_slow;
-	delete[] dimag_slow;
+		
+		delete[] dreal_reference;
+		delete[] dimag_reference;
+		delete[] dreal_fast;
+		delete[] dimag_fast;
+		delete[] dreal_slow;
+		delete[] dimag_slow;
 	} while (tickTestUi());
 	
 	delete image;
