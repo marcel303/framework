@@ -1981,7 +1981,7 @@ int main(int argc, char * argv[])
 
 			// perform soft clipping. since we need to go down to int16 range we need to ensure the sample range is within (-1, +1)
 			
-			audioBufferClip_FastSigmoid(outputBuffer, numSamples * 2);
+			audioBufferClip_SigmoidFast(outputBuffer, numSamples * 2);
 			
 			// convert from float (-1, +1) to int16
 			

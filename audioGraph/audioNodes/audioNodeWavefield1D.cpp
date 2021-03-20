@@ -334,6 +334,15 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 
 //
 
+AUDIO_ENUM_TYPE(wavefield_1d_softClip)
+{
+	enumName = "wavefield.1d.softClip";
+	
+	elem("none", AudioNodeWavefield1D::kSoftClip_None);
+	elem("sigmoid.fast", AudioNodeWavefield1D::kSoftClip_SigmoidFast);
+	elem("sigmoid.sqrt", AudioNodeWavefield1D::kSoftClip_SigmoidSqrt);
+}
+
 AUDIO_NODE_TYPE(AudioNodeWavefield1D)
 {
 	typeName = "wavefield.1d";
@@ -351,6 +360,7 @@ AUDIO_NODE_TYPE(AudioNodeWavefield1D)
 	in("tension", "audioValue", "1");
 	in("wrap", "bool", "0");
 	in("sample.pos", "audioValue", "0.5");
+	inEnum("clip", "wavefield.1d.softClip", AudioNodeWavefield1D::kSoftClip_SigmoidSqrt);
 	in("trigger!", "trigger");
 	in("trigger.pos", "audioValue", "0.5");
 	in("trigger.amount", "audioValue", "0.5");
@@ -374,6 +384,7 @@ AudioNodeWavefield1D::AudioNodeWavefield1D()
 	addInput(kInput_Tension, kAudioPlugType_FloatVec);
 	addInput(kInput_Wrap, kAudioPlugType_Bool);
 	addInput(kInput_SampleLocation, kAudioPlugType_FloatVec);
+	addInput(kInput_SoftClip, kAudioPlugType_Int);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
 	addInput(kInput_TriggerLocation, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerAmount, kAudioPlugType_FloatVec);
@@ -450,6 +461,7 @@ void AudioNodeWavefield1D::tick(const float in_dt)
 	const AudioFloat * tension = getInputAudioFloat(kInput_Tension, &defaultTension);
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocation = getInputAudioFloat(kInput_SampleLocation, &AudioFloat::Half);
+	const SoftClip softClip = (SoftClip)getInputInt(kInput_SoftClip, kSoftClip_SigmoidSqrt);
 	
 	//
 
@@ -489,11 +501,25 @@ void AudioNodeWavefield1D::tick(const float in_dt)
 		
 		wavefield->tick(dtPerSample, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], closedEnds);
 		
-	// todo : soft clip wavefield position. unsafe tension changes could boost it too much
-		
 		audioOutput.samples[i] = wavefield->sample(
 			sampleLocation->samples[i] * wavefield->numElems,
 			closedEnds);
+	}
+	
+	// soft clip wavefield position. abrupt tension changes could boost velocity too much, causing huge values for position
+	
+	switch (softClip)
+	{
+		case kSoftClip_None:
+			break;
+			
+		case kSoftClip_SigmoidFast:
+			audioBufferClip_SigmoidFast(audioOutput.samples, AUDIO_UPDATE_SIZE);
+			break;
+		
+		case kSoftClip_SigmoidSqrt:
+			audioBufferClip_SigmoidSqrt(audioOutput.samples, AUDIO_UPDATE_SIZE);
+			break;
 	}
 	
 	audioOutput.mul(*gain);
@@ -509,12 +535,12 @@ void AudioNodeWavefield1D::handleTrigger(const int inputSocketIndex)
 		
 		if (wavefield->numElems > 0)
 		{
-			const int elemIndex = int(std::round(triggerPosition * wavefield->numElems)) % wavefield->numElems;
+			const int elemX = int(std::round(triggerPosition * wavefield->numElems)) % wavefield->numElems;
 			
-			if (triggerSize == 1.f)
-				wavefield->d[elemIndex] += triggerAmount;
+			if (triggerSize <= 1.f)
+				wavefield->d[elemX] += triggerAmount;
 			else
-				wavefield->d[elemIndex] += triggerAmount; // todo : implement gaussian impact
+				wavefield->doGaussianImpact(elemX, triggerSize, triggerAmount, 1.f);
 		}
 	}
 	else if (inputSocketIndex == kInput_Randomize)

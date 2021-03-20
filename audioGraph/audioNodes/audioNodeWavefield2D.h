@@ -35,6 +35,13 @@ struct Wavefield2D;
 
 struct AudioNodeWavefield2D : AudioNodeBase
 {
+	enum SoftClip
+	{
+		kSoftClip_None,
+		kSoftClip_SigmoidFast,
+		kSoftClip_SigmoidSqrt
+	};
+	
 	enum Input
 	{
 		kInput_Gain,
@@ -44,6 +51,7 @@ struct AudioNodeWavefield2D : AudioNodeBase
 		kInput_Wrap,
 		kInput_SampleLocationX,
 		kInput_SampleLocationY,
+		kInput_SoftClip,
 		kInput_Trigger,
 		kInput_TriggerLocationX,
 		kInput_TriggerLocationY,

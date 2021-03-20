@@ -663,11 +663,12 @@ void audioBufferClip_Hard(
 		else if (value > +1.f)
 			value = +1.f;
 		
+		//Assert(value >= -1.f && value <= +1.f);
 		audioBuffer[i] = value;
 	}
 }
 
-void audioBufferClip_FastSigmoid(
+void audioBufferClip_SigmoidSqrt(
 	float * __restrict audioBuffer,
 	const int numSamples)
 {
@@ -675,16 +676,28 @@ void audioBufferClip_FastSigmoid(
 	{
 		float value = audioBuffer[i];
 		
-	#if 0
-		// stays linear aroud zero for a longer period of time
+		// stays linear aroud zero for a longer period of time compared to FastSigmoid
 		value = value / sqrtf(1.f + value * value);
-	#else
-		// quickly begins to attenuate. more 'range' when clipping occurs
+		
+		//Assert(value >= -1.f && value <= +1.f);
+		audioBuffer[i] = value;
+	}
+}
+
+void audioBufferClip_SigmoidFast(
+	float * __restrict audioBuffer,
+	const int numSamples)
+{
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float value = audioBuffer[i];
+		
+		// quickly begins to attenuate compared to SqrtSigmoid. more 'range' when clipping occurs
 		const float absValue = value < 0.f ? -value : +value;
 		
 		value = value / (1.f + absValue);
-	#endif
 		
+		//Assert(value >= -1.f && value <= +1.f);
 		audioBuffer[i] = value;
 	}
 }

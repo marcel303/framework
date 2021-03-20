@@ -89,7 +89,7 @@ AUDIO_NODE_TYPE(AudioNodeVoice4D)
 	in("ddiff.tresh", "audioValue", "50");
 	in("ddiff.curve", "audioValue", "0.2");
 	in("spatd", "bool");
-	inEnum("spatd.mode", "4d.spatialDelayMode", "grid");
+	inEnum("spatd.mode", "4d.spatialDelayMode", Osc4D::kSpatialDelay_Grid);
 	in("spatd.feedback", "audioValue", "0.5");
 	in("spatd.wetness", "audioValue", "0.5");
 	in("spatd.scale", "audioValue", "1");

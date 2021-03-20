@@ -328,7 +328,7 @@ struct AudioNodeTypeRegistration
 	AudioNodeTypeRegistration();
 	
 	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * displayName = "");
-	void inEnum(const char * name, const char * enumName, const char * defaultValue = "", const char * displayName = "");
+	void inEnum(const char * name, const char * enumName, const int defaultValue = 0, const char * displayName = "");
 	void out(const char * name, const char * typeName, const char * displayName = "");
 	void outEditable(const char * name);
 };

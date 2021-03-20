@@ -34,6 +34,7 @@ AUDIO_NODE_TYPE(AudioNodeImpulseResponse)
 	
 	in("value", "audioValue");
 	in("frequency", "audioValue");
+	in("decayPerMs", "audioValue", "0.5");
 	out("response", "audioValue");
 }
 
@@ -46,15 +47,17 @@ AudioNodeImpulseResponse::AudioNodeImpulseResponse()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kAudioPlugType_FloatVec);
 	addInput(kInput_Frequency, kAudioPlugType_FloatVec);
+	addInput(kInput_DecayPerMs, kAudioPlugType_FloatVec);
 	addOutput(kOutput_ImpulseResponse, kAudioPlugType_FloatVec, &impulseResponseOutput);
 }
 
-void AudioNodeImpulseResponse::tick(const float _dt)
+void AudioNodeImpulseResponse::tick(const float in_dt)
 {
 	audioCpuTimingBlock(AudioNodeImpulseResponse);
 	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
-	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::Zero);
+	const AudioFloat * frequency = getInputAudioFloat(kInput_Frequency, &AudioFloat::One);
+	const float decayPerMs = getInputAudioFloat(kInput_DecayPerMs, &AudioFloat::Half)->getMean();
 	
 	value->expand();
 	frequency->expand();
@@ -62,11 +65,9 @@ void AudioNodeImpulseResponse::tick(const float _dt)
 	//
 	
 	{
-		// todo : decay rate should be an input
-		
-		const double dt = 1.0 / SAMPLE_RATE;
+		const double dtPerSample = 1.0 / SAMPLE_RATE;
 		const double twoPi = 2.0 * M_PI;
-		const double retain = pow(0.5, dt * 1000.0);
+		const double retain = pow(1.0 - decayPerMs, dtPerSample * 1000.0);
 		
 		impulseResponseOutput.setVector();
 		
@@ -84,9 +85,12 @@ void AudioNodeImpulseResponse::tick(const float _dt)
 			runningImpulseResponseX += measurementValue * x;
 			runningImpulseResponseY += measurementValue * y;
 			
-			measurementPhase = fmod(measurementPhase + measurementFrequency * dt, 1.0);
+			measurementPhase = fmod(measurementPhase + measurementFrequency * dtPerSample, 1.0);
 			
-			impulseResponseOutput.samples[i] = float(hypotf(runningImpulseResponseX, runningImpulseResponseY));
+			impulseResponseOutput.samples[i] =
+				hypotf(
+					runningImpulseResponseX,
+					runningImpulseResponseY);
 		}
 	}
 }

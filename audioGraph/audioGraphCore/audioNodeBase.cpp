@@ -699,14 +699,14 @@ void AudioNodeTypeRegistration::in(const char * name, const char * typeName, con
 	inputs.push_back(i);
 }
 
-void AudioNodeTypeRegistration::inEnum(const char * name, const char * enumName, const char * defaultValue, const char * displayName)
+void AudioNodeTypeRegistration::inEnum(const char * name, const char * enumName, const int defaultValue, const char * displayName)
 {
 	Input i;
 	i.name = name;
 	i.displayName = displayName;
 	i.typeName = "int";
 	i.enumName = enumName;
-	i.defaultValue = defaultValue;
+	i.defaultValue = String::FormatC("%d", defaultValue);
 	
 	inputs.push_back(i);
 }
