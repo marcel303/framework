@@ -593,6 +593,20 @@ void AudioGraph::unregisterEvent(const char * name)
 	context->mutex_reg->unlock();
 }
 
+bool AudioGraph::isEventTriggered(const char * name, const bool isMainThread)
+{
+	// thread: main & audio
+	
+	Assert(context->mainThreadId.checkThreadId() == isMainThread);
+	
+	const bool result =
+		isMainThread
+		? g_currentAudioGraph->triggeredEvents_mainThread.count(name) != 0
+		: g_currentAudioGraph->triggeredEvents_audioThread.count(name) != 0;
+	
+	return result;
+}
+
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	context->mutex_mem->lock();

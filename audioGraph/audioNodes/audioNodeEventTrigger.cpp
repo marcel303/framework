@@ -112,8 +112,7 @@ void AudioNodeEventTrigger::tick(const float dt)
 
 	if (name != nullptr)
 	{
-	// todo : add method to check if event is triggered
-		if (g_currentAudioGraph->triggeredEvents_audioThread.count(name) != 0)
+		if (g_currentAudioGraph->isEventTriggered(name, false))
 		{
 			trigger(kOutput_Trigger);
 		}
