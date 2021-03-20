@@ -274,6 +274,8 @@ void AudioVoiceManager4D::generateAudio(
 	
 	audioMutex->lock();
 	{
+		float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
+		
 		for (auto * voice_itr = firstVoice; voice_itr != nullptr; voice_itr = voice_itr->next)
 		{
 			AudioVoice4D & voice = static_cast<AudioVoice4D&>(*voice_itr);
@@ -284,13 +286,6 @@ void AudioVoiceManager4D::generateAudio(
 			//if (voice.channelIndex != -1)
 			{
 				// generate samples
-				
-			#ifdef WIN32
-				 // cleanup : cleanup when (if ever) VS supports GCC variable array size extension
-				float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
-			#else
-				ALIGN32 float voiceSamples[numSamples];
-			#endif
 				
 				voice.source->generate(voiceSamples, numSamples);
 				
@@ -655,7 +650,7 @@ void AudioVoiceManager4D::setOscEndpoint(const char * ipAddress, const int udpPo
 void AudioVoiceManager4D::updateDynamicChannelIndices()
 {
 	bool * used = (bool*)alloca(numDynamicChannels * sizeof(bool));
-	memset(used, 0, numDynamicChannels * sizeof(bool));
+	memset(used, 0, numDynamicChannels * sizeof(used[0]));
 	
 	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 	{

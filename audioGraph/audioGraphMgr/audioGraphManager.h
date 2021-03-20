@@ -90,6 +90,10 @@ struct AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) = 0;
 	virtual void tickVisualizers() = 0;
+	
+	// called from any thread
+	virtual void lockAudio() = 0;
+	virtual void unlockAudio() = 0;
 };
 
 /*
@@ -146,6 +150,10 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
+	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
 };
 
 /*
@@ -198,6 +206,10 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
 	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
+	
 	// called from the app thread
 	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
 	void drawEditor(const int sx, const int sy);
@@ -247,6 +259,10 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
+	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
 	
 	// called from the app thread
 	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);

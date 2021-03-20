@@ -455,11 +455,7 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 			numVoices++;
 		
-	#ifdef _MSC_VER
 		AudioVoice ** voiceArray = (AudioVoice**)alloca(numVoices * sizeof(AudioVoice*));
-	#else
-		AudioVoice * voiceArray[numVoices + 1];
-	#endif
 	
 		int voiceIndex = 0;
 		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
@@ -529,13 +525,8 @@ int AudioVoiceManagerBasic::getNumDynamicChannels() const
 
 void AudioVoiceManagerBasic::updateDynamicChannelIndices()
 {
-#ifdef WIN32
-	// cleanup : cleanup when (if ever) VS supports GCC variable array size extension
 	bool * used = (bool*)alloca(numDynamicChannels * sizeof(bool));
-#else
-	bool used[numDynamicChannels];
-#endif
-	memset(used, 0, sizeof(used));
+	memset(used, 0, numDynamicChannels * sizeof(used[0]));
 	
 	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 	{

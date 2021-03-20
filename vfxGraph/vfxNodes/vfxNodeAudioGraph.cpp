@@ -360,6 +360,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	// generate channel data
 	
+	audioGraphMgr->lockAudio(); // prevent the audio thread from generating new voice samples while we're generating audio here
 	voiceMgr.lockVoices();
 	{
 		const AudioVoiceManager::OutputMode outputMode =
@@ -382,6 +383,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			outputMode, false);
 	}
 	voiceMgr.unlockVoices();
+	audioGraphMgr->unlockAudio();
 	
 	//
 	

@@ -448,6 +448,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		}
 	}
 	
+	audioGraphMgr->lockAudio(); // prevent the audio thread from generating new voice samples while we're generating audio here
 	voiceMgr.lockVoices();
 	{
 		const int numVoices = voiceMgr.voices.size();
@@ -465,6 +466,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		}
 	}
 	voiceMgr.unlockVoices();
+	audioGraphMgr->unlockAudio();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)

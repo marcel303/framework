@@ -526,7 +526,7 @@ void AudioGraphManager_Basic::tickMain()
 
 void AudioGraphManager_Basic::tickAudio(const float dt)
 {
-	audioMutex->lock();
+	lockAudio();
 	{
 		mutex_mem.lock();
 		{
@@ -545,11 +545,21 @@ void AudioGraphManager_Basic::tickAudio(const float dt)
 		for (auto & instance : instances)
 			instance->audioGraph->tickAudio(dt, false);
 	}
-	audioMutex->unlock();
+	unlockAudio();
 }
 
 void AudioGraphManager_Basic::tickVisualizers()
 {
+}
+
+void AudioGraphManager_Basic::lockAudio()
+{
+	audioMutex->lock();
+}
+
+void AudioGraphManager_Basic::unlockAudio()
+{
+	audioMutex->unlock();
 }
 
 //
@@ -933,7 +943,7 @@ void AudioGraphManager_RTE::tickMain()
 
 void AudioGraphManager_RTE::tickAudio(const float dt)
 {
-	audioMutex->lock();
+	lockAudio();
 	{
 		mutex_mem.lock();
 		{
@@ -954,7 +964,7 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 			for (auto & instance : file.second->instanceList)
 				instance->audioGraph->tickAudio(dt, false);
 	}
-	audioMutex->unlock();
+	unlockAudio();
 }
 
 void AudioGraphManager_RTE::tickVisualizers()
@@ -966,6 +976,16 @@ void AudioGraphManager_RTE::tickVisualizers()
 			selectedFile->activeInstance->realTimeConnection->updateAudioValues();
 		}
 	}
+	audioMutex->unlock();
+}
+
+void AudioGraphManager_RTE::lockAudio()
+{
+	audioMutex->lock();
+}
+
+void AudioGraphManager_RTE::unlockAudio()
+{
 	audioMutex->unlock();
 }
 
@@ -1388,7 +1408,7 @@ void AudioGraphManager_MultiRTE::tickMain()
 
 void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 {
-	audioMutex->lock();
+	lockAudio();
 	{
 		mutex_mem.lock();
 		{
@@ -1409,7 +1429,7 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 			for (auto & instance : file.second->instanceList)
 				instance->audioGraph->tickAudio(dt, false);
 	}
-	audioMutex->unlock();
+	unlockAudio();
 }
 
 void AudioGraphManager_MultiRTE::tickVisualizers()
@@ -1426,6 +1446,16 @@ void AudioGraphManager_MultiRTE::tickVisualizers()
 			}
 		}
 	}
+	audioMutex->unlock();
+}
+
+void AudioGraphManager_MultiRTE::lockAudio()
+{
+	audioMutex->lock();
+}
+
+void AudioGraphManager_MultiRTE::unlockAudio()
+{
 	audioMutex->unlock();
 }
 
