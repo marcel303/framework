@@ -63,17 +63,30 @@ inline T lerp(T a, T b, T t)
 	return a * (1.0 - t) + b * t;
 }
 
+template <bool closedEnds>
 inline void toSampleIndex(const float v, const int arraySize, int & s, float & fraction)
 {
 	const float vFloor = floorf(v);
 	fraction = v - vFloor;
 	
-	const int a = int(vFloor) % arraySize;
-	const int b = a < 0 ? a + arraySize : a;
-	
-	s = b;
-	
-	assert(s >= 0 && s < arraySize);
+	if (closedEnds)
+	{
+		const int a = int(vFloor);
+		const int b = a < 0 ? 0 : a >= arraySize ? arraySize - 1 : a;
+		
+		s = b;
+		
+		assert(s >= 0 && s < arraySize);
+	}
+	else
+	{
+		const int a = int(vFloor) % arraySize;
+		const int b = a < 0 ? a + arraySize : a;
+		
+		s = b;
+		
+		assert(s >= 0 && s < arraySize);
+	}
 }
 
 //
@@ -298,7 +311,7 @@ void Wavefield1D::tick(const double dt, const double c, const double vRetainPerS
 	}
 }
 
-float Wavefield1D::sample(const float x) const
+float Wavefield1D::sample(const float x, const bool closedEnds) const
 {
 	if (numElems == 0)
 	{
@@ -306,17 +319,35 @@ float Wavefield1D::sample(const float x) const
 	}
 	else
 	{
-		float tx2;
-		int x1Clamped;
+		int x1;
+		int x2;
 		
-		toSampleIndex(x, numElems, x1Clamped, tx2);
+		float tx2;
+		
+		if (closedEnds)
+		{
+			toSampleIndex<true>(x, numElems, x1, tx2);
 
-		// todo : sampling should be either wrapped or clamped.. need to choose
-		const int x2Clamped = x1Clamped + 1 == numElems ? 0 : x1Clamped + 1;
+			x2 =
+				x1 + 1 == numElems
+				? x1
+				: x1 + 1;
+		}
+		else
+		{
+			toSampleIndex<false>(x, numElems, x1, tx2);
+
+			x2 =
+				x1 + 1 == numElems
+					? 0
+					: x1 + 1;
+		}
+		
 		const float tx1 = 1.f - tx2;
 		
-		const float v0 = p[x1Clamped];
-		const float v1 = p[x2Clamped];
+		const float v0 = p[x1];
+		const float v1 = p[x2];
+		
 		const float v = v0 * tx1 + v1 * tx2;
 		
 		return v;
@@ -603,7 +634,7 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 	}
 }
 
-float Wavefield1Df::sample(const float x) const
+float Wavefield1Df::sample(const float x, const bool closedEnds) const
 {
 	if (numElems == 0)
 	{
@@ -611,17 +642,35 @@ float Wavefield1Df::sample(const float x) const
 	}
 	else
 	{
-		float tx2;
-		int x1Clamped;
+		int x1;
+		int x2;
 		
-		toSampleIndex(x, numElems, x1Clamped, tx2);
+		float tx2;
+		
+		if (closedEnds)
+		{
+			toSampleIndex<true>(x, numElems, x1, tx2);
 
-		// todo : sampling should be either wrapped or clamped.. need to choose
-		const int x2Clamped = x1Clamped + 1 == numElems ? 0 : x1Clamped + 1;
+			x2 =
+				x1 + 1 == numElems
+					? x1
+					: x1 + 1;
+		}
+		else
+		{
+			toSampleIndex<false>(x, numElems, x1, tx2);
+
+			x2 =
+				x1 + 1 == numElems
+					? 0
+					: x1 + 1;
+		}
+		
 		const float tx1 = 1.f - tx2;
 		
-		const float v0 = p[x1Clamped];
-		const float v1 = p[x2Clamped];
+		const float v0 = p[x1];
+		const float v1 = p[x2];
+		
 		const float v = v0 * tx1 + v1 * tx2;
 		
 		return v;
@@ -688,6 +737,7 @@ void Wavefield2D::tick(const double dt, const double c, const double vRetainPerS
 	
 	if (closedEnds)
 	{
+	#if true // todo : to zero out the border or not to zero it out
 		for (int x = 0; x < numElems; ++x)
 		{
 			v[x][0] = 0.f;
@@ -705,6 +755,7 @@ void Wavefield2D::tick(const double dt, const double c, const double vRetainPerS
 			p[0][y] = 0.f;
 			p[numElems - 1][y] = 0.f;
 		}
+	#endif
 	}
 	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
@@ -917,7 +968,7 @@ void Wavefield2D::doGaussianImpact(const int spotX, const int spotY, const int r
 	}
 }
 
-float Wavefield2D::sample(const float x, const float y) const
+float Wavefield2D::sample(const float x, const float y, const bool closedEnds) const
 {
 	if (numElems == 0)
 	{
@@ -925,20 +976,35 @@ float Wavefield2D::sample(const float x, const float y) const
 	}
 	else
 	{
-		float tx2;
-		float ty2;
 		int x1;
 		int y1;
 		
-		toSampleIndex(x, numElems, x1, tx2);
-		toSampleIndex(y, numElems, y1, ty2);
+		int x2;
+		int y2;
+		
+		float tx2;
+		float ty2;
+		
+		if (closedEnds)
+		{
+			toSampleIndex<true>(x, numElems, x1, tx2);
+			toSampleIndex<true>(y, numElems, y1, ty2);
 
-		// todo : sampling should be either wrapped or clamped.. need to choose
-		const int x2 = x1 + 1 == numElems ? 0 : x1 + 1;
-		const int y2 = y1 + 1 == numElems ? 0 : y1 + 1;
+			x2 = x1 + 1 == numElems ? x1 : x1 + 1;
+			y2 = y1 + 1 == numElems ? y1 : y1 + 1;
+		}
+		else
+		{
+			toSampleIndex<false>(x, numElems, x1, tx2);
+			toSampleIndex<false>(y, numElems, y1, ty2);
+
+			x2 = x1 + 1 == numElems ? 0 : x1 + 1;
+			y2 = y1 + 1 == numElems ? 0 : y1 + 1;
+		}
+		
 		const float tx1 = 1.f - tx2;
 		const float ty1 = 1.f - ty2;
-		
+				
 		const float v00 = p[x1][y1];
 		const float v10 = p[x2][y1];
 		const float v01 = p[x1][y2];
@@ -1274,7 +1340,7 @@ void Wavefield2Df::doGaussianImpact(const int spotX, const int spotY, const int 
 	}
 }
 
-float Wavefield2Df::sample(const float x, const float y) const
+float Wavefield2Df::sample(const float x, const float y, const bool closedEnds) const
 {
 	if (numElems == 0)
 	{
@@ -1282,17 +1348,32 @@ float Wavefield2Df::sample(const float x, const float y) const
 	}
 	else
 	{
-		float tx2;
-		float ty2;
 		int x1;
 		int y1;
 		
-		toSampleIndex(x, numElems, x1, tx2);
-		toSampleIndex(y, numElems, y1, ty2);
+		int x2;
+		int y2;
+		
+		float tx2;
+		float ty2;
+		
+		if (closedEnds)
+		{
+			toSampleIndex<true>(x, numElems, x1, tx2);
+			toSampleIndex<true>(y, numElems, y1, ty2);
 
-		// todo : sampling should be either wrapped or clamped.. need to choose
-		const int x2 = x1 + 1 == numElems ? 0 : x1 + 1;
-		const int y2 = y1 + 1 == numElems ? 0 : y1 + 1;
+			x2 = x1 + 1 == numElems ? x1 : x1 + 1;
+			y2 = y1 + 1 == numElems ? y1 : y1 + 1;
+		}
+		else
+		{
+			toSampleIndex<false>(x, numElems, x1, tx2);
+			toSampleIndex<false>(y, numElems, y1, ty2);
+
+			x2 = x1 + 1 == numElems ? 0 : x1 + 1;
+			y2 = y1 + 1 == numElems ? 0 : y1 + 1;
+		}
+		
 		const float tx1 = 1.f - tx2;
 		const float ty1 = 1.f - ty2;
 		

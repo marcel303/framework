@@ -65,7 +65,7 @@ struct Wavefield1D
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
 	void doGaussianImpact(const int x, const int radius, const double strength, const double intensity);
-	float sample(const float x) const;
+	float sample(const float x, const bool closedEnds) const;
 	
 	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
@@ -92,7 +92,7 @@ struct Wavefield1Df
 	void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds);
 	
 	void doGaussianImpact(const int x, const int radius, const float strength, const float intensity);
-	float sample(const float x) const;
+	float sample(const float x, const bool closedEnds) const;
 	
 	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
@@ -126,7 +126,7 @@ struct Wavefield2D
 	void randomize();
 	
 	void doGaussianImpact(const int x, const int y, const int radius, const double strength, const double intensity);
-	float sample(const float x, const float y) const;
+	float sample(const float x, const float y, const bool closedEnds) const;
 	
 	void copyFrom(const Wavefield2D & other, const bool copyP, const bool copyV, const bool copyF);
 	
@@ -162,7 +162,7 @@ struct Wavefield2Df
 	void randomize();
 	
 	void doGaussianImpact(const int x, const int y, const int radius, const float strength, const float intensity);
-	float sample(const float x, const float y) const;
+	float sample(const float x, const float y, const bool closedEnds) const;
 	
 	void copyFrom(const Wavefield2Df & other, const bool copyP, const bool copyV, const bool copyF);
 	

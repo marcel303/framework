@@ -95,6 +95,8 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 	
 	AudioRNG rng;
 	
+	const bool closedEnds = true;
+	
 	ResourceEditor_Wavefield2D()
 		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
@@ -153,7 +155,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 			wavefield.numElems = resource->numElems;
 			
 			for (int i = 0; i < 10; ++i)
-				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
+				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, closedEnds);
 		}
 		
 		if (g_doDraw)
@@ -170,7 +172,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 				{
 					for (int y = 0; y < wavefield.numElems; ++y)
 					{
-						const float p = wavefield.sample(x, y);
+						const float p = wavefield.sample(x, y, closedEnds);
 						const float a = saturate(wavefield.f[x][y]);
 						
 						setColorf(1.f, 1.f, 1.f, a);
@@ -429,7 +431,7 @@ void AudioNodeWavefield2D::init(const GraphNode & node)
 	syncWavefieldResource();
 }
 
-void AudioNodeWavefield2D::tick(const float _dt)
+void AudioNodeWavefield2D::tick(const float in_dt)
 {
 	audioCpuTimingBlock(AudioNodeWavefield2D);
 	
@@ -470,19 +472,22 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	//
 	
-	const double dt = 1.0 / double(SAMPLE_RATE);
+	const double dtPerSample = 1.0 / double(SAMPLE_RATE);
 	
 	const double maxTension = 2000000000.0;
+	
+	const bool closedEnds = (wrap == false);
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
 		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
-		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
+		wavefield->tick(dtPerSample, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], closedEnds);
 		
 		audioOutput.samples[i] = wavefield->sample(
 			sampleLocationX->samples[i] * wavefield->numElems,
-			sampleLocationY->samples[i] * wavefield->numElems);
+			sampleLocationY->samples[i] * wavefield->numElems,
+			closedEnds);
 	}
 	
 	audioOutput.mul(*gain);

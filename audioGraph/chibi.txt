@@ -50,8 +50,7 @@ library audiograph-graphMgr
 
 library audiograph-nodes
 
-	# todo : remove framework dependency
-	#        used by resource editors
+	# todo : remove framework dependency. depending on it here due to resource editors
 	depend_library framework
 
 	# todo : remove libavgraph dependency. depending on it here due to resource editors
@@ -76,7 +75,7 @@ library audiograph-nodes
 	scan_files cpp path audioNodes conglomerate conglomerates/audioNodes_all.h
 	scan_files h   path audioNodes
 
-# todo : remove portaudio dependency
+# todo : remove portaudio dependency. depending on it here due to paobject
 	with_platform android compile_definition STUB_PAOBJECT * expose
 
 	link_translation_unit_using_function_call linkAudioNodes

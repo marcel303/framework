@@ -1724,14 +1724,14 @@ struct World : WorldInterface
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return wavefield.sample(samplePosition[0], samplePosition[1]);
+		return wavefield.sample(samplePosition[0], samplePosition[1], true);
 	}
 	
 	virtual float measureFlight(const Vec3 & p) override
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return wavefield.sample(samplePosition[0], samplePosition[1]);
+		return wavefield.sample(samplePosition[0], samplePosition[1], true);
 	}
 	
 	ALIGNED_AUDIO_NEW_AND_DELETE();

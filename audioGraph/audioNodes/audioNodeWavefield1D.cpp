@@ -438,7 +438,7 @@ void AudioNodeWavefield1D::init(const GraphNode & node)
 	syncWavefieldResource();
 }
 
-void AudioNodeWavefield1D::tick(const float _dt)
+void AudioNodeWavefield1D::tick(const float in_dt)
 {
 	audioCpuTimingBlock(AudioNodeWavefield1D);
 	
@@ -477,19 +477,23 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	//
 	
-	const double dt = 1.0 / double(SAMPLE_RATE);
+	const double dtPerSample = 1.0 / double(SAMPLE_RATE);
 	
 	const double maxTension = 2000000000.0;
+	
+	const bool closedEnds = (wrap == false);
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
 		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
-		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
+		wavefield->tick(dtPerSample, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], closedEnds);
 		
 	// todo : soft clip wavefield position. unsafe tension changes could boost it too much
 		
-		audioOutput.samples[i] = wavefield->sample(sampleLocation->samples[i] * wavefield->numElems);
+		audioOutput.samples[i] = wavefield->sample(
+			sampleLocation->samples[i] * wavefield->numElems,
+			closedEnds);
 	}
 	
 	audioOutput.mul(*gain);
