@@ -331,9 +331,6 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 				? slider.desc + 1
 				: slider.desc;
 			
-			char defaultString[64];
-			sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
-			
 			if (slider.isEnum)
 			{
 				// add enumeration type registration with a name unique to this node type ..
@@ -347,10 +344,13 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 				
 				// .. and add the enum input itself
 				
-				inEnum(sliderInput.name.c_str(), enumName.c_str(), defaultString, sliderDesc);
+				inEnum(sliderInput.name.c_str(), enumName.c_str(), (int)slider.def, sliderDesc);
 			}
 			else
 			{
+				char defaultString[64];
+				sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
+				
 				in(sliderInput.name.c_str(), "audioValue", defaultString, sliderDesc);
 			}
 			
