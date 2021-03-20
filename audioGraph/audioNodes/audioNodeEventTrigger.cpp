@@ -60,7 +60,7 @@ void AudioNodeEventTrigger::updateEventRegistration()
 	{
 		if (isRegistered)
 		{
-			g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+			g_currentAudioGraph->unregisterEvent(currentName.c_str());
 			isRegistered = false;
 		}
 		
@@ -84,7 +84,7 @@ void AudioNodeEventTrigger::updateEventRegistration()
 		
 		if (isRegistered)
 		{
-			g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+			g_currentAudioGraph->unregisterEvent(currentName.c_str());
 			isRegistered = false;
 		}
 		
@@ -112,7 +112,8 @@ void AudioNodeEventTrigger::tick(const float dt)
 
 	if (name != nullptr)
 	{
-		if (g_currentAudioGraph->stateDescriptor.activeEvents.count(name) != 0)
+	// todo : add method to check if event is triggered
+		if (g_currentAudioGraph->triggeredEvents_audioThread.count(name) != 0)
 		{
 			trigger(kOutput_Trigger);
 		}

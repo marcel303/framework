@@ -59,8 +59,6 @@ static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
-extern AudioMutexBase * g_vfxAudioMutex;
-
 extern OscEndpointMgr g_oscEndpointMgr;
 
 static void initAudioGraph();
@@ -595,7 +593,6 @@ static void initAudioGraph()
 	Assert(s_audioMutex == nullptr);
 	s_audioMutex = new AudioMutex();
 	s_audioMutex->init();
-	g_vfxAudioMutex = s_audioMutex;
 	
 	Assert(s_audioVoiceMgr == nullptr);
 	s_audioVoiceMgr = new AudioVoiceManagerBasic();

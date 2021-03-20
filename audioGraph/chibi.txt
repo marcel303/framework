@@ -62,7 +62,7 @@ library audiograph-nodes
 	depend_library binaural
 	depend_library libavgraph-core
 
-	# todo : remove portaudio dependency
+	# todo : remove portaudio dependency. depending on it here due to paobject
 	with_platform macos   depend_library portaudio
 	with_platform linux   depend_library portaudio
 	with_platform windows depend_library portaudio

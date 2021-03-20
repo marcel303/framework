@@ -332,12 +332,12 @@ AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 {
 }
 
-void AudioVoiceManagerBasic::init(AudioMutexBase * in_audioMutex, const int _numDynamicChannels)
+void AudioVoiceManagerBasic::init(AudioMutexBase * in_audioMutex, const int in_numDynamicChannels)
 {
 	Assert(firstVoice == nullptr);
 	
 	Assert(numDynamicChannels == 0);
-	numDynamicChannels = _numDynamicChannels;
+	numDynamicChannels = in_numDynamicChannels;
 	
 	audioMutex = in_audioMutex;
 }

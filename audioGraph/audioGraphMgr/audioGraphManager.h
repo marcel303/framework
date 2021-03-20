@@ -78,7 +78,7 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) = 0;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) = 0;
 	virtual void freeContext(AudioGraphContext *& context) = 0;
 	virtual AudioGraphContext * getContext() = 0;
 	
@@ -119,6 +119,8 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	std::list<AudioGraphInstance*> instances;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -132,7 +134,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	
@@ -162,6 +164,8 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	AudioGraphFile * selectedFile;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -181,7 +185,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	
@@ -210,6 +214,8 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	AudioGraphFile * selectedFile;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -229,7 +235,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	

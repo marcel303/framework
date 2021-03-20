@@ -298,8 +298,10 @@ void AudioGraphManager_Basic::init(AudioMutexBase * mutex, AudioVoiceManager * v
 	createAudioNodeTypeDefinitions(*typeDefinitionLibrary, g_audioNodeTypeRegistrationList);
 	
 	audioMutex = mutex;
+	mutex_mem.init();
+	mutex_reg.init();
 	
-	context = createContext(mutex, voiceMgr);
+	context = createContext(voiceMgr);
 }
 
 void AudioGraphManager_Basic::shut()
@@ -345,11 +347,11 @@ void AudioGraphManager_Basic::addGraphToCache(const char * filename)
 	}
 }
 
-AudioGraphContext * AudioGraphManager_Basic::createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr)
+AudioGraphContext * AudioGraphManager_Basic::createContext(AudioVoiceManager * voiceMgr)
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr);
+	context->init(&mutex_mem, &mutex_reg, voiceMgr);
 	
 	audioMutex->lock();
 	{
@@ -516,26 +518,23 @@ void AudioGraphManager_Basic::tickMain()
 	{
 		free(instanceToRemove, false);
 	}
-	
-	// tick audio graphs
-	
-	for (auto & instance : instances)
-	{
-		instance->audioGraph->tickMain();
-	}
 }
 
 void AudioGraphManager_Basic::tickAudio(const float dt)
 {
 	audioMutex->lock();
 	{
-		for (auto & context : allocatedContexts)
-			context->tickAudio(dt);
-		
-		// synchronize state from main to audio thread
-		
-		for (auto & instance : instances)
-			instance->audioGraph->syncMainToAudio();
+		mutex_mem.lock();
+		{
+			// synchronize state from main to audio thread
+			
+			for (auto & context : allocatedContexts)
+				context->tickAudio(dt);
+			
+			for (auto & instance : instances)
+				instance->audioGraph->syncMainToAudio(dt);
+		}
+		mutex_mem.unlock();
 		
 		// tick graph instances
 		
@@ -557,6 +556,8 @@ AudioGraphManager_RTE::AudioGraphManager_RTE(const int in_displaySx, const int i
 	, files()
 	, selectedFile(nullptr)
 	, audioMutex(nullptr)
+	, mutex_mem()
+	, mutex_reg()
 	, allocatedContexts()
 	, context(nullptr)
 	, displaySx(0)
@@ -585,7 +586,10 @@ void AudioGraphManager_RTE::init(AudioMutexBase * mutex, AudioVoiceManager * voi
 	
 	audioMutex = mutex;
 	
-	context = createContext(mutex, voiceMgr);
+	mutex_mem.init();
+	mutex_reg.init();
+	
+	context = createContext(voiceMgr);
 }
 
 void AudioGraphManager_RTE::shut()
@@ -608,6 +612,9 @@ void AudioGraphManager_RTE::shut()
 		
 		freeContext(context);
 	}
+	
+	mutex_mem.shut();
+	mutex_reg.shut();
 	
 	audioMutex = nullptr;
 	
@@ -684,11 +691,11 @@ void AudioGraphManager_RTE::selectInstance(const AudioGraphInstance * instance)
 	audioMutex->unlock();
 }
 
-AudioGraphContext * AudioGraphManager_RTE::createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr)
+AudioGraphContext * AudioGraphManager_RTE::createContext(AudioVoiceManager * voiceMgr)
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr);
+	context->init(&mutex_mem, &mutex_reg, voiceMgr);
 	
 	audioMutex->lock();
 	{
@@ -912,16 +919,6 @@ void AudioGraphManager_RTE::tickMain()
 		free(instanceToRemove, false);
 	}
 	
-	// tick audio graphs
-	
-	for (auto & file : files)
-	{
-		for (auto & instance : file.second->instanceList)
-		{
-			instance->audioGraph->tickMain();
-		}
-	}
-	
 	// copy audio values
 	
 	if (selectedFile && selectedFile->activeInstance)
@@ -934,15 +931,19 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 {
 	audioMutex->lock();
 	{
-		for (auto & context : allocatedContexts)
-			context->tickAudio(dt);
-		
-		// synchronize state from main to audio thread
-		
-		for (auto & file : files)
-			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->syncMainToAudio();
-		
+		mutex_mem.lock();
+		{
+			// synchronize state from main to audio thread
+			
+			for (auto & context : allocatedContexts)
+				context->tickAudio(dt);
+			
+			for (auto & file : files)
+				for (auto & instance : file.second->instanceList)
+					instance->audioGraph->syncMainToAudio(dt);
+		}
+		mutex_mem.unlock();
+	
 		// tick graph instances
 		
 		for (auto & file : files)
@@ -1054,7 +1055,7 @@ void AudioGraphManager_MultiRTE::init(AudioMutexBase * mutex, AudioVoiceManager 
 	
 	audioMutex = mutex;
 	
-	context = createContext(mutex, voiceMgr);
+	context = createContext(voiceMgr);
 }
 
 void AudioGraphManager_MultiRTE::shut()
@@ -1132,11 +1133,11 @@ void AudioGraphManager_MultiRTE::selectInstance(const AudioGraphInstance * insta
 	audioMutex->unlock();
 }
 
-AudioGraphContext * AudioGraphManager_MultiRTE::createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr)
+AudioGraphContext * AudioGraphManager_MultiRTE::createContext(AudioVoiceManager * voiceMgr)
 {
 	AudioGraphContext * context = new AudioGraphContext();
 	
-	context->init(mutex, voiceMgr);
+	context->init(&mutex_mem, &mutex_reg, voiceMgr);
 	
 	audioMutex->lock();
 	{
@@ -1358,19 +1359,9 @@ void AudioGraphManager_MultiRTE::tickMain()
 		free(instanceToRemove, false);
 	}
 	
-	// tick audio graphs
-	
-	for (auto & file : files)
-	{
-		for (auto & instance : file.second->instanceList)
-		{
-			instance->audioGraph->tickMain();
-		}
-	}
-	
 	// copy audio values
 	
-	audioMutex->lock();
+	audioMutex->lock(); // lock here, so we don't lock many times in captureAudioValues
 	{
 		for (auto & fileItr : files)
 		{
@@ -1389,14 +1380,18 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 {
 	audioMutex->lock();
 	{
-		for (auto & context : allocatedContexts)
-			context->tickAudio(dt);
-		
-		// synchronize state from main to audio thread
-		
-		for (auto & file : files)
-			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->syncMainToAudio();
+		mutex_mem.lock();
+		{
+			// synchronize state from main to audio thread
+			
+			for (auto & context : allocatedContexts)
+				context->tickAudio(dt);
+			
+			for (auto & file : files)
+				for (auto & instance : file.second->instanceList)
+					instance->audioGraph->syncMainToAudio(dt);
+		}
+		mutex_mem.unlock();
 		
 		// tick graph instances
 		

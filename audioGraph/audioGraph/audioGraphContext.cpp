@@ -32,7 +32,8 @@
 #include <math.h>
 
 AudioGraphContext::AudioGraphContext()
-	: audioMutex(nullptr)
+	: mutex_mem(nullptr)
+	, mutex_reg(nullptr)
 	, voiceMgr(nullptr)
 	, mainThreadId()
 	, controlValues()
@@ -41,11 +42,15 @@ AudioGraphContext::AudioGraphContext()
 {
 }
 
-void AudioGraphContext::init(AudioMutexBase * mutex, AudioVoiceManager * _voiceMgr)
+void AudioGraphContext::init(
+	AudioMutexBase * in_mutex_mem,
+	AudioMutexBase * in_mutex_reg,
+	AudioVoiceManager * in_voiceMgr)
 {
-	audioMutex = mutex;
+	mutex_mem = in_mutex_mem;
+	mutex_reg = in_mutex_reg;
 	
-	voiceMgr = _voiceMgr;
+	voiceMgr = in_voiceMgr;
 	
 	mainThreadId.setThreadId();
 }
@@ -54,33 +59,67 @@ void AudioGraphContext::shut()
 {
 	mainThreadId.clearThreadId();
 	
-	audioMutex = nullptr;
+	mutex_mem = nullptr;
+	mutex_reg = nullptr;
 }
 
 void AudioGraphContext::tickAudio(const float dt)
 {
-	// update control values
-
-	for (auto & controlValue : controlValues)
+	mutex_mem->lock();
 	{
-		const float retain = powf(controlValue.smoothness, dt);
+		// update control values
 		
-		controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
-		controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
+		updateControlValues(dt);
+		
+		// export control values
+		
+		exportControlValues();
+		
+		// synchronize memory from main -> audio
+		
+		for (auto & memf_itr : memf)
+		{
+			auto & memf = memf_itr.second;
+			
+			memf.syncMainToAudio();
+		}
 	}
-
-	exportControlValues();
+	mutex_mem->unlock();
 
 	// update time
 	
 	time += dt;
 }
 
+void AudioGraphContext::registerMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+{
+	mutex_reg->lock();
+	mutex_mem->lock();
+	{
+		auto mem_itr = memf.find(name);
+		
+		if (mem_itr == memf.end())
+		{
+			auto & mem = memf[name];
+			
+			mem.value1_mainThread = value1;
+			mem.value2_mainThread = value2;
+			mem.value3_mainThread = value3;
+			mem.value4_mainThread = value4;
+			
+			mem.syncMainToAudio();
+		}
+	}
+	mutex_mem->unlock();
+	mutex_reg->unlock();
+}
+
 void AudioGraphContext::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
-	//rteMutex.lock(); // todo
+	// thread: main, audio
 	
-	audioMutex->lock();
+	mutex_reg->lock();
+	mutex_mem->lock();
 	{
 		bool exists = false;
 		
@@ -98,38 +137,43 @@ void AudioGraphContext::registerControlValue(AudioControlValue::Type type, const
 		{
 			controlValues.resize(controlValues.size() + 1);
 			
-			auto & controlValue = controlValues.back();
-			
-			controlValue.type = type;
-			controlValue.name = name;
-			controlValue.refCount = 1;
-			controlValue.min = min;
-			controlValue.max = max;
-			controlValue.smoothness = smoothness;
-			controlValue.defaultX = defaultX;
-			controlValue.defaultY = defaultY;
-			controlValue.desiredX = defaultX;
-			controlValue.desiredY = defaultY;
-			controlValue.currentX = defaultX;
-			controlValue.currentY = defaultY;
-			
-			controlValue.finalize();
+			{
+				// note : it won't be safe to reference controlValue after the sort,
+				//        so we make sure to let it leave scope before the sort
+				
+				auto & controlValue = controlValues.back();
+				
+				controlValue.type = type;
+				controlValue.name = name;
+				controlValue.refCount = 1;
+				controlValue.min = min;
+				controlValue.max = max;
+				controlValue.smoothness = smoothness;
+				controlValue.defaultX = defaultX;
+				controlValue.defaultY = defaultY;
+				controlValue.desiredX = defaultX;
+				controlValue.desiredY = defaultY;
+				controlValue.currentX = defaultX;
+				controlValue.currentY = defaultY;
+			}
 			
 			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
 			
-			// immediately export it. this is necessary during real-time editing only. for regular processing, it would export the control values before processing the audio graph anyway
+			// register the memf. if we don't, setMemf would fail!
 			
-			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
+			registerMemf(name, defaultX, defaultY);
 		}
 	}
-	audioMutex->unlock();
-	
-	//rteMutex.unlock();
+	mutex_mem->unlock();
+	mutex_reg->unlock();
 }
 
 void AudioGraphContext::unregisterControlValue(const char * name)
 {
-	audioMutex->lock();
+	// thread: main, audio
+	
+	mutex_reg->lock();
+	mutex_mem->lock();
 	{
 		bool exists = false;
 		
@@ -159,40 +203,68 @@ void AudioGraphContext::unregisterControlValue(const char * name)
 			LOG_WRN("failed to unregister control value %s", name);
 		}
 	}
-	audioMutex->unlock();
+	mutex_mem->unlock();
+	mutex_reg->unlock();
+}
+
+void AudioGraphContext::lockControlValues()
+{
+	mutex_mem->lock();
+}
+
+void AudioGraphContext::unlockControlValues()
+{
+	mutex_mem->unlock();
+}
+
+void AudioGraphContext::updateControlValues(const float dt)
+{
+	for (auto & controlValue : controlValues)
+	{
+		const float retain = powf(controlValue.smoothness, dt);
+		
+		controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
+		controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
+	}
 }
 
 void AudioGraphContext::exportControlValues()
 {
-	audioMutex->lock();
+	for (auto & controlValue : controlValues)
 	{
-		for (auto & controlValue : controlValues)
-		{
-			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
-		}
+		setMemf(
+			controlValue.name.c_str(),
+			controlValue.currentX,
+			controlValue.currentY);
 	}
-	audioMutex->unlock();
 }
 
 void AudioGraphContext::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	audioMutex->lock();
+	mutex_mem->lock();
 	{
-		auto & mem = memf[name];
+		auto mem_itr = memf.find(name);
 		
-		mem.value1 = value1;
-		mem.value2 = value2;
-		mem.value3 = value3;
-		mem.value4 = value4;
+		if (mem_itr != memf.end())
+		{
+			auto & mem = mem_itr->second;
+		
+			mem.value1_mainThread = value1;
+			mem.value2_mainThread = value2;
+			mem.value3_mainThread = value3;
+			mem.value4_mainThread = value4;
+		}
 	}
-	audioMutex->unlock();
+	mutex_mem->unlock();
 }
 
-AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
+AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name, const bool isMainThread)
 {
+	Assert(mainThreadId.checkThreadId() == isMainThread);
+	
 	Memf result;
 	
-	audioMutex->lock();
+	mutex_mem->lock();
 	{
 		auto memfItr = memf.find(name);
 		
@@ -201,13 +273,15 @@ AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
 			result = memfItr->second;
 		}
 	}
-	audioMutex->unlock();
+	mutex_mem->unlock();
 	
 	return result;
 }
 
-void AudioGraphContext::addObject(const std::type_index & type, void * object)
+void AudioGraphContext::addObject(const std::type_index & type, void * object, const char * name)
 {
+	LOG_DBG("AudioGraphContext: Adding object '%s'", name);
+	
 	ObjectRegistration r;
 	r.type = type;
 	r.object = object;

@@ -41,6 +41,8 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		
 		std::set<AudioVoice*> voices;
 		
+		mutable AudioMutex mutex;
+		
 		VoiceMgr()
 			: AudioVoiceManager(kType_Basic)
 			, parentVoiceMgr(nullptr)
@@ -51,6 +53,23 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		void init(AudioVoiceManager * in_parentVoiceMgr)
 		{
 			parentVoiceMgr = in_parentVoiceMgr;
+			
+			mutex.init();
+		}
+		
+		void shut()
+		{
+			mutex.shut();
+		}
+		
+		void lockVoices() const
+		{
+			mutex.lock();
+		}
+		
+		void unlockVoices() const
+		{
+			mutex.unlock();
 		}
 		
 		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;

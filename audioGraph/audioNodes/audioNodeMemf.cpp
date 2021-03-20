@@ -28,6 +28,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeMemf.h"
 
+// todo : add scope
+
 AUDIO_NODE_TYPE(AudioNodeMemf)
 {
 	typeName = "memf";
@@ -74,12 +76,12 @@ void AudioNodeMemf::tick(const float dt)
 			g_currentAudioGraph->registerMemf(name, 0.f, 0.f, 0.f, 0.f);
 		}
 		
-		const AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name);
+		const AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name, false);
 
-		valueOutput[0].setScalar(memf.value1);
-		valueOutput[1].setScalar(memf.value2);
-		valueOutput[2].setScalar(memf.value3);
-		valueOutput[3].setScalar(memf.value4);
+		valueOutput[0].setScalar(memf.value1_audioThread);
+		valueOutput[1].setScalar(memf.value2_audioThread);
+		valueOutput[2].setScalar(memf.value3_audioThread);
+		valueOutput[3].setScalar(memf.value4_audioThread);
 	}
 }
 

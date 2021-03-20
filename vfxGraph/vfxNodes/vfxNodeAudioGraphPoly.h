@@ -52,6 +52,8 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 	
 	Mode currentMode;
 	
+	mutable AudioMutex mutex;
+	
 	VoiceMgr_VoiceGroup()
 		: AudioVoiceManager(kType_Basic)
 		, parentVoiceMgr(nullptr)
@@ -68,6 +70,13 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 	void init(AudioVoiceManager * in_parentVoiceMgr)
 	{
 		parentVoiceMgr = in_parentVoiceMgr;
+		
+		mutex.init();
+	}
+	
+	void shut()
+	{
+		mutex.shut();
 	}
 	
 	void setMode(const Mode mode)
@@ -80,6 +89,16 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 			// todo : if mode is downmix to mono -> add special voice to perform downmix based on the set of voices we manage here
 			// todo : if mode is muted -> don't add any voices
 		}
+	}
+	
+	void lockVoices() const
+	{
+		mutex.lock();
+	}
+	
+	void unlockVoices() const
+	{
+		mutex.unlock();
 	}
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;

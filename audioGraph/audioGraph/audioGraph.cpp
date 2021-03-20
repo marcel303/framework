@@ -57,20 +57,8 @@ AudioGraph::AudioGraph(AudioGraphContext * in_context, const bool in_isPaused)
 #endif
 	, valuesToFree()
 	, time(0.0)
-	, stateDescriptor()
-	, pushedStateDescriptorUpdate(nullptr)
 	, context(nullptr)
-	, mutex()
-	, rteMutex_main()
-	, rteMutex_audio()
 {
-// todo : use the mutex from the context, so the audio graph can share it with all other graphs, ensuring state descriptor updates are sync'ed across all audio graph instances
-
-	mutex.init();
-	
-	rteMutex_main.init();
-	rteMutex_audio.init();
-	
 	context = in_context;
 }
 
@@ -92,8 +80,6 @@ void AudioGraph::destroy()
 	}
 	popAudioGraph();
 	
-// todo : perhaps more convenient and less error prone would be to free all of the voices ourselves and remove the task from audio nodes. it would save the expense of calling shut on each node instance
-
 	// all of the voice nodes should have freed their voices when shut was called
 	Assert(audioVoices.empty());
 	
@@ -152,11 +138,6 @@ void AudioGraph::destroy()
 #if AUDIO_GRAPH_ENABLE_TIMING
 	graph = nullptr;
 #endif
-
-	rteMutex_main.shut();
-	rteMutex_audio.shut();
-	
-	mutex.shut();
 }
 
 void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & inputValue)
@@ -242,75 +223,66 @@ void AudioGraph::freeVoice(AudioVoice *& voice)
 	}
 }
 
-void AudioGraph::tickMain()
-{
-	pushStateDescriptorUpdate();
-}
-
 void AudioGraph::lockControlValues()
 {
-	rteMutex_main.lock();
+	context->mutex_mem->lock();
 }
 
 void AudioGraph::unlockControlValues()
 {
-	rteMutex_main.unlock();
+	context->mutex_mem->unlock();
 }
 
-void AudioGraph::syncMainToAudio()
+void AudioGraph::syncMainToAudio(const float dt)
 {
 	Assert(context->mainThreadId.checkThreadId() == false);
 	
-	mutex.lock();
+	context->mutex_mem->lock();
 	{
-		rteMutex_audio.lock();
+		// update control values
+		
+		for (auto & controlValue : controlValues)
 		{
-			for (auto & controlValue : stateDescriptor.controlValues)
-			{
-				// update pushed desired values
-				
-				controlValue.active_desiredX = controlValue.pushed_desiredX;
-				controlValue.active_desiredY = controlValue.pushed_desiredY;
-				
-				// store updates current values
-				
-				controlValue.stored_currentX = controlValue.active_currentX;
-				controlValue.stored_currentY = controlValue.active_currentY;
-			}
+			const float retain = powf(controlValue.smoothness, dt);
 			
-			for (auto & memf_itr : stateDescriptor.memf)
-			{
-				auto & memf = memf_itr.second;
-				
-				memf.active_value1 = memf.pushed_value1;
-				memf.active_value2 = memf.pushed_value2;
-				memf.active_value3 = memf.pushed_value3;
-				memf.active_value4 = memf.pushed_value4;
-			}
-			
-			for (auto & mems_itr : stateDescriptor.mems)
-			{
-				auto & mems = mems_itr.second;
-				
-				mems.active_value = mems.pushed_value;
-			}
+			controlValue.currentX = controlValue.currentX * retain + controlValue.desiredX * (1.f - retain);
+			controlValue.currentY = controlValue.currentY * retain + controlValue.desiredY * (1.f - retain);
 		}
-		rteMutex_audio.unlock();
+		
+		// export control values
+		
+		for (auto & controlValue : controlValues)
+		{
+			setMemf(
+				controlValue.name.c_str(),
+				controlValue.currentX,
+				controlValue.currentY);
+		}
+		
+		// synchronize memory from main -> audio
+		
+		for (auto & memf_itr : memf)
+		{
+			auto & memf = memf_itr.second;
+			
+			memf.syncMainToAudio();
+		}
+		
+		for (auto & mems_itr : mems)
+		{
+			auto & mems = mems_itr.second;
+			
+			mems.syncMainToAudio();
+		}
 	
-		stateDescriptor.activeEvents.clear();
+		// capture and reset triggered events
 		
-		std::swap(stateDescriptor.activeEvents, triggeredEvents_pushed);
-		
-		if (pushedStateDescriptorUpdate != nullptr)
-		{
-			std::swap(stateDescriptor.activeFlags, pushedStateDescriptorUpdate->activeFlags);
-			
-		// todo : perform memory allocs/frees on the main thread
-			delete pushedStateDescriptorUpdate;
-			pushedStateDescriptorUpdate = nullptr;
-		}
+		std::swap(
+			triggeredEvents_audioThread,
+			triggeredEvents_mainThread);
+		triggeredEvents_mainThread.clear();
 	}
-	mutex.unlock();
+	context->mutex_mem->unlock();
 }
 
 void AudioGraph::tickAudio(const float dt, const bool in_syncMainToAudio)
@@ -325,58 +297,28 @@ void AudioGraph::tickAudio(const float dt, const bool in_syncMainToAudio)
 		if (rampDownRequested)
 			rampDown = true;
 		
-		rteMutex_audio.lock();
+		if (in_syncMainToAudio)
 		{
-			if (in_syncMainToAudio)
-			{
-				mutex.lock();
-				{
-					syncMainToAudio();
-				}
-				mutex.unlock();
-			}
-			
-			// update control values
-			
-			for (auto & controlValue : stateDescriptor.controlValues)
-			{
-				const float retain = powf(controlValue.smoothness, dt);
-				
-				controlValue.active_currentX = controlValue.active_currentX * retain + controlValue.active_desiredX * (1.f - retain);
-				controlValue.active_currentY = controlValue.active_currentY * retain + controlValue.active_desiredY * (1.f - retain);
-				
-				// update associated memory inside the state descriptor
-				
-				auto mem_itr = stateDescriptor.memf.find(controlValue.name.c_str());
-				Assert(mem_itr != stateDescriptor.memf.end());
-				if (mem_itr != stateDescriptor.memf.end())
-				{
-					auto & mem = mem_itr->second;
-					
-					mem.active_value1 = controlValue.active_currentX;
-					mem.active_value2 = controlValue.active_currentY;
-				}
-			}
-				
-			// process nodes
-			
-			++currentTickTraversalId;
-			
-			setCurrentAudioGraphTraversalId(currentTickTraversalId);
-			
-			for (auto & i : nodes)
-			{
-				AudioNodeBase * node = i.second;
-				
-				if (node->lastTickTraversalId != currentTickTraversalId)
-				{
-					node->traverseTick(currentTickTraversalId, dt);
-				}
-			}
-			
-			clearCurrentAudioGraphTraversalId();
+			syncMainToAudio(dt);
 		}
-		rteMutex_audio.unlock();
+		
+		// process nodes
+		
+		++currentTickTraversalId;
+		
+		setCurrentAudioGraphTraversalId(currentTickTraversalId);
+		
+		for (auto & i : nodes)
+		{
+			AudioNodeBase * node = i.second;
+			
+			if (node->lastTickTraversalId != currentTickTraversalId)
+			{
+				node->traverseTick(currentTickTraversalId, dt);
+			}
+		}
+		
+		clearCurrentAudioGraphTraversalId();
 		
 		//
 		
@@ -404,89 +346,95 @@ void AudioGraph::tickAudio(const float dt, const bool in_syncMainToAudio)
 
 void AudioGraph::setFlag(const char * name, const bool value)
 {
-	mutex.lock();
+	// thread: main, audio
+	
+	context->mutex_mem->lock();
 	{
 		if (value)
 			activeFlags.insert(name);
 		else
 			activeFlags.erase(name);
 	}
-	mutex.unlock();
+	context->mutex_mem->unlock();
 }
 
 void AudioGraph::resetFlag(const char * name)
 {
-	mutex.lock();
+	// thread: main, audio
+	
+	context->mutex_mem->lock();
 	{
 		activeFlags.erase(name);
 	}
-	mutex.unlock();
+	context->mutex_mem->unlock();
 }
 
 bool AudioGraph::isFlagSet(const char * name) const
 {
+	// thread: main, audio
+	
 	bool result;
 	
-	mutex.lock();
+	context->mutex_mem->lock();
 	{
 		result = activeFlags.count(name) != 0;
 	}
-	mutex.unlock();
+	context->mutex_mem->unlock();
 	
 	return result;
 }
 
 void AudioGraph::registerMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.memf.find(name);
+		auto mem_itr = memf.find(name);
 		
-		if (mem_itr == stateDescriptor.memf.end())
+		if (mem_itr == memf.end())
 		{
-			auto & mem = stateDescriptor.memf[name];
+			auto & mem = memf[name];
 			
-			mem.value1 = value1;
-			mem.value2 = value2;
-			mem.value3 = value3;
-			mem.value4 = value4;
+			mem.value1_mainThread = value1;
+			mem.value2_mainThread = value2;
+			mem.value3_mainThread = value3;
+			mem.value4_mainThread = value4;
 			
-			mem.finalize();
+			mem.syncMainToAudio();
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::registerMems(const char * name, const char * value)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.mems.find(name);
+		auto mem_itr = mems.find(name);
 		
-		if (mem_itr == stateDescriptor.mems.end())
+		if (mem_itr == mems.end())
 		{
-			auto & mem = stateDescriptor.mems[name];
+			auto & mem = mems[name];
 			
-			mem.value = value;
+			mem.value_mainThread = value;
 			
-			mem.finalize();
+			mem.syncMainToAudio();
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
 		bool exists = false;
 		
-		for (auto & controlValue : stateDescriptor.controlValues)
+		for (auto & controlValue : controlValues)
 		{
 			if (controlValue.name == name)
 			{
@@ -498,44 +446,49 @@ void AudioGraph::registerControlValue(AudioControlValue::Type type, const char *
 		
 		if (exists == false)
 		{
-			stateDescriptor.controlValues.resize(stateDescriptor.controlValues.size() + 1);
+			controlValues.resize(controlValues.size() + 1);
 			
-			auto & controlValue = stateDescriptor.controlValues.back();
+			{
+				// note : it won't be safe to reference controlValue after the sort,
+				//        so we make sure to let it leave scope before the sort
+				
+				auto & controlValue = controlValues.back();
+				
+				controlValue.type = type;
+				controlValue.name = name;
+				controlValue.refCount = 1;
+				controlValue.min = min;
+				controlValue.max = max;
+				controlValue.smoothness = smoothness;
+				controlValue.defaultX = defaultX;
+				controlValue.defaultY = defaultY;
+				controlValue.desiredX = defaultX;
+				controlValue.desiredY = defaultY;
+				controlValue.currentX = defaultX;
+				controlValue.currentY = defaultY;
+			}
 			
-			controlValue.type = type;
-			controlValue.name = name;
-			controlValue.refCount = 1;
-			controlValue.min = min;
-			controlValue.max = max;
-			controlValue.smoothness = smoothness;
-			controlValue.defaultX = defaultX;
-			controlValue.defaultY = defaultY;
-			controlValue.desiredX = defaultX;
-			controlValue.desiredY = defaultY;
-			controlValue.currentX = defaultX;
-			controlValue.currentY = defaultY;
+			// keep the list of control values sorted (for a possible UI)
 			
-			controlValue.finalize();
+			std::sort(controlValues.begin(), controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
 			
-			std::sort(stateDescriptor.controlValues.begin(), stateDescriptor.controlValues.end(), [](const AudioControlValue & a, const AudioControlValue & b) { return a.name < b.name; });
+			// register the memf. if we don't, setMemf would fail!
 			
-			// immediately export it. this is necessary during real-time editing only. for regular processing, it would export the control values before processing the audio graph anyway
-			
-			registerMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY, 0.f, 0.f);
+			registerMemf(name, defaultX, defaultY, 0.f, 0.f);
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::unregisterControlValue(const char * name)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
 		bool exists = false;
 		
-		for (auto controlValueItr = stateDescriptor.controlValues.begin(); controlValueItr != stateDescriptor.controlValues.end(); ++controlValueItr)
+		for (auto controlValueItr = controlValues.begin(); controlValueItr != controlValues.end(); ++controlValueItr)
 		{
 			auto & controlValue = *controlValueItr;
 			
@@ -547,7 +500,7 @@ void AudioGraph::unregisterControlValue(const char * name)
 				{
 					//LOG_DBG("erasing control value %s", name);
 					
-					stateDescriptor.controlValues.erase(controlValueItr);
+					controlValues.erase(controlValueItr);
 				}
 				
 				exists = true;
@@ -561,82 +514,18 @@ void AudioGraph::unregisterControlValue(const char * name)
 			LOG_WRN("failed to unregister control value %s", name);
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
-}
-
-void AudioGraph::pushStateDescriptorUpdate()
-{
-	Assert(context->mainThreadId.checkThreadId() == true);
-	
-	// build and push a state descriptor update message
-
-	StateDescriptorUpdateMessage * update = new StateDescriptorUpdateMessage(stateDescriptorUpdate);
-	
-	stateDescriptorUpdate = StateDescriptorUpdateMessage();
-	
-	mutex.lock();
-	{
-	// fixme : use separate flags to communicate from main -> audio thread and audio to main thread (?)
-	// fixme : same for memf/mems ? make them explicitly directional
-	
-		rteMutex_main.lock();
-		{
-			for (auto & controlValue : stateDescriptor.controlValues)
-			{
-				controlValue.pushed_desiredX = controlValue.desiredX;
-				controlValue.pushed_desiredY = controlValue.desiredY;
-				
-				controlValue.currentX = controlValue.stored_currentX;
-				controlValue.currentY = controlValue.stored_currentY;
-			}
-			
-			for (auto & memf_itr : stateDescriptor.memf)
-			{
-				auto & memf = memf_itr.second;
-				
-				memf.pushed_value1 = memf.value1;
-				memf.pushed_value2 = memf.value2;
-				memf.pushed_value3 = memf.value3;
-				memf.pushed_value4 = memf.value4;
-			}
-			
-			for (auto & mems_itr : stateDescriptor.mems)
-			{
-				auto & mems = mems_itr.second;
-				
-				mems.pushed_value = mems.value;
-			}
-		}
-		rteMutex_main.unlock();
-	
-		triggeredEvents_pushed.insert(triggeredEvents.begin(), triggeredEvents.end());
-		
-		triggeredEvents.clear();
-		
-		update->activeFlags = activeFlags;
-		
-		if (pushedStateDescriptorUpdate != nullptr)
-		{
-			// free the previous (non-processed) update and replace it with the current update
-			
-			delete pushedStateDescriptorUpdate;
-			pushedStateDescriptorUpdate = nullptr;
-		}
-		
-		pushedStateDescriptorUpdate = update;
-	}
-	mutex.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::registerEvent(const char * name)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
 		bool exists = false;
 		
-		for (auto & event : stateDescriptor.events)
+		for (auto & event : events)
 		{
 			if (event.name == name)
 			{
@@ -648,28 +537,33 @@ void AudioGraph::registerEvent(const char * name)
 		
 		if (exists == false)
 		{
-			stateDescriptor.events.resize(stateDescriptor.events.size() + 1);
+			events.resize(events.size() + 1);
 			
-			auto & event = stateDescriptor.events.back();
+			{
+				// note : it won't be safe to reference event after the sort,
+				//        so we make sure to let it leave scope before the sort
+				
+				auto & event = events.back();
+				
+				event.name = name;
+				event.refCount = 1;
+			}
 			
-			event.name = name;
-			event.refCount = 1;
-			
-			std::sort(stateDescriptor.events.begin(), stateDescriptor.events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
+			std::sort(events.begin(), events.end(), [](const AudioEvent & a, const AudioEvent & b) { return a.name < b.name; });
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::unregisterEvent(const char * name)
 {
-	rteMutex_main.lock();
-	rteMutex_audio.lock();
+	context->mutex_reg->lock();
+	context->mutex_mem->lock();
 	{
 		bool exists = false;
 		
-		for (auto eventItr = stateDescriptor.events.begin(); eventItr != stateDescriptor.events.end(); ++eventItr)
+		for (auto eventItr = events.begin(); eventItr != events.end(); ++eventItr)
 		{
 			auto & event = *eventItr;
 			
@@ -681,7 +575,7 @@ void AudioGraph::unregisterEvent(const char * name)
 				{
 					//LOG_DBG("erasing event %s", name);
 					
-					stateDescriptor.events.erase(eventItr);
+					events.erase(eventItr);
 				}
 				
 				exists = true;
@@ -695,103 +589,106 @@ void AudioGraph::unregisterEvent(const char * name)
 			LOG_WRN("failed to unregister event %s", name);
 		}
 	}
-	rteMutex_main.unlock();
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	context->mutex_reg->unlock();
 }
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	Assert(context->mainThreadId.checkThreadId() == true);
-
-	rteMutex_main.lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.memf.find(name);
+		auto mem_itr = memf.find(name);
 		
-		if (mem_itr != stateDescriptor.memf.end())
+		if (mem_itr != memf.end())
 		{
 			auto & mem = mem_itr->second;
 			
-			mem.value1 = value1;
-			mem.value2 = value2;
-			mem.value3 = value3;
-			mem.value4 = value4;
+			mem.value1_mainThread = value1;
+			mem.value2_mainThread = value2;
+			mem.value3_mainThread = value3;
+			mem.value4_mainThread = value4;
 		}
 	}
-	rteMutex_main.unlock();
+	context->mutex_mem->unlock();
 }
 
-AudioGraph::Memf AudioGraph::getMemf(const char * name) const
+AudioGraph::Memf AudioGraph::getMemf(const char * name, const bool isMainThread) const
 {
-	Assert(context->mainThreadId.checkThreadId() == false);
+	Assert(context->mainThreadId.checkThreadId() == isMainThread);
 
+	bool found = false;
+	
 	Memf result;
 	
-	rteMutex_audio.lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.memf.find(name);
+		auto mem_itr = memf.find(name);
 		
-		if (mem_itr != stateDescriptor.memf.end())
+		if (mem_itr != memf.end())
 		{
 			auto & mem = mem_itr->second;
 			
-			result.value1 = mem.active_value1;
-			result.value2 = mem.active_value2;
-			result.value3 = mem.active_value3;
-			result.value4 = mem.active_value4;
+			result = mem;
+			
+			found = true;
 		}
 	}
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
+	
+	Assert(found);
 	
 	return result;
 }
 
 void AudioGraph::setMems(const char * name, const char * value)
 {
-	Assert(context->mainThreadId.checkThreadId() == true);
-
-	rteMutex_main.lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.mems.find(name);
+		auto mem_itr = mems.find(name);
 	
-		Assert(mem_itr != stateDescriptor.mems.end());
-		if (mem_itr != stateDescriptor.mems.end())
+		Assert(mem_itr != mems.end());
+		if (mem_itr != mems.end())
 		{
 			auto & mem = mem_itr->second;
 			
-			mem.value = value;
+			mem.value_mainThread = value;
 		}
 	}
-	rteMutex_main.unlock();
+	context->mutex_mem->unlock();
 }
 
 void AudioGraph::getMems(const char * name, std::string & result) const
 {
 	Assert(context->mainThreadId.checkThreadId() == false);
 
-	rteMutex_audio.lock();
+	context->mutex_mem->lock();
 	{
-		auto mem_itr = stateDescriptor.mems.find(name);
+		auto mem_itr = mems.find(name);
 		
-		Assert(mem_itr != stateDescriptor.mems.end());
-		if (mem_itr != stateDescriptor.mems.end())
+		Assert(mem_itr != mems.end());
+		if (mem_itr != mems.end())
 		{
 			auto & mem = mem_itr->second;
 			
-			result = mem.active_value;
+			result = mem.value_audioThread;
 		}
 		else
 		{
 			result.clear();
 		}
 	}
-	rteMutex_audio.unlock();
+	context->mutex_mem->unlock();
 }
 
 void AudioGraph::triggerEvent(const char * event)
 {
 	Assert(context->mainThreadId.checkThreadId() == true);
 	
-	triggeredEvents.insert(event);
+	context->mutex_mem->lock();
+	{
+		triggeredEvents_mainThread.insert(event);
+	}
+	context->mutex_mem->unlock();
 }
 
 //
@@ -985,8 +882,6 @@ AudioGraph * constructAudioGraph(
 			
 			audioNode->init(node);
 		}
-		
-		audioGraph->pushStateDescriptorUpdate();
 	}
 	popAudioGraph();
 	
