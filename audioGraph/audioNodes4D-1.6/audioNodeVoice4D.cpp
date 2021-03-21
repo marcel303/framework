@@ -70,7 +70,7 @@ AUDIO_NODE_TYPE(AudioNodeVoice4D)
 	in("rot.x", "audioValue");
 	in("rot.y", "audioValue");
 	in("rot.z", "audioValue");
-	//in("dim", "audioValue", "1");
+	in("dim", "audioValue", "1");
 	in("dim.x", "audioValue", "1");
 	in("dim.y", "audioValue", "1");
 	in("dim.z", "audioValue", "1");
@@ -142,7 +142,7 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_RotX, kAudioPlugType_FloatVec);
 	addInput(kInput_RotY, kAudioPlugType_FloatVec);
 	addInput(kInput_RotZ, kAudioPlugType_FloatVec);
-	//addInput(kInput_Dim, kAudioPlugType_FloatVec);
+	addInput(kInput_Dim, kAudioPlugType_FloatVec);
 	addInput(kInput_DimX, kAudioPlugType_FloatVec);
 	addInput(kInput_DimY, kAudioPlugType_FloatVec);
 	addInput(kInput_DimZ, kAudioPlugType_FloatVec);
@@ -249,8 +249,7 @@ void AudioNodeVoice4D::tick(const float dt)
 		voice4D->spat.rot = originMatrix.Mul3(voice4D->spat.rot);
 		
 		// dimensions
-		//const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
-		const float size = 1.f;
+		const float size = getInputAudioFloat(kInput_Dim, &AudioFloat::One)->getMean();
 		voice4D->spat.size[0] = size * getInputAudioFloat(kInput_DimX, &AudioFloat::One)->getMean();
 		voice4D->spat.size[1] = size * getInputAudioFloat(kInput_DimY, &AudioFloat::One)->getMean();
 		voice4D->spat.size[2] = size * getInputAudioFloat(kInput_DimZ, &AudioFloat::One)->getMean();

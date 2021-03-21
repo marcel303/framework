@@ -866,7 +866,17 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		
 		auto & history_capture = audioValueHistorySetCapture->audioValues[ref];
 		
-		if (history_capture.isValid == false)
+		if (history_capture.isValid)
+		{
+			AUDIO_SCOPE;
+			
+			// historic data is available. make sure it stays available, by
+			// updating the last request time
+			
+			auto & history = audioValueHistorySet->audioValues[ref];
+			history.lastRequestTime = g_TimerRT.TimeUS_get();
+		}
+		else
 		{
 			AUDIO_SCOPE;
 			
@@ -933,7 +943,17 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		
 		auto & history_capture = audioValueHistorySetCapture->audioValues[ref];
 		
-		if (history_capture.isValid == false)
+		if (history_capture.isValid)
+		{
+			AUDIO_SCOPE;
+			
+			// historic data is available. make sure it stays available, by
+			// updating the last request time
+			
+			auto & history = audioValueHistorySet->audioValues[ref];
+			history.lastRequestTime = g_TimerRT.TimeUS_get();
+		}
+		else
 		{
 			AUDIO_SCOPE;
 			
