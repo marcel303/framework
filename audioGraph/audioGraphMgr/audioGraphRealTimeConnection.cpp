@@ -49,7 +49,7 @@
 #include "Timer.h"
 
 AudioValueHistory::AudioValueHistory()
-	: lastUpdateTime(0)
+	: lastRequestTime(0)
 	, isValid(false)
 {
 	memset(samples, 0, sizeof(samples));
@@ -70,7 +70,7 @@ bool AudioValueHistory::isActive() const
 {
 	const uint64_t time = g_TimerRT.TimeUS_get();
 	
-	return (time - lastUpdateTime) < 1000 * 1000;
+	return (time - lastRequestTime) < 1000 * 1000;
 }
 
 //
@@ -255,6 +255,9 @@ void AudioRealTimeConnection::loadBegin()
 	delete audioGraph;
 	audioGraph = nullptr;
 	*audioGraphPtr = nullptr;
+	
+	audioValueHistorySet->clear();
+	audioValueHistorySetCapture->clear();
 }
 
 void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
@@ -859,31 +862,34 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.srcSocketIndex = srcSocketIndex;
 		
-		auto & history = audioValueHistorySetCapture->audioValues[ref];
+		// check if there's historic data readily available
 		
-		history.lastUpdateTime = g_TimerRT.TimeUS_get();
+		auto & history_capture = audioValueHistorySetCapture->audioValues[ref];
 		
-		if (history.isValid)
+		if (history_capture.isValid == false)
 		{
-			channels.addChannel(history.samples, history.kNumSamples, true);
+			AUDIO_SCOPE;
 			
-			return true;
-		}
-		else
-		{
+			// no historic data is available (yet). add a new history item to the
+			// history set actively maintained on the audio thread. this will
+			// ensure historic data will become available more efficiently through
+			// the capture process, so we can hit the fast path above
+			
+			auto & history = audioValueHistorySet->audioValues[ref];
+			history.lastRequestTime = g_TimerRT.TimeUS_get();
+			
 			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 			const AudioFloat & value = input->getAudioFloat();
 			clearCurrentAudioGraphTraversalId();
 			
-			if (value.isScalar)
-				channels.addChannel(value.samples, 1, true);
-			else
-				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			// make the data available
 			
-			return true;
+			history_capture.provide(value);
 		}
 		
-		return false;
+		channels.addChannel(history_capture.samples, history_capture.kNumSamples, true);
+			
+		return true;
 	}
 	else
 	{
@@ -923,30 +929,34 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		ref.nodeId = nodeId;
 		ref.dstSocketIndex = dstSocketIndex;
 		
-		auto & history = audioValueHistorySetCapture->audioValues[ref];
-		history.lastUpdateTime = g_TimerRT.TimeUS_get();
+		// check if there's historic data readily available
 		
-		if (history.isValid)
+		auto & history_capture = audioValueHistorySetCapture->audioValues[ref];
+		
+		if (history_capture.isValid == false)
 		{
-			channels.addChannel(history.samples, history.kNumSamples, true);
+			AUDIO_SCOPE;
 			
-			return true;
-		}
-		else
-		{
+			// no historic data is available (yet). add a new history item to the
+			// history set actively maintained on the audio thread. this will
+			// ensure historic data will become available more efficiently through
+			// the capture process, so we can hit the fast path above
+			
+			auto & history = audioValueHistorySet->audioValues[ref];
+			history.lastRequestTime = g_TimerRT.TimeUS_get();
+			
 			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 			const AudioFloat & value = output->getAudioFloat();
 			clearCurrentAudioGraphTraversalId();
 			
-			if (value.isScalar)
-				channels.addChannel(value.samples, 1, true);
-			else
-				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			// make the data available
 			
-			return true;
+			history_capture.provide(value);
 		}
 		
-		return false;
+		channels.addChannel(history_capture.samples, history_capture.kNumSamples, true);
+		
+		return true;
 	}
 	else
 	{
