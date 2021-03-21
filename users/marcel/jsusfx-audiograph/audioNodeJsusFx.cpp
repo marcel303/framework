@@ -536,15 +536,7 @@ void AudioNodeJsusFx::load(const char * filename)
 	
 	if (jsusFxIsValid)
 	{
-		resource->lock();
-		{
-			resourceVersion = resource->version;
-			
-			JsusFxSerializer_Basic serializer(resource->serializationData);
-			
-			jsusFx->serialize(serializer, false);
-		}
-		resource->unlock();
+		updateFromResource();
 		
 		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
@@ -568,12 +560,63 @@ void AudioNodeJsusFx::free()
 	
 	delete jsusFx;
 	jsusFx = nullptr;
+	
+	resourceVersion = -1;
 }
 
 void AudioNodeJsusFx::clearOutputs()
 {
 	for (auto & audioOutput : audioOutputs)
 		audioOutput.setZero();
+}
+
+void AudioNodeJsusFx::updateFromResource()
+{
+	if (resourceVersion != resource->version)
+	{
+		resource->lock();
+		{
+			resourceVersion = resource->version;
+			
+			if (jsusFxIsValid)
+			{
+				JsusFxSerializer_Basic serializer(resource->serializationData);
+				
+				jsusFx->serialize(serializer, false);
+				
+				// update slider values from resource
+				
+				for (auto & sliderInput : sliderInputs)
+				{
+					Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
+					
+					// note : slider input default comes from either the serialized
+					// resource data (when set), or from the original default value
+					// set for the JSFX slider, if the aforementioned resource data
+					// isn't set. this ensures that when for instance a knob inside
+					// the resource editor is turned, the knob value will be used
+					// (when no connection exists to the input, which would override
+					// the value)
+					
+					// find the value inside the serialized resource data (if it exists)
+					
+					sliderInput.valueFromResource = 0.f;
+					sliderInput.hasValueFromResource = false;
+					
+					for (auto & resourceSlider : resource->serializationData.sliders)
+					{
+						if (resourceSlider.index == sliderInput.sliderIndex)
+						{
+							Assert(sliderInput.hasValueFromResource == false);
+							sliderInput.valueFromResource = resourceSlider.value;
+							sliderInput.hasValueFromResource = true;
+						}
+					}
+				}
+			}
+		}
+		resource->unlock();
+	}
 }
 
 void AudioNodeJsusFx::init(const GraphNode & node)
@@ -616,28 +659,14 @@ void AudioNodeJsusFx::tick(const float dt)
 		currentFilename = filename;
 	}
 	
-	if (resourceVersion != resource->version)
-	{
-		resource->lock();
-		{
-			resourceVersion = resource->version;
-			
-			if (jsusFxIsValid)
-			{
-				JsusFxSerializer_Basic serializer(resource->serializationData);
-				
-				jsusFx->serialize(serializer, false);
-			}
-		}
-		resource->unlock();
-	}
-	
 	if (jsusFxIsValid == false)
 	{
 		clearOutputs();
 	}
 	else
 	{
+		updateFromResource();
+	
 		// update slider values
 		
 		AudioFloat defaultValue;
@@ -654,28 +683,12 @@ void AudioNodeJsusFx::tick(const float dt)
 			// (when no connection exists to the input, which would override
 			// the value)
 			
-			// find the value inside the serialize resource data (if it exists)
+			// if we have a slider value from the resource, use it as the
+			// default value for fetching the input value. otherwise, use
+			// the default value for the socket as authored inside the JSFX file
 			
-			float valueFromResource = 0.f;
-			bool hasValueFromResource = false;
-			
-			for (auto & resourceSlider : resource->serializationData.sliders)
-			{
-				if (resourceSlider.index == sliderInput.sliderIndex)
-				{
-					Assert(hasValueFromResource == false);
-					valueFromResource = resourceSlider.value;
-					hasValueFromResource = true;
-				}
-			}
-			
-			// if we found a value inside the resource, use it as the
-			// default value for fetching the input value
-			// otherwise, just the default value for the socket as
-			// authored inside the JSFX file
-			
-			if (hasValueFromResource)
-				defaultValue.setScalar(valueFromResource);
+			if (sliderInput.hasValueFromResource)
+				defaultValue.setScalar(sliderInput.valueFromResource);
 			else
 				defaultValue.setScalar(sliderInput.defaultValue);
 			
