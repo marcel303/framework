@@ -379,7 +379,8 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 		
 		numOutputs = jsusFx.numOutputs;
 		
-		resourceTypeName = "jsusfx";
+		mainResourceType = "jsusfx";
+		mainResourceName = "editorData";
 	}
 };
 
@@ -471,7 +472,10 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 		{
 			const AudioNodeTypeRegistration_JsusFx * r = (AudioNodeTypeRegistration_JsusFx*)data;
 			
-			return new ResourceEditor_JsusFx(r->filename.c_str(), r->dataRoot.c_str(), r->searchPath.c_str());
+			return new ResourceEditor_JsusFx(
+				r->filename.c_str(),
+				r->dataRoot.c_str(),
+				r->searchPath.c_str());
 		};
 	}
 }
@@ -481,7 +485,6 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	: AudioNodeBase()
 	, filename()
-	, currentFilename()
 	, numAudioInputs(0)
 	, numAudioOutputs(0)
 	, audioOutputs()
@@ -619,19 +622,18 @@ void AudioNodeJsusFx::updateFromResource()
 	}
 }
 
-void AudioNodeJsusFx::init(const GraphNode & node)
+void AudioNodeJsusFx::initSelf(const GraphNode & node)
 {
 	Assert(resource == nullptr);
 	createAudioNodeResource(node, "jsusfx", "editorData", resource);
 	
-	if (isPassthrough)
-		return;
+	load(filename.c_str());
 	
-	Assert(!filename.empty());
-	if (filename != currentFilename)
+	if (jsusFxIsValid)
 	{
-		load(filename.c_str());
-		currentFilename = filename;
+		updateFromResource();
+		
+		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
 }
 
@@ -652,19 +654,14 @@ void AudioNodeJsusFx::tick(const float dt)
 		return;
 	}
 	
-	Assert(!filename.empty());
-	if (filename != currentFilename)
-	{
-		load(filename.c_str());
-		currentFilename = filename;
-	}
-	
 	if (jsusFxIsValid == false)
 	{
 		clearOutputs();
 	}
 	else
 	{
+		// update from resource, in case the resource is being edited in real-time
+		
 		updateFromResource();
 	
 		// update slider values

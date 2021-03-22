@@ -69,8 +69,6 @@ struct AudioNodeJsusFx : AudioNodeBase
 	
 	std::vector<SliderInput> sliderInputs;
 	
-	std::string currentFilename;
-	
 	int numAudioInputs;
 	int numAudioOutputs;
 	
@@ -96,7 +94,7 @@ struct AudioNodeJsusFx : AudioNodeBase
 	
 	void updateFromResource();
 	
-	virtual void init(const GraphNode & node) override;
+	virtual void initSelf(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	
