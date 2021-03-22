@@ -47,19 +47,6 @@ extern "C"
 
 namespace MP
 {
-	AudioContext::AudioContext()
-		: m_packetQueue(nullptr)
-		, m_audioBuffer(nullptr)
-		, m_codecContext(nullptr)
-		, m_codec(nullptr)
-		, m_swrContext(nullptr)
-		, m_outputChannelCount(0)
-		, m_timeBase(0.0)
-		, m_streamIndex(-1)
-		, m_initialized(false)
-	{
-	}
-
 	AudioContext::~AudioContext()
 	{
 		Assert(m_initialized == false);
@@ -69,24 +56,29 @@ namespace MP
 		Assert(m_codecContext == nullptr);
 		Assert(m_codec == nullptr);
 		Assert(m_swrContext == nullptr);
+		
 		Assert(m_outputChannelCount == 0);
+		Assert(m_timeBase == 0.0);
+		
+		Assert(m_streamIndex == (size_t)-1);
 	}
 
-	bool AudioContext::Initialize(Context * context, const size_t streamIndex, const AudioOutputMode outputMode)
+	bool AudioContext::Initialize(
+		Context * context,
+		const size_t streamIndex,
+		const AudioOutputMode outputMode)
 	{
 		Assert(m_initialized == false);
-
+		Assert(m_packetQueue == nullptr);
+		Assert(m_audioBuffer == nullptr);
+		
 		m_initialized = true;
 
 		m_streamIndex = streamIndex;
-		
-		Assert(m_packetQueue == nullptr);
 		m_packetQueue = new PacketQueue();
-		
-		Assert(m_audioBuffer == nullptr);
 		m_audioBuffer = new AudioBuffer();
 		
-		AVCodecID codec_id = AV_CODEC_ID_NONE;
+		AVCodecID codecId = AV_CODEC_ID_NONE;
 		
 	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
@@ -96,13 +88,13 @@ namespace MP
 			return false;
 		}
 		
-		codec_id = audioParams->codec_id;
+		codecId = audioParams->codec_id;
 	#else
-		codec_id = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
+		codecId = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
 	#endif
 	
 		// Get codec for audio stream.
-		m_codec = avcodec_find_decoder(codec_id);
+		m_codec = avcodec_find_decoder(codecId);
 		if (!m_codec)
 		{
 			Debug::Print("Audio: unable to find codec.");
@@ -136,17 +128,17 @@ namespace MP
 
 		// Display codec info.
 		Debug::Print("Audio: samplerate: %d.", m_codecContext->sample_rate);
-		Debug::Print("Audio: channels: %d.", m_codecContext->channels);
-		Debug::Print("Audio: framesize: %d.", m_codecContext->frame_size); // Number of samples/packet.
+		Debug::Print("Audio: channels:   %d.", m_codecContext->channels);
+		Debug::Print("Audio: framesize:  %d.", m_codecContext->frame_size); // Number of samples/packet.
 		
 	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		const int64_t outputChannelLayout =
-			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
+			outputMode == kAudioOutputMode_Mono   ? AV_CH_LAYOUT_MONO :
 			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
 			audioParams->channel_layout;
 	#else
 		const int64_t outputChannelLayout =
-			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
+			outputMode == kAudioOutputMode_Mono   ? AV_CH_LAYOUT_MONO :
 			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
 			m_codecContext->channel_layout;
 	#endif
@@ -156,7 +148,8 @@ namespace MP
 		int inputChannelLayout = audioParams->channel_layout;
 		if (inputChannelLayout == 0)
 			inputChannelLayout = (1 << audioParams->channels) - 1;
-		m_swrContext = swr_alloc_set_opts(nullptr,
+		m_swrContext = swr_alloc_set_opts(
+			nullptr,
 			// output
 			outputChannelLayout,
 			AV_SAMPLE_FMT_S16,
@@ -172,7 +165,8 @@ namespace MP
 		int inputChannelLayout = m_codecContext->channel_layout;
 		if (inputChannelLayout == 0)
 			inputChannelLayout = (1 << m_codecContext->channels) - 1;
-		m_swrContext = swr_alloc_set_opts(nullptr,
+		m_swrContext = swr_alloc_set_opts(
+			nullptr,
 			// output
 			outputChannelLayout,
 			AV_SAMPLE_FMT_S16,
@@ -198,7 +192,7 @@ namespace MP
 		}
 		
 		m_outputChannelCount =
-			outputChannelLayout == AV_CH_LAYOUT_MONO ? 1 :
+			outputChannelLayout == AV_CH_LAYOUT_MONO   ? 1 :
 			outputChannelLayout == AV_CH_LAYOUT_STEREO ? 2 :
 			m_codecContext->channels;
 		
@@ -217,6 +211,9 @@ namespace MP
 
 		m_initialized = false;
 
+		m_streamIndex = -1;
+		
+		m_timeBase = 0.0;
 		m_outputChannelCount = 0;
 		
 		if (m_swrContext)
@@ -487,5 +484,23 @@ namespace MP
 	bool AudioContext::Depleted() const
 	{
 		return m_audioBuffer->Depleted() && (m_packetQueue->GetSize() == 0);
+	}
+	
+	int AudioContext::GetSampleRate() const
+	{
+		return m_codecContext->sample_rate;
+	}
+	
+	int AudioContext::GetOutputChannelCount() const
+	{
+		return m_outputChannelCount;
+	}
+	
+	void AudioContext::ClearBuffers()
+	{
+		m_packetQueue->Clear();
+		m_audioBuffer->Clear();
+		
+		avcodec_flush_buffers(m_codecContext);
 	}
 };

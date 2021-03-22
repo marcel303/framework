@@ -39,7 +39,6 @@ namespace MP
 	class PacketQueue
 	{
 	public:
-		PacketQueue();
 		~PacketQueue();
 
 		void PushBack(const AVPacket & packet);

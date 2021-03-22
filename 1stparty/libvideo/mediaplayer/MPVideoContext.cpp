@@ -46,7 +46,7 @@ extern "C"
 //#define QUEUE_SIZE (4 * 30)
 //#define QUEUE_SIZE (4)
 
-#define DO_DECODE_BUFFER_OPTIMIZE 0
+#define DO_DECODE_BUFFER_OPTIMIZE 1
 
 #if !defined(LIBAVCODEC_VERSION_MAJOR)
 	#error LIBAVCODEC_VERSION_MAJOR not defined
@@ -54,23 +54,6 @@ extern "C"
 
 namespace MP
 {
-	VideoContext::VideoContext()
-		: m_packetQueue(nullptr)
-		, m_codecContext(nullptr)
-		, m_codec(nullptr)
-		, m_tempVideoFrame(nullptr)
-		, m_tempFrame(nullptr)
-		, m_tempFrameBuffer(nullptr)
-		, m_videoBuffer(nullptr)
-		, m_swsContext(nullptr)
-		, m_streamIndex(-1)
-		, m_outputMode(kOutputMode_RGBA)
-		, m_time(0.0)
-		, m_frameCount(0)
-		, m_initialized(false)
-	{
-	}
-	
 	VideoContext::~VideoContext()
 	{
 		Assert(m_initialized == false);
@@ -83,34 +66,39 @@ namespace MP
 		Assert(m_tempFrameBuffer == nullptr);
 		Assert(m_videoBuffer == nullptr);
 		Assert(m_swsContext == nullptr);
+		Assert(m_timeBase == 0.0);
+		
 		Assert(m_streamIndex == -1);
 		Assert(m_outputMode == kOutputMode_RGBA);
+		
 		Assert(m_time == 0.0);
 		Assert(m_frameCount == 0);
 	}
 
-	bool VideoContext::Initialize(Context * context, const size_t streamIndex, const OutputMode outputMode)
+	bool VideoContext::Initialize(
+		Context * context,
+		const size_t streamIndex,
+		const OutputMode outputMode)
 	{
 		Assert(m_initialized == false);
-		
-		m_initialized = true;
-		
 		Assert(m_streamIndex == -1);
 		Assert(m_outputMode == kOutputMode_RGBA);
 		Assert(m_time == 0.0);
 		Assert(m_frameCount == 0);
+		Assert(m_packetQueue == nullptr);
+		Assert(m_videoBuffer == nullptr);
+		
+		m_initialized = true;
+		
 		m_streamIndex = streamIndex;
 		m_outputMode = outputMode;
 		m_time = 0.0;
 		m_frameCount = 0;
 		
-		Assert(m_packetQueue == nullptr);
 		m_packetQueue = new PacketQueue();
-		
-		Assert(m_videoBuffer == nullptr);
 		m_videoBuffer = new VideoBuffer();
 
-		AVCodecID codec_id = AV_CODEC_ID_NONE;
+		AVCodecID codecId = AV_CODEC_ID_NONE;
 		
 	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		AVCodecParameters * codecParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
@@ -120,14 +108,14 @@ namespace MP
 			return false;
 		}
 		
-		codec_id = codecParams->codec_id;
+		codecId = codecParams->codec_id;
 	#else
-		codec_id = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
+		codecId = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
 	#endif
 		
 		// Get codec for video stream.
 		Assert(m_codec == nullptr);
-		m_codec = avcodec_find_decoder(codec_id);
+		m_codec = avcodec_find_decoder(codecId);
 		if (!m_codec)
 		{
 			Debug::Print("Video: failed to find decoder.");
@@ -175,7 +163,10 @@ namespace MP
 				Debug::Print("Video: bitrate: %d.", m_codecContext->bit_rate);
 				Debug::Print("Video: format: %d. isPlanarYUV: %d", m_codecContext->pix_fmt, isPlanarYUV ? 1 : 0);
 				
-				if (!m_videoBuffer->Initialize(m_codecContext->width, m_codecContext->height, destinationFormat))
+				if (!m_videoBuffer->Initialize(
+					m_codecContext->width,
+					m_codecContext->height,
+					destinationFormat))
 				{
 					Debug::Print("Video: failed to initialize video buffer.");
 					return false;
@@ -184,10 +175,11 @@ namespace MP
 				if (DO_DECODE_BUFFER_OPTIMIZE && m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
 				{
 					Assert(m_tempVideoFrame == nullptr);
+					Assert(m_tempFrame == nullptr);
+					
 					m_tempVideoFrame = m_videoBuffer->AllocateFrame();
 					Assert(m_tempVideoFrame->m_isValidForRead == false);
 					
-					Assert(m_tempFrame == nullptr);
 					m_tempFrame = m_tempVideoFrame->m_frame;
 				}
 				else
@@ -208,15 +200,20 @@ namespace MP
 							m_codecContext->pix_fmt,
 							m_codecContext->width,
 							m_codecContext->height,
-							16);
+							16 /* align */);
 
 						Assert(m_tempFrameBuffer == nullptr);
 						m_tempFrameBuffer = (uint8_t*)MemAlloc(frameBufferSize, 16);
 
 						// Assign buffer to frame.
 						const int requiredFrameBufferSize = av_image_fill_arrays(
-							m_tempFrame->data, m_tempFrame->linesize, m_tempFrameBuffer,
-							m_codecContext->pix_fmt, m_codecContext->width, m_codecContext->height, 16);
+							m_tempFrame->data,
+							m_tempFrame->linesize,
+							m_tempFrameBuffer,
+							m_codecContext->pix_fmt,
+							m_codecContext->width,
+							m_codecContext->height,
+							16 /* align */);
 						
 						Debug::Print("Vide: frameBufferSize: %d.", frameBufferSize);
 						Debug::Print("Video: requiredFrameBufferSize: %d.", requiredFrameBufferSize);
@@ -228,8 +225,12 @@ namespace MP
 						}
 						
 						m_swsContext = sws_getContext(
-							m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
-							m_codecContext->width, m_codecContext->height, destinationFormat,
+							m_codecContext->width,
+							m_codecContext->height,
+							m_codecContext->pix_fmt,
+							m_codecContext->width,
+							m_codecContext->height,
+							destinationFormat,
 							SWS_POINT, nullptr, nullptr, nullptr);
 						
 						if (!m_swsContext)
@@ -255,16 +256,12 @@ namespace MP
 
 		m_initialized = false;
 
+		m_timeBase = 0.0;
+		
 		if (m_swsContext)
 		{
 			sws_freeContext(m_swsContext);
 			m_swsContext = nullptr;
-		}
-		
-		if (m_tempVideoFrame != nullptr)
-		{
-			m_videoBuffer->StoreFrame(m_tempVideoFrame);
-			m_tempVideoFrame = nullptr;
 		}
 		
 		if (m_videoBuffer != nullptr)
@@ -278,28 +275,34 @@ namespace MP
 			m_videoBuffer = nullptr;
 		}
 
-		if (m_tempFrame != nullptr)
-		{
-			av_frame_unref(m_tempFrame);
-			m_tempFrame = nullptr;
-		}
-
 		if (m_tempFrameBuffer != nullptr)
 		{
 			MemFree(m_tempFrameBuffer);
 			m_tempFrameBuffer = nullptr;
 		}
+		
+		if (m_tempFrame != nullptr)
+		{
+			av_frame_unref(m_tempFrame);
+			m_tempFrame = nullptr;
+		}
+		
+		if (m_tempVideoFrame != nullptr)
+		{
+			m_videoBuffer->StoreFrame(m_tempVideoFrame);
+			m_tempVideoFrame = nullptr;
+		}
 
+		if (m_codec != nullptr)
+		{
+			m_codec = nullptr;
+		}
+		
 		// Close video codec context.
 		if (m_codecContext != nullptr)
 		{
 			avcodec_free_context(&m_codecContext);
 			m_codecContext = nullptr;
-		}
-		
-		if (m_codec != nullptr)
-		{
-			m_codec = nullptr;
 		}
 		
 		if (m_packetQueue != nullptr)
@@ -310,6 +313,7 @@ namespace MP
 		
 		m_streamIndex = -1;
 		m_outputMode = kOutputMode_RGBA;
+		
 		m_time = 0.0;
 		m_frameCount = 0;
 		
@@ -329,7 +333,9 @@ namespace MP
 	void VideoContext::FillVideoBuffer()
 	{
 		while (!m_videoBuffer->IsFull() && !m_packetQueue->IsEmpty() && ProcessPacket(m_packetQueue->GetPacket()))
+		{
 			m_packetQueue->PopFront();
+		}
 	}
 
 	bool VideoContext::RequestVideo(const double time, VideoFrame ** out_frame, bool & out_gotVideo)
@@ -343,12 +349,10 @@ namespace MP
 		// Check if the frame is in the buffer.
 		
 		VideoFrame * oldFrame = m_videoBuffer->GetCurrentFrame();
-		Assert(oldFrame == nullptr || oldFrame->m_isValidForRead);
 		{
 			m_videoBuffer->AdvanceToTime(time);
 		}
 		VideoFrame * newFrame = m_videoBuffer->GetCurrentFrame();
-		Assert(newFrame == nullptr || newFrame->m_isValidForRead);
 
 		*out_frame = newFrame;
 
@@ -374,9 +378,9 @@ namespace MP
 		return true;
 	}
 
-	bool VideoContext::ProcessPacket(AVPacket & _packet)
+	bool VideoContext::ProcessPacket(AVPacket & in_packet)
 	{
-		AVPacket packet = _packet;
+		AVPacket packet = in_packet;
 		
 		Assert(packet.data);
 		Assert(packet.size >= 0);
@@ -391,8 +395,9 @@ namespace MP
 			
 			if (m_tempVideoFrame)
 			{
-				Assert(!m_tempVideoFrame->m_isValidForRead);
+				Assert(m_tempVideoFrame->m_isValidForRead == false);
 				Assert(m_tempFrame == m_tempVideoFrame->m_frame);
+				Assert(m_tempFrameBuffer == nullptr);
 			}
 			
 			// Decode some data.
@@ -417,13 +422,11 @@ namespace MP
 				Assert(bytesDecoded >= 0);
 				Assert(bytesRemaining >= 0);
 
-				// Video frame finished?
+				// Video frame finished to decode?
 				if (gotPicture)
 				{
 					const bool isPlanarYUV = m_codecContext->pix_fmt == AV_PIX_FMT_YUV420P;
 					Assert(m_tempFrame->format == m_codecContext->pix_fmt);
-					
-					//SDL_Delay(25);
 					
 					if (DO_DECODE_BUFFER_OPTIMIZE && m_outputMode == kOutputMode_PlanarYUV && isPlanarYUV)
 					{
@@ -451,8 +454,6 @@ namespace MP
 
 						m_videoBuffer->StoreFrame(frame);
 					}
-					
-					//SDL_Delay(25);
 				}
 			}
 		}
@@ -463,6 +464,26 @@ namespace MP
 	bool VideoContext::Depleted() const
 	{
 		return m_videoBuffer->Depleted() && (m_packetQueue->GetSize() == 0);
+	}
+	
+	int VideoContext::GetVideoWidth() const
+	{
+		return m_codecContext->width;
+	}
+	
+	int VideoContext::GetVideoHeight() const
+	{
+		return m_codecContext->height;
+	}
+	
+	void VideoContext::ClearBuffers()
+	{
+		m_packetQueue->Clear();
+		m_videoBuffer->Clear();
+		m_time = 0.0;
+		m_frameCount = 0;
+		
+		avcodec_flush_buffers(m_codecContext);
 	}
 
 	bool VideoContext::Convert(VideoFrame * out_frame)
@@ -516,7 +537,14 @@ namespace MP
 	#endif
 		else
 		{
-			sws_scale(m_swsContext, src.data, src.linesize, 0, src.height, dst.data, dst.linesize);
+			sws_scale(
+				m_swsContext,
+				src.data,
+				src.linesize,
+				0,
+				src.height,
+				dst.data,
+				dst.linesize);
 		}
 
 		return result;

@@ -50,27 +50,16 @@ extern "C"
 
 namespace MP
 {
-	Context::Context()
-		: m_begun(false)
-		, m_filename()
-		, m_eof(false)
-		, m_time(0.0)
-		, m_formatContext(nullptr)
-		, m_audioContext(nullptr)
-		, m_videoContext(nullptr)
-	{
-	}
-	
 	Context::~Context()
 	{
 		Assert(m_begun == false);
 		Assert(m_filename.empty());
-		Assert(m_eof == false);
-		Assert(m_time == 0.0);
+		Assert(m_eof   == false);
+		Assert(m_time  == 0.0);
 		
 		Assert(m_formatContext == nullptr);
-		Assert(m_audioContext == nullptr);
-		Assert(m_videoContext == nullptr);
+		Assert(m_audioContext  == nullptr);
+		Assert(m_videoContext  == nullptr);
 	}
 
 	bool Context::Begin(
@@ -82,6 +71,9 @@ namespace MP
 		const AudioOutputMode audioOutputMode)
 	{
 		Assert(m_begun == false);
+		Assert(m_filename.empty());
+		Assert(m_eof   == false);
+		Assert(m_time  == 0.0);
 
 		bool result = true;
 
@@ -163,6 +155,7 @@ namespace MP
 			Debug::Print("Destroying audio context.");
 
 			result &= m_audioContext->Destroy();
+			
 			delete m_audioContext;
 			m_audioContext = nullptr;
 		}
@@ -173,6 +166,7 @@ namespace MP
 			Debug::Print("Destroying video context.");
 
 			result &= m_videoContext->Destroy();
+			
 			delete m_videoContext;
 			m_videoContext = nullptr;
 		}
@@ -226,7 +220,7 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_videoContext)
-			return m_videoContext->m_codecContext->width;
+			return m_videoContext->GetVideoWidth();
 		else
 			return 0;
 	}
@@ -236,7 +230,7 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_videoContext)
-			return m_videoContext->m_codecContext->height;
+			return m_videoContext->GetVideoHeight();
 		else
 			return 0;
 	}
@@ -247,7 +241,10 @@ namespace MP
 
 		if (m_videoContext)
 		{
-			const AVRational ratio = av_guess_sample_aspect_ratio(m_formatContext, m_formatContext->streams[m_videoContext->m_streamIndex], nullptr);
+			const AVRational ratio = av_guess_sample_aspect_ratio(
+				m_formatContext,
+				m_formatContext->streams[m_videoContext->GetStreamIndex()],
+				nullptr);
 			
 			if (ratio.num == 0 || ratio.den == 0)
 				return 1.0;
@@ -263,7 +260,7 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_audioContext)
-			return m_audioContext->m_codecContext->sample_rate;
+			return m_audioContext->GetSampleRate();
 		else
 			return 0;
 	}
@@ -273,12 +270,15 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_audioContext)
-			return m_audioContext->m_outputChannelCount;
+			return m_audioContext->GetOutputChannelCount();
 		else
 			return 0;
 	}
 
-	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime)
+	bool Context::RequestAudio(
+		int16_t * __restrict out_samples, const size_t frameCount,
+		bool   & out_gotAudio,
+		double & out_audioTime)
 	{
 		Assert(m_begun == true);
 		Assert(m_audioContext);
@@ -339,12 +339,13 @@ namespace MP
 
 	bool Context::Depleted() const
 	{
-		if (!HasReachedEOF())
+		if (!HasReachedEOF()) // have all packets been read ?
 			return false;
-		if (m_audioContext && !m_audioContext->Depleted())
+		if (m_audioContext && !m_audioContext->Depleted()) // have all packets been processed and their contents consumed ?
 			return false;
-		if (m_videoContext && !m_videoContext->Depleted())
+		if (m_videoContext && !m_videoContext->Depleted()) // have all packets been processed and their contents consumed ?
 			return false;
+			
 		return true;
 	}
 
@@ -369,22 +370,27 @@ namespace MP
 		if (m_audioContext != nullptr)
 		{
 			streams.push_back(m_audioContext->GetStreamIndex());
-			m_audioContext->m_packetQueue->Clear();
-			m_audioContext->m_audioBuffer->Clear();
+			m_audioContext->ClearBuffers();
 		}
 
 		if (m_videoContext != nullptr)
 		{
 			streams.push_back(m_videoContext->GetStreamIndex());
-			m_videoContext->m_packetQueue->Clear();
-			m_videoContext->m_videoBuffer->Clear();
-			m_videoContext->m_time = 0.0;
+			m_videoContext->ClearBuffers();
 		}
 
 		for (size_t i = 0; i < streams.size(); ++i)
 		{
-			if (av_seek_frame(m_formatContext, streams[i], 0, 0*AVSEEK_FLAG_BYTE | 0*AVSEEK_FLAG_ANY) < 0)
+			if (av_seek_frame(
+				m_formatContext,
+				streams[i],
+				0, // time stamp
+				0*AVSEEK_FLAG_BACKWARD |
+				0*AVSEEK_FLAG_BYTE |
+				0*AVSEEK_FLAG_ANY) < 0)
+			{
 				result = false;
+			}
 		}
 
 		return result;
@@ -394,25 +400,41 @@ namespace MP
 	{
 		bool result = true;
 		
+		int streamIndex = -1;
+		
 		if (m_audioContext != nullptr)
 		{
-			m_audioContext->m_packetQueue->Clear();
-			m_audioContext->m_audioBuffer->Clear();
-			
-			avcodec_flush_buffers(m_audioContext->m_codecContext);
+			streamIndex = m_audioContext->GetStreamIndex();
+			m_audioContext->ClearBuffers();
 		}
 
 		if (m_videoContext != nullptr)
 		{
-			m_videoContext->m_packetQueue->Clear();
-			m_videoContext->m_videoBuffer->Clear();
-			m_videoContext->m_time = 0.0;
-			
-			avcodec_flush_buffers(m_videoContext->m_codecContext);
+			streamIndex = m_videoContext->GetStreamIndex();
+			m_videoContext->ClearBuffers();
 		}
-
-		if (av_seek_frame(m_formatContext, -1, time * AV_TIME_BASE, AVSEEK_FLAG_BACKWARD) < 0)
+		
+	#if 1
+		// note : streamIndex -1 works just fine, so we use it in combination with AV_TIME_BASE, instead of our own time stamp calculation (that may have
+		//        unknown side effects that only become apparent in the future)
+		streamIndex = -1;
+	#endif
+	
+		// the time base is unique per stream, or AV_TIME_BASE for the special value of -1
+		const int64_t timeStamp =
+			streamIndex == -1
+				? time * AV_TIME_BASE
+				: time / av_q2d(m_formatContext->streams[streamIndex]->time_base);
+	
+		if (av_seek_frame(
+			m_formatContext,
+			streamIndex,
+			timeStamp,
+			1*AVSEEK_FLAG_BACKWARD |
+			0*AVSEEK_FLAG_ANY) < 0)
+		{
 			result = false;
+		}
 		
 		if (nearest == false)
 		{
@@ -427,15 +449,12 @@ namespace MP
 
 				FillVideoBuffer();
 		
-				m_videoContext->m_videoBuffer->AdvanceToTime(time);
+				m_videoContext->GetVideoBuffer()->AdvanceToTime(time);
 				
-				if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
-				{
-					VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
-					
-					if (videoFrame != nullptr && videoFrame->m_time >= time)
-						break;
-				}
+				VideoFrame * nextVideoFrame = m_videoContext->GetVideoBuffer()->PeekNextFrame();
+				
+				if (nextVideoFrame != nullptr && nextVideoFrame->m_time >= time)
+					break;
 				
 				if (Depleted())
 					break;
@@ -445,7 +464,7 @@ namespace MP
 		{
 			// decode at least a single frame to find the actual seek time
 			
-			while (m_videoContext->m_videoBuffer->m_consumeList.empty())
+			while (m_videoContext->GetVideoBuffer()->PeekNextFrame() == nullptr)
 			{
 				if (FillBuffers() == false)
 					break;
@@ -457,20 +476,16 @@ namespace MP
 				if (Depleted())
 					break;
 			}
-
 		}
 		
 		//
 		
 		actualTime = 0.0;
 		
-		if (m_videoContext->m_videoBuffer->m_consumeList.empty() == false)
-		{
-			VideoFrame * videoFrame = m_videoContext->m_videoBuffer->m_consumeList.front();
-			
-			if (videoFrame != nullptr)
-				actualTime = videoFrame->m_time;
-		}
+		VideoFrame * nextVideoFrame = m_videoContext->GetVideoBuffer()->PeekNextFrame();
+		
+		if (nextVideoFrame != nullptr)
+			actualTime = nextVideoFrame->m_time;
 		
 		return result;
 	}
@@ -480,7 +495,10 @@ namespace MP
 		return m_formatContext;
 	}
 
-	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex, const int desiredAudioStreamIndex)
+	bool Context::GetStreamIndices(
+		size_t & out_audioStreamIndex,
+		size_t & out_videoStreamIndex,
+		const int desiredAudioStreamIndex)
 	{
 		out_audioStreamIndex = STREAM_NOT_FOUND;
 		out_videoStreamIndex = STREAM_NOT_FOUND;
@@ -495,7 +513,7 @@ namespace MP
 		int audioStreamIndex = 0;
 
 		// Find the first audio & video streams and use those during rendering.
-		for (size_t i = 0; i < static_cast<size_t>(m_formatContext->nb_streams); ++i)
+		for (size_t i = 0; i < size_t(m_formatContext->nb_streams); ++i)
 		{
 			// Show stream info.
 			av_dump_format(m_formatContext, i, m_filename.c_str(), false);
@@ -504,7 +522,9 @@ namespace MP
 			if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
 			{
 				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
+				{
 					out_audioStreamIndex = i;
+				}
 				
 				audioStreamIndex++;
 			}
@@ -512,7 +532,9 @@ namespace MP
 			if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
 			{
 				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
+				{
 					out_audioStreamIndex = i;
+				}
 				
 				audioStreamIndex++;
 			}
@@ -520,12 +542,20 @@ namespace MP
 
 		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			if (out_videoStreamIndex == STREAM_NOT_FOUND)
+			{
 				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
+				{
 					out_videoStreamIndex = i;
+				}
+			}
 		#else
 			if (out_videoStreamIndex == STREAM_NOT_FOUND)
+			{
 				if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+				{
 					out_videoStreamIndex = i;
+				}
+			}
 		#endif
 		}
 
@@ -547,31 +577,12 @@ namespace MP
 
 		if (ReadPacket(packet))
 		{
-		#if LIBAVCODEC_VERSION_MAJOR >= 57
-			// todo : use the old version as default ? seems like a better implementation actually
-			AVPacket * packetCopy = av_packet_clone(&packet);
-			av_packet_unref(&packet);
-		#else
-			AVPacket * packetCopy = &packet;
-		#endif
+			// Process packet.
+			if (ProcessPacket(packet) != true)
+				result = false;
 			
-			if (!packetCopy)
-				Debug::Print("av_packet_clone failed");
-			else
-			{
-				// Process packet.
-				if (ProcessPacket(*packetCopy) != true)
-					result = false;
-				
-				av_packet_unref(packetCopy);
-				
-			#if LIBAVCODEC_VERSION_MAJOR >= 57
-				av_packet_free(&packetCopy);
-				packetCopy = nullptr;
-			#else
-				packetCopy = nullptr;
-			#endif
-			}
+			// Packets from av_read_frame should always be unref'ed.
+			av_packet_unref(&packet);
 		}
 		else
 		{

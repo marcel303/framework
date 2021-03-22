@@ -33,8 +33,6 @@
 #include <list>
 #include <stdint.h>
 
-#define MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG (0 || DEBUG_MEDIAPLAYER_VIDEO_ALLOCS) // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
-
 namespace MP
 {
 	class VideoFrame
@@ -43,7 +41,10 @@ namespace MP
 		VideoFrame();
 		~VideoFrame();
 
-		bool Initialize(const size_t width, const size_t height, const size_t pixelFormat);
+		bool Initialize(
+			const size_t width,
+			const size_t height,
+			const size_t pixelFormat);
 		void Destroy();
 		
 		uint8_t * getY(int & sx, int & sy, int & pitch) const;
@@ -51,48 +52,51 @@ namespace MP
 		uint8_t * getV(int & sx, int & sy, int & pitch) const;
 		uint8_t * getRGBA(int & sx, int & sy, int & pitch) const;
 		
-		size_t m_width;
-		size_t m_height;
+		size_t m_width = 0;
+		size_t m_height = 0;
 		size_t m_pixelFormat;
 
-		AVFrame * m_frame;
-		uint8_t * m_frameBuffer;
-	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
-		int m_frameBufferSize;
-	#endif
-		double m_time;
-		bool m_isFirstFrame;
-		bool m_isValidForRead; // todo : remove once decode buffer optimize issue is fixed ?
+		AVFrame * m_frame           = nullptr;
+		uint8_t * m_frameBuffer     = nullptr; // storage for m_frame contents
+		int       m_frameBufferSize = 0;
+		
+		double m_time           = 0.0;
+		bool   m_isFirstFrame   = false;
+		bool   m_isValidForRead = false;
 
-		bool m_initialized;
+		bool m_initialized = false;
 	};
 
 	class VideoBuffer
 	{
 	public:
-		VideoBuffer();
 		~VideoBuffer();
 
-		bool Initialize(const size_t width, const size_t height, const size_t pixelFormat);
+		bool Initialize(
+			const size_t width,
+			const size_t height,
+			const size_t pixelFormat);
 		bool Destroy();
 		bool IsInitialized() const;
 
 		VideoFrame * AllocateFrame();
 		void StoreFrame(VideoFrame * frame);
 		VideoFrame * GetCurrentFrame();
+		VideoFrame * PeekNextFrame();
+		
 		void AdvanceToTime(double time);
 		bool Depleted() const;
 		bool IsFull() const;
 		void Clear();
 
-	//private:
+	private:
 		Mutex m_mutex;
 
 		std::list<VideoFrame*> m_freeList;
 		std::list<VideoFrame*> m_consumeList;
 
-		VideoFrame * m_currentFrame;
+		VideoFrame * m_currentFrame = nullptr;
 
-		bool m_initialized;
+		bool m_initialized = false;
 	};
 };
