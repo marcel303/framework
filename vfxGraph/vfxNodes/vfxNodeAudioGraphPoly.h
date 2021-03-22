@@ -29,86 +29,107 @@
 
 #include "audioGraph.h"
 #include "vfxNodeBase.h"
-#include <set>
+#include <vector>
 
 struct AudioGraphInstance;
 
 //
 
 #include "audioVoiceManager.h"
+#include <atomic>
 
+#include "soundmix.h" // todo : move to cpp // audioBufferSetZero
+
+// todo : share VoiceMgr_VoiceGroup with vfxNodeAudioGraph, so it can have 'muted' mode too
 struct VoiceMgr_VoiceGroup : AudioVoiceManager
 {
-	enum Mode
+	struct NullSource : AudioSource
 	{
-		kMode_Passthrough,
-		kMode_DownmixMono,
-		kMode_Disabled
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
+		{
+			audioBufferSetZero(samples, numSamples);
+		}
 	};
 	
-	AudioVoiceManager * parentVoiceMgr;
+	struct VoiceInfo
+	{
+		AudioVoice * voice;
+		AudioSource * source;
+		
+		VoiceInfo()
+			: voice(nullptr)
+			, source(nullptr)
+		{
+		}
+	};
 	
-	std::set<AudioVoice*> voices;
+	AudioGraphManager * graphMgr;
+	AudioVoiceManager * voiceMgr;
 	
-	Mode currentMode;
+	std::vector<VoiceInfo> voiceInfos;
 	
-	mutable AudioMutex mutex;
+	std::atomic<bool> muted;
+	
+	NullSource nullSource;
 	
 	VoiceMgr_VoiceGroup()
 		: AudioVoiceManager(kType_Basic)
-		, parentVoiceMgr(nullptr)
-		, voices()
-		, currentMode(kMode_Passthrough)
+		, graphMgr(nullptr)
+		, voiceMgr(nullptr)
+		, voiceInfos()
+		, muted(false)
+		, nullSource()
 	{
 	}
 	
 	virtual ~VoiceMgr_VoiceGroup() override
 	{
-		Assert(voices.empty());
+		Assert(voiceInfos.empty());
 	}
 	
-	void init(AudioVoiceManager * in_parentVoiceMgr)
+	void init(AudioGraphManager * in_graphMgr, AudioVoiceManager * in_voiceMgr)
 	{
-		parentVoiceMgr = in_parentVoiceMgr;
-		
-		mutex.init();
+		graphMgr = in_graphMgr;
+		voiceMgr = in_voiceMgr;
 	}
 	
-	void shut()
+	void setMuted(const bool in_muted)
 	{
-		mutex.shut();
-	}
-	
-	void setMode(const Mode mode)
-	{
-		if (mode != currentMode)
+		if (in_muted != muted.load())
 		{
-			// todo : remove all voices
+			muted.store(in_muted);
 			
-			// todo : if mode is passthrough -> add all voices
-			// todo : if mode is downmix to mono -> add special voice to perform downmix based on the set of voices we manage here
-			// todo : if mode is muted -> don't add any voices
+			updateVoices();
 		}
 	}
 	
-	void lockVoices() const
+	void updateVoices()
 	{
-		mutex.lock();
-	}
-	
-	void unlockVoices() const
-	{
-		mutex.unlock();
+		graphMgr->lockAudio();
+		{
+			if (muted)
+			{
+				for (auto & voiceInfo : voiceInfos)
+				{
+					voiceInfo.voice->source = &nullSource;
+				}
+			}
+			else
+			{
+				for (auto & voiceInfo : voiceInfos)
+				{
+					voiceInfo.voice->source = voiceInfo.source;
+				}
+			}
+		}
+		graphMgr->unlockAudio();
 	}
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
 	virtual void freeVoice(AudioVoice *& voice) override;
 	virtual int calculateNumVoices() const override;
 	
-	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override
-	{
-		// todo : implement
-	}
+	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override { }
 };
 
 struct VfxNodeAudioGraphPoly : VfxNodeBase
@@ -133,6 +154,8 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 		kInput_Filename,
 		kInput_Volume,
 		kInput_MaxInstances,
+		kInput_OutputMode,
+		kInput_Muted,
 		kInput_COUNT
 	};
 	
@@ -140,6 +163,13 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	{
 		kOutput_Voices,
 		kOutput_COUNT
+	};
+	
+	enum OutputMode
+	{
+		kOutputMode_Mono,
+		kOutputMode_Stereo,
+		kOutputMode_MultiChannel
 	};
 	
 	VoiceMgr_VoiceGroup voiceMgr;
@@ -155,6 +185,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	VfxChannelData voicesData;
 	VfxChannel voicesOutput;
 	
+	// history of changes used for getDescription
 	HistoryElem history[kMaxHistory];
 	int historyWritePos;
 	int historySize;
