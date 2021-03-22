@@ -148,7 +148,8 @@ void createVfxNodeTypeDefinitions(
 			typeDefinition.displayName = registration->displayName;
 		}
 		
-		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		typeDefinition.mainResourceType = registration->mainResourceType;
+		typeDefinition.mainResourceName = registration->mainResourceName;
 		
 		for (int i = 0; i < registration->inputs.size(); ++i)
 		{

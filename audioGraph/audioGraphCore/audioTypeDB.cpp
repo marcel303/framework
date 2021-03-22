@@ -122,7 +122,8 @@ void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinition
 			typeDefinition.displayName = registration->displayName;
 		}
 		
-		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		typeDefinition.mainResourceType = registration->mainResourceType;
+		typeDefinition.mainResourceName = registration->mainResourceName;
 		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{

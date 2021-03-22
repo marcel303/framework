@@ -190,7 +190,8 @@ struct Graph_TypeDefinition
 	
 	std::string displayName;
 	
-	std::string resourceTypeName;
+	std::string mainResourceType; // the type and name of the main node resource
+	std::string mainResourceName; // GraphEdit will edit this resource by default
 	
 	Graph_TypeDefinition()
 		: typeName()
@@ -198,7 +199,8 @@ struct Graph_TypeDefinition
 		, outputSockets()
 		, resourceEditor()
 		, displayName()
-		, resourceTypeName()
+		, mainResourceType()
+		, mainResourceName()
 	{
 	}
 	

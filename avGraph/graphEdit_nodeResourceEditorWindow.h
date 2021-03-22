@@ -32,9 +32,13 @@
 struct GraphEdit_NodeResourceEditorWindow
 {
 	GraphEdit * graphEdit;
+	
 	GraphNodeId nodeId;
-	std::string resourceTypeName; // todo : should be path ?
+	std::string resourceType;
+	std::string resourceName;
+	
 	Window * window;
+	
 	GraphEdit_ResourceEditorBase * resourceEditor;
 	
 	GraphEdit_NodeResourceEditorWindow();

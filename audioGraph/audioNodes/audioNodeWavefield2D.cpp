@@ -347,7 +347,8 @@ AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 	
-	resourceTypeName = "wavefield.2d";
+	mainResourceType = "wavefield.2d";
+	mainResourceName = "editorData";
 	
 	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{

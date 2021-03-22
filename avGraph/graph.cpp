@@ -59,7 +59,7 @@ void GraphNode::setResource(const char * type, const char * name, const char * d
 {
 	auto & resource = resources[name];
 	
-	resource = Resource();
+	resource = GraphNodeResource();
 	resource.type = type;
 	resource.name = name;
 	resource.data = data;
@@ -317,7 +317,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibra
 		
 		for (const XMLElement * xmlResource = xmlNode->FirstChildElement("resource"); xmlResource != nullptr; xmlResource = xmlResource->NextSiblingElement("resource"))
 		{
-			GraphNode::Resource resource;
+			GraphNodeResource resource;
 			
 			resource.type = stringAttrib(xmlResource, "type", "");
 			resource.name = stringAttrib(xmlResource, "name", "");

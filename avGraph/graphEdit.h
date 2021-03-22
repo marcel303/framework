@@ -335,7 +335,6 @@ struct GraphEdit_ResourceEditorBase
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
 	
-	// todo : introduce the concept of a resource path ? perhaps name node-specific resources "<type>:node/<id>"
 	virtual void setResource(const GraphNode & node, const char * type, const char * name) = 0;
 	virtual bool serializeResource(std::string & text) const = 0;
 };
@@ -771,12 +770,15 @@ struct GraphEdit : GraphEditConnection
 	struct NodeResourceEditor
 	{
 		GraphNodeId nodeId;
-		std::string resourceTypeName; // todo : should be path ?
+		std::string resourceType;
+		std::string resourceName;
+		
 		GraphEdit_ResourceEditorBase * resourceEditor;
 		
 		NodeResourceEditor()
 			: nodeId(kGraphNodeIdInvalid)
-			, resourceTypeName()
+			, resourceType()
+			, resourceName()
 			, resourceEditor(nullptr)
 		{
 		}

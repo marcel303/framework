@@ -831,7 +831,8 @@ struct VfxNodeTypeRegistration
 	std::string typeName;
 	std::string displayName;
 	
-	std::string resourceTypeName;
+	std::string mainResourceType;
+	std::string mainResourceName;
 	
 	std::vector<Input> inputs;
 	std::vector<Output> outputs;

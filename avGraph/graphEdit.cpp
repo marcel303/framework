@@ -4129,19 +4129,25 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 		Assert(typeDefinition != nullptr);
 		if (typeDefinition != nullptr)
 		{
-			auto & resourceTypeName = typeDefinition->resourceTypeName;
-			
-			if (resourceTypeName.empty() == false)
+			if (typeDefinition->mainResourceType.empty() == false &&
+				typeDefinition->mainResourceName.empty() == false)
 			{
 				nodeResourceEditor.nodeId = nodeId;
-				nodeResourceEditor.resourceTypeName = resourceTypeName;
+				nodeResourceEditor.resourceType = typeDefinition->mainResourceType;
+				nodeResourceEditor.resourceName = typeDefinition->mainResourceName;
+				
 				if (typeDefinition->resourceEditor.create != nullptr)
+				{
 					nodeResourceEditor.resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
+				}
 				
 				Assert(nodeResourceEditor.resourceEditor != nullptr);
 				if (nodeResourceEditor.resourceEditor != nullptr)
 				{
-					nodeResourceEditor.resourceEditor->setResource(*node, resourceTypeName.c_str(), "editorData");
+					nodeResourceEditor.resourceEditor->setResource(
+						*node,
+						nodeResourceEditor.resourceType.c_str(),
+						nodeResourceEditor.resourceName.c_str());
 					
 					// calculate the position based on size and move the editor over there
 					
@@ -4172,11 +4178,16 @@ void GraphEdit::nodeResourceEditSave()
 			
 			if (nodeResourceEditor.resourceEditor->serializeResource(resourceData))
 			{
-				node->setResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData", resourceData.c_str());
+				node->setResource(
+					nodeResourceEditor.resourceType.c_str(),
+					nodeResourceEditor.resourceName.c_str(),
+					resourceData.c_str());
 			}
 			else
 			{
-				node->clearResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData");
+				node->clearResource(
+					nodeResourceEditor.resourceType.c_str(),
+					nodeResourceEditor.resourceName.c_str());
 			}
 		}
 	}
