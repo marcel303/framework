@@ -501,3 +501,31 @@ void Surface::blit(BLEND_MODE blendMode) const
 	popColorMode();
 	popBlend();
 }
+
+SURFACE_FORMAT Surface::toSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat)
+{
+	switch (textureFormat)
+	{
+	case GX_R8_UNORM:
+		return SURFACE_R8;
+	case GX_RG8_UNORM:
+		return SURFACE_RG8;
+	case GX_RGBA8_UNORM:
+		return SURFACE_RGBA8;
+	case GX_R16_UNORM:
+		logWarning("translating R16 texture format to R8 surface format!");
+		return SURFACE_R8;
+	case GX_R16_FLOAT:
+		return SURFACE_R16F;
+	case GX_RGBA16_FLOAT:
+		return SURFACE_RGBA16F;
+	case GX_R32_FLOAT:
+		return SURFACE_R32F;
+	case GX_RGBA32_FLOAT:
+		return SURFACE_RGBA32F;
+	
+	default:
+		Assert(false);
+		return SURFACE_RGBA8;
+	}
+}

@@ -812,6 +812,8 @@ public:
 	
 	void blitTo(Surface * surface) const;
 	void blit(BLEND_MODE blendMode) const;
+	
+	static SURFACE_FORMAT toSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat);
 };
 
 void blitBackBufferToSurface(Surface * surface);
@@ -1561,6 +1563,7 @@ Vec2 transformToScreen(const Vec3 & v, float & w);
 
 void pushSurface(Surface * surface, const bool clearSurface = false);
 void popSurface();
+
 void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
 
