@@ -27,49 +27,59 @@
 
 #pragma once
 
-#include "gx_mesh.h"
 #include "vfxNodeBase.h"
 
-// todo : mesh.fromPrefab: add sphere type
+#include "framework.h" // ShaderBuffer
 
-struct VfxNodeMeshFromPrefab : VfxNodeBase
+struct VfxNodeDrawMesh : VfxNodeBase
 {
-	enum Type
+	enum PositionMode
 	{
-		kType_Cube,
-		kType_Cylinder,
-		kType_Circle,
-		kType_Rect,
-		kType_None
+		kPositionMode_Regular,
+		kPositionMode_CartesianProduct
 	};
-
+	
 	enum Input
 	{
-		kInput_Type,
-		kInput_Resolution,
+		kInput_Mesh,
+		kInput_PositionMode,
+		kInput_PositionX,
+		kInput_PositionY,
+		kInput_PositionZ,
+		kInput_RotationAngle,
+		kInput_RotationAxisX,
+		kInput_RotationAxisY,
+		kInput_RotationAxisZ,
 		kInput_Scale,
 		kInput_ScaleX,
 		kInput_ScaleY,
 		kInput_ScaleZ,
+		kInput_Shader,
+		kInput_Instanced,
 		kInput_COUNT
 	};
 	
 	enum Output
 	{
-		kOutput_Mesh,
+		kOutput_Draw,
 		kOutput_COUNT
 	};
-
-	Type currentType;
-	int currentResolution;
-	Vec3 currentScale;
-
-	GxVertexBuffer vb;
-	GxIndexBuffer ib;
-	GxMesh mesh;
 	
-	VfxNodeMeshFromPrefab();
-	virtual ~VfxNodeMeshFromPrefab() override;
+	struct Stats
+	{
+		int numInstancesDrawn = 0;
+	};
+	
+	mutable ShaderBuffer shaderBuffer;
+	
+	mutable Stats stats;
+	
+	VfxNodeDrawMesh();
+	virtual ~VfxNodeDrawMesh() override;
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void draw() const override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };
