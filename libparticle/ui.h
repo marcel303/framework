@@ -14,6 +14,8 @@ struct UiState;
 
 struct ParticleColor; // todo : remove
 
+static const int kUiItemHeight = 20;
+
 extern UiMenu * g_menu;
 
 enum UiTextboxResult

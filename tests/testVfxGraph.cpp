@@ -562,16 +562,40 @@ void testVfxGraph()
 			
 		#if ENABLE_AUDIO_RTE
 			makeActive(graphEdit.uiState, true, true);
-			g_drawX = 10;
-			g_drawY = GFX_SY - 160;
+			
+			const int bottomY = GFX_SY - 90;
+			const int topY = bottomY - kUiItemHeight /* switch button */ - 10 - kUiItemHeight * s_audioGraphMgr->files.size() /* audio graphs */ - kUiItemHeight /* vfx graph */;
+			
 			pushMenu("graph-select");
-			if (doAudioGraphSelect(*s_audioGraphMgr))
-				editor = 1;
+			{
+				g_drawX = 10;
+				g_drawY = topY;
+				if (doAudioGraphSelect(*s_audioGraphMgr))
+					editor = 1;
+				if (doButton(graphEdit.documentInfo.filename.c_str()))
+					editor = 0;
+			}
 			popMenu();
+			
 			pushMenu("editor-type");
-			g_drawY = GFX_SY - 110;
-			if (doButton("Switch editor type"))
-				editor = 1 - editor;
+			{
+				g_drawX = 10;
+				g_drawY = bottomY - kUiItemHeight;
+				if (doButton("Switch editor type"))
+					editor = 1 - editor;
+			}
+			popMenu();
+			
+			pushMenu("graph-instance-select");
+			{
+				g_drawY = topY;
+				g_drawX += graphEdit.uiState->sx + 10;
+				if (editor == 1)
+				{
+					static std::string activeAudioGraphInstanceName;
+					doAudioGraphInstanceSelect(*s_audioGraphMgr, activeAudioGraphInstanceName, true);
+				}
+			}
 			popMenu();
 		#endif
 			

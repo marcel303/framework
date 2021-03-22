@@ -49,7 +49,7 @@ bool doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr)
 	return result;
 }
 
-bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName)
+bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName, const bool forSelectedFileOnly)
 {
 	bool result = true;
 	
@@ -57,6 +57,9 @@ bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::stri
 	{
 		auto & filename = fileItr.first;
 		auto file = fileItr.second;
+		
+		if (forSelectedFileOnly && file != audioGraphMgr.selectedFile)
+			continue;
 		
 		for (auto instance : file->instanceList)
 		{

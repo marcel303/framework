@@ -13,11 +13,11 @@ struct UiMenu;
 
 // ui design
 static const int kFontSize = 12;
-static const int kTextBoxHeight = 20;
+static const int kTextBoxHeight = kUiItemHeight;
 static const int kTextBoxTextOffset = 150;
 static const int kTextBoxMousePixelsPerIncrement = 5;
-static const int kCheckBoxHeight = 20;
-static const int kEnumHeight = 20;
+static const int kCheckBoxHeight = kUiItemHeight;
+static const int kEnumHeight = kUiItemHeight;
 static const int kEnumSelectOffset = 150;
 #define kBackgroundFocusColor Color(0.f, 0.f, 1.f, g_uiState->opacity * .7f)
 #define kBackgroundColor Color(0.f, 0.f, 0.f, g_uiState->opacity * .8f)

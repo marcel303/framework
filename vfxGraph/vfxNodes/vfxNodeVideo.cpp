@@ -219,16 +219,6 @@ void VfxNodeVideo::tick(const float dt)
 	}
 }
 
-void VfxNodeVideo::draw() const
-{
-	// todo : remove once decode buffer optimize is free of bugs
-	
-	if (mediaPlayer->videoFrame)
-	{
-		Assert(mediaPlayer->videoFrame->m_isValidForRead);
-	}
-}
-
 void VfxNodeVideo::init(const GraphNode & node)
 {
 	const char * source = getInputString(kInput_Source, "");
