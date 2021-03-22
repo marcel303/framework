@@ -125,6 +125,8 @@ void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinition
 		typeDefinition.mainResourceType = registration->mainResourceType;
 		typeDefinition.mainResourceName = registration->mainResourceName;
 		
+		Assert(typeDefinition.mainResourceType.empty() == typeDefinition.mainResourceName.empty()); // both must either be set or not set
+		
 		for (int i = 0; i < (int)registration->inputs.size(); ++i)
 		{
 			auto & src = registration->inputs[i];
