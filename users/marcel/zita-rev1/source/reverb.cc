@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define DRYWET_OPTIMIZE 1
+
 namespace ZitaRev1
 {
 	Diff1::~Diff1()
@@ -284,7 +286,7 @@ namespace ZitaRev1
 		      float * __restrict q3 = _ambis ? out[3] : nullptr;
 
 		const float g = sqrtf(0.125f);
-
+		
 		for (int i = 0; i < numFrames; ++i)
 		{
 			_vdelay0.write(p0[i]);
@@ -328,9 +330,16 @@ namespace ZitaRev1
 			}
 			else
 			{
+			#if DRYWET_OPTIMIZE
+				_g0 += _d0;
+				_g1 += _d1;
+				q0[i] = _g1 * (x1 + x2) + _g0 * p0[i];
+				q1[i] = _g1 * (x1 - x2) + _g0 * p1[i];
+			#else
 				_g1 += _d1;
 				q0[i] = _g1 * (x1 + x2);
 				q1[i] = _g1 * (x1 - x2);
+			#endif
 			}
 
 			_delay[0].write(_filt1[0].process(g * x0));
@@ -351,9 +360,9 @@ namespace ZitaRev1
 		_pareq1.process(numFrames, numChannels, out);
 		_pareq2.process(numFrames, numChannels, out);
 		
+	#if !DRYWET_OPTIMIZE
 		if (!_ambis)
 		{
-			// todo : what does this do? dry-wet?
 			for (int i = 0; i < numFrames; ++i)
 			{
 				_g0 += _d0;
@@ -362,5 +371,6 @@ namespace ZitaRev1
 				q1[i] += _g0 * p1[i];
 			}
 		}
+	#endif
 	}
 }

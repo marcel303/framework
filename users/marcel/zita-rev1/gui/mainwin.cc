@@ -67,6 +67,7 @@ Mainwin::Mainwin (
     _reverb->set_fdamp(_rotary[R_FDAMP]->value());
     _reverb->set_opmix(_rotary[R_OPMIX]->value());
     _reverb->set_rgxyz(_rotary[R_RGXYZ]->value());
+    
     _reverb->set_eq1(_rotary[R_EQ1FR]->value(), _rotary[R_EQ1GN]->value());
     _reverb->set_eq2(_rotary[R_EQ2FR]->value(), _rotary[R_EQ2GN]->value());
 }
@@ -151,6 +152,7 @@ void Mainwin::handle_callb(int type, Ctl *W)
         case R_RGXYZ:
             _reverb->set_rgxyz(_rotary[R_RGXYZ]->value());
             break;
+            
         case R_EQ1FR:
         case R_EQ1GN:
             _reverb->set_eq1(_rotary[R_EQ1FR]->value(), _rotary[R_EQ1GN]->value());

@@ -33,6 +33,7 @@ namespace ZitaRev1
 
 		float process(float x)
 		{
+		// todo : avoid denormals ?
 			const float z = _line[_i];
 			
 			x -= _c * z;
@@ -169,6 +170,7 @@ namespace ZitaRev1
 		void set_fdamp(const float v) { _fdamp = v; _cntB1++; }
 		void set_opmix(const float v) { _opmix = v; _cntC1++; }
 		void set_rgxyz(const float v) { _rgxyz = v; _cntC1++; }
+		
 		void set_eq1(const float f, const float g) { _pareq1.set_param(f, g); }
 		void set_eq2(const float f, const float g) { _pareq2.set_param(f, g); }
 
@@ -202,7 +204,7 @@ namespace ZitaRev1
 		float   _opmix;
 		float   _rgxyz;
 
-		float   _g0, _d0;
+		float   _g0, _d0; // dry-wet value and gradient
 		float   _g1, _d1;
 
 		// -- eq

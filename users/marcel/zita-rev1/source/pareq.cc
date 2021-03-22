@@ -156,9 +156,12 @@ namespace ZitaRev1
 					c1 += _dc1;
 					c2 += _dc2;
 					gg += _dgg;
+					
 					float x = *p;
 					float y = x - c2 * z2;
+					
 					*p++ = x - gg * (z2 + c2 * y - x);
+					
 					y -= c1 * z1;
 					z2 = z1 + c1 * y;
 					z1 = y + 1e-20f;
