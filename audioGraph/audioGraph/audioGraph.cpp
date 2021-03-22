@@ -724,8 +724,7 @@ void popAudioGraph()
 
 AudioNodeBase * createAudioNode(
 	const GraphNodeId nodeId,
-	const std::string & typeName,
-	AudioGraph * audioGraph)
+	const std::string & typeName)
 {
 	AudioNodeBase * audioNode = nullptr;
 	
@@ -771,7 +770,7 @@ AudioGraph * constructAudioGraph(
 		{
 			auto & node = nodeItr.second;
 			
-			AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
+			AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName);
 			
 			Assert(audioNode != nullptr);
 			if (audioNode == nullptr)

@@ -27,6 +27,7 @@
 
 #include "audioInputOutputObject.h"
 #include "audioNodeInput.h"
+#include "Log.h"
 
 AUDIO_NODE_TYPE(AudioNodeInput)
 {
@@ -35,6 +36,16 @@ AUDIO_NODE_TYPE(AudioNodeInput)
 	in("channel", "int");
 	in("gain", "audioValue", "1");
 	out("audio", "audioValue");
+}
+
+void AudioNodeInput::init(const GraphNode & node)
+{
+	AudioInputOutputObject * audioIO = g_currentAudioGraph->context->findObject<AudioInputOutputObject>();
+	
+	if (audioIO == nullptr)
+	{
+		LOG_WRN("missing AudioInputOutputObject. audio.in won't be able to provide any data!");
+	}
 }
 
 void AudioNodeInput::tick(const float dt)

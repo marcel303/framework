@@ -157,7 +157,7 @@ void AudioRealTimeConnection::updateAudioValues()
 	if (audioGraph == nullptr)
 		return;
 
-	AUDIO_SCOPE;
+	AUDIO_SCOPE; // currentTickTraversalId, audioValueHistorySet, nodes
 	
 	if (audioGraph->currentTickTraversalId < 0)
 		return;
@@ -289,15 +289,17 @@ void AudioRealTimeConnection::nodeAdd(const GraphNode & node)
 	
 	//
 	
-	AUDIO_SCOPE;
-	
 	pushAudioGraph(audioGraph);
 	{
-		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
+		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName);
 	
 		if (audioNode != nullptr)
 		{
 			audioNode->initSelf(node);
+			
+			AUDIO_SCOPE;
+			
+			// note : audioGraph->nodes is accessed during updateAudioValues, so we require AUDIO_SCOPE to modify it
 			
 			audioGraph->nodes[node.id] = audioNode;
 		}

@@ -122,8 +122,6 @@ void AudioNodeSourcePcm::tick(const float dt)
 	}
 	else
 	{
-		// todo : do this on a per-sample basis !
-		
 		const int _rangeBegin = rangeBegin ? rangeBegin->getScalar() * pcmData->numSamples : 0;
 		const int _rangeLength = rangeLength ? rangeLength->getScalar() * pcmData->numSamples : pcmData->numSamples - _rangeBegin;
 		

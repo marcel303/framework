@@ -214,8 +214,7 @@ void popAudioGraph();
 
 AudioNodeBase * createAudioNode(
 	const GraphNodeId nodeId,
-	const std::string & typeName,
-	AudioGraph * audioGraph);
+	const std::string & typeName);
 
 AudioGraph * constructAudioGraph(
 	const Graph & graph,

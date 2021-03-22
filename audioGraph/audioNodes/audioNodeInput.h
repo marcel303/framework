@@ -56,5 +56,7 @@ struct AudioNodeInput : AudioNodeBase
 		addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	}
 	
+	virtual void init(const GraphNode & node) override;
+	
 	virtual void tick(const float dt) override;
 };

@@ -41,7 +41,7 @@ EnsureLinkage(jgmod_audiograph);
 #define ENABLE_AUDIO_RTE 1
 
 // todo : ask a few plugin developers if it's ok to bundle their scripts on framework's repo as a test/demo of jsfx support
-// todo : add and remove the ability to add JSFX script paths
+// todo : add the ability to add and remove JSFX script paths
 
 #define JSFX_SEARCH_PATH_1 "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
 #define JSFX_SEARCH_PATH_2 "/Users/thecat/framework/jsfx-geraintluff/" // fixme : remove hard coded ATK scripts path

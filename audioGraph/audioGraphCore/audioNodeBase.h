@@ -235,8 +235,8 @@ struct AudioNodeBase
 	
 	// -- implementation
 	
-	virtual void initSelf(const GraphNode & node) { }
-	virtual void init(const GraphNode & node) { }
+	virtual void initSelf(const GraphNode & node) { } // perform expensive, isolated initialization here, as initSelf occurs outside of AUDIO_SCOPE
+	virtual void init(const GraphNode & node) { } // occurs inside AUDIO_SCOPE, so make sure to keep it light-weight!
 	virtual void shut() { }
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex) { }

@@ -82,8 +82,13 @@ void AudioNodeJgmod::freeJgmod()
 {
 	currentFilename.clear();
 	
-	delete jgmodPlayer;
-	jgmodPlayer = nullptr;
+	if (jgmodPlayer != nullptr)
+	{
+		jgmodPlayer->stop();
+		
+		delete jgmodPlayer;
+		jgmodPlayer = nullptr;
+	}
 	
 	if (jgmod != nullptr)
 	{
