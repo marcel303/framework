@@ -436,7 +436,7 @@ void AudioNodeWavefield2D::syncWavefieldResource()
 	wavefieldData->unlock();
 }
 
-void AudioNodeWavefield2D::init(const GraphNode & node)
+void AudioNodeWavefield2D::initSelf(const GraphNode & node)
 {
 	createAudioNodeResource(node, "wavefield.2d", "editorData", wavefieldData);
 	

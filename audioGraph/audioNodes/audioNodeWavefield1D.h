@@ -80,7 +80,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	void randomize();
 	void syncWavefieldResource();
 	
-	virtual void init(const GraphNode & node) override;
+	virtual void initSelf(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	

@@ -443,7 +443,7 @@ void AudioNodeWavefield1D::syncWavefieldResource()
 	wavefieldData->unlock();
 }
 
-void AudioNodeWavefield1D::init(const GraphNode & node)
+void AudioNodeWavefield1D::initSelf(const GraphNode & node)
 {
 	createAudioNodeResource(node, "wavefield.1d", "editorData", wavefieldData);
 	
