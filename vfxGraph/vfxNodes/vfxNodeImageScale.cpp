@@ -40,35 +40,6 @@ VFX_NODE_TYPE(VfxNodeImageScale)
 	out("image", "image");
 }
 
-// todo : move this to its own source file, to make sure conglomerate build keeps working once we convert other nodes to use this function too
-static SURFACE_FORMAT textureFormatToSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat)
-{
-	switch (textureFormat)
-	{
-	case GX_R8_UNORM:
-		return SURFACE_R8;
-	case GX_RG8_UNORM:
-		return SURFACE_RG8;
-	case GX_RGBA8_UNORM:
-		return SURFACE_RGBA8;
-	case GX_R16_UNORM:
-		logWarning("translating R16 texture format to R8 surface format!");
-		return SURFACE_R8;
-	case GX_R16_FLOAT:
-		return SURFACE_R16F;
-	case GX_RGBA16_FLOAT:
-		return SURFACE_RGBA16F;
-	case GX_R32_FLOAT:
-		return SURFACE_R32F;
-	case GX_RGBA32_FLOAT:
-		return SURFACE_RGBA32F;
-	
-	default:
-		Assert(false);
-		return SURFACE_RGBA8;
-	}
-}
-
 VfxNodeImageScale::VfxNodeImageScale()
 	: VfxNodeBase()
 	, surface(nullptr)
@@ -86,6 +57,7 @@ VfxNodeImageScale::~VfxNodeImageScale()
 {
 	freeImage();
 }
+
 void VfxNodeImageScale::draw() const
 {
 	vfxCpuTimingBlock(VfxNodeImageScale);
@@ -127,10 +99,13 @@ void VfxNodeImageScale::draw() const
 		{
 			const int sx = int(ceilf(image->getSx() * scale));
 			const int sy = int(ceilf(image->getSy() * scale));
-			const GX_TEXTURE_FORMAT format = (GX_TEXTURE_FORMAT)image->getTextureFormat();
-			const SURFACE_FORMAT surfaceFormat = textureFormatToSurfaceFormat(format);
+			const GX_TEXTURE_FORMAT textureFormat = (GX_TEXTURE_FORMAT)image->getTextureFormat();
+			const SURFACE_FORMAT surfaceFormat = Surface::toSurfaceFormat(textureFormat);
 			
-			if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight() || surfaceFormat != surface->getFormat())
+			if (surface == nullptr ||
+				sx != surface->getWidth() ||
+				sy != surface->getHeight() ||
+				surfaceFormat != surface->getFormat())
 			{
 				allocateImage(sx, sy, surfaceFormat);
 			}
