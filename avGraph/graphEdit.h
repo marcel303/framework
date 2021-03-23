@@ -359,6 +359,7 @@ struct GraphEdit : GraphEditConnection
 		kState_OutputSocketConnect,
 		kState_NodeResize,
 		kState_NodeInsert,
+		kState_TouchDecide,
 		kState_TouchDrag,
 		kState_TouchZoom,
 		kState_Hidden,
@@ -665,8 +666,8 @@ struct GraphEdit : GraphEditConnection
 		float desiredFocusX;
 		float desiredFocusY;
 		
-		Mat4x4 transform;
-		Mat4x4 invTransform;
+		Mat4x4 transform;    // graph coord to screen space
+		Mat4x4 invTransform; // screen space to graph coord
 		
 		DragAndZoom()
 			: zoom(1.f)
@@ -695,7 +696,10 @@ struct GraphEdit : GraphEditConnection
 		
 		void updateTransform()
 		{
-			transform = Mat4x4(true).Translate(GRAPHEDIT_SX/2, GRAPHEDIT_SY/2, 0).Scale(zoom, zoom, 1.f).Translate(-focusX, -focusY, 0.f);
+			transform = Mat4x4(true)
+				.Translate(GRAPHEDIT_SX/2, GRAPHEDIT_SY/2, 0)
+				.Scale(zoom, zoom, 1.f)
+				.Translate(-focusX, -focusY, 0.f);
 			invTransform = transform.Invert();
 		}
 		
@@ -865,14 +869,16 @@ struct GraphEdit : GraphEditConnection
 	{
 		struct FingerInfo
 		{
-			uint64_t id;
+			uint64_t id = 0;
 			Vec2 position;
+			bool hasPosition = false;
 			Vec2 initialPosition;
 		};
 		
 		FingerInfo finger1;
 		FingerInfo finger2;
 		
+		// for zoom
 		float initialDistance;
 		float distance;
 		
