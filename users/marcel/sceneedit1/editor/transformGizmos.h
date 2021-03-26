@@ -91,7 +91,8 @@ struct TransformGizmo
 		const bool pointer_isActive,
 		const bool pointer_becameActive,
 		bool & inputIsCaptured);
-	void draw() const;
+	void drawOpaque(const bool depthObscuredPass) const;
+	void drawTranslucent() const;
 
 private:
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;

@@ -53,7 +53,6 @@ struct VfxNodeDrawRibbon : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	// todo : add objects/ribbon.cpp/h source files
 	// todo : add objects/ribbon3d.cpp/h source files
 	
 	struct Ribbon

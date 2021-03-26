@@ -435,7 +435,7 @@ void SceneEditor::editNode(const int nodeId)
 				}
 				ImGui::EndGroup();
 			
-			#if 1
+			#if 1 // todo : fix issue with this menu obscuring child menus. array add/insert etc don't work anymore :-(
 				// see if we should open the node context menu
 				
 				NodeContextMenuResult result = kNodeContextMenuResult_None;
@@ -1434,6 +1434,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		performAction_save();
 	}
 	
+// todo : remove this action. it belongs to the user of the scene editor
 	// action: load
 	if (inputIsCaptured == false && keyboard.wentDown(SDLK_l) && keyCommand())
 	{
@@ -2334,11 +2335,17 @@ void SceneEditor::drawEditorTranslucent() const
 	}
 }
 
-void SceneEditor::drawEditorGizmos() const
+void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 {
 #if ENABLE_TRANSFORM_GIZMOS
-// todo : draw transform gizmo on top of everything
-	transformGizmo.draw();
+	transformGizmo.drawOpaque(depthObscuredPass);
+#endif
+}
+
+void SceneEditor::drawEditorGizmosTranslucent() const
+{
+#if ENABLE_TRANSFORM_GIZMOS
+	transformGizmo.drawTranslucent();
 #endif
 }
 

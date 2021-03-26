@@ -582,16 +582,30 @@ int main(int argc, char * argv[])
 	auto drawOpaque = [&]()
 		{
 			pushDepthTest(true, DEPTH_LEQUAL);
+			pushCullMode(CULL_BACK, CULL_CCW);
 			pushBlend(BLEND_OPAQUE);
 			{
 				editor.drawSceneOpaque();
 				editor.drawEditorOpaque();
+				
+				pushCullMode(CULL_BACK, CULL_CCW);
+				editor.drawEditorGizmosOpaque(false);
+				popCullMode();
+				
+				pushDepthTest(true, DEPTH_GREATER, false);
+				{
+					pushCullMode(CULL_BACK, CULL_CCW);
+					editor.drawEditorGizmosOpaque(true);
+					popCullMode();
+				}
+				popDepthTest();
 
 			#if USE_GUI_WINDOW
 				framework.drawVirtualDesktop();
 			#endif
 			}
 			popBlend();
+			popCullMode();
 			popDepthTest();
 		};
 	
@@ -602,14 +616,7 @@ int main(int argc, char * argv[])
 			{
 				editor.drawSceneTranslucent();
 				editor.drawEditorTranslucent();
-			}
-			popBlend();
-			popDepthTest();
-			
-			pushDepthTest(false, DEPTH_LESS);
-			pushBlend(BLEND_ALPHA);
-			{
-				editor.drawEditorGizmos();
+				editor.drawEditorGizmosTranslucent();
 			}
 			popBlend();
 			popDepthTest();

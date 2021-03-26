@@ -57,6 +57,9 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 }
 
 // todo : create a vfxgraph-fsfx system, which requires explicit initialization. add registered systems to VfxGraphContext. when system is not present, let behavior be passthrough mode
+// todo : allow to specify a custom location for FSFX shaders (getFsfxShaderList). ties in with registering FSFX object to VfxGraphContext
+// todo : add a library of built-in shaders
+// todo : automatically register FSFX objects when linked to a FSFX shader libraries? add support for multiple shader libraries?
 
 VFX_ENUM_TYPE(fsfxShader)
 {
@@ -573,6 +576,7 @@ void VfxNodeFsfxV2::draw() const
 				{
 					setTransform(TRANSFORM_SCREEN);
 					
+				// fixme : the pop/push here causes a lot of extra gpu work ..
 					popSurface();
 					{
 						g_currentVfxSurface->postprocess();
