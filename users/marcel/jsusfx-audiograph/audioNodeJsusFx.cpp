@@ -142,6 +142,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 	JsusFxGfx_Framework gfx;
 	bool jsusFxIsValid;
 	
+	bool sliderIsActive[JsusFx::kMaxSliders] = { };
+	
 	ResourceEditor_JsusFx(const char * filename, const char * dataRoot, const char * searchPath)
 		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
@@ -180,6 +182,93 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
+	static void doSlider(
+		const bool tick,
+		const bool draw,
+		JsusFx & fx,
+		JsusFx_Slider & slider,
+		int x, int y,
+		bool & isActive)
+	{
+		const int sx = 200;
+		const int sy = 12;
+		
+		if (tick)
+		{
+			const bool isInside =
+				x >= 0 && x <= sx &&
+				y >= 0 && y <= sy;
+				
+			if (isInside && mouse.wentDown(BUTTON_LEFT))
+				isActive = true;
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+				isActive = false;
+			
+			if (isActive)
+			{
+				const float t = x / float(sx);
+				const float v = slider.min + (slider.max - slider.min) * t;
+				fx.moveSlider(&slider - fx.sliders, v);
+			}
+		}
+		
+		if (draw)
+		{
+			setColor(0, 0, 255, 127);
+			const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
+			drawRect(0, 0, sx * t, sy);
+			
+			if (slider.isEnum)
+			{
+				const int enumIndex = (int)slider.getValue();
+				
+				if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+				{
+					setColor(colorWhite);
+					drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+				}
+			}
+			else
+			{
+				setColor(colorWhite);
+				drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.desc);
+			}
+			
+			setColor(63, 31, 255, 127);
+			drawRectLine(0, 0, sx, sy);
+		}
+	}
+
+	void doSliders(const bool tick, const bool draw, const bool inputIsCaptured)
+	{
+		int x = 10;
+		int y = 10;
+		
+		int sliderIndex = 0;
+		
+		for (auto & slider : jsusFx.sliders)
+		{
+			if (slider.exists && slider.desc[0] != '-')
+			{
+				gxPushMatrix();
+				gxTranslatef(x, y, 0);
+				doSlider(
+					tick, draw,
+					jsusFx,
+					slider,
+					mouse.x - x,
+					mouse.y - y,
+					sliderIsActive[sliderIndex]);
+				gxPopMatrix();
+				
+				y += 16;
+			}
+			
+			sliderIndex++;
+		}
+	}
+	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override
 	{
 		if (jsusFxIsValid)
@@ -187,6 +276,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 			gfx.setup(nullptr, sx, sy, mouse.x, mouse.y, inputIsCaptured == false);
 			
 			jsusFx.process(nullptr, nullptr, AUDIO_UPDATE_SIZE, 0, 0);
+			
+			doSliders(true, false, inputIsCaptured);
 		}
 		
 		if (jsusFxIsValid && resource != nullptr)
@@ -240,6 +331,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		if (jsusFxIsValid)
 		{
 			const_cast<JsusFx_Framework&>(jsusFx).draw();
+			
+			const_cast<ResourceEditor_JsusFx*>(this)->doSliders(false, true, false);
 		}
 	}
 	
