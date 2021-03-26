@@ -1082,7 +1082,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	//
 	
 	y += kPadding;
-	fassert(y == sy); // fixme
+	fassert(y == sy);
 }
 
 //

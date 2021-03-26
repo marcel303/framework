@@ -17,7 +17,7 @@ library audiograph-core
 
 library audiograph-voice
 
-	# description : provides the AudioVoiceMgr base object and a basic implementation
+	# description : provides AudioVoiceManager base object and a basic implementation
 
 	depend_library audiograph-core
 
@@ -28,7 +28,7 @@ library audiograph-voice
 
 library audiograph-graph
 
-	# description : provides AudioGraph and AudioGraphContext and integrates core and voice types
+	# description : provides AudioGraph and AudioGraphContext and integrates audiograph-core and audiograph-voice
 	
 	depend_library audiograph-core
 	depend_library audiograph-voice
@@ -40,6 +40,8 @@ library audiograph-graph
 
 library audiograph-graphMgr
 
+	# description provides various AudioGraphManager implementations, ranging from very basic, to supporting real-time editing for multiple graphs and instances
+	
 	depend_library audiograph-graph
 	depend_library libavgraph
 
