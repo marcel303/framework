@@ -49,14 +49,19 @@ void DynamicBufferPool::init(const int numBytesPerBuffer)
 
 void DynamicBufferPool::shut()
 {
-	while (m_freeList != nullptr)
+	m_mutex.lock();
 	{
-		m_freeList->m_buffer = nullptr;
-		
-		DynamicBufferPoolElem * next = m_freeList->m_next;
-		delete m_freeList;
-		m_freeList = next;
+		while (m_freeList != nullptr)
+		{
+			__unsafe_unretained id <MTLBuffer> tmp = m_freeList->m_buffer;
+			m_freeList->m_buffer = nullptr;
+			
+			DynamicBufferPoolElem * next = m_freeList->m_next;
+			delete m_freeList;
+			m_freeList = next;
+		}
 	}
+	m_mutex.unlock();
 }
 
 DynamicBufferPoolElem * DynamicBufferPool::allocBuffer()

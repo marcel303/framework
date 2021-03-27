@@ -33,8 +33,6 @@
 #include "metal.h"
 #include <map>
 
-static DynamicBufferPool s_bufferPool;
-
 static void freeBufferAfterRenderingIsDone(DynamicBufferPool * bufferPool, DynamicBufferPoolElem * bufferPoolElem)
 {
 	// the buffer may still be in use.. wait for the render commands to finish
@@ -125,7 +123,7 @@ void ShaderBuffer::free()
 	{
 		if (m_bufferPoolElemIsUsed == false)
 		{
-			s_bufferPool.freeBuffer(m_bufferPoolElem);
+			m_bufferPool->freeBuffer(m_bufferPoolElem);
 			m_bufferPoolElem = nullptr;
 		}
 		else
