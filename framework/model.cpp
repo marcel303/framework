@@ -826,16 +826,12 @@ void Model::ctorEnd()
 	
 	for (int i = 0; i < numBones; ++i)
 		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
-	
-	skinningMatrices.alloc(64 * sizeof(Mat4x4));
 }
 
 Model::~Model()
 {
 	delete [] m_boneTransforms;
 	m_boneTransforms = nullptr;
-
-	skinningMatrices.free();
 
 	if (m_autoUpdate)
 		framework.unregisterModel(this);
@@ -930,7 +926,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
-		skinningMatrices.setData(globalMatrices, sizeof(Mat4x4) * numBones);
+		m_model->skinningMatrices->setData(globalMatrices, sizeof(Mat4x4) * numBones);
 		
 		const Shader * previousShader = nullptr;
 		
@@ -958,7 +954,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				// set uniform constants for skinning matrices
 				
-				shader.setBuffer("SkinningData", skinningMatrices);
+				shader.setBuffer("SkinningData", *m_model->skinningMatrices);
 				
 				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				
@@ -1573,10 +1569,15 @@ ModelCacheElem::ModelCacheElem()
 	animSet = 0;
 	
 	meshToObjectParity = 0;
+	
+	skinningMatrices = 0;
 }
 
 void ModelCacheElem::free()
 {
+	delete skinningMatrices;
+	skinningMatrices = 0;
+	
 	delete meshSet;
 	meshSet = 0;
 	
@@ -2031,6 +2032,11 @@ void ModelCacheElem::load(const char * filename)
 	meshToObjectParity = right * up * forward;
 	
 	//dumpMatrix(meshToObject);
+	
+	// allocate skinning matrices buffer
+	
+	skinningMatrices = new ShaderBuffer();
+	skinningMatrices->alloc(64 * sizeof(Mat4x4));
 }
 
 //

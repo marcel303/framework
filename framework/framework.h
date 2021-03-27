@@ -1247,8 +1247,6 @@ public:
 	
 	float drawNormalsScale = 1.f;
 	
-	mutable ShaderBuffer skinningMatrices;
-	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
 	~Model();
