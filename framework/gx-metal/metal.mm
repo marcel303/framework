@@ -280,6 +280,7 @@ void metal_capture_boundary()
 	[queue insertDebugCaptureBoundary];
 }
 
+#include "poolhack/poolhack.h"
 #include "renderTarget.h"
 
 void metal_acquire_drawable()
@@ -296,38 +297,36 @@ void metal_acquire_drawable()
 		Always release a drawable as soon as possible; preferably, immediately after finalizing a frame’s CPU work. It is highly advisable to contain your rendering loop within an autorelease pool block to avoid possible deadlock situations with multiple drawables."
 	*/
 	
-	@autoreleasepool
+	poolhack_begin();
+	
+	Assert(activeWindowData->current_drawable == nullptr);
+	
+	for (;;)
 	{
-		Assert(activeWindowData->current_drawable == nullptr);
-		
-		for (;;)
-		{
-			activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
-			if (activeWindowData->current_drawable != nullptr)
-				break;
-				
-			framework.waitForEvents = true;
-			framework.process();
-			framework.waitForEvents = false;
-		}
+		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
+		if (activeWindowData->current_drawable != nullptr)
+			break;
+			
+		framework.waitForEvents = true;
+		framework.process();
+		framework.waitForEvents = false;
 	}
 }
 
 void metal_present()
 {
-	@autoreleasepool
-	{
-		id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
-		
-		// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
-		
-		[cmdbuf presentDrawable:activeWindowData->current_drawable];
-		
-		activeWindowData->current_drawable = nullptr;
-		
-		[cmdbuf commit];
-		cmdbuf = nil;
-	}
+	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+	
+	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
+	
+	[cmdbuf presentDrawable:activeWindowData->current_drawable];
+	
+	activeWindowData->current_drawable = nullptr;
+	
+	[cmdbuf commit];
+	cmdbuf = nil;
+	
+	poolhack_end();
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -610,94 +609,93 @@ void beginRenderPass(
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
-	@autoreleasepool
-	{
-		RenderPassData pd;
-		
-		pd.cmdbuf = [queue commandBuffer];
+	poolhack_begin();
 	
-	 	pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+	RenderPassData pd;
+	
+	pd.cmdbuf = [queue commandBuffer];
+
+	pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+	
+	int viewportSx = 0;
+	int viewportSy = 0;
+	
+	// specify the color and depth attachment(s)
+	
+	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
+	{
+		MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[i];
+		colorattachment.texture = (__bridge id <MTLTexture>)targets[i]->getMetalTexture();
 		
-		int viewportSx = 0;
-		int viewportSy = 0;
+		const Color & clearColor = targets[i]->getClearColor();
 		
-		// specify the color and depth attachment(s)
+		colorattachment.clearColor  = MTLClearColorMake(
+			clearColor.r,
+			clearColor.g,
+			clearColor.b,
+			clearColor.a);
+		colorattachment.loadAction  = in_clearColor ? MTLLoadActionClear : MTLLoadActionLoad;
+		colorattachment.storeAction = MTLStoreActionStore;
 		
-		for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
-		{
-			MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[i];
-			colorattachment.texture = (__bridge id <MTLTexture>)targets[i]->getMetalTexture();
-			
-			const Color & clearColor = targets[i]->getClearColor();
-			
-			colorattachment.clearColor  = MTLClearColorMake(
-				clearColor.r,
-				clearColor.g,
-				clearColor.b,
-				clearColor.a);
-			colorattachment.loadAction  = in_clearColor ? MTLLoadActionClear : MTLLoadActionLoad;
-			colorattachment.storeAction = MTLStoreActionStore;
-			
-			pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
-			
-			if (colorattachment.texture.width > viewportSx)
-				viewportSx = colorattachment.texture.width;
-			if (colorattachment.texture.height > viewportSy)
-				viewportSy = colorattachment.texture.height;
-		}
+		pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
 		
-		if (depthTarget != nullptr)
-		{
-			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
-			depthattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
-			depthattachment.clearDepth = depthTarget->getClearDepth();
-			depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
-			depthattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
-			
-			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
-			
-			if (depthattachment.texture.width > viewportSx)
-				viewportSx = depthattachment.texture.width;
-			if (depthattachment.texture.height > viewportSy)
-				viewportSy = depthattachment.texture.height;
-			
-		#if defined(IPHONEOS)
-			if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
-		#else
-			if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth24Unorm_Stencil8 ||
-				depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
-		#endif
-			{
-				MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
-				stencilattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
-				stencilattachment.clearStencil = 0x00;
-				stencilattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
-				stencilattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
-				
-				pd.renderPass.stencilFormat = stencilattachment.texture.pixelFormat;
-			}
-		}
-		
-		pd.viewportSx = viewportSx;
-		pd.viewportSy = viewportSy;
-		pd.backingScale = backingScale;
-		
-		// begin encoding
-		
-		pd.encoder = [pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc];
-		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
-		
-		renderState.renderPass = pd.renderPass;
-		
-		s_renderPassData = pd;
-		s_activeRenderPass = &s_renderPassData;
-		
-		// set viewport and apply transform
-		
-		metal_set_viewport(viewportSx, viewportSy);
-		
-		applyTransform();
+		if (colorattachment.texture.width > viewportSx)
+			viewportSx = colorattachment.texture.width;
+		if (colorattachment.texture.height > viewportSy)
+			viewportSy = colorattachment.texture.height;
 	}
+	
+	if (depthTarget != nullptr)
+	{
+		MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
+		depthattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
+		depthattachment.clearDepth = depthTarget->getClearDepth();
+		depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
+		depthattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
+		
+		pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
+		
+		if (depthattachment.texture.width > viewportSx)
+			viewportSx = depthattachment.texture.width;
+		if (depthattachment.texture.height > viewportSy)
+			viewportSy = depthattachment.texture.height;
+		
+	#if defined(IPHONEOS)
+		if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
+	#else
+		if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth24Unorm_Stencil8 ||
+			depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
+	#endif
+		{
+			MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
+			stencilattachment.texture = (__bridge id <MTLTexture>)depthTarget->getMetalTexture();
+			stencilattachment.clearStencil = 0x00;
+			stencilattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
+			stencilattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
+			
+			pd.renderPass.stencilFormat = stencilattachment.texture.pixelFormat;
+		}
+	}
+	
+	pd.viewportSx = viewportSx;
+	pd.viewportSy = viewportSy;
+	pd.backingScale = backingScale;
+	
+	// begin encoding
+	
+	pd.encoder = [pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc];
+	pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
+	
+	renderState.renderPass = pd.renderPass;
+	
+	s_renderPassData = pd;
+	s_activeRenderPass = &s_renderPassData;
+	
+	// set viewport and apply transform
+	
+	metal_set_viewport(viewportSx, viewportSy);
+	
+	applyTransform();
 }
 
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
@@ -723,24 +721,23 @@ void endRenderPass()
 	
 	gxEndDraw();
 	
-	@autoreleasepool
-	{
-		auto & pd = *s_activeRenderPass;
-		
-		[pd.encoder endEncoding];
-		
-		[pd.cmdbuf commit];
-		
-		//
-		
-		pd.encoder = nil;
-		pd.renderdesc = nil;
-		pd.cmdbuf = nil;
-		
-		s_activeRenderPass = nullptr;
-		
-		renderState.renderPass = RenderPipelineState::RenderPass();
-	}
+	auto & pd = *s_activeRenderPass;
+	
+	[pd.encoder endEncoding];
+	
+	[pd.cmdbuf commit];
+	
+	//
+	
+	pd.encoder = nil;
+	pd.renderdesc = nil;
+	pd.cmdbuf = nil;
+	
+	s_activeRenderPass = nullptr;
+	
+	renderState.renderPass = RenderPipelineState::RenderPass();
+	
+	poolhack_end();
 }
 
 // --- render passes stack ---
@@ -1057,26 +1054,23 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		
 		if (state == nil)
 		{
-			@autoreleasepool
-			{
-				// create the depth-stencil state when it isn't cached yet
-				
-				MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-				fillDepthStencilDescriptor(descriptor);
-				
-				s_depthStencilStates
-					[globals.depthTestWriteEnabled]
-					[globals.depthTest]
-					[globals.depthTestEnabled] =
-						[device newDepthStencilStateWithDescriptor:descriptor];
-				
-				state = s_depthStencilStates
-					[globals.depthTestWriteEnabled]
-					[globals.depthTest]
-					[globals.depthTestEnabled];
-				
-				descriptor = nullptr;
-			}
+			// create the depth-stencil state when it isn't cached yet
+			
+			MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+			fillDepthStencilDescriptor(descriptor);
+			
+			s_depthStencilStates
+				[globals.depthTestWriteEnabled]
+				[globals.depthTest]
+				[globals.depthTestEnabled] =
+					[device newDepthStencilStateWithDescriptor:descriptor];
+			
+			state = s_depthStencilStates
+				[globals.depthTestWriteEnabled]
+				[globals.depthTest]
+				[globals.depthTestEnabled];
+			
+			descriptor = nullptr;
 		}
 		
 		// set the depth-stencil state
@@ -1087,18 +1081,15 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	{
 		// for stencil-enabled depth-stencil states.. we create a new depth-stencil descriptor, each and every time. caching can be implemented if we calculate the hash or a composite-key of the state and use it as the lookup key into a map
 		
-		@autoreleasepool
-		{
-			MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-			fillDepthStencilDescriptor(descriptor);
-			
-			id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-			[s_activeRenderPass->encoder setDepthStencilState:state];
-			
-			state = nullptr;
-			
-			descriptor = nullptr;
-		}
+		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+		fillDepthStencilDescriptor(descriptor);
+		
+		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+		[s_activeRenderPass->encoder setDepthStencilState:state];
+		
+		state = nullptr;
+		
+		descriptor = nullptr;
 	}
 }
 
@@ -1185,42 +1176,36 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 	globals.frontStencilState = front;
 	globals.backStencilState = back;
 	
-	@autoreleasepool
-	{
-		// update depth-stencil state
-		
-		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-		fillDepthStencilDescriptor(descriptor);
-		
-		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-		[s_activeRenderPass->encoder setDepthStencilState:state];
-		
-		[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
-		
-		state = nullptr;
-		
-		descriptor = nullptr;
-	}
+	// update depth-stencil state
+	
+	MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+	fillDepthStencilDescriptor(descriptor);
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
+	
+	state = nullptr;
+	
+	descriptor = nullptr;
 }
 
 void clearStencilTest()
 {
 	globals.stencilEnabled = false;
 	
-	@autoreleasepool
-	{
-		// update depth-stencil state
-		
-		MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
-		fillDepthStencilDescriptor(descriptor);
-		
-		id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-		[s_activeRenderPass->encoder setDepthStencilState:state];
-		
-		state = nullptr;
-		
-		descriptor = nullptr;
-	}
+	// update depth-stencil state
+	
+	MTLDepthStencilDescriptor * descriptor = [MTLDepthStencilDescriptor new];
+	fillDepthStencilDescriptor(descriptor);
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	state = nullptr;
+	
+	descriptor = nullptr;
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
@@ -2408,24 +2393,21 @@ static void gxFlush(bool endOfBatch)
 	
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
 
-		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
+		if (indexBuffer != nil)
 		{
-			if (indexBuffer != nil)
-			{
-				[s_activeRenderPass->encoder
-					drawIndexedPrimitives:metalPrimitiveType
-					indexCount:numElements
-					indexType:MTLIndexTypeUInt32
-					indexBuffer:indexBuffer
-					indexBufferOffset:0];
-			}
-			else
-			{
-				[s_activeRenderPass->encoder
-					drawPrimitives:metalPrimitiveType
-					vertexStart:0
-					vertexCount:numElements];
-			}
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numElements
+				indexType:MTLIndexTypeUInt32
+				indexBuffer:indexBuffer
+				indexBufferOffset:0];
+		}
+		else
+		{
+			[s_activeRenderPass->encoder
+				drawPrimitives:metalPrimitiveType
+				vertexStart:0
+				vertexCount:numElements];
 		}
 	}
 	
@@ -2623,10 +2605,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
 
-	@autoreleasepool
-	{
-		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
-	}
+	[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
 	
 	globals.gxShaderIsDirty = false;
 }
@@ -2874,18 +2853,15 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 				: 4;
 		const int indexOffset = firstIndex * indexSize;
 		
-		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
-		{
-			[s_activeRenderPass->encoder
-				drawIndexedPrimitives:metalPrimitiveType
-				indexCount:numIndices
-				indexType:
-					indexBuffer->getFormat() == GX_INDEX_16
-					? MTLIndexTypeUInt16
-					: MTLIndexTypeUInt32
-				indexBuffer:buffer
-				indexBufferOffset:indexOffset];
-		}
+		[s_activeRenderPass->encoder
+			drawIndexedPrimitives:metalPrimitiveType
+			indexCount:numIndices
+			indexType:
+				indexBuffer->getFormat() == GX_INDEX_16
+				? MTLIndexTypeUInt16
+				: MTLIndexTypeUInt32
+			indexBuffer:buffer
+			indexBufferOffset:indexOffset];
 	}
 	else
 	{
@@ -2935,10 +2911,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
-		{
-			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
-		}
+		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
 	}
 	else
 	{
@@ -2998,19 +2971,16 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 				: 4;
 		const int indexOffset = firstIndex * indexSize;
 		
-		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
-		{
-			[s_activeRenderPass->encoder
-				drawIndexedPrimitives:metalPrimitiveType
-				indexCount:numIndices
-				indexType:
-					indexBuffer->getFormat() == GX_INDEX_16
-					? MTLIndexTypeUInt16
-					: MTLIndexTypeUInt32
-				indexBuffer:buffer
-				indexBufferOffset:indexOffset
-				instanceCount:numInstances];
-		}
+		[s_activeRenderPass->encoder
+			drawIndexedPrimitives:metalPrimitiveType
+			indexCount:numIndices
+			indexType:
+				indexBuffer->getFormat() == GX_INDEX_16
+				? MTLIndexTypeUInt16
+				: MTLIndexTypeUInt32
+			indexBuffer:buffer
+			indexBufferOffset:indexOffset
+			instanceCount:numInstances];
 	}
 	else
 	{
@@ -3060,14 +3030,11 @@ void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE t
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		@autoreleasepool // todo : find a way to manage an autorelease pool between begin- and endDraw to catch leaks from the Metal debug layer
-		{
-			[s_activeRenderPass->encoder
-				drawPrimitives:metalPrimitiveType
-				vertexStart:firstVertex
-				vertexCount:numVertices
-				instanceCount:numInstances];
-		}
+		[s_activeRenderPass->encoder
+			drawPrimitives:metalPrimitiveType
+			vertexStart:firstVertex
+			vertexCount:numVertices
+			instanceCount:numInstances];
 	}
 	else
 	{

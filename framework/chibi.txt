@@ -52,6 +52,16 @@ library soundfile
 
 	header_path . expose
 
+library gx-metal-poolhack
+
+	# Apple decided to ban manually managing NSAutoreleasePools when ARC is enabled, so we
+	# need a separate library with ARC disabled so we can manage one ourselves. the gx-metal
+	# implementation requires manually managing a pool due to how begin/endDraw and
+	# begin/endRenderPass segment the draw code, making use of @autoreleasepool not an option
+	
+	add_files gx-metal/poolhack/poolhack.mm
+	add_files gx-metal/poolhack/poolhack.h
+	
 pop_group
 
 library framework objc-arc
@@ -106,10 +116,12 @@ library framework objc-arc
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
+	with_platform macos depend_library gx-metal-poolhack
 
 	with_platform iphoneos scan_files cpp path gx-metal group gx-metal
 	with_platform iphoneos scan_files h   path gx-metal group gx-metal
 	with_platform iphoneos scan_files mm  path gx-metal group gx-metal
+	with_platform iphoneos depend_library gx-metal-poolhack
 
 	header_path . expose
 
