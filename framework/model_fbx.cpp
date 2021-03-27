@@ -2179,6 +2179,12 @@ namespace AnimModel
 		
 		fbxLogInf(logIndent, "time: %d ms", time2 - time1);
 		
+		// free objects
+		
+		for (auto i : objectsByName)
+			delete i.second;
+		objectsByName.clear();
+		
 		// create meshes
 		
 		std::vector<Mesh*> meshes2;
