@@ -37,6 +37,7 @@ struct AngleAxis;
 
 struct SceneEditor
 {
+	static const int kMainWindowWidth = 370;
 	static const int kMaxNodeDisplayNameFilter = 100;
 	static const int kMaxComponentTypeNameFilter = 100;
 	static const int kMaxParameterFilter = 100;
@@ -45,13 +46,8 @@ struct SceneEditor
 	
 	Scene scene; // todo : this should live outside the editor, but referenced
 	
-	Camera camera; // todo : this should live outside the editor, but referenced
+	Camera camera;
 	bool cameraIsActive = false;
-	
-	std::set<int> selectedNodes;
-	int hoverNodeId = -1;
-	
-	int nodeToGiveFocus = -1;
 	
 #if ENABLE_TRANSFORM_GIZMOS
 	TransformGizmo transformGizmo;
@@ -60,6 +56,13 @@ struct SceneEditor
 	FrameworkImGuiContext guiContext;
 	
 	bool showUi = true;
+	
+	struct Selection
+	{
+		std::set<int> selectedNodes;
+	} selection;
+	
+	int hoverNodeId = -1;
 	
 	struct
 	{
@@ -75,6 +78,11 @@ struct SceneEditor
 		float tickMultiplier = 1.f;
 		
 		bool drawScene = true;
+		
+		int viewportX = 0;
+		int viewportY = 0;
+		int viewportSx = -1;
+		int viewportSy = -1;
 	} preview;
 	
 	struct Deferred
@@ -95,16 +103,17 @@ struct SceneEditor
 		}
 	} deferred;
 	
-	struct
+	struct NodeUi
 	{
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
 		std::set<int> visibleNodes; // set of visible nodes, when the node structure is filtered, by for instance node name or component type
 		std::set<int> nodesToOpen_deferred; // nodes inside this set will be forcibly opened inside the node structure editor and scrolled into view
 		std::set<int> nodesToOpen_active; // deferredNodesToOpen will be moved into here when the scene is traversed. we need a copy, so we can clear the deferred set and add new nodes to it during scene traversal itself
+		int nodeToGiveFocus = -1;
 	} nodeUi;
 	
-	struct
+	struct ParameterUi
 	{
 		char component_filter[kMaxParameterFilter] = { };
 		char parameter_filter[kMaxParameterFilter] = { };
@@ -112,7 +121,7 @@ struct SceneEditor
 		bool showAnonymousComponents = false;
 	} parameterUi;
 	
-	struct
+	struct Undo
 	{
 		std::vector<std::string> versions;
 		int currentVersionIndex = -1;
@@ -122,7 +131,6 @@ struct SceneEditor
 	
 	struct ClipboardInfo
 	{
-	// todo : store if we got a node or a node tree inside the clipboard
 		std::vector<std::string> lines;
 		bool hasNode = false;
 		bool hasNodeTree = false;
@@ -132,11 +140,18 @@ struct SceneEditor
 		int component_lineIndent = -1;
 	} clipboardInfo;
 	
+	struct DocumentInfo
+	{
+		std::string path;
+	} documentInfo;
+	
 	//
 	
 	void init(TypeDB * in_typeDB);
 	void shut();
 
+	void getEditorViewport(int & x, int & y, int & sx, int & sy) const;
+	
 	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore) const;
 	
 	/**
@@ -164,7 +179,7 @@ struct SceneEditor
 	void updateClipboardInfo();
 	
 	bool pasteNodeFromLines(const int parentId, LineReader & line_reader);
-	bool pasteNodeTreeFromLines(const int parentId, LineReader & line_reader);
+	bool pasteNodeTreeFromLines(const int parentId, LineReader & line_reader, const bool keepRootNode);
 
 	enum NodeStructureContextMenuResult
 	{
@@ -193,11 +208,12 @@ struct SceneEditor
 	void markNodeOpenUntilRoot(const int in_nodeId);
 	
 // todo : this is a test method. remove from scene editor and move elsewhere
-	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId);
-// todo : this is a test method. remove from scene editor and move elsewhere
 	int addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId);
-// todo : this is a test method. remove from scene editor and move elsewhere
-	int addNodesFromScene_v1(const int parentId);
+	
+	int addNodesFromScene(const char * path, const int parentId);
+	
+	int attachScene(const char * path, const int parentId);
+	void updateAttachedScene(const int rootNodeId);
 	
 	void tickGui(const float dt, bool & inputIsCaptured);
 	void tickView(const float dt, bool & inputIsCaptured);
@@ -206,7 +222,8 @@ struct SceneEditor
 	void validateNodeStructure() const;
 	
 	void performAction_save();
-	void performAction_load();
+	void performAction_save(const char * path, const bool updateDocumentPath);
+	void performAction_load(const char * path);
 	
 	void performAction_undo();
 	void performAction_redo();
@@ -233,4 +250,6 @@ struct SceneEditor
 	void drawView() const;
 	
 	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath);
+	
+	void resetDocument();
 };

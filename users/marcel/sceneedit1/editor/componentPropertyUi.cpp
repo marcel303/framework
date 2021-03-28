@@ -1,11 +1,16 @@
 #include "componentPropertyUi.h"
 #include "componentType.h"
 #include "helpers2.h" // g_typeDB
+
 #include "imgui.h"
+#include "nfd.h"
+
+// libreflection
 #include "lineReader.h"
 #include "lineWriter.h"
-#include "nfd.h"
 #include "reflection-textio.h"
+
+// libgg
 #include "StringEx.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -33,7 +38,8 @@ namespace ImGui
 		ComponentBase * component,
 		const bool signalChanges,
 		bool & isSet,
-		ComponentBase * defaultComponent)
+		ComponentBase * defaultComponent,
+		Reflection_Callbacks * callbacks)
 	{
 		if (member.isVector) // todo : add support for vector types
 			return false;
@@ -73,7 +79,8 @@ namespace ImGui
 						member_object,
 						isSet,
 						default_member_object,
-						nullptr))
+						nullptr,
+						callbacks))
 					{
 						if (signalChanges)
 							component->propertyChanged(member_object);
@@ -88,7 +95,7 @@ namespace ImGui
 		{
 			auto & plain_type = static_cast<const PlainType&>(*member_type);
 			
-			if (Reflection_PlainTypeMember(member, plain_type, member_object, isSet, default_member_object))
+			if (Reflection_PlainTypeMember(member, plain_type, member_object, isSet, default_member_object, callbacks))
 			{
 				if (signalChanges)
 					component->propertyChanged(member_object);
@@ -140,7 +147,8 @@ namespace ImGui
 		const PlainType & plain_type,
 		void * member_object,
 		bool & isSet,
-		void * default_member_object)
+		void * default_member_object,
+		Reflection_Callbacks * callbacks)
 	{
 		bool result = false;
 		
@@ -459,8 +467,14 @@ namespace ImGui
 
 							if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 							{
-							// todo : compute relative path
-								value = filename;
+								// compute relative path
+								
+								std::string relativePath = filename;
+								
+								if (callbacks && callbacks->makePathRelative)
+									callbacks->makePathRelative(relativePath);
+							
+								value = relativePath;
 								
 								result = true;
 							}
@@ -548,7 +562,8 @@ namespace ImGui
 		const Member * in_member,
 		bool & isSet,
 		void * default_object,
-		void ** changedMemberObject)
+		void ** changedMemberObject,
+		Reflection_Callbacks * callbacks)
 	{
 		bool result = false;
 		
@@ -605,7 +620,8 @@ namespace ImGui
 											member,
 											isSet,
 											nullptr,
-											changedMemberObject);
+											changedMemberObject,
+											callbacks);
 										
 										if (ImGui::BeginPopupContextItem("Vector"))
 										{
@@ -677,7 +693,8 @@ namespace ImGui
 								member,
 								isSet,
 								default_member_object,
-								changedMemberObject);
+								changedMemberObject,
+								callbacks);
 						}
 					}
 				}
@@ -695,7 +712,7 @@ namespace ImGui
 			
 			auto & plain_type = static_cast<const PlainType&>(type);
 			
-			if (Reflection_PlainTypeMember(*in_member, plain_type, object, isSet, default_object))
+			if (Reflection_PlainTypeMember(*in_member, plain_type, object, isSet, default_object, callbacks))
 			{
 				result = true;
 				
@@ -713,7 +730,8 @@ namespace ImGui
 		void * object,
 		bool & isSet,
 		void * default_object,
-		void ** changedMemberObject)
+		void ** changedMemberObject,
+		Reflection_Callbacks * callbacks)
 	{
 		Assert(changedMemberObject == nullptr || *changedMemberObject == nullptr);
 		
@@ -724,6 +742,7 @@ namespace ImGui
 			nullptr,
 			isSet,
 			default_object,
-			changedMemberObject);
+			changedMemberObject,
+			callbacks);
 	}
 }

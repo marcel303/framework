@@ -50,7 +50,7 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		add("filename", &ModelComponent::filename)
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
 		add("rotation", &ModelComponent::rotation);
-		in("scale", &ModelComponent::scale)
+		add("scale", &ModelComponent::scale)
 			.limits(0.f, 100.f)
 			.editingCurveExponential(2.f);
 		add("colorTexcoords", &ModelComponent::colorTexcoords);

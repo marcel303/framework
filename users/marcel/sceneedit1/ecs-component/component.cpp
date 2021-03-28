@@ -1,16 +1,43 @@
 #include "component.h"
+#include <vector>
 
 // component set ids
 
-static int s_nextComponentSetId = 0; // todo : reuse component set ids when freed, to avoid infinitely growing numbers
+// note : we reuse component set ids when freed, to avoid infinitely growing numbers
+//        hence we define an array of freed component set ids, and a variable that
+//        maintains the next (unique) id
+
+static int s_nextComponentSetId = 0;
+
+static std::vector<int> s_freedComponentSetIds;
 
 int allocComponentSetId()
 {
-	return s_nextComponentSetId++;
+	int id;
+	
+	// reuse a freed component set id when possible
+	
+	if (!s_freedComponentSetIds.empty())
+	{
+		id = s_freedComponentSetIds.back();
+		s_freedComponentSetIds.pop_back();
+	}
+	else
+	{
+		// if all component set ids are in use, allocate a new one
+		
+		id = s_nextComponentSetId++;
+	}
+	
+	return id;
 }
 
 void freeComponentSetId(int & id)
 {
+	Assert(id != kComponentSetIdInvalid);
+	
+	s_freedComponentSetIds.push_back(id); // reuse the id
+	
 	id = kComponentSetIdInvalid;
 }
 

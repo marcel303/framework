@@ -9,6 +9,8 @@ struct SceneNodeComponent : Component<SceneNodeComponent>
 	Mat4x4 objectToWorld = Mat4x4(true);
 	
 	std::string name;
+	
+	std::string attachedFromScene;
 };
 
 struct SceneNodeComponentMgr : ComponentMgr<SceneNodeComponent>
@@ -25,6 +27,8 @@ struct SceneNodeComponentType : ComponentType<SceneNodeComponent>
 		: ComponentType("SceneNodeComponent")
 	{
 		add("name", &SceneNodeComponent::name);
+		
+		add("attachedFromScene", &SceneNodeComponent::attachedFromScene);
 	}
 };
 

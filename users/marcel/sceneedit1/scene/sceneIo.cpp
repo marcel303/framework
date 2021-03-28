@@ -152,6 +152,10 @@ bool parseSceneFromLines(
 		}
 		else if (match_text(word, "entity"))
 		{
+			// note : entities are basically the same as templates, with the difference
+			//        being that when we encounter an entity, we will instantiate it,
+			//        rather than adding it to the collection of known templates
+			
 			const char * name;
 			
 			if (!eat_word_v2(line, name))
@@ -175,7 +179,24 @@ bool parseSceneFromLines(
 			}
 			line_reader.pop_indent();
 			
-			// recursively apply overlays
+			// check if an entity with the same name exists already
+			
+			if (entities.count(name) != 0)
+			{
+				LOG_ERR("entity with name '%s' already exists", name);
+				return false;
+			}
+			
+			// add the entity to the map
+			
+			entities.insert({ name, t });
+		}
+		else if (match_text(word, "scene"))
+		{
+			// recursively apply overlays for entities
+			
+			// note : we defer applying overlays until we encounter the 'scene' section,
+			//        as entities may depend on templates defined after their own definition
 			
 			struct FetchContext
 			{
@@ -218,33 +239,26 @@ bool parseSceneFromLines(
 			context.basePath = basePath;
 			context.templates = &templates;
 			
-			if (!recursivelyOverlayBaseTemplates(
-				t,
-				true,
-				true,
-				fetchTemplate,
-				&context))
+			for (auto & entity_itr : entities)
 			{
-				LOG_ERR("failed to parse template (entity)");
-				return false;
+				auto & t = entity_itr.second;
+				
+				if (!recursivelyOverlayBaseTemplates(
+					t,
+					true,
+					true,
+					fetchTemplate,
+					&context))
+				{
+					LOG_ERR("failed to parse template (entity)");
+					return false;
+				}
+				
+				//dumpTemplateToLog(t);
 			}
 			
-			//dumpTemplateToLog(t);
+			// load/instantiate the scene objects
 			
-			// check if an entity with the same name exists already
-			
-			if (entities.count(name) != 0)
-			{
-				LOG_ERR("entity with name '%s' already exists", name);
-				return false;
-			}
-			
-			// add the entity to the map
-			
-			entities.insert({ name, t });
-		}
-		else if (match_text(word, "scene"))
-		{
 			line_reader.push_indent();
 			{
 				if (!parseSceneObjectFromLines(

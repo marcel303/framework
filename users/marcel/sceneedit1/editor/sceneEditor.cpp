@@ -28,6 +28,9 @@
 #include "framework.h"
 #include "framework-camera.h"
 
+// libnfd
+#include "nfd.h"
+
 // libreflection-textio
 #include "lineReader.h"
 #include "lineWriter.h"
@@ -49,7 +52,13 @@
 
 //
 
-// todo : remove. need a may generic way to ask for a node's bounding box
+#if defined(DEBUG)
+	#define DEBUG_UNDO 0
+#else
+	#define DEBUG_UNDO 0 // do not alter
+#endif
+
+// todo : remove. need a generic way to ask for a node's bounding box
 
 #include "components/gltfComponent.h"
 #include "components/modelComponent.h"
@@ -107,6 +116,19 @@ void SceneEditor::shut()
 	scene.freeAllNodesAndComponents();
 	
 	guiContext.shut();
+}
+
+void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
+{
+	x = preview.viewportX;
+	y = preview.viewportY;
+	
+	int viewportSx;
+	int viewportSy;
+	framework.getCurrentViewportSize(viewportSx, viewportSy);
+	
+	sx = preview.viewportSx == -1 ? viewportSx : preview.viewportSx;
+	sy = preview.viewportSy == -1 ? viewportSy : preview.viewportSy;
 }
 
 SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore) const
@@ -210,7 +232,7 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 		if (nodeId == scene.rootNodeId)
 			scene.rootNodeId = -1;
 		
-		selectedNodes.erase(nodeId);
+		selection.selectedNodes.erase(nodeId);
 		
 		deferred.nodesToRemove.erase(nodeId);
 		deferred.nodesToSelect.erase(nodeId);
@@ -263,13 +285,14 @@ void SceneEditor::selectNodesToSelect(const bool append)
 	{
 		if (append == false)
 		{
-			selectedNodes.clear();
+			selection = Selection();
+			selection.selectedNodes.clear();
 		}
 		
 		for (auto nodeId : deferred.nodesToSelect)
 		{
-			selectedNodes.insert(nodeId);
-			nodeToGiveFocus = nodeId;
+			selection.selectedNodes.insert(nodeId);
+			nodeUi.nodeToGiveFocus = nodeId;
 			
 			auto & node = scene.getNode(nodeId);
 			markNodeOpenUntilRoot(node.parentId);
@@ -418,13 +441,23 @@ void SceneEditor::editNode(const int nodeId)
 						bool isSet = true;
 						void * changedMemberObject = nullptr;
 						
+						ImGui::Reflection_Callbacks callbacks;
+						callbacks.makePathRelative = [this](std::string & path)
+							{
+								if (!documentInfo.path.empty())
+								{
+									path = Path::MakeRelative(Path::GetDirectory(documentInfo.path), path);
+								}
+							};
+						
 						if (ImGui::Reflection_StructuredType(
 							*typeDB,
 							*componentType,
 							component,
 							isSet,
 							nullptr,
-							&changedMemberObject))
+							&changedMemberObject,
+							&callbacks))
 						{
 							// signal the component one of its properties has changed
 							component->propertyChanged(changedMemberObject);
@@ -522,6 +555,14 @@ void SceneEditor::updateClipboardInfo()
 			}
 			line_reader.pop_indent();
 		}
+		else if (strcmp(id, "sceneNode") == 0)
+		{
+			clipboardInfo.hasNode = true;
+		}
+		else if (strcmp(id, "sceneNodeTree") == 0)
+		{
+			clipboardInfo.hasNodeTree = true;
+		}
 	}
 }
 
@@ -572,25 +613,25 @@ bool SceneEditor::pasteNodeFromLines(const int parentId, LineReader & line_reade
 	}
 }
 
-bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_reader)
+bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_reader, const bool keepRootNode)
 {
-	Scene tempScene;
-	tempScene.nodeIdAllocator = &scene;
+	Scene childScene;
+	childScene.nodeIdAllocator = &scene;
 	
 	// create root node, assign its parent id, and make sure it has a transform component
-	tempScene.createRootNode();
-	auto & rootNode = tempScene.getRootNode();
+	childScene.createRootNode();
+	auto & rootNode = childScene.getRootNode();
 	rootNode.parentId = parentId;
 	
-	if (!pasteSceneNodeTreeFromLines(*typeDB, line_reader, tempScene))
+	if (!pasteSceneNodeTreeFromLines(*typeDB, line_reader, childScene))
 	{
-		tempScene.freeAllNodesAndComponents();
+		childScene.freeAllNodesAndComponents();
 		return false;
 	}
 	
 	bool init_ok = true;
 
-	for (auto node_itr : tempScene.nodes)
+	for (auto node_itr : childScene.nodes)
 	{
 		auto & node = *node_itr.second;
 		
@@ -607,28 +648,44 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 
 	if (init_ok == false)
 	{
-		tempScene.freeAllNodesAndComponents();
+		childScene.freeAllNodesAndComponents();
 		return false;
 	}
 	else
 	{
 		deferredBegin();
 		{
-		// todo : let deferredEnd traverse child nodes and add them ?
-			for (auto node_itr : tempScene.nodes)
+			for (auto node_itr : childScene.nodes)
 			{
 				auto * node = node_itr.second;
 				
-				if (node->id == rootNode.id)
+				if (keepRootNode == false)
 				{
-					node->freeComponents();
-					continue;
+					// re-parent the node if it is the root node
+					
+					if (node->id == rootNode.id)
+					{
+						node->parentId = parentId;
+						deferred.nodesToSelect.insert(node->id);
+					}
 				}
-				
-				if (node->parentId == rootNode.id)
+				else
 				{
-					node->parentId = parentId;
-					deferred.nodesToSelect.insert(node->id);
+					// skip this node if its the root node
+					
+					if (node->id == rootNode.id)
+					{
+						node->freeComponents();
+						continue;
+					}
+					
+					// re-parent the node if it was parented to the root node
+					
+					if (node->parentId == rootNode.id)
+					{
+						node->parentId = parentId;
+						deferred.nodesToSelect.insert(node->id);
+					}
 				}
 				
 				deferred.nodesToAdd.push_back(node);
@@ -636,7 +693,7 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 		}
 		deferredEnd();
 		
-		tempScene.nodes.clear();
+		childScene.nodes.clear();
 		
 		return true;
 	}
@@ -657,17 +714,6 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		sceneNodeComponent->name = name;
 	}
 	
-// todo : add the ability to attach a scene
-	if (ImGui::MenuItem("Attach from template"))
-	{
-		deferredBegin();
-		{
-			//addNodeFromTemplate_v2(Vec3(), AngleAxis(), node.id);
-			addNodesFromScene_v1(node.id);
-		}
-		deferredEnd();
-	}
-	
 	if (ImGui::MenuItem("Copy"))
 	{
 		result = kNodeStructureContextMenuResult_NodeCopy;
@@ -680,55 +726,114 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		performAction_copy(true);
 	}
 	
-	if (ImGui::MenuItem("Paste as child", nullptr, false, clipboardInfo.lines.empty() == false))
+	if (ImGui::MenuItem("Paste as child", nullptr, false, clipboardInfo.hasNode || clipboardInfo.hasNodeTree))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
-		performAction_paste(node.id);
+		for (auto nodeId : selection.selectedNodes)
+			performAction_paste(nodeId);
 	}
 	
-	if (ImGui::MenuItem("Paste as sibling", nullptr, false, clipboardInfo.lines.empty() == false && node.parentId != -1))
+	if (ImGui::MenuItem("Paste as sibling", nullptr, false, (clipboardInfo.hasNode || clipboardInfo.hasNodeTree) && node.parentId != -1))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
-		performAction_paste(node.parentId);
+		
+		for (auto nodeId : selection.selectedNodes)
+		{
+			auto & node = scene.getNode(nodeId);
+			performAction_paste(node.parentId);
+		}
 	}
 	
 	if (ImGui::MenuItem("Remove", nullptr, false, node.parentId != -1))
 	{
 		result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
 		
-		deferred.nodesToRemove.insert(node.id);
+		deferredBegin();
+		{
+			for (auto nodeId : selection.selectedNodes)
+				deferred.nodesToRemove.insert(nodeId);
+		}
+		deferredEnd();
 	}
 
 	if (ImGui::MenuItem("Add child node"))
 	{
 		result = kNodeStructureContextMenuResult_NodeAdded;
 		
-		SceneNode * childNode = new SceneNode();
-		childNode->id = scene.allocNodeId();
-		childNode->parentId = node.id;
-		
-		auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
-		sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
-		childNode->components.add(sceneNodeComponent);
-		
-		auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
-		childNode->components.add(transformComponent);
-		
-		if (childNode->initComponents() == false)
+		deferredBegin();
 		{
-			childNode->freeComponents();
-			
-			delete childNode;
-			childNode = nullptr;
-		}
-		else
-		{
-			deferredBegin();
+			for (auto nodeId : selection.selectedNodes)
 			{
-				deferred.nodesToAdd.push_back(childNode);
-				deferred.nodesToSelect.insert(childNode->id);
+				SceneNode * childNode = new SceneNode();
+				childNode->id = scene.allocNodeId();
+				childNode->parentId = nodeId;
+				
+				auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
+				sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
+				childNode->components.add(sceneNodeComponent);
+				
+				auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
+				childNode->components.add(transformComponent);
+				
+				if (childNode->initComponents() == false)
+				{
+					childNode->freeComponents();
+					
+					delete childNode;
+					childNode = nullptr;
+				}
+				else
+				{
+					deferred.nodesToAdd.push_back(childNode);
+					deferred.nodesToSelect.insert(childNode->id);
+				}
 			}
-			deferredEnd();
+		}
+		deferredEnd();
+	}
+	
+	if (ImGui::MenuItem("Import nodes from scene"))
+	{
+		nfdchar_t * path = nullptr;
+		
+		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		{
+			for (auto nodeId : selection.selectedNodes)
+				addNodesFromScene(path, nodeId);
+		}
+	
+		if (path != nullptr)
+		{
+			free(path);
+			path = nullptr;
+		}
+	}
+	
+	if (ImGui::MenuItem("Attach scene"))
+	{
+		nfdchar_t * path = nullptr;
+		
+		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		{
+			for (auto nodeId : selection.selectedNodes)
+				attachScene(path, nodeId);
+		}
+	
+		if (path != nullptr)
+		{
+			free(path);
+			path = nullptr;
+		}
+	}
+	
+	if (sceneNodeComponent->attachedFromScene.empty() == false)
+	{
+		if (ImGui::MenuItem("Update attached scene"))
+		{
+		// todo : should keep the root node in-tact? (transform)
+		// todo : even better would be if we supported overrides for node components in the sub-tree. note : this may require a full refactor, where we make the scene editor into a fancy text editor for template files, and figure out some way to keep the text and run-time scene representations in sync
+		
+			updateAttachedScene(node.id);
 		}
 	}
 	
@@ -895,7 +1000,7 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 	
 	//
 	
-	const bool isSelected = selectedNodes.count(node.id) != 0;
+	const bool isSelected = selection.selectedNodes.count(node.id) != 0;
 	const bool isLeaf = node.childNodeIds.empty();
 	const bool isRoot = node.parentId == -1;
 	
@@ -903,9 +1008,9 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 	{
 		// update scrolling
 		
-		if (nodeToGiveFocus == nodeId)
+		if (nodeUi.nodeToGiveFocus == nodeId)
 		{
-			nodeToGiveFocus = -1;
+			nodeUi.nodeToGiveFocus = -1;
 			ImGui::SetScrollHereY();
 		}
 		
@@ -926,11 +1031,14 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 		if (sceneNodeComponent != nullptr)
 			name = sceneNodeComponent->name.c_str();
 		
+		const bool isReference = sceneNodeComponent && !sceneNodeComponent->attachedFromScene.empty();
+		
 		const bool isOpen = ImGui::TreeNodeEx(&node,
 			(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
 			(ImGuiTreeNodeFlags_Selected * isSelected) |
 			(ImGuiTreeNodeFlags_Leaf * isLeaf) |
 			(ImGuiTreeNodeFlags_DefaultOpen * isRoot) |
+			(ImGuiTreeNodeFlags_Framed * isReference) | // give attached scenes a different visual appearance
 			(ImGuiTreeNodeFlags_FramePadding * 0 |
 			(ImGuiTreeNodeFlags_NavLeftJumpsBackHere * 1)), "%s", name);
 		
@@ -939,8 +1047,8 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 		if (isClicked)
 		{
 			if (!ImGui::GetIO().KeyShift)
-				selectedNodes.clear();
-			selectedNodes.insert(node.id);
+				selection = Selection();
+			selection.selectedNodes.insert(node.id);
 		}
 	
 		if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
@@ -949,7 +1057,7 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 
 			ImGui::EndPopup();
 		}
-
+		
 		if (isOpen)
 		{
 			for (auto childNodeId : node.childNodeIds)
@@ -1000,7 +1108,7 @@ void SceneEditor::updateNodeVisibility()
 		
 		// selected nodes are always visible
 		
-		for (auto nodeId : selectedNodes)
+		for (auto nodeId : selection.selectedNodes)
 		{
 			markNodeVisibleUntilRoot(nodeId);
 		}
@@ -1062,45 +1170,6 @@ void SceneEditor::markNodeOpenUntilRoot(const int in_nodeId)
 		
 		auto & node = scene.getNode(nodeId);
 		nodeId = node.parentId;
-	}
-}
-
-// todo : this is a test method. remove from scene editor and move elsewhere
-void SceneEditor::addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
-{
-	SceneNode * node = new SceneNode();
-	node->id = scene.allocNodeId();
-	node->parentId = parentId;
-	
-	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
-	sceneNodeComponent->name = String::FormatC("Node %d", node->id);
-	node->components.add(sceneNodeComponent);
-	
-	auto * modelComp = s_modelComponentMgr.createComponent(node->components.id);
-	modelComp->filename = "model.txt";
-	modelComp->scale = .01f;
-	node->components.add(modelComp);
-	
-	auto * transformComp = s_transformComponentMgr.createComponent(node->components.id);
-	transformComp->position = position;
-	node->components.add(transformComp);
-	
-	if (node->initComponents() == false)
-	{
-		node->freeComponents();
-		
-		delete node;
-		node = nullptr;
-	}
-	else
-	{
-		scene.nodes[node->id] = node;
-		
-		//
-		
-
-		auto & parentNode = scene.getNode(parentId);
-		parentNode.childNodeIds.push_back(node->id);
 	}
 }
 
@@ -1171,55 +1240,123 @@ int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angl
 	return node->id;
 }
 
-// todo : this is a test method. remove from scene editor and move elsewhere
-int SceneEditor::addNodesFromScene_v1(const int parentId)
+int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 {
-	Scene tempScene;
-	tempScene.nodeIdAllocator = &scene;
+	Scene childScene;
+	childScene.nodeIdAllocator = &scene;
 	
-	// create root node, assign its parent id, and make sure it has a transform component
-	tempScene.createRootNode();
-	auto & rootNode = tempScene.getRootNode();
+	// 1. create root node
+	
+	childScene.createRootNode();
+	auto & rootNode = childScene.getRootNode();
+	
+	// 2.1 assign its parent id
+	
 	rootNode.parentId = parentId;
+	
+	// 2.2 assign its display name
+	
+	auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode.components.id);
+	
+	sceneNodeComponent->name = Path::GetBaseName(path);
+	
+	// 3. and make sure it has a transform component
+	
 	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
 	rootNode.components.add(transformComponent);
 	
-	if (!parseSceneFromFile(*typeDB, "textfiles/scene-v1.txt", tempScene))
+	// 4. load scene from file
+	
+	if (!parseSceneFromFile(*typeDB, path, childScene))
 	{
-		tempScene.freeAllNodesAndComponents();
+		childScene.freeAllNodesAndComponents();
 		return -1;
 	}
 	
-	for (auto node_itr : tempScene.nodes)
-		node_itr.second->name.clear(); // make sure it gets assigned a new unique auto-generated name on save
+	// 5. anonymize node names. this to ensure nodes get assigned a new unique auto-generated name on save
+	
+	for (auto node_itr : childScene.nodes)
+	{
+		node_itr.second->name.clear();
+	}
+	
+	// 6. initialize the scene
 	
 	bool init_ok = true;
 	
-	for (auto node_itr : tempScene.nodes)
+	for (auto node_itr : childScene.nodes)
 		init_ok &= node_itr.second->initComponents();
 
 	if (init_ok == false)
 	{
-		tempScene.freeAllNodesAndComponents();
+		childScene.freeAllNodesAndComponents();
 		return -1;
 	}
 	else
 	{
+		auto & rootNode = childScene.getRootNode();
+		
+		// if all went well, move the nodes to the parent scene
+		
 		deferredBegin();
 		{
-			for (auto node_itr : tempScene.nodes)
+			for (auto node_itr : childScene.nodes)
 			{
 				deferred.nodesToAdd.push_back(node_itr.second);
 			}
 			
-			deferred.nodesToSelect.insert(tempScene.rootNodeId);
+			deferred.nodesToSelect.insert(childScene.rootNodeId);
 			
-			tempScene.nodes.clear();
+			childScene.nodes.clear();
 		}
 		deferredEnd();
 		
-		return tempScene.rootNodeId;
+		return childScene.rootNodeId;
 	}
+}
+
+int SceneEditor::attachScene(const char * path, const int parentId)
+{
+	// add nodes
+	
+	const int rootNodeId = addNodesFromScene(path, parentId);
+	
+	// mark sub-tree as being attached from scene
+	
+	SceneNode * rootNode = nullptr;
+	for (auto * node : deferred.nodesToAdd)
+		if (node->id == rootNodeId)
+			rootNode = node;
+	if (rootNode == nullptr)
+		rootNode = &scene.getNode(rootNodeId);
+		
+	if (rootNodeId != -1)
+	{
+		auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode->components.id);
+	
+		sceneNodeComponent->attachedFromScene = path;
+	}
+}
+
+void SceneEditor::updateAttachedScene(const int rootNodeId)
+{
+	auto & rootNode = scene.getNode(rootNodeId);
+	auto * sceneNodeComponent = rootNode.components.find<SceneNodeComponent>();
+	
+	const int parentNodeId = rootNode.parentId;
+	const std::string path = sceneNodeComponent->attachedFromScene;
+		
+	deferredBegin();
+	{
+		// remove sub-tree
+		
+		deferred.nodesToRemove.insert(rootNodeId);
+		
+		// add nodes from scene
+		
+		attachScene(path.c_str(), parentNodeId);
+	}
+	deferredEnd();
 }
 
 void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
@@ -1234,9 +1371,13 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 	{
 		if (showUi)
 		{
-			ImGui::SetNextWindowPos(ImVec2(4, 20 + 4 + 4));
-			ImGui::SetNextWindowSize(ImVec2(370, viewSy - 20 - 4 - 4));
-			if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			ImGui::SetNextWindowPos(ImVec2(0, 20));
+			ImGui::SetNextWindowSize(ImVec2(kMainWindowWidth, viewSy - 20));
+			if (ImGui::Begin("Editor", nullptr,
+				ImGuiWindowFlags_NoResize |
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoBackground |
+				ImGuiWindowFlags_NoTitleBar))
 			{
 				// visibility options
 				
@@ -1324,7 +1465,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 						{
 							deferredBegin();
-							for (auto nodeId : selectedNodes)
+							for (auto nodeId : selection.selectedNodes)
 								deferred.nodesToRemove.insert(nodeId);
 							deferredEnd();
 						}
@@ -1338,7 +1479,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 					{
 						ImGui::PushItemWidth(180.f);
-						for (auto & selectedNodeId : selectedNodes)
+						for (auto & selectedNodeId : selection.selectedNodes)
 						{
 							editNode(selectedNodeId);
 						}
@@ -1362,9 +1503,51 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 			if (ImGui::BeginMenu("File"))
 			{
 				if (ImGui::MenuItem("Load"))
-					performAction_load();
+				{
+					nfdchar_t * path = nullptr;
+					
+					if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+					{
+						performAction_load(path);
+					}
+				
+					if (path != nullptr)
+					{
+						free(path);
+						path = nullptr;
+					}
+				}
+				
+				if (ImGui::MenuItem("Reload"))
+				{
+					if (!documentInfo.path.empty())
+					{
+						const std::string path = documentInfo.path;
+						
+						performAction_load(path.c_str());
+					}
+				}
+				
 				if (ImGui::MenuItem("Save"))
+				{
 					performAction_save();
+				}
+				
+				if (ImGui::MenuItem("Save as.."))
+				{
+					nfdchar_t * path = nullptr;
+					
+					if (NFD_SaveDialog(nullptr, nullptr, &path) == NFD_OKAY)
+					{
+						performAction_save(path, true);
+					}
+				
+					if (path != nullptr)
+					{
+						free(path);
+						path = nullptr;
+					}
+				}
 				
 				ImGui::EndMenu();
 			}
@@ -1377,15 +1560,15 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					performAction_redo();
 				ImGui::Separator();
 				
-				if (ImGui::MenuItem("Copy", nullptr, false, !selectedNodes.empty()))
+				if (ImGui::MenuItem("Copy", nullptr, false, !selection.selectedNodes.empty()))
 					performAction_copy(false);
-				if (ImGui::MenuItem("Copy tree", nullptr, false, !selectedNodes.empty()))
+				if (ImGui::MenuItem("Copy tree", nullptr, false, !selection.selectedNodes.empty()))
 					performAction_copy(true);
-				if (ImGui::MenuItem("Paste", nullptr, false, clipboardInfo.lines.empty() == false))
+				if (ImGui::MenuItem("Paste", nullptr, false, clipboardInfo.hasNode || clipboardInfo.hasNodeTree))
 					performAction_paste(scene.rootNodeId);
 				ImGui::Separator();
 				
-				if (ImGui::MenuItem("Duplicate", nullptr, false, !selectedNodes.empty()))
+				if (ImGui::MenuItem("Duplicate", nullptr, false, !selection.selectedNodes.empty()))
 					performAction_duplicate();
 				
 				ImGui::EndMenu();
@@ -1431,15 +1614,8 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	if (inputIsCaptured == false && keyboard.wentDown(SDLK_s) && keyCommand())
 	{
 		inputIsCaptured = true;
+		
 		performAction_save();
-	}
-	
-// todo : remove this action. it belongs to the user of the scene editor
-	// action: load
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_l) && keyCommand())
-	{
-		inputIsCaptured = true;
-		performAction_load();
 	}
 	
 	// action: increase simulation speed
@@ -1482,7 +1658,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	// 1. transform mouse coordinates into a world space direction vector
 	
-	Vec3 pointerOrigin;
+	Vec3 pointerOrigin_world;
 	Vec3 pointerDirection_world;
 	bool hasPointer = false;
 	bool pointerIsActive = false;
@@ -1493,7 +1669,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		if (vrPointer[0].hasTransform)
 		{
 			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
-			pointerOrigin = transform.GetTranslation();
+			pointerOrigin_world = transform.GetTranslation();
 			pointerDirection_world = transform.GetAxis(2);
 			pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
 			pointerBecameActive = vrPointer[0].wentDown(VrButton_Trigger);
@@ -1502,9 +1678,11 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	}
 	else
 	{
+		int viewportX;
+		int viewportY;
 		int viewportSx;
 		int viewportSy;
-		framework.getCurrentViewportSize(viewportSx, viewportSy);
+		getEditorViewport(viewportX, viewportY, viewportSx, viewportSy);
 		
 		Mat4x4 projectionMatrix;
 		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
@@ -1518,27 +1696,27 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 				mouse.x,
 				mouse.y);
 			const Vec3 mousePosition_clip(
-				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
-				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f,
+				(mousePosition_screen[0] - viewportX) / float(viewportSx) * 2.f - 1.f,
+				(mousePosition_screen[1] - viewportY) / float(viewportSy) * 2.f - 1.f,
 				0.f);
 			Vec3 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
 			mousePosition_camera[1] = -mousePosition_camera[1];
 			
-			pointerOrigin = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
+			pointerOrigin_world = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
 			
 			pointerDirection_world = cameraToWorld.GetAxis(2);
 			pointerDirection_world = pointerDirection_world.CalcNormalized();
 		}
 		else
 		{
-			pointerOrigin = cameraToWorld.GetTranslation();
+			pointerOrigin_world = cameraToWorld.GetTranslation();
 			
 			const Vec2 mousePosition_screen(
 				mouse.x,
 				mouse.y);
 			const Vec2 mousePosition_clip(
-				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
-				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f);
+				(mousePosition_screen[0] - viewportX) / float(viewportSx) * 2.f - 1.f,
+				(mousePosition_screen[1] - viewportY) / float(viewportSy) * 2.f - 1.f);
 			Vec2 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
 			
 			pointerDirection_world = cameraToWorld.Mul3(
@@ -1557,13 +1735,13 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 #if ENABLE_TRANSFORM_GIZMOS
 	// 2. transformation gizo interaction
 	
-	if (selectedNodes.size() != 1)
+	if (selection.selectedNodes.size() != 1)
 	{
 		transformGizmo.hide();
 	}
 	else
 	{
-		auto & node = scene.getNode(*selectedNodes.begin());
+		auto & node = scene.getNode(*selection.selectedNodes.begin());
 		
 		// determine the current global transform
 		
@@ -1581,7 +1759,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		
 		if (hasPointer &&
 			transformGizmo.tick(
-				pointerOrigin,
+				pointerOrigin_world,
 				pointerDirection_world,
 				pointerIsActive,
 				pointerBecameActive,
@@ -1650,7 +1828,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	const SceneNode * hoverNode =
 		inputIsCaptured == false && hasPointer
-		? raycast(pointerOrigin, pointerDirection_world, selectedNodes)
+		? raycast(pointerOrigin_world, pointerDirection_world, selection.selectedNodes)
 		: nullptr;
 	
 	hoverNodeId = hoverNode ? hoverNode->id : -1;
@@ -1680,17 +1858,17 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		
 			if (pointerDirection_world[1] != 0.f)
 			{
-				const float t = -pointerOrigin[1] / pointerDirection_world[1];
+				const float t = -pointerOrigin_world[1] / pointerDirection_world[1];
 				
 				if (t >= 0.f)
 				{
-					const Vec3 groundPosition = pointerOrigin + pointerDirection_world * t;
+					const Vec3 groundPosition = pointerOrigin_world + pointerDirection_world * t;
 					
 					if (keyboard.isDown(SDLK_c))
 					{
 						deferredBegin();
 						{
-							for (auto & parentNodeId : selectedNodes)
+							for (auto & parentNodeId : selection.selectedNodes)
 							{
 								auto & parentNode = scene.getNode(parentNodeId);
 								
@@ -1721,13 +1899,13 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		else
 		{
 			if (!modShift())
-				selectedNodes.clear();
+				selection = Selection();
 			
 			if (hoverNode != nullptr)
 			{
-				selectedNodes.insert(hoverNode->id);
+				selection.selectedNodes.insert(hoverNode->id);
 				markNodeOpenUntilRoot(hoverNode->id);
-				nodeToGiveFocus = hoverNode->id;
+				nodeUi.nodeToGiveFocus = hoverNode->id;
 			}
 		}
 	}
@@ -1739,7 +1917,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		
 		deferredBegin();
 		{
-			for (auto nodeId : selectedNodes)
+			for (auto nodeId : selection.selectedNodes)
 			{
 				if (nodeId == scene.rootNodeId)
 					continue;
@@ -1769,10 +1947,10 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 
 void SceneEditor::validateNodeReferences() const
 {
-	for (auto & selectedNodeId : selectedNodes)
+	for (auto & selectedNodeId : selection.selectedNodes)
 		Assert(scene.nodes.count(selectedNodeId) != 0);
 	Assert(hoverNodeId == -1 || scene.nodes.count(hoverNodeId) != 0);
-	Assert(nodeToGiveFocus == -1 || scene.nodes.count(nodeToGiveFocus) != 0);
+	Assert(nodeUi.nodeToGiveFocus == -1 || scene.nodes.count(nodeUi.nodeToGiveFocus) != 0);
 	Assert(deferred.isFlushed());
 }
 
@@ -1805,6 +1983,29 @@ void SceneEditor::validateNodeStructure() const
 
 void SceneEditor::performAction_save()
 {
+	if (documentInfo.path.empty())
+	{
+		nfdchar_t * path = nullptr;
+					
+		if (NFD_SaveDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		{
+			performAction_save(path, true);
+		}
+
+		if (path != nullptr)
+		{
+			free(path);
+			path = nullptr;
+		}
+	}
+	else
+	{
+		performAction_save(documentInfo.path.c_str(), false);
+	}
+}
+
+void SceneEditor::performAction_save(const char * path, const bool updateDocumentPath)
+{
 #if ENABLE_SAVE_LOAD_TIMING
 	auto t1 = g_TimerRT.TimeUS_get();
 #endif
@@ -1818,17 +2019,94 @@ void SceneEditor::performAction_save()
 	else
 	{
 		auto lines = line_writer.to_lines();
-
-		const char * path = "testScene.txt";
-		const std::string basePath = Path::GetDirectory(path);
 		
 		if (TextIO::save(path, lines, TextIO::kLineEndings_Unix) == false)
 			logError("failed to save lines to file");
 		else
 		{
 		#if ENABLE_LOAD_AFTER_SAVE_TEST
+			const std::string basePath = Path::GetDirectory(path);
+			
 			loadSceneFromLines_nonDestructive(lines, basePath.c_str());
 		#endif
+		
+			if (updateDocumentPath)
+			{
+				// when we change document paths, all relative paths should be updated to reflect the new 'base path' (path where the scene is saved)
+				
+				// we will also convert all absolute paths into relative paths, as the scene may already be edited and contain some absolute paths as a result, as the document path wasn't known at the time of making these edits
+				
+				// convert all paths into absolute paths
+				
+				std::vector<std::string*> filePaths;
+				
+				for (auto & node_itr : scene.nodes)
+				{
+					auto * node = node_itr.second;
+					
+					for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
+					{
+						auto * componentType = findComponentType(component->typeIndex());
+						
+						for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+						{
+							const bool isFilePath = member->hasFlag<ComponentMemberFlag_EditorType_FilePath>();
+							
+							if (isFilePath)
+							{
+								// todo : add vector support
+								if (member->isVector == false)
+								{
+									auto * member_scalar = static_cast<const Member_Scalar*>(member);
+									
+									auto * member_type = typeDB->findType(member_scalar->typeIndex);
+									auto * member_object = member_scalar->scalar_access(component);
+									
+									Assert(member_type->isStructured == false);
+									if (member_type->isStructured == false)
+									{
+										auto * plain_type = static_cast<const PlainType*>(member_type);
+										
+										if (plain_type->dataType == kDataType_String)
+										{
+											std::string * filePath = &plain_type->access<std::string>(member_object);
+											
+											filePaths.push_back(filePath);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				auto isAbsolutePath = [](const char * path)
+				{
+					return
+						path[0] == '/' ||
+						strchr(path, ':') != nullptr;
+				};
+				
+				if (!documentInfo.path.empty())
+					for (auto * filePath : filePaths)
+						if (!filePath->empty())
+							if (!isAbsolutePath(filePath->c_str())) // don't attempt to make absolute paths absolute
+								*filePath = Path::MakeAbsolute(documentInfo.path, *filePath);
+				
+				// remember path as current path
+								
+				documentInfo.path = path;
+				
+				// convert all paths into relative paths, given the new document path
+				
+				if (!documentInfo.path.empty())
+				{
+					const auto basePath = Path::GetDirectory(documentInfo.path);
+					for (auto * filePath : filePaths)
+						if (!filePath->empty())
+							*filePath = Path::MakeRelative(basePath, *filePath);
+				}
+			}
 		}
 	}
 	
@@ -1838,18 +2116,16 @@ void SceneEditor::performAction_save()
 #endif
 }
 
-void SceneEditor::performAction_load()
+void SceneEditor::performAction_load(const char * path)
 {
 #if ENABLE_SAVE_LOAD_TIMING
 	auto t1 = g_TimerRT.TimeUS_get();
 #endif
 
+	resetDocument();
+	
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
-
-// todo : store path somewhere
-	const char * path = "testScene.txt";
-	const std::string basePath = Path::GetDirectory(path);
 	
 	if (!TextIO::load(path, lines, lineEndings))
 	{
@@ -1857,7 +2133,14 @@ void SceneEditor::performAction_load()
 	}
 	else
 	{
-		loadSceneFromLines_nonDestructive(lines, basePath.c_str());
+		const std::string basePath = Path::GetDirectory(path);
+		
+		if (loadSceneFromLines_nonDestructive(lines, basePath.c_str()))
+		{
+			// remember path as current path
+							
+			documentInfo.path = path;
+		}
 	}
 
 #if ENABLE_SAVE_LOAD_TIMING
@@ -1871,7 +2154,7 @@ static void backupSelectedNodes(SceneEditor & sceneEditor)
 {
 	Assert(s_capturedSelectedNodes.empty());
 	sceneEditor.scene.assignAutoGeneratedNodeNames();
-	for (auto nodeId : sceneEditor.selectedNodes)
+	for (auto nodeId : sceneEditor.selection.selectedNodes)
 	{
 		auto & node = sceneEditor.scene.getNode(nodeId);
 		s_capturedSelectedNodes.insert(node.name);
@@ -1886,7 +2169,7 @@ static void restoreSelectedNodes(SceneEditor & sceneEditor)
 	{
 		auto i = nodeNameToNodeId.find(nodeName);
 		Assert(i != nodeNameToNodeId.end());
-		sceneEditor.selectedNodes.insert(i->second);
+		sceneEditor.selection.selectedNodes.insert(i->second);
 	}
 	s_capturedSelectedNodes.clear();
 }
@@ -2011,7 +2294,8 @@ void SceneEditor::performAction_redo()
 					undo.currentVersion = text;
 					undo.currentVersionIndex++;
 					
-				#if false // todo : remove. this is an A-B test to see if the results of a save-load-save are equal
+				#if DEBUG_UNDO
+					// this is an A-B test to see if the results of a save-load-save are equal
 					std::string temp;
 					undoCapture(temp);
 					{
@@ -2046,7 +2330,7 @@ void SceneEditor::performAction_copy(const bool deep)
 
 void SceneEditor::performAction_copySceneNodes()
 {
-	if (selectedNodes.empty() == false)
+	if (selection.selectedNodes.empty() == false)
 	{
 		bool result = true;
 		
@@ -2054,7 +2338,7 @@ void SceneEditor::performAction_copySceneNodes()
 		
 		int indent = 0;
 		
-		for (auto nodeId : selectedNodes)
+		for (auto nodeId : selection.selectedNodes)
 		{
 			line_writer.append_indented_line(indent, "sceneNode");
 			
@@ -2078,7 +2362,7 @@ void SceneEditor::performAction_copySceneNodes()
 
 void SceneEditor::performAction_copySceneNodeTrees()
 {
-	if (selectedNodes.empty() == false)
+	if (selection.selectedNodes.empty() == false)
 	{
 		bool result = true;
 		
@@ -2086,7 +2370,7 @@ void SceneEditor::performAction_copySceneNodeTrees()
 		
 		int indent = 0;
 		
-		for (auto nodeId : selectedNodes)
+		for (auto nodeId : selection.selectedNodes)
 		{
 			line_writer.append_indented_line(indent, "sceneNodeTree");
 			
@@ -2151,7 +2435,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							result &= pasteNodeTreeFromLines(parentNodeId, line_reader);
+							result &= pasteNodeTreeFromLines(parentNodeId, line_reader, false);
 						}
 						line_reader.pop_indent();
 					}
@@ -2177,11 +2461,11 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 
 void SceneEditor::performAction_duplicate()
 {
-	if (selectedNodes.empty() == false)
+	if (selection.selectedNodes.empty() == false)
 	{
 		deferredBegin();
 		{
-			for (auto nodeId : selectedNodes)
+			for (auto nodeId : selection.selectedNodes)
 			{
 				auto & node = scene.getNode(nodeId);
 				
@@ -2191,7 +2475,7 @@ void SceneEditor::performAction_duplicate()
 				{
 					auto lines = line_writer.to_lines();
 					LineReader line_reader(lines, 0, 0);
-					pasteNodeTreeFromLines(node.parentId, line_reader);
+					pasteNodeTreeFromLines(node.parentId, line_reader, false);
 				}
 			#else
 				LineWriter line_writer;
@@ -2211,7 +2495,7 @@ void SceneEditor::performAction_duplicate()
 void SceneEditor::drawNode(const SceneNode & node) const
 {
 	const bool isHovered = node.id == hoverNodeId;
-	const bool isSelected = selectedNodes.count(node.id) != 0;
+	const bool isSelected = selection.selectedNodes.count(node.id) != 0;
 	
 	if (isHovered)
 	{
@@ -2315,6 +2599,8 @@ void SceneEditor::drawEditorTranslucent() const
 		{
 			gxScalef(100, 100, 100);
 			
+			setAlpha(255);
+			
 			setLumi(200);
 			drawGrid3dLine(100, 100, 0, 2, true);
 			
@@ -2351,19 +2637,24 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 
 void SceneEditor::drawEditorSelectedNodeLabels() const
 {
-	int viewportSx = 0;
-	int viewportSy = 0;
-	framework.getCurrentViewportSize(viewportSx, viewportSy);
+	int viewportX;
+	int viewportY;
+	int viewportSx;
+	int viewportSy;
+	getEditorViewport(viewportX, viewportY, viewportSx, viewportSy);
 	
 	Mat4x4 projectionMatrix;
 	camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+	projectionMatrix = Mat4x4(true)
+		.Translate(viewportX, viewportY, 0)
+		.Mul(projectionMatrix);
 
 	Mat4x4 viewMatrix;
 	camera.calculateViewMatrix(viewMatrix);
 	
 	const Mat4x4 modelViewProjection = projectionMatrix * viewMatrix;
 	
-	for (auto nodeId : selectedNodes)
+	for (auto nodeId : selection.selectedNodes)
 	{
 		auto & node = scene.getNode(nodeId);
 		
@@ -2466,4 +2757,19 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 			return true;
 		}
 	}
+}
+
+void SceneEditor::resetDocument()
+{
+	selection = Selection();
+	
+	deferred = Deferred();
+	
+	nodeUi = NodeUi();
+	
+	parameterUi = ParameterUi();
+	
+	undo = Undo();
+	
+	documentInfo = DocumentInfo();
 }
