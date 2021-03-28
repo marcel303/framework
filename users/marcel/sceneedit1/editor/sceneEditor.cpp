@@ -58,6 +58,8 @@
 	#define DEBUG_UNDO 0 // do not alter
 #endif
 
+#define ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE 1
+
 // todo : remove. need a generic way to ask for a node's bounding box
 
 #include "components/gltfComponent.h"
@@ -714,6 +716,8 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		sceneNodeComponent->name = name;
 	}
 	
+// todo : for actions that change the scene structure : defer changes until after showing the node UI. this ensure node ids remain valid during scene traversal, and removes the need for deferred adding and removing of nodes, which will simplify various other code paths a great deal
+
 	if (ImGui::MenuItem("Copy"))
 	{
 		result = kNodeStructureContextMenuResult_NodeCopy;
@@ -826,14 +830,24 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		}
 	}
 	
-	if (sceneNodeComponent->attachedFromScene.empty() == false)
+	if (ImGui::MenuItem("Update attached scene", nullptr, false, sceneNodeComponent->attachedFromScene.empty() == false))
 	{
-		if (ImGui::MenuItem("Update attached scene"))
+		updateAttachedScene(node.id);
+	}
+	
+	if (ImGui::MenuItem("Focus camera"))
+	{
+		switch (camera.mode)
 		{
-		// todo : should keep the root node in-tact? (transform)
-		// todo : even better would be if we supported overrides for node components in the sub-tree. note : this may require a full refactor, where we make the scene editor into a fancy text editor for template files, and figure out some way to keep the text and run-time scene representations in sync
-		
-			updateAttachedScene(node.id);
+		case Camera::kMode_Orbit:
+			camera.orbit.origin = sceneNodeComponent->objectToWorld.GetTranslation();
+			break;
+		case Camera::kMode_Ortho:
+			camera.ortho.position = sceneNodeComponent->objectToWorld.GetTranslation();
+			break;
+		case Camera::kMode_FirstPerson:
+			// todo : make lookat matrix and convert
+			break;
 		}
 	}
 	
@@ -891,7 +905,10 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 	
 	if (ImGui::MenuItem("Paste as new component", nullptr, false, clipboardInfo.hasComponent && !hasComponentOfType))
 	{
-		LineReader line_reader(clipboardInfo.lines, clipboardInfo.component_lineIndex, clipboardInfo.component_lineIndent);
+		LineReader line_reader(
+			clipboardInfo.lines,
+			clipboardInfo.component_lineIndex,
+			clipboardInfo.component_lineIndent);
 		
 		auto * componentType = findComponentType(clipboardInfo.componentTypeName.c_str());
 		
@@ -912,7 +929,10 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 	
 	if (ImGui::MenuItem("Paste component values", nullptr, false, clipboardInfo.hasComponent && hasComponentOfType))
 	{
-		LineReader line_reader(clipboardInfo.lines, clipboardInfo.component_lineIndex, clipboardInfo.component_lineIndent);
+		LineReader line_reader(
+			clipboardInfo.lines,
+			clipboardInfo.component_lineIndex,
+			clipboardInfo.component_lineIndent);
 		
 		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 		{
@@ -1042,7 +1062,7 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 			(ImGuiTreeNodeFlags_FramePadding * 0 |
 			(ImGuiTreeNodeFlags_NavLeftJumpsBackHere * 1)), "%s", name);
 		
-		const bool isClicked = ImGui::IsItemClicked();
+		const bool isClicked = ImGui::IsItemClicked(0) || ImGui::IsItemClicked(1);
 		
 		if (isClicked)
 		{
@@ -1336,16 +1356,36 @@ int SceneEditor::attachScene(const char * path, const int parentId)
 	
 		sceneNodeComponent->attachedFromScene = path;
 	}
+	
+	return rootNodeId;
 }
 
-void SceneEditor::updateAttachedScene(const int rootNodeId)
+int SceneEditor::updateAttachedScene(const int rootNodeId)
 {
 	auto & rootNode = scene.getNode(rootNodeId);
 	auto * sceneNodeComponent = rootNode.components.find<SceneNodeComponent>();
 	
+#if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
+	// todo : should keep the root node in-tact? (transform)
+	// todo : even better would be if we supported overrides for node components in the sub-tree. note : this may require a full refactor, where we make the scene editor into a fancy text editor for template files, and figure out some way to keep the text and run-time scene representations in sync
+	
+	LineWriter line_writer;
+	auto * oldTransformComponent = rootNode.components.find<TransformComponent>();
+	if (oldTransformComponent != nullptr)
+	{
+		writeComponentToLines(
+			*typeDB,
+			*oldTransformComponent,
+			line_writer,
+			0);
+	}
+#endif
+
 	const int parentNodeId = rootNode.parentId;
 	const std::string path = sceneNodeComponent->attachedFromScene;
-		
+	
+	int newRootNodeId = -1;
+
 	deferredBegin();
 	{
 		// remove sub-tree
@@ -1354,9 +1394,32 @@ void SceneEditor::updateAttachedScene(const int rootNodeId)
 		
 		// add nodes from scene
 		
-		attachScene(path.c_str(), parentNodeId);
+		newRootNodeId = attachScene(path.c_str(), parentNodeId);
 	}
 	deferredEnd();
+	
+#if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
+	if (newRootNodeId != -1)
+	{
+		SceneNode * newRootNode = nullptr;
+		for (auto * node : deferred.nodesToAdd)
+			if (node->id == newRootNodeId)
+				newRootNode = node;
+		
+		auto * newTransformComponent = newRootNode->components.find<TransformComponent>();
+		if (newTransformComponent != nullptr)
+		{
+			auto lines = line_writer.to_lines();
+			LineReader line_reader(lines, 1, 1);
+			parseComponentFromLines(
+				*typeDB,
+				line_reader,
+				*newTransformComponent);
+		}
+	}
+#endif
+
+	return newRootNodeId;
 }
 
 void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
@@ -2032,80 +2095,17 @@ void SceneEditor::performAction_save(const char * path, const bool updateDocumen
 		
 			if (updateDocumentPath)
 			{
-				// when we change document paths, all relative paths should be updated to reflect the new 'base path' (path where the scene is saved)
+				// update file paths so they become relative to the new document path
 				
-				// we will also convert all absolute paths into relative paths, as the scene may already be edited and contain some absolute paths as a result, as the document path wasn't known at the time of making these edits
-				
-				// convert all paths into absolute paths
-				
-				std::vector<std::string*> filePaths;
-				
-				for (auto & node_itr : scene.nodes)
-				{
-					auto * node = node_itr.second;
-					
-					for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
-					{
-						auto * componentType = findComponentType(component->typeIndex());
-						
-						for (auto * member = componentType->members_head; member != nullptr; member = member->next)
-						{
-							const bool isFilePath = member->hasFlag<ComponentMemberFlag_EditorType_FilePath>();
-							
-							if (isFilePath)
-							{
-								// todo : add vector support
-								if (member->isVector == false)
-								{
-									auto * member_scalar = static_cast<const Member_Scalar*>(member);
-									
-									auto * member_type = typeDB->findType(member_scalar->typeIndex);
-									auto * member_object = member_scalar->scalar_access(component);
-									
-									Assert(member_type->isStructured == false);
-									if (member_type->isStructured == false)
-									{
-										auto * plain_type = static_cast<const PlainType*>(member_type);
-										
-										if (plain_type->dataType == kDataType_String)
-										{
-											std::string * filePath = &plain_type->access<std::string>(member_object);
-											
-											filePaths.push_back(filePath);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				
-				auto isAbsolutePath = [](const char * path)
-				{
-					return
-						path[0] == '/' ||
-						strchr(path, ':') != nullptr;
-				};
-				
-				if (!documentInfo.path.empty())
-					for (auto * filePath : filePaths)
-						if (!filePath->empty())
-							if (!isAbsolutePath(filePath->c_str())) // don't attempt to make absolute paths absolute
-								*filePath = Path::MakeAbsolute(documentInfo.path, *filePath);
+				updateFilePaths(
+					scene,
+					typeDB,
+					Path::GetDirectory(documentInfo.path).c_str(),
+					Path::GetDirectory(path).c_str());
 				
 				// remember path as current path
 								
 				documentInfo.path = path;
-				
-				// convert all paths into relative paths, given the new document path
-				
-				if (!documentInfo.path.empty())
-				{
-					const auto basePath = Path::GetDirectory(documentInfo.path);
-					for (auto * filePath : filePaths)
-						if (!filePath->empty())
-							*filePath = Path::MakeRelative(basePath, *filePath);
-				}
 			}
 		}
 	}
@@ -2772,4 +2772,118 @@ void SceneEditor::resetDocument()
 	undo = Undo();
 	
 	documentInfo = DocumentInfo();
+}
+
+void SceneEditor::updateFilePaths(Scene & scene, TypeDB * typeDB, const char * oldBasePath, const char * newBasePath)
+{
+	// when we change document paths, all relative paths should be updated to reflect the new 'base path' (the path where the scene is saved)
+	
+	// we will also convert all absolute paths into relative paths, as the scene may already be edited and contain some absolute paths when the document path wasn't known at the time of making these edits
+	
+	// fetch all file paths inside the scene
+	
+	std::vector<std::string*> filePaths;
+	
+	for (auto & node_itr : scene.nodes)
+	{
+		auto * node = node_itr.second;
+		
+		for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
+		{
+			auto * componentType = findComponentType(component->typeIndex());
+			
+			for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+			{
+				const bool isFilePath = member->hasFlag<ComponentMemberFlag_EditorType_FilePath>();
+				
+				if (isFilePath == false)
+					continue;
+					
+				if (member->isVector)
+				{
+					auto * member_vector = static_cast<const Member_VectorInterface*>(member);
+					
+					auto * vector_type = typeDB->findType(member_vector->vector_type());
+					
+					Assert(vector_type->isStructured == false); // the FilePath flag shouldn't be set on structured types
+					if (vector_type->isStructured == false)
+					{
+						auto * plain_type = static_cast<const PlainType*>(vector_type);
+						
+						for (int i = 0; i < member_vector->vector_size(component); ++i)
+						{
+							auto * vector_object = member_vector->vector_access(component, i);
+							
+							if (plain_type->dataType == kDataType_String)
+							{
+								std::string * filePath = &plain_type->access<std::string>(vector_object);
+								
+								filePaths.push_back(filePath);
+							}
+						}
+					}
+				}
+				else
+				{
+					auto * member_scalar = static_cast<const Member_Scalar*>(member);
+					
+					auto * member_type = typeDB->findType(member_scalar->typeIndex);
+					auto * member_object = member_scalar->scalar_access(component);
+					
+					Assert(member_type->isStructured == false); // the FilePath flag shouldn't be set on structured types
+					if (member_type->isStructured == false)
+					{
+						auto * plain_type = static_cast<const PlainType*>(member_type);
+						
+						if (plain_type->dataType == kDataType_String)
+						{
+							std::string * filePath = &plain_type->access<std::string>(member_object);
+							
+							filePaths.push_back(filePath);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// convert all paths into absolute paths
+	
+	auto isAbsolutePath = [](const char * path)
+	{
+		return
+			path[0] == '/' ||
+			strchr(path, ':') != nullptr;
+	};
+	
+	if (oldBasePath[0] != 0)
+	{
+		for (auto * filePath : filePaths)
+		{
+			// don't attempt to change empty paths
+			if (filePath->empty())
+				continue;
+				
+			// don't attempt to make absolute paths absolute
+			if (isAbsolutePath(filePath->c_str()))
+				continue;
+			
+			// make the path absolute
+			*filePath = Path::MakeAbsolute(oldBasePath, *filePath);
+		}
+	}
+				
+	// convert all paths into relative paths, given the new document path
+	
+	if (newBasePath[0] != 0)
+	{
+		for (auto * filePath : filePaths)
+		{
+			// don't attempt to change empty paths
+			if (filePath->empty())
+				continue;
+				
+			*filePath = Path::MakeRelative(newBasePath, *filePath);
+		}
+	}
 }

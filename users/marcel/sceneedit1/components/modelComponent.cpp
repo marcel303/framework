@@ -2,9 +2,17 @@
 #include "modelComponent.h"
 #include "sceneNodeComponent.h"
 
+ModelComponent::~ModelComponent()
+{
+	delete model;
+	model = nullptr;
+}
+
 bool ModelComponent::init()
 {
-	hasModelAabb = Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
+	model = new Model(filename.c_str());
+	
+	hasModelAabb = model->calculateAABB(modelAabbMin, modelAabbMax, true);
 	
 	if (hasModelAabb)
 	{
@@ -25,7 +33,10 @@ void ModelComponent::propertyChanged(void * address)
 {
 	if (address == &filename)
 	{
-		hasModelAabb = Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
+		delete model;
+		model = new Model(filename.c_str());
+		
+		hasModelAabb = model->calculateAABB(modelAabbMin, modelAabbMax, true);
 	}
 	
 	if (address == &filename || address == &scale || address == &centimetersToMeters)
@@ -57,7 +68,7 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
 		
 		setColor(colorWhite);
-		Model(filename.c_str()).drawEx(Vec3(), rotation.axis, rotation.angle * float(M_PI) / 180.f, finalScale, drawFlags);
+		model->drawEx(Vec3(), rotation.axis, rotation.angle * float(M_PI) / 180.f, finalScale, drawFlags);
 	}
 	gxPopMatrix();
 }

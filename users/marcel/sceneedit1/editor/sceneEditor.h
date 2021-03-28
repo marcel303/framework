@@ -213,7 +213,7 @@ struct SceneEditor
 	int addNodesFromScene(const char * path, const int parentId);
 	
 	int attachScene(const char * path, const int parentId);
-	void updateAttachedScene(const int rootNodeId);
+	int updateAttachedScene(const int rootNodeId);
 	
 	void tickGui(const float dt, bool & inputIsCaptured);
 	void tickView(const float dt, bool & inputIsCaptured);
@@ -252,4 +252,6 @@ struct SceneEditor
 	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath);
 	
 	void resetDocument();
+	
+	static void updateFilePaths(Scene & scene, TypeDB * typeDB, const char * oldBasePath, const char * newBasePath);
 };
