@@ -103,6 +103,20 @@ struct SceneEditor
 		}
 	} deferred;
 	
+	enum NodeStructureEditingAction
+	{
+		kNodeStructureEditingAction_None,
+		kNodeStructureEditingAction_NodeCopy,
+		kNodeStructureEditingAction_NodeCopyTree,
+		kNodeStructureEditingAction_NodePasteChild,
+		kNodeStructureEditingAction_NodePasteSibling,
+		kNodeStructureEditingAction_NodeRemove,
+		kNodeStructureEditingAction_NodeAddChild,
+		kNodeStructureEditingAction_NodeSceneAttach,
+		kNodeStructureEditingAction_NodeSceneAttachUpdate,
+		kNodeStructureEditingAction_NodeSceneImport
+	};
+	
 	struct NodeUi
 	{
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
@@ -180,17 +194,8 @@ struct SceneEditor
 	
 	bool pasteNodeFromLines(const int parentId, LineReader & line_reader);
 	bool pasteNodeTreeFromLines(const int parentId, LineReader & line_reader, const bool keepRootNode);
-
-	enum NodeStructureContextMenuResult
-	{
-		kNodeStructureContextMenuResult_None,
-		kNodeStructureContextMenuResult_NodeCopy,
-		kNodeStructureContextMenuResult_NodePaste,
-		kNodeStructureContextMenuResult_NodeQueuedForRemove,
-		kNodeStructureContextMenuResult_NodeAdded
-	};
 	
-	NodeStructureContextMenuResult doNodeStructureContextMenu(SceneNode & node);
+	NodeStructureEditingAction doNodeStructureContextMenu(SceneNode & node);
 	
 	enum NodeContextMenuResult
 	{
@@ -201,7 +206,7 @@ struct SceneEditor
 	
 	NodeContextMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * selectedComponent);
 	
-	void editNodeStructure_traverse(const int nodeId);
+	NodeStructureEditingAction editNodeStructure_traverse(const int nodeId);
 	
 	void updateNodeVisibility();
 	
@@ -231,7 +236,14 @@ struct SceneEditor
 	void performAction_copy(const bool deep);
 	void performAction_copySceneNodes();
 	void performAction_copySceneNodeTrees();
+	void performAction_pasteChild();
+	void performAction_pasteSibling();
 	void performAction_paste(const int parentNodeId);
+	void performAction_addChild();
+	bool performAction_addChild(const int parentNodeId);
+	void performAction_sceneAttach();
+	void performAction_sceneAttachUpdate();
+	void performAction_sceneImport();
 	void performAction_duplicate();
 	
 	void drawNode(const SceneNode & node) const;

@@ -189,7 +189,7 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 void SceneEditor::deferredBegin()
 {
 	Assert(deferred.numActivations || deferred.isFlushed());
-	
+		
 	deferred.numActivations++;
 }
 
@@ -701,11 +701,11 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 	}
 }
 
-SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextMenu(SceneNode & node)
+SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(SceneNode & node)
 {
 	//logDebug("context window for %d", node.id);
 	
-	NodeStructureContextMenuResult result = kNodeStructureContextMenuResult_None;
+	NodeStructureEditingAction result = kNodeStructureEditingAction_None;
 
 	auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
 	
@@ -720,119 +720,47 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 
 	if (ImGui::MenuItem("Copy"))
 	{
-		result = kNodeStructureContextMenuResult_NodeCopy;
-		performAction_copy(false);
+		result = kNodeStructureEditingAction_NodeCopy;
 	}
 	
 	if (ImGui::MenuItem("Copy tree"))
 	{
-		result = kNodeStructureContextMenuResult_NodeCopy;
-		performAction_copy(true);
+		result = kNodeStructureEditingAction_NodeCopyTree;
 	}
 	
 	if (ImGui::MenuItem("Paste as child", nullptr, false, clipboardInfo.hasNode || clipboardInfo.hasNodeTree))
 	{
-		result = kNodeStructureContextMenuResult_NodePaste;
-		for (auto nodeId : selection.selectedNodes)
-			performAction_paste(nodeId);
+		result = kNodeStructureEditingAction_NodePasteChild;
 	}
 	
 	if (ImGui::MenuItem("Paste as sibling", nullptr, false, (clipboardInfo.hasNode || clipboardInfo.hasNodeTree) && node.parentId != -1))
 	{
-		result = kNodeStructureContextMenuResult_NodePaste;
-		
-		for (auto nodeId : selection.selectedNodes)
-		{
-			auto & node = scene.getNode(nodeId);
-			performAction_paste(node.parentId);
-		}
+		result = kNodeStructureEditingAction_NodePasteSibling;
 	}
 	
 	if (ImGui::MenuItem("Remove", nullptr, false, node.parentId != -1))
 	{
-		result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
-		
-		deferredBegin();
-		{
-			for (auto nodeId : selection.selectedNodes)
-				deferred.nodesToRemove.insert(nodeId);
-		}
-		deferredEnd();
+		result = kNodeStructureEditingAction_NodeRemove;
 	}
 
 	if (ImGui::MenuItem("Add child node"))
 	{
-		result = kNodeStructureContextMenuResult_NodeAdded;
-		
-		deferredBegin();
-		{
-			for (auto nodeId : selection.selectedNodes)
-			{
-				SceneNode * childNode = new SceneNode();
-				childNode->id = scene.allocNodeId();
-				childNode->parentId = nodeId;
-				
-				auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
-				sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
-				childNode->components.add(sceneNodeComponent);
-				
-				auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
-				childNode->components.add(transformComponent);
-				
-				if (childNode->initComponents() == false)
-				{
-					childNode->freeComponents();
-					
-					delete childNode;
-					childNode = nullptr;
-				}
-				else
-				{
-					deferred.nodesToAdd.push_back(childNode);
-					deferred.nodesToSelect.insert(childNode->id);
-				}
-			}
-		}
-		deferredEnd();
+		result = kNodeStructureEditingAction_NodeAddChild;
 	}
 	
 	if (ImGui::MenuItem("Import nodes from scene"))
 	{
-		nfdchar_t * path = nullptr;
-		
-		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
-		{
-			for (auto nodeId : selection.selectedNodes)
-				addNodesFromScene(path, nodeId);
-		}
-	
-		if (path != nullptr)
-		{
-			free(path);
-			path = nullptr;
-		}
+		result = kNodeStructureEditingAction_NodeSceneImport;
 	}
 	
 	if (ImGui::MenuItem("Attach scene"))
 	{
-		nfdchar_t * path = nullptr;
-		
-		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
-		{
-			for (auto nodeId : selection.selectedNodes)
-				attachScene(path, nodeId);
-		}
-	
-		if (path != nullptr)
-		{
-			free(path);
-			path = nullptr;
-		}
+		result = kNodeStructureEditingAction_NodeSceneAttach;
 	}
 	
 	if (ImGui::MenuItem("Update attached scene", nullptr, false, sceneNodeComponent->attachedFromScene.empty() == false))
 	{
-		updateAttachedScene(node.id);
+		result = kNodeStructureEditingAction_NodeSceneAttachUpdate;
 	}
 	
 	if (ImGui::MenuItem("Focus camera"))
@@ -1012,8 +940,10 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 	return result;
 }
 
-void SceneEditor::editNodeStructure_traverse(const int nodeId)
+SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(const int nodeId)
 {
+	NodeStructureEditingAction result = kNodeStructureEditingAction_None;
+	
 	const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
 	
 	auto & node = scene.getNode(nodeId);
@@ -1073,7 +1003,12 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 	
 		if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
 		{
-			doNodeStructureContextMenu(node);
+			const NodeStructureEditingAction menuResult = doNodeStructureContextMenu(node);
+			
+			if (menuResult != kNodeStructureEditingAction_None)
+			{
+				result = menuResult;
+			}
 
 			ImGui::EndPopup();
 		}
@@ -1087,13 +1022,20 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 					continue;
 				}
 
-				editNodeStructure_traverse(childNodeId);
+				const NodeStructureEditingAction childResult = editNodeStructure_traverse(childNodeId);
+				
+				if (childResult != kNodeStructureEditingAction_None)
+				{
+					result = childResult;
+				}
 			}
 		
 			ImGui::TreePop();
 		}
 	}
 	ImGui::PopID();
+	
+	return result;
 }
 
 void SceneEditor::updateNodeVisibility()
@@ -1337,25 +1279,36 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 
 int SceneEditor::attachScene(const char * path, const int parentId)
 {
-	// add nodes
+// todo : make paths absolute and relative again, based on attached scene path and our path
+// todo : do the above also for the import and update cases
+
+	int rootNodeId = -1;
 	
-	const int rootNodeId = addNodesFromScene(path, parentId);
-	
-	// mark sub-tree as being attached from scene
-	
-	SceneNode * rootNode = nullptr;
-	for (auto * node : deferred.nodesToAdd)
-		if (node->id == rootNodeId)
-			rootNode = node;
-	if (rootNode == nullptr)
-		rootNode = &scene.getNode(rootNodeId);
-		
-	if (rootNodeId != -1)
+	deferredBegin();
 	{
-		auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode->components.id);
-	
-		sceneNodeComponent->attachedFromScene = path;
+		// add nodes
+		
+		rootNodeId = addNodesFromScene(path, parentId);
+		
+		// mark sub-tree as being attached from scene
+		
+		if (rootNodeId != -1)
+		{
+			SceneNode * rootNode = nullptr;
+			for (auto * node : deferred.nodesToAdd)
+				if (node->id == rootNodeId)
+					rootNode = node;
+			if (rootNode == nullptr)
+				rootNode = &scene.getNode(rootNodeId);
+			
+			Assert(rootNode != nullptr);
+				
+			auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode->components.id);
+		
+			sceneNodeComponent->attachedFromScene = path;
+		}
 	}
+	deferredEnd();
 	
 	return rootNodeId;
 }
@@ -1511,14 +1464,54 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					
 					ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 					{
-						deferredBegin();
+						nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
+						nodeUi.nodesToOpen_deferred.clear();
+						
+						const NodeStructureEditingAction action = editNodeStructure_traverse(scene.rootNodeId);
+						
+						switch (action)
 						{
-							nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
-							nodeUi.nodesToOpen_deferred.clear();
+						case kNodeStructureEditingAction_None:
+							break;
 							
-							editNodeStructure_traverse(scene.rootNodeId);
+						case kNodeStructureEditingAction_NodeCopy:
+							performAction_copy(false);
+							break;
+						case kNodeStructureEditingAction_NodeCopyTree:
+							performAction_copy(true);
+							break;
+							
+						case kNodeStructureEditingAction_NodePasteChild:
+							performAction_pasteChild();
+							break;
+						case kNodeStructureEditingAction_NodePasteSibling:
+							performAction_pasteSibling();
+							break;
+							
+						case kNodeStructureEditingAction_NodeRemove:
+							deferredBegin();
+							{
+								for (auto nodeId : selection.selectedNodes)
+									deferred.nodesToRemove.insert(nodeId);
+							}
+							deferredEnd();
+							break;
+							
+						case kNodeStructureEditingAction_NodeAddChild:
+							performAction_addChild();
+							break;
+							
+						case kNodeStructureEditingAction_NodeSceneAttach:
+							performAction_sceneAttach();
+							break;
+						case kNodeStructureEditingAction_NodeSceneAttachUpdate:
+							performAction_sceneAttachUpdate();
+							break;
+							
+						case kNodeStructureEditingAction_NodeSceneImport:
+							performAction_sceneImport();
+							break;
 						}
-						deferredEnd();
 					}
 					ImGui::EndChild();
 					
@@ -1528,8 +1521,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 						{
 							deferredBegin();
-							for (auto nodeId : selection.selectedNodes)
-								deferred.nodesToRemove.insert(nodeId);
+							{
+								for (auto nodeId : selection.selectedNodes)
+									deferred.nodesToRemove.insert(nodeId);
+							}
 							deferredEnd();
 						}
 					}
@@ -2392,6 +2387,21 @@ void SceneEditor::performAction_copySceneNodeTrees()
 	}
 }
 
+void SceneEditor::performAction_pasteChild()
+{
+	for (auto nodeId : selection.selectedNodes)
+		performAction_paste(nodeId);
+}
+
+void SceneEditor::performAction_pasteSibling()
+{
+	for (auto nodeId : selection.selectedNodes)
+	{
+		auto & node = scene.getNode(nodeId);
+		performAction_paste(node.parentId);
+	}
+}
+
 void SceneEditor::performAction_paste(const int parentNodeId)
 {
 	deferredBegin();
@@ -2457,6 +2467,109 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 		Assert(result); // todo : make it possible for deferred blocks to discard their changes. this would make deferred blocks into something like transactions
 	}
 	deferredEnd();
+}
+
+void SceneEditor::performAction_addChild()
+{
+	bool result = true;
+	
+	deferredBegin();
+	{
+		for (auto nodeId : selection.selectedNodes)
+		{
+			result &= performAction_addChild(nodeId);
+		}
+	}
+	deferredEnd();
+}
+
+bool SceneEditor::performAction_addChild(const int parentNodeId)
+{
+	bool result = true;
+	
+	SceneNode * childNode = new SceneNode();
+	childNode->id = scene.allocNodeId();
+	childNode->parentId = parentNodeId;
+	
+	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
+	sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
+	childNode->components.add(sceneNodeComponent);
+	
+	auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
+	childNode->components.add(transformComponent);
+	
+	if (childNode->initComponents() == false)
+	{
+		childNode->freeComponents();
+		
+		delete childNode;
+		childNode = nullptr;
+		
+		result = false;
+	}
+	else
+	{
+		deferredBegin();
+		{
+			deferred.nodesToAdd.push_back(childNode);
+			deferred.nodesToSelect.insert(childNode->id);
+		}
+		deferredEnd();
+	}
+	
+	return result;
+}
+
+void SceneEditor::performAction_sceneAttach()
+{
+	nfdchar_t * path = nullptr;
+
+	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+	{
+		deferredBegin();
+		{
+			for (auto nodeId : selection.selectedNodes)
+				attachScene(path, nodeId);
+		}
+		deferredEnd();
+	}
+
+	if (path != nullptr)
+	{
+		free(path);
+		path = nullptr;
+	}
+}
+
+void SceneEditor::performAction_sceneAttachUpdate()
+{
+	deferredBegin();
+	{
+		for (auto nodeId : selection.selectedNodes)
+			updateAttachedScene(nodeId);
+	}
+	deferredEnd();
+}
+
+void SceneEditor::performAction_sceneImport()
+{
+	nfdchar_t * path = nullptr;
+
+	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+	{
+		deferredBegin();
+		{
+			for (auto nodeId : selection.selectedNodes)
+				addNodesFromScene(path, nodeId);
+		}
+		deferredEnd();
+	}
+
+	if (path != nullptr)
+	{
+		free(path);
+		path = nullptr;
+	}
 }
 
 void SceneEditor::performAction_duplicate()
