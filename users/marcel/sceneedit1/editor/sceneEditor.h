@@ -13,7 +13,9 @@
 #include "framework-camera.h"
 
 // std
+#include <list>
 #include <set>
+#include <vector>
 
 //
 
@@ -85,13 +87,10 @@ struct SceneEditor
 		int viewportSy = -1;
 	} preview;
 	
-	struct Deferred
+	struct DeferredState
 	{
-		int numActivations = 0;
-		bool isProcessing = false;
-		
 		std::set<int> nodesToRemove;
-		std::vector<SceneNode*> nodesToAdd;
+		std::set<SceneNode*> nodesToAdd;
 		std::set<int> nodesToSelect;
 		
 		bool isFlushed() const
@@ -101,6 +100,14 @@ struct SceneEditor
 				nodesToAdd.empty() &&
 				nodesToSelect.empty();
 		}
+	};
+	
+	struct Deferred : DeferredState
+	{
+		bool isProcessing = false;
+		int numActivations = 0;
+		
+		std::list<DeferredState> stack;
 	} deferred;
 	
 	enum NodeStructureEditingAction
@@ -174,7 +181,22 @@ struct SceneEditor
 	 * updates to it. Making immediate updates would invalidate and/or complicate scene traversal.
 	 */
 	void deferredBegin();
-	void deferredEnd();
+	/**
+	 * End a deferred update, either committing the changes, or canceling them.
+	 */
+	void deferredEnd(const bool commit);
+	/**
+	 * End a deferred update, committing the changes made.
+	 * Note that when a deferred update is begun in the scope of another deferred update,
+	 * the changes will be committed to the parent scope. When this is the top-level update,
+	 * the changes will be committed to the actual scene.
+	 */
+	void deferredEndCommit();
+	/**
+	 * Ends a deferred update, canceling all of the made changes. The scene will be left in
+	 * the same state it initially was in.
+	 */
+	void deferredEndCancel();
 	
 	void removeNodeSubTree(const int nodeId);
 	
@@ -233,18 +255,18 @@ struct SceneEditor
 	void performAction_undo();
 	void performAction_redo();
 	
-	void performAction_copy(const bool deep);
-	void performAction_copySceneNodes();
-	void performAction_copySceneNodeTrees();
-	void performAction_pasteChild();
-	void performAction_pasteSibling();
-	void performAction_paste(const int parentNodeId);
-	void performAction_addChild();
+	void performAction_copy(const bool deep) const;
+	void performAction_copySceneNodes() const;
+	void performAction_copySceneNodeTrees() const;
+	bool performAction_pasteChild();
+	bool performAction_pasteSibling();
+	bool performAction_paste(const int parentNodeId);
+	bool performAction_addChild();
 	bool performAction_addChild(const int parentNodeId);
-	void performAction_sceneAttach();
-	void performAction_sceneAttachUpdate();
-	void performAction_sceneImport();
-	void performAction_duplicate();
+	bool performAction_sceneAttach();
+	bool performAction_sceneAttachUpdate();
+	bool performAction_sceneImport();
+	bool performAction_duplicate();
 	
 	void drawNode(const SceneNode & node) const;
 	void drawNodes() const;

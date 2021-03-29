@@ -181,43 +181,131 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 	return bestNode;
 }
 
-/**
- * Begin a deferred update to the scene structure. Note we need to defer updates, due to
- * the fact that the scene editor traverses the scene structure at the same time as making
- * updates to it. Making immediate updates would invalidate and/or complicate scene traversal.
- */
 void SceneEditor::deferredBegin()
 {
 	Assert(deferred.numActivations || deferred.isFlushed());
 		
 	deferred.numActivations++;
+	
+	// push stack item
+	
+	deferred.stack.emplace_back();
+	auto & stackItem = deferred.stack.back();
+	
+	auto & deferredState = static_cast<DeferredState&>(deferred);
+	
+	stackItem = deferredState;
+	
+	deferredState = DeferredState();
 }
 
-void SceneEditor::deferredEnd()
+void SceneEditor::deferredEnd(const bool commit)
+{
+	if (commit)
+	{
+		deferredEndCommit();
+	}
+	else
+	{
+		deferredEndCancel();
+	}
+}
+
+void SceneEditor::deferredEndCommit()
 {
 	Assert(deferred.isProcessing == false);
 	Assert(deferred.numActivations > 0);
 	
 	deferred.numActivations--;
 	
-	if (deferred.numActivations == 0 && deferred.isFlushed() == false)
+	if (deferred.isFlushed() == false)
 	{
-		undoCaptureBegin();
+		if (deferred.numActivations == 0)
 		{
-			deferred.isProcessing = true;
+			undoCaptureBegin();
+			{
+				deferred.isProcessing = true;
+				
+				addNodesToAdd();
+				
+				removeNodesToRemove();
+				
+				selectNodesToSelect(false);
+				
+				deferred.isProcessing = false;
+			}
+			undoCaptureEnd();
 			
-			addNodesToAdd();
-			
-			removeNodesToRemove();
-			
-			selectNodesToSelect(false);
-			
-			deferred.isProcessing = false;
+			Assert(deferred.isFlushed());
 		}
-		undoCaptureEnd();
+		else
+		{
+			auto & stackItem = deferred.stack.back();
+			
+			for (auto * node : deferred.nodesToAdd)
+				stackItem.nodesToAdd.insert(node);
+			deferred.nodesToAdd.clear();
+			
+			for (auto nodeId : deferred.nodesToRemove)
+				stackItem.nodesToRemove.insert(nodeId);
+			deferred.nodesToRemove.clear();
+			
+			for (auto nodeId : deferred.nodesToSelect)
+				stackItem.nodesToSelect.insert(nodeId);
+			deferred.nodesToSelect.clear();
+			
+			Assert(deferred.isFlushed());
+		}
+	}
+	
+	// pop stack item
+	
+	auto & stackItem = deferred.stack.back();
+	
+	auto & deferredState = static_cast<DeferredState&>(deferred);
+	
+	deferredState = stackItem;
+	
+	deferred.stack.pop_back();
+	
+	Assert(deferred.numActivations > 0 || deferred.isFlushed());
+}
+
+void SceneEditor::deferredEndCancel()
+{
+	Assert(deferred.isProcessing == false);
+	Assert(deferred.numActivations > 0);
+	
+	deferred.numActivations--;
+	
+	if (deferred.isFlushed() == false)
+	{
+		for (auto * node : deferred.nodesToAdd)
+		{
+			node->freeComponents();
+			
+			delete node;
+			node = nullptr;
+		}
+		
+		deferred.nodesToAdd.clear();
+		deferred.nodesToRemove.clear();
+		deferred.nodesToSelect.clear();
 		
 		Assert(deferred.isFlushed());
 	}
+	
+	// pop stack item
+	
+	auto & stackItem = deferred.stack.back();
+	
+	auto & deferredState = static_cast<DeferredState&>(deferred);
+	
+	deferredState = stackItem;
+	
+	deferred.stack.pop_back();
+	
+	Assert(deferred.numActivations > 0 || deferred.isFlushed());
 }
 
 void SceneEditor::removeNodeSubTree(const int nodeId)
@@ -605,10 +693,10 @@ bool SceneEditor::pasteNodeFromLines(const int parentId, LineReader & line_reade
 		{
 			deferredBegin();
 			{
-				deferred.nodesToAdd.push_back(childNode);
+				deferred.nodesToAdd.insert(childNode);
 				deferred.nodesToSelect.insert(childNode->id);
 			}
-			deferredEnd();
+			deferredEnd(true);
 			
 			return true;
 		}
@@ -690,10 +778,10 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 					}
 				}
 				
-				deferred.nodesToAdd.push_back(node);
+				deferred.nodesToAdd.insert(node);
 			}
 		}
-		deferredEnd();
+		deferredEnd(true);
 		
 		childScene.nodes.clear();
 		
@@ -716,7 +804,7 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		sceneNodeComponent->name = name;
 	}
 	
-// todo : for actions that change the scene structure : defer changes until after showing the node UI. this ensure node ids remain valid during scene traversal, and removes the need for deferred adding and removing of nodes, which will simplify various other code paths a great deal
+	// note : for actions that change the scene structure, we defer changes until after showing the node structure UI. this ensures node ids remain valid during scene traversal. we could use a global deferred update begin/end scope surrounding node traversal as well, but this seems more clean and easier to grasp to me
 
 	if (ImGui::MenuItem("Copy"))
 	{
@@ -774,7 +862,18 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 			camera.ortho.position = sceneNodeComponent->objectToWorld.GetTranslation();
 			break;
 		case Camera::kMode_FirstPerson:
-			// todo : make lookat matrix and convert
+			{
+				Mat4x4 cameraTransform;
+				camera.firstPerson.calculateWorldMatrix(cameraTransform);
+				
+				const Vec3 delta = sceneNodeComponent->objectToWorld.GetTranslation() - cameraTransform.GetTranslation();
+				
+				const float radToDeg = 180.f / float(M_PI);
+				
+				camera.firstPerson.yaw = -atan2f(delta[0], delta[2]) * radToDeg;
+				camera.firstPerson.pitch = atan2f(delta[1], hypotf(delta[0], delta[2])) * radToDeg;
+				camera.firstPerson.roll = 0.f;
+			}
 			break;
 		}
 	}
@@ -1194,10 +1293,10 @@ int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angl
 	
 	deferredBegin();
 	{
-		deferred.nodesToAdd.push_back(node);
+		deferred.nodesToAdd.insert(node);
 		deferred.nodesToSelect.insert(node->id);
 	}
-	deferredEnd();
+	deferredEnd(true);
 	
 	return node->id;
 }
@@ -1235,7 +1334,15 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 		return -1;
 	}
 	
-	// 5. anonymize node names. this to ensure nodes get assigned a new unique auto-generated name on save
+	// 5.1. update file paths for the imported nodes
+	
+	updateFilePaths(
+		childScene,
+		typeDB,
+		Path::GetDirectory(path).c_str(),
+		Path::GetDirectory(documentInfo.path).c_str());
+	
+	// 5.2. anonymize node names. this to ensure nodes get assigned a new unique auto-generated name on save
 	
 	for (auto node_itr : childScene.nodes)
 	{
@@ -1264,14 +1371,14 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 		{
 			for (auto node_itr : childScene.nodes)
 			{
-				deferred.nodesToAdd.push_back(node_itr.second);
+				deferred.nodesToAdd.insert(node_itr.second);
 			}
 			
 			deferred.nodesToSelect.insert(childScene.rootNodeId);
 			
 			childScene.nodes.clear();
 		}
-		deferredEnd();
+		deferredEnd(true);
 		
 		return childScene.rootNodeId;
 	}
@@ -1279,9 +1386,8 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 
 int SceneEditor::attachScene(const char * path, const int parentId)
 {
-// todo : make paths absolute and relative again, based on attached scene path and our path
-// todo : do the above also for the import and update cases
-
+	bool success = true;
+	
 	int rootNodeId = -1;
 	
 	deferredBegin();
@@ -1289,6 +1395,8 @@ int SceneEditor::attachScene(const char * path, const int parentId)
 		// add nodes
 		
 		rootNodeId = addNodesFromScene(path, parentId);
+		
+		success &= rootNodeId != -1;
 		
 		// mark sub-tree as being attached from scene
 		
@@ -1308,7 +1416,7 @@ int SceneEditor::attachScene(const char * path, const int parentId)
 			sceneNodeComponent->attachedFromScene = path;
 		}
 	}
-	deferredEnd();
+	deferredEnd(success);
 	
 	return rootNodeId;
 }
@@ -1318,22 +1426,31 @@ int SceneEditor::updateAttachedScene(const int rootNodeId)
 	auto & rootNode = scene.getNode(rootNodeId);
 	auto * sceneNodeComponent = rootNode.components.find<SceneNodeComponent>();
 	
+	bool success = true;
+	
 #if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
 	// todo : should keep the root node in-tact? (transform)
-	// todo : even better would be if we supported overrides for node components in the sub-tree. note : this may require a full refactor, where we make the scene editor into a fancy text editor for template files, and figure out some way to keep the text and run-time scene representations in sync
+	// todo : even better would be if we supported overrides for node components in the sub-tree. note : this may require a full refactor, where we make the scene editor into a fancy text editor for template files, and figure out some way to keep the text and run-time scene representations in sync. although.. I like how currently attached scenes can be fully modified. perhaps another approach would be to serialize the attached scene, remove it, re-add it, and attempt to re-apply to serialized data (matching a 'origin-node-id' stored inside the imported nodes' scene node component)
 	
 	LineWriter line_writer;
 	auto * oldTransformComponent = rootNode.components.find<TransformComponent>();
-	if (oldTransformComponent != nullptr)
+	bool hasOldTransform = false;
+	
+	if (success && oldTransformComponent != nullptr)
 	{
-		writeComponentToLines(
+		success &= writeComponentToLines(
 			*typeDB,
 			*oldTransformComponent,
 			line_writer,
 			0);
+		
+		if (success)
+		{
+			hasOldTransform = true;
+		}
 	}
 #endif
-
+	
 	const int parentNodeId = rootNode.parentId;
 	const std::string path = sceneNodeComponent->attachedFromScene;
 	
@@ -1348,29 +1465,31 @@ int SceneEditor::updateAttachedScene(const int rootNodeId)
 		// add nodes from scene
 		
 		newRootNodeId = attachScene(path.c_str(), parentNodeId);
-	}
-	deferredEnd();
-	
-#if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
-	if (newRootNodeId != -1)
-	{
-		SceneNode * newRootNode = nullptr;
-		for (auto * node : deferred.nodesToAdd)
-			if (node->id == newRootNodeId)
-				newRootNode = node;
 		
-		auto * newTransformComponent = newRootNode->components.find<TransformComponent>();
-		if (newTransformComponent != nullptr)
+		success &= newRootNodeId != -1;
+	
+	#if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
+		if (success && hasOldTransform)
 		{
-			auto lines = line_writer.to_lines();
-			LineReader line_reader(lines, 1, 1);
-			parseComponentFromLines(
-				*typeDB,
-				line_reader,
-				*newTransformComponent);
+			SceneNode * newRootNode = nullptr;
+			for (auto * node : deferred.nodesToAdd)
+				if (node->id == newRootNodeId)
+					newRootNode = node;
+			
+			auto * newTransformComponent = newRootNode->components.find<TransformComponent>();
+			if (newTransformComponent != nullptr)
+			{
+				auto lines = line_writer.to_lines();
+				LineReader line_reader(lines, 1, 1);
+				success &= parseComponentFromLines(
+					*typeDB,
+					line_reader,
+					*newTransformComponent);
+			}
 		}
+	#endif
 	}
-#endif
+	deferredEnd(success);
 
 	return newRootNodeId;
 }
@@ -1494,7 +1613,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 								for (auto nodeId : selection.selectedNodes)
 									deferred.nodesToRemove.insert(nodeId);
 							}
-							deferredEnd();
+							deferredEnd(true);
 							break;
 							
 						case kNodeStructureEditingAction_NodeAddChild:
@@ -1525,7 +1644,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 								for (auto nodeId : selection.selectedNodes)
 									deferred.nodesToRemove.insert(nodeId);
 							}
-							deferredEnd();
+							deferredEnd(true);
 						}
 					}
 				}
@@ -1910,7 +2029,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		{
 			inputIsCaptured = true;
 			
-			// todo : make action dependent on editing state. in this case, node placement
+			// todo : make action dependent on editing mode. in this case, 'editing mode = node placement'. for the vr version of the app, it would be nice to have a selection wheel to select the editing mode
 		
 			// find intersection point with the ground plane
 		
@@ -1924,6 +2043,8 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 					
 					if (keyboard.isDown(SDLK_c))
 					{
+						bool success = true;
+						
 						deferredBegin();
 						{
 							for (auto & parentNodeId : selection.selectedNodes)
@@ -1937,19 +2058,25 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 								{
 									const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
 									
-									addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									const int rootNodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									
+									success &= rootNodeId != -1;
 								}
 							}
 						}
-						deferredEnd();
+						deferredEnd(success);
 					}
 					else
 					{
+						bool success = true;
+						
 						deferredBegin();
 						{
-							addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
+							const int rootNodeId = addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
+							
+							success &= rootNodeId != -1;
 						}
-						deferredEnd();
+						deferredEnd(success);
 					}
 				}
 			}
@@ -1983,7 +2110,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 				deferred.nodesToRemove.insert(nodeId);
 			}
 		}
-		deferredEnd();
+		deferredEnd(true);
 	}
 	
 	// update the camera
@@ -2315,7 +2442,7 @@ void SceneEditor::performAction_redo()
 	}
 }
 
-void SceneEditor::performAction_copy(const bool deep)
+void SceneEditor::performAction_copy(const bool deep) const
 {
 	if (deep)
 		performAction_copySceneNodeTrees();
@@ -2323,7 +2450,7 @@ void SceneEditor::performAction_copy(const bool deep)
 		performAction_copySceneNodes();
 }
 
-void SceneEditor::performAction_copySceneNodes()
+void SceneEditor::performAction_copySceneNodes() const
 {
 	if (selection.selectedNodes.empty() == false)
 	{
@@ -2355,7 +2482,7 @@ void SceneEditor::performAction_copySceneNodes()
 	}
 }
 
-void SceneEditor::performAction_copySceneNodeTrees()
+void SceneEditor::performAction_copySceneNodeTrees() const
 {
 	if (selection.selectedNodes.empty() == false)
 	{
@@ -2387,39 +2514,58 @@ void SceneEditor::performAction_copySceneNodeTrees()
 	}
 }
 
-void SceneEditor::performAction_pasteChild()
+bool SceneEditor::performAction_pasteChild()
 {
-	for (auto nodeId : selection.selectedNodes)
-		performAction_paste(nodeId);
-}
-
-void SceneEditor::performAction_pasteSibling()
-{
-	for (auto nodeId : selection.selectedNodes)
-	{
-		auto & node = scene.getNode(nodeId);
-		performAction_paste(node.parentId);
-	}
-}
-
-void SceneEditor::performAction_paste(const int parentNodeId)
-{
+	bool success = true;
+	
 	deferredBegin();
 	{
-		bool result = true;
-		
+		for (auto nodeId : selection.selectedNodes)
+			success &= performAction_paste(nodeId);
+	}
+	deferredEnd(success);
+	
+	return success;
+}
+
+bool SceneEditor::performAction_pasteSibling()
+{
+	bool success = true;
+	
+	deferredBegin();
+	{
+		for (auto nodeId : selection.selectedNodes)
+		{
+			auto & node = scene.getNode(nodeId);
+			success &= performAction_paste(node.parentId);
+		}
+	}
+	deferredEnd(success);
+	
+	return success;
+}
+
+bool SceneEditor::performAction_paste(const int parentNodeId)
+{
+	bool success = true;
+	
+	deferredBegin();
+	{
 		// fetch clipboard text
 
-		const std::string text = framework.getClipboardText();
+		const std::string clipboard_text = framework.getClipboardText();
 	
-		if (!text.empty())
+		if (!clipboard_text.empty())
 		{
 			// convert text to lines
 			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
-			if (TextIO::loadText(text.c_str(), lines, lineEndings) == false)
-				logError("failed to load text");
+			if (TextIO::loadText(clipboard_text.c_str(), lines, lineEndings) == false)
+			{
+				logError("failed to load clipboard text");
+				success &= false;
+			}
 			else
 			{
 				LineReader line_reader(lines, 0, 0);
@@ -2437,7 +2583,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							result &= pasteNodeFromLines(parentNodeId, line_reader);
+							success &= pasteNodeFromLines(parentNodeId, line_reader);
 						}
 						line_reader.pop_indent();
 					}
@@ -2445,14 +2591,14 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							result &= pasteNodeTreeFromLines(parentNodeId, line_reader, false);
+							success &= pasteNodeTreeFromLines(parentNodeId, line_reader, false);
 						}
 						line_reader.pop_indent();
 					}
 					else
 					{
 						logError("unknown clipboard item: %s", id);
-						result &= false;
+						success &= false;
 						
 						line_reader.push_indent();
 						{
@@ -2464,28 +2610,32 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 			}
 		}
 		
-		Assert(result); // todo : make it possible for deferred blocks to discard their changes. this would make deferred blocks into something like transactions
+		Assert(success);
 	}
-	deferredEnd();
+	deferredEnd(success);
+	
+	return success;
 }
 
-void SceneEditor::performAction_addChild()
+bool SceneEditor::performAction_addChild()
 {
-	bool result = true;
+	bool success = true;
 	
 	deferredBegin();
 	{
 		for (auto nodeId : selection.selectedNodes)
 		{
-			result &= performAction_addChild(nodeId);
+			success &= performAction_addChild(nodeId);
 		}
 	}
-	deferredEnd();
+	deferredEnd(success);
+	
+	return success;
 }
 
 bool SceneEditor::performAction_addChild(const int parentNodeId)
 {
-	bool result = true;
+	bool success = true;
 	
 	SceneNode * childNode = new SceneNode();
 	childNode->id = scene.allocNodeId();
@@ -2505,23 +2655,25 @@ bool SceneEditor::performAction_addChild(const int parentNodeId)
 		delete childNode;
 		childNode = nullptr;
 		
-		result = false;
+		success &= false;
 	}
 	else
 	{
 		deferredBegin();
 		{
-			deferred.nodesToAdd.push_back(childNode);
+			deferred.nodesToAdd.insert(childNode);
 			deferred.nodesToSelect.insert(childNode->id);
 		}
-		deferredEnd();
+		deferredEnd(success);
 	}
 	
-	return result;
+	return success;
 }
 
-void SceneEditor::performAction_sceneAttach()
+bool SceneEditor::performAction_sceneAttach()
 {
+	bool success = true;
+	
 	nfdchar_t * path = nullptr;
 
 	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
@@ -2529,9 +2681,9 @@ void SceneEditor::performAction_sceneAttach()
 		deferredBegin();
 		{
 			for (auto nodeId : selection.selectedNodes)
-				attachScene(path, nodeId);
+				success &= attachScene(path, nodeId) != -1;
 		}
-		deferredEnd();
+		deferredEnd(success);
 	}
 
 	if (path != nullptr)
@@ -2539,20 +2691,28 @@ void SceneEditor::performAction_sceneAttach()
 		free(path);
 		path = nullptr;
 	}
+	
+	return success;
 }
 
-void SceneEditor::performAction_sceneAttachUpdate()
+bool SceneEditor::performAction_sceneAttachUpdate()
 {
+	bool success = true;
+	
 	deferredBegin();
 	{
 		for (auto nodeId : selection.selectedNodes)
-			updateAttachedScene(nodeId);
+			success &= updateAttachedScene(nodeId) != -1;
 	}
-	deferredEnd();
+	deferredEnd(success);
+	
+	return success;
 }
 
-void SceneEditor::performAction_sceneImport()
+bool SceneEditor::performAction_sceneImport()
 {
+	bool success = true;
+	
 	nfdchar_t * path = nullptr;
 
 	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
@@ -2560,9 +2720,9 @@ void SceneEditor::performAction_sceneImport()
 		deferredBegin();
 		{
 			for (auto nodeId : selection.selectedNodes)
-				addNodesFromScene(path, nodeId);
+				success &= addNodesFromScene(path, nodeId) != -1;
 		}
-		deferredEnd();
+		deferredEnd(success);
 	}
 
 	if (path != nullptr)
@@ -2570,10 +2730,14 @@ void SceneEditor::performAction_sceneImport()
 		free(path);
 		path = nullptr;
 	}
+	
+	return success;
 }
 
-void SceneEditor::performAction_duplicate()
+bool SceneEditor::performAction_duplicate()
 {
+	bool success = true;
+	
 	if (selection.selectedNodes.empty() == false)
 	{
 		deferredBegin();
@@ -2588,7 +2752,7 @@ void SceneEditor::performAction_duplicate()
 				{
 					auto lines = line_writer.to_lines();
 					LineReader line_reader(lines, 0, 0);
-					pasteNodeTreeFromLines(node.parentId, line_reader, false);
+					success &= pasteNodeTreeFromLines(node.parentId, line_reader, false);
 				}
 			#else
 				LineWriter line_writer;
@@ -2596,13 +2760,15 @@ void SceneEditor::performAction_duplicate()
 				{
 					auto lines = line_writer.to_lines();
 					LineReader line_reader(lines, 0, 0);
-					pasteNodeFromLines(node.parentId, line_reader);
+					success &= pasteNodeFromLines(node.parentId, line_reader);
 				}
 			#endif
 			}
 		}
-		deferredEnd();
+		deferredEnd(success);
 	}
+	
+	return success;
 }
 
 void SceneEditor::drawNode(const SceneNode & node) const
@@ -2860,7 +3026,7 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 				for (auto & node_itr : scene.nodes)
 					deferred.nodesToRemove.insert(node_itr.second->id);
 			}
-			deferredEnd();
+			deferredEnd(true);
 			
 			scene = tempScene;
 			tempScene.nodes.clear();
