@@ -14,6 +14,8 @@ namespace ImGui
 	struct Reflection_Callbacks
 	{
 		std::function<void(std::string & path)> makePathRelative;
+		std::function<void()> propertyWillChange;
+		std::function<void()> propertyDidChange;
 	};
 	
 	bool ComponentProperty(

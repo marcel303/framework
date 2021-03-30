@@ -90,7 +90,7 @@ struct SceneEditor
 	struct DeferredState
 	{
 		std::set<int> nodesToRemove;
-		std::set<SceneNode*> nodesToAdd;
+		std::vector<SceneNode*> nodesToAdd; // note : this needs to be a vector, to ensure nodes are added in the same order to the scene as they were added here
 		std::set<int> nodesToSelect;
 		
 		bool isFlushed() const
@@ -204,9 +204,15 @@ struct SceneEditor
 	void removeNodesToRemove();
 	void selectNodesToSelect(const bool append);
 	
-	// undo functions
+	/**
+	 * The undo system works by initially capturing the new or loaded scene into the undo history. After each (significant)
+	 * editing operation, a new undo history item is added. Note that before an editing operation begins, a history item
+	 * to return to the previous state already exists. undoCaptureBegin() only exists to assist in catching bugs, due to
+	 * missing undoCaptureEnd calls when making edits. undoCaptureEnd() actually captures the scene into the undo
+	 * history to ensure the *next* editing operation can be rolled back.
+	 */
 	bool undoCapture(std::string & text) const; // capture the entire scene into text format
-	void undoCaptureBegin(); // begin a scene capture
+	void undoCaptureBegin(const bool isPristine = true); // begin a scene capture
 	void undoCaptureEnd();   // end a scene capture and add it to the undo history
 	void undoReset(); // reset the undo history
 	
@@ -244,6 +250,7 @@ struct SceneEditor
 	
 	void tickGui(const float dt, bool & inputIsCaptured);
 	void tickView(const float dt, bool & inputIsCaptured);
+	void tickKeyCommands(bool & inputIsCaptured);
 	
 	void validateNodeReferences() const;
 	void validateNodeStructure() const;
@@ -268,7 +275,7 @@ struct SceneEditor
 	bool performAction_sceneImport();
 	bool performAction_duplicate();
 	
-	void drawNode(const SceneNode & node) const;
+	void drawNodeBoundingBox(const SceneNode & node) const;
 	void drawNodes() const;
 	
 	void drawSceneOpaque() const;

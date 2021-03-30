@@ -142,6 +142,12 @@ namespace ImGui
 		return result;
 	}
 
+	static void valueDidChange(Reflection_Callbacks * callbacks)
+	{
+		if (callbacks && callbacks->propertyDidChange)
+			callbacks->propertyDidChange();
+	}
+	
 	bool Reflection_PlainTypeMember(
 		const Member & member,
 		const PlainType & plain_type,
@@ -172,6 +178,9 @@ namespace ImGui
 				{
 					result = true;
 				}
+				
+				if (ImGui::IsItemDeactivatedAfterEdit())
+					valueDidChange(callbacks);
 			}
 			break;
 		case kDataType_Int:
@@ -194,6 +203,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -203,6 +215,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -210,6 +225,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -234,6 +252,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -248,6 +269,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -257,6 +281,9 @@ namespace ImGui
 							{
 								result = true;
 							}
+							
+							if (ImGui::IsItemDeactivatedAfterEdit())
+								valueDidChange(callbacks);
 						}
 						else
 						{
@@ -264,6 +291,9 @@ namespace ImGui
 							{
 								result = true;
 							}
+							
+							if (ImGui::IsItemDeactivatedAfterEdit())
+								valueDidChange(callbacks);
 						}
 					}
 				}
@@ -287,6 +317,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -294,6 +327,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 			}
 			break;
@@ -318,6 +354,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else if (isOrientation)
 				{
@@ -325,6 +364,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -334,6 +376,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -341,6 +386,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -365,6 +413,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -374,6 +425,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -381,6 +435,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -408,10 +465,11 @@ namespace ImGui
 					if (ImGui::SliderFloat(member.name, &value_as_float, limits->min, limits->max, "%.3f",
 						curveExponential == nullptr ? 1.f : curveExponential->exponential))
 					{
-						value = value_as_float;
-						
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -421,6 +479,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -428,6 +489,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -456,9 +520,11 @@ namespace ImGui
 						if (ImGui::InputText("", buffer, sizeof(buffer)))
 						{
 							value = buffer;
-							
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 						
 						ImGui::SameLine();
 						if (ImGui::Button(".."))
@@ -475,8 +541,9 @@ namespace ImGui
 									callbacks->makePathRelative(relativePath);
 							
 								value = relativePath;
-								
 								result = true;
+								
+								valueDidChange(callbacks);
 							}
 						
 							if (filename != nullptr)
@@ -496,9 +563,11 @@ namespace ImGui
 					if (ImGui::InputText(member.name, buffer, sizeof(buffer)))
 					{
 						value = buffer;
-						
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 			}
 			break;
@@ -533,9 +602,13 @@ namespace ImGui
 				{
 					if (ImGui::Combo(member.name, &selectedItem, items.data(), items.size()))
 					{
+						if (callbacks && callbacks->propertyWillChange)
+							callbacks->propertyWillChange();
+							
 						enum_type.set(member_object, items[selectedItem]);
-						
 						result = true;
+						
+						valueDidChange(callbacks);
 					}
 				}
 			}
