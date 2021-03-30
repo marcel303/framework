@@ -35,7 +35,7 @@ bool parseTemplateFromLines(
 			return false;
 		}
 		
-		if (memcmp(line, "base", 4) == 0)
+		if (memcmp(line, "base", 4) == 0 && isspace(line[4]))
 		{
 			// special : base specifier. find the base name at the end
 		
