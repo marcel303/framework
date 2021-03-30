@@ -22,6 +22,12 @@
 	#define HAS_KEYBOARD 1
 #endif
 
+#if defined(ANDROID) || defined(IPHONEOS)
+	#define USE_NFD 0
+#else
+	#define USE_NFD 1
+#endif
+
 namespace ImGui
 {
 	bool DragDouble(const char* label, double* v, double v_speed = 1.0, double v_min = 0.0, double v_max = 0.0, const char* format = "%.3f", float power = 1.0f)     // If v_min >= v_max we have no bound
@@ -526,6 +532,7 @@ namespace ImGui
 						if (ImGui::IsItemDeactivatedAfterEdit())
 							valueDidChange(callbacks);
 						
+					#if USE_NFD
 						ImGui::SameLine();
 						if (ImGui::Button(".."))
 						{
@@ -552,6 +559,7 @@ namespace ImGui
 								filename = nullptr;
 							}
 						}
+					#endif
 					}
 					ImGui::PopID();
 				}
