@@ -20,8 +20,7 @@ struct GltfComponent : Component<GltfComponent>
 	Vec3 aabbMin;
 	Vec3 aabbMax;
 
-	gltf::Scene scene;
-	gltf::BufferCache bufferCache;
+	class GltfCacheElem * cacheElem = nullptr;
 	
 	virtual ~GltfComponent() override final;
 	

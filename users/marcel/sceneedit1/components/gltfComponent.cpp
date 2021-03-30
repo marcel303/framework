@@ -1,8 +1,12 @@
-#include "framework.h"
+#include "gltfCache.h"
+#include "gltfComponent.h"
+
+#include "sceneNodeComponent.h"
+
 #include "gltf-draw.h"
 #include "gltf-loader.h"
-#include "gltfComponent.h"
-#include "sceneNodeComponent.h"
+
+#include "framework.h"
 
 using namespace gltf;
 
@@ -13,27 +17,16 @@ GltfComponent::~GltfComponent()
 
 bool GltfComponent::init()
 {
-	// load GLTF scene
-	
-	loadScene(filename.c_str(), scene);
-	
-	// initialize buffer cache
-	
-	bufferCache.init(scene);
-	
-	// compute AABB
-	
-	modelAabb = BoundingBox();
-	calculateSceneMinMax(scene, modelAabb);
-	
+	cacheElem = &g_gltfCache.findOrCreate(filename.c_str());
+
 	// compute scaled AABB
 	
-	if (modelAabb.hasMinMax)
+	if (cacheElem->m_aabb->hasMinMax)
 	{
 		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
 		
-		aabbMin = modelAabb.min * finalScale;
-		aabbMax = modelAabb.max * finalScale;
+		aabbMin = cacheElem->m_aabb->min * finalScale;
+		aabbMax = cacheElem->m_aabb->max * finalScale;
 	}
 	
 	return true;
@@ -49,39 +42,28 @@ void GltfComponent::propertyChanged(void * address)
 	{
 		free();
 		
-		// load GLTF scene
-	
-		loadScene(filename.c_str(), scene);
+		// update cache elem
 		
-		// initialize buffer cache
-		
-		bufferCache.init(scene);
-		
-		// compute AABB
-		
-		modelAabb = BoundingBox();
-		calculateSceneMinMax(scene, modelAabb);
+		cacheElem = &g_gltfCache.findOrCreate(filename.c_str());
 	}
 	
 	if (address == &filename || address == &scale || address == &centimetersToMeters)
 	{
 		// compute scaled AABB
 		
-		if (modelAabb.hasMinMax)
+		if (cacheElem->m_aabb->hasMinMax)
 		{
 			const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
 			
-			aabbMin = modelAabb.min * finalScale;
-			aabbMax = modelAabb.max * finalScale;
+			aabbMin = cacheElem->m_aabb->min * finalScale;
+			aabbMax = cacheElem->m_aabb->max * finalScale;
 		}
 	}
 }
 
 void GltfComponent::free()
 {
-	bufferCache.free();
-
-	scene = gltf::Scene();
+	cacheElem = nullptr;
 }
 
 void GltfComponent::draw(const Mat4x4 & objectToWorld) const
@@ -100,8 +82,8 @@ void GltfComponent::draw(const Mat4x4 & objectToWorld) const
 		MaterialShaders materialShaders;
 		setDefaultMaterialShaders(materialShaders);
 		
-		drawScene(scene, &bufferCache, materialShaders, true);
-		drawScene(scene, &bufferCache, materialShaders, false);
+		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, true);
+		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, false);
 	}
 	gxPopMatrix();
 }
