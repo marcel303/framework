@@ -24,6 +24,9 @@
 // sceneedit
 #include "helpers2.h" // g_typeDB
 
+// ui
+#include "editor/ui-capture.h"
+
 // framework
 #include "framework.h"
 #include "gx_render.h"
@@ -642,6 +645,8 @@ int main(int argc, char * argv[])
 		bool inputIsCaptured = false;
 		
 	#if USE_GUI_WINDOW
+		uiCaptureBeginFrame(inputIsCaptured);
+		
 		{
 			const Mat4x4 transform = Mat4x4(true).Translate(framework.vrOrigin).Mul(vrPointer[0].transform);
 			const int buttonMask =

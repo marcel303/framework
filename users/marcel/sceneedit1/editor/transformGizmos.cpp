@@ -13,7 +13,20 @@ void TransformGizmo::show(const Mat4x4 & transform)
 
 void TransformGizmo::hide()
 {
+	if (isActive())
+	{
+		if (editingDidEnd != nullptr)
+			editingDidEnd();
+	}
+	
 	state = kState_Hidden;
+}
+
+bool TransformGizmo::isActive() const
+{
+	return
+		state != kState_Hidden &&
+		state != kState_Visible;
 }
 
 static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_direction)
@@ -28,25 +41,27 @@ static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_directio
 	return projection_axis;
 }
 
-bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, const bool pointer_isActive, const bool pointer_becameActive, bool & inputIsCaptured)
+bool TransformGizmo::tick(
+	Vec3Arg pointer_origin,
+	Vec3Arg pointer_direction,
+	const bool pointer_isActive,
+	const bool pointer_becameActive,
+	bool & inputIsCaptured)
 {
-	isInteractive = (inputIsCaptured == false);
+	isInteractive = isActive() || (inputIsCaptured == false);
 	
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
 	rayOriginInGizmoSpace = worldToGizmo.Mul4(pointer_origin);
 	
-	if (inputIsCaptured)
-	{
-		//
-	}
-	else if (state == kState_Hidden)
+	if (state == kState_Hidden)
 	{
 		//
 	}
 	else if (state == kState_DragArrow)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 		
 		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
@@ -66,11 +81,15 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_DragPad)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 		
 		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
@@ -90,11 +109,15 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_DragRing)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 	
 		// intersect the ray with the projection plane for the ring
 		
@@ -125,6 +148,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_Visible)
@@ -135,8 +161,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YAxis ||
 			intersectionResult.element == kElement_ZAxis)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
 				
 				state = kState_DragArrow;
@@ -153,6 +180,11 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 				const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragArrow.initialPosition = position_gizmo;
+				
+				//
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 		
@@ -160,8 +192,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YXPad ||
 			intersectionResult.element == kElement_ZYPad)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
 				
 				state = kState_DragPad;
@@ -181,6 +214,11 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragPad.initialPosition = position_gizmo;
 				dragPad.projection_axis = projection_axis;
+				
+				//
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 		
@@ -188,18 +226,28 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YRing ||
 			intersectionResult.element == kElement_ZRing)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
+				
 				state = kState_DragRing;
 				
 				dragRing = DragRing();
 				dragRing.axis = intersectionResult.element - kElement_XRing;
 				const Vec3 position_world = pointer_origin + pointer_direction * intersectionResult.t;
 				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis);
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 	}
+	
+	Assert(
+		state == kState_Hidden ||
+		state == kState_Visible ||
+		(inputIsCaptured && uiCaptureElem.hasCapture));
 	
 	return
 		state == kState_DragRing ||

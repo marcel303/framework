@@ -1886,6 +1886,15 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 #if ENABLE_TRANSFORM_GIZMOS
 	// 2. transformation gizo interaction
 	
+	transformGizmo.editingWillBegin = [this]()
+		{
+			undoCaptureBegin();
+		};
+	transformGizmo.editingDidEnd = [this]()
+		{
+			undoCaptureEnd();
+		};
+		
 	if (selection.selectedNodes.size() != 1)
 	{
 		transformGizmo.hide();
