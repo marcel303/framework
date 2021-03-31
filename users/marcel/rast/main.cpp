@@ -4,8 +4,8 @@
 #include "framework.h"
 #include "image.h"
 #include "md3.h"
-#include "SIMD.h"
 #include "SimdMat4x4.h"
+#include "SimdVec.h"
 #include "Timer.h"
 
 #if 0

@@ -38,8 +38,6 @@ static AudioMutex * s_audioMutex = nullptr;
 static AudioVoiceManager * s_voiceMgr = nullptr;
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 
-extern AudioMutexBase * g_vfxAudioMutex;
-
 extern OscEndpointMgr g_oscEndpointMgr;
 
 enum Editor
@@ -754,8 +752,6 @@ int main(int argc, char * argv[])
 	
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
-
-	g_vfxAudioMutex = &audioMutex;
 	
 	VfxGraph * vfxGraph = new VfxGraph();
 	RealTimeConnection realTimeConnection(vfxGraph);

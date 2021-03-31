@@ -168,7 +168,8 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 {
 	typeName = "test.resource";
 	
-	resourceTypeName = "timeline";
+	mainResourceType = "timeline";
+	mainResourceName = "editorData";
 	
 	in("randomize!", "trigger");
 	out("value", "float");

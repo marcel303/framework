@@ -1,6 +1,6 @@
 #include "framework.h"
 #include "image.h"
-#include "SIMD.h"
+#include "SimdVec.h"
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>

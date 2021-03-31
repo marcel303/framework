@@ -8,8 +8,6 @@
 #include "vfxGraphManager.h"
 #include "vfxUi.h"
 
-extern AudioMutexBase * g_vfxAudioMutex;
-
 FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	: vfxGraphMgr(defaultSx, defaultSy)
 	, audioGraphMgr(true)
@@ -22,8 +20,6 @@ FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	audioMutex.init();
 	audioVoiceMgr.init(&audioMutex, 64);
 	audioGraphMgr.init(&audioMutex, &audioVoiceMgr);
-	
-	g_vfxAudioMutex = &audioMutex;
 	
 	vfxGraphCtx.addSystem<AudioVoiceManager>(&audioVoiceMgr);
 	vfxGraphCtx.addSystem<AudioGraphManager>(&audioGraphMgr);
@@ -40,8 +36,6 @@ FileEditor_VfxGraph::~FileEditor_VfxGraph()
 	Assert(instance == nullptr);
 	
 	// shut audio graph
-	g_vfxAudioMutex = nullptr; // todo : needs a nicer solution .. make it part of globals .. side data for additional node support .. ?
-	
 	audioGraphMgr.shut();
 	audioVoiceMgr.shut();
 	audioMutex.shut();

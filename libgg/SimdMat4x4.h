@@ -2,7 +2,7 @@
 
 #include <math.h>
 #include "Debugging.h"
-#include "SIMD.h"
+#include "SimdVec.h"
 
 ALIGN_CLASS(16) SimdMat4x4
 {

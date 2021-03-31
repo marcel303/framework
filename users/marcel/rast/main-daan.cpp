@@ -4,8 +4,8 @@
 #include <SDL/SDL.h>
 #include <vector>
 #include <xmmintrin.h>
-#include "../../../libgg/SIMD.h"
-#include "../../../libgg/SimdMat4x4.h"
+#include "SimdMat4x4.h"
+#include "SimVec.h"
 #include "md3.h"
 
 #if defined(WINDOWS)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SIMD.h"
+#include "SimdVec.h"
 
 #define RESTRICTED __restrict
 
