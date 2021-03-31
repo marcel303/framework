@@ -149,6 +149,14 @@ std::string Path::MakeAbsolute(const std::string& base, const std::string& path)
 	return Path::FlattenPathComponents(components);
 }
 
+std::string Path::MakeRelative(const std::string& base, const std::string& path)
+{
+	Path relativePath;
+	relativePath.MakeRelative(Path(base), Path(path));
+	
+	return relativePath.ToString();
+}
+
 std::string Path::MakeRelative(const std::string& base, const std::string& _path1, const std::string& _path2)
 {
 	std::string path1 = Path::MakeAbsolute(base, _path1);

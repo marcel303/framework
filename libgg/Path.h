@@ -21,6 +21,7 @@ public:
 	static std::string GetExtension(const std::string& path, const bool toLower);
 	static std::string GetDirectory(const std::string& path);
 	static std::string MakeAbsolute(const std::string& base, const std::string& path);
+	static std::string MakeRelative(const std::string& base, const std::string& path);
 	static std::string MakeRelative(const std::string& base, const std::string& path1, const std::string& path2);
 	
 private:
