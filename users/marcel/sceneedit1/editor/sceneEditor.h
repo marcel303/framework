@@ -44,6 +44,12 @@ struct SceneEditor
 	static const int kMaxComponentTypeNameFilter = 100;
 	static const int kMaxParameterFilter = 100;
 	
+	enum EditingMode
+	{
+		kEditingMode_NodeSelection,
+		kEditingMode_NodePlacement
+	};
+	
 	TypeDB * typeDB = nullptr;
 	
 	Scene scene; // todo : this should live outside the editor, but referenced
@@ -59,10 +65,17 @@ struct SceneEditor
 	
 	bool showUi = true;
 	
+	EditingMode editingMode = kEditingMode_NodeSelection;
+	
 	struct Selection
 	{
 		std::set<int> selectedNodes;
 	} selection;
+	
+	struct NodePlacement
+	{
+		std::string templatePath;
+	} nodePlacement;
 	
 	int hoverNodeId = -1;
 	
@@ -108,6 +121,14 @@ struct SceneEditor
 		int numActivations = 0;
 		
 		std::list<DeferredState> stack;
+		
+		SceneNode * getNodeToAdd(const int nodeId)
+		{
+			for (auto * node : nodesToAdd)
+				if (node->id == nodeId)
+					return node;
+			return nullptr;
+		}
 	} deferred;
 	
 	enum NodeStructureEditingAction
@@ -117,6 +138,7 @@ struct SceneEditor
 		kNodeStructureEditingAction_NodeCopyTree,
 		kNodeStructureEditingAction_NodePasteChild,
 		kNodeStructureEditingAction_NodePasteSibling,
+		kNodeStructureEditingAction_NodeDuplicate,
 		kNodeStructureEditingAction_NodeRemove,
 		kNodeStructureEditingAction_NodeAddChild,
 		kNodeStructureEditingAction_NodeSceneAttach,
@@ -240,9 +262,6 @@ struct SceneEditor
 	
 	void markNodeOpenUntilRoot(const int in_nodeId);
 	
-// todo : this is a test method. remove from scene editor and move elsewhere
-	int addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId);
-	
 	int addNodesFromScene(const char * path, const int parentId);
 	
 	int attachScene(const char * path, const int parentId);
@@ -270,9 +289,9 @@ struct SceneEditor
 	bool performAction_paste(const int parentNodeId);
 	bool performAction_addChild();
 	bool performAction_addChild(const int parentNodeId);
-	bool performAction_sceneAttach();
+	bool performAction_sceneAttach(const char * path, std::vector<int> * out_rootNodeIds);
 	bool performAction_sceneAttachUpdate();
-	bool performAction_sceneImport();
+	bool performAction_sceneImport(const char * path);
 	bool performAction_duplicate();
 	
 	void drawNodeBoundingBox(const SceneNode & node) const;

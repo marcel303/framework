@@ -55,25 +55,48 @@ inline bool intersectBoundingBox3d(
 	}
 }
 
-#if 0
+//
 
-#include "SIMD.h" // todo : create SimdVec.h, add SimdBoundingBox.h
+#if 0 // todo : doesn't compile on ARM
 
-inline bool intersectBoundingBox3d_simd(SimdVecArg rayOrigin, SimdVecArg rayDirectionInv, SimdVecArg boxMin, SimdVecArg boxMax, /*SimdVec & ioDistance*/float & ioDistance)
+#include "SimdVec.h"
+
+/**
+ * Intersects a bounding box given by (min, max) with a ray specified by its origin and direction. If there is an intersection, the function returns true, and stores the distance of the point of intersection in 't'. If there is no intersection, the function returns false and leaves 't' unmodified. Note that the ray direction is expected to be the inverse of the actual ray direction, for efficiency reasons.
+ * @param boxMin: Minimum values of bounding box extents.
+ * @param boxMax: Maximum values of bounding box extents.
+ * @param rayOrigin: Origin of ray.
+ * @param rayDirectionInv: Inverse of direction of ray.
+ * @param ioDistance: Stores the distance to the intersection point if there is an intersection.
+ * @return: True if there is an intersection. False otherwise.
+ */
+inline bool intersectBoundingBox3d_simd(
+	SimdVecArg boxMin,
+	SimdVecArg boxMax,
+	SimdVecArg rayOrigin,
+	SimdVecArg rayDirectionInv,
+	/*SimdVec & ioDistance*/ float & ioDistance)
 {
 	const static SimdVec infNeg(-std::numeric_limits<float>::infinity());
 	const static SimdVec infPos(+std::numeric_limits<float>::infinity());
 
 	// distances
-	SimdVec minVecTemp = boxMin.Sub(rayOrigin).Mul(rayDirectionInv);
-	SimdVec maxVecTemp = boxMax.Sub(rayOrigin).Mul(rayDirectionInv);
+	const SimdVec minVecTemp = boxMin.Sub(rayOrigin).Mul(rayDirectionInv);
+	const SimdVec maxVecTemp = boxMax.Sub(rayOrigin).Mul(rayDirectionInv);
 
-	SimdVec minVec = minVecTemp.Min(maxVecTemp);
-	SimdVec maxVec = minVecTemp.Max(maxVecTemp);
+	const SimdVec minVec = minVecTemp.Min(maxVecTemp);
+	const SimdVec maxVec = minVecTemp.Max(maxVecTemp);
 
 	// calculcate distance
-	const SimdVec max =                    maxVec.ReplicateX().Min(maxVec.ReplicateY().Min(maxVec.ReplicateZ()));
-	const SimdVec min = SimdVec(VZERO).Max(minVec.ReplicateX().Max(minVec.ReplicateY().Max(minVec.ReplicateZ())));
+	const SimdVec max =
+		     maxVec.ReplicateX()
+		.Min(maxVec.ReplicateY()
+		.Min(maxVec.ReplicateZ()));
+	const SimdVec min =
+		SimdVec(VZERO)
+		.Max(minVec.ReplicateX()
+		.Max(minVec.ReplicateY()
+		.Max(minVec.ReplicateZ())));
 
 	// no intersection or greater distance?
 	if (min.ANY_GE3(max))

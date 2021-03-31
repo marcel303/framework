@@ -46,6 +46,7 @@ add hackerPoet/010-particleLife
 add hashSpaceCollide
 add holeFilling
 add homography
+add ImGuiFileDialog-support
 add interpolation1
 add jsusfx1
 add jsusfx2

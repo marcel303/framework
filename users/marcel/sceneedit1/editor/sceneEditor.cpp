@@ -28,9 +28,6 @@
 #include "framework.h"
 #include "framework-camera.h"
 
-// libnfd
-#include "nfd.h"
-
 // libreflection-textio
 #include "lineReader.h"
 #include "lineWriter.h"
@@ -50,6 +47,15 @@
 // std
 #include <set>
 
+// filedialog
+#if SCENEEDIT_USE_LIBNFD
+	#include "nfd.h"
+#endif
+#if SCENEEDIT_USE_IMGUIFILEDIALOG
+	#include "ImGuiFileDialog.h"
+#endif
+
+
 //
 
 #if defined(DEBUG)
@@ -59,12 +65,6 @@
 #endif
 
 #define ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE 1
-
-#if defined(ANDROID) || defined(IPHONEOS)
-	#define USE_NFD 0
-#else
-	#define USE_NFD 1
-#endif
 
 // todo : remove. need a generic way to ask for a node's bounding box
 
@@ -329,6 +329,9 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 			scene.rootNodeId = -1;
 		
 		selection.selectedNodes.erase(nodeId);
+		
+		if (nodeId == hoverNodeId)
+			hoverNodeId = -1;
 		
 		deferred.nodesToRemove.erase(nodeId);
 		deferred.nodesToSelect.erase(nodeId);
@@ -828,7 +831,12 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	strcpy_s(name, sizeof(name), sceneNodeComponent->name.c_str());
 	if (ImGui::InputText("Name", name, sizeof(name)))
 	{
-		sceneNodeComponent->name = name;
+	// todo : only add undo capture on completion of editing operation..
+		undoCaptureBegin();
+		{
+			sceneNodeComponent->name = name;
+		}
+		undoCaptureEnd();
 	}
 	
 	// note : for actions that change the scene structure, we defer changes until after showing the node structure UI. this ensures node ids remain valid during scene traversal. we could use a global deferred update begin/end scope surrounding node traversal as well, but this seems more clean and easier to grasp to me
@@ -853,6 +861,13 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		result = kNodeStructureEditingAction_NodePasteSibling;
 	}
 	
+	ImGui::Separator();
+	
+	if (ImGui::MenuItem("Duplicate", nullptr, false, node.parentId != -1))
+	{
+		result = kNodeStructureEditingAction_NodeDuplicate;
+	}
+	
 	if (ImGui::MenuItem("Remove", nullptr, false, node.parentId != -1))
 	{
 		result = kNodeStructureEditingAction_NodeRemove;
@@ -862,6 +877,8 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	{
 		result = kNodeStructureEditingAction_NodeAddChild;
 	}
+	
+	ImGui::Separator();
 	
 	if (ImGui::MenuItem("Import nodes from scene"))
 	{
@@ -877,6 +894,8 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	{
 		result = kNodeStructureEditingAction_NodeSceneAttachUpdate;
 	}
+	
+	ImGui::Separator();
 	
 	if (ImGui::MenuItem("Focus camera"))
 	{
@@ -1261,73 +1280,6 @@ void SceneEditor::markNodeOpenUntilRoot(const int in_nodeId)
 	}
 }
 
-// todo : this is a test method. remove from scene editor and move elsewhere
-#include "template.h"
-#include "templateIo.h"
-int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
-{
-	Template t;
-	
-	if (!parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
-		"textfiles/base-entity-v1-overlay.txt",
-		true,
-		true,
-		t))
-	{
-		return -1;
-	}
-	
-	//
-	
-	SceneNode * node = new SceneNode();
-	node->id = scene.allocNodeId();
-	node->parentId = parentId;
-	
-	bool init_ok = true;
-	
-	init_ok &= instantiateComponentsFromTemplate(*typeDB, t, node->components);
-	
-	if (node->components.contains<SceneNodeComponent>() == false)
-	{
-		auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
-		sceneNodeComponent->name = String::FormatC("Node %d", node->id);
-		node->components.add(sceneNodeComponent);
-	}
-	
-	init_ok &= node->initComponents();
-	
-	if (init_ok == false)
-	{
-		logError("failed to initialize node components");
-		
-		node->freeComponents();
-		
-		delete node;
-		node = nullptr;
-		
-		return -1;
-	}
-	
-	{
-		auto * transformComp = node->components.find<TransformComponent>();
-		
-		if (transformComp != nullptr)
-		{
-			transformComp->position = position;
-			transformComp->angleAxis = angleAxis;
-		}
-	}
-	
-	deferredBegin();
-	{
-		deferred.nodesToAdd.push_back(node);
-		deferred.nodesToSelect.insert(node->id);
-	}
-	deferredEnd(true);
-	
-	return node->id;
-}
-
 int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 {
 	Scene childScene;
@@ -1429,13 +1381,7 @@ int SceneEditor::attachScene(const char * path, const int parentId)
 		
 		if (rootNodeId != -1)
 		{
-			SceneNode * rootNode = nullptr;
-			for (auto * node : deferred.nodesToAdd)
-				if (node->id == rootNodeId)
-					rootNode = node;
-			if (rootNode == nullptr)
-				rootNode = &scene.getNode(rootNodeId);
-			
+			SceneNode * rootNode = deferred.getNodeToAdd(rootNodeId);
 			Assert(rootNode != nullptr);
 				
 			auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode->components.id);
@@ -1498,10 +1444,8 @@ int SceneEditor::updateAttachedScene(const int rootNodeId)
 	#if ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE
 		if (success && hasOldTransform)
 		{
-			SceneNode * newRootNode = nullptr;
-			for (auto * node : deferred.nodesToAdd)
-				if (node->id == newRootNodeId)
-					newRootNode = node;
+			SceneNode * newRootNode = deferred.getNodeToAdd(newRootNodeId);
+			Assert(newRootNode != nullptr);
 			
 			auto * newTransformComponent = newRootNode->components.find<TransformComponent>();
 			if (newTransformComponent != nullptr)
@@ -1543,6 +1487,64 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				ImGuiWindowFlags_NoBackground |
 				ImGuiWindowFlags_NoTitleBar))
 			{
+				if (editingMode == kEditingMode_NodePlacement)
+				{
+					if (ImGui::CollapsingHeader("Node Placement", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						char path[256];
+						strcpy_s(path, sizeof(path), nodePlacement.templatePath.c_str());
+						if (ImGui::InputText("Template", path, sizeof(path)))
+							nodePlacement.templatePath = path;
+							
+					#if SCENEEDIT_USE_LIBNFD
+						ImGui::SameLine();
+						if (ImGui::Button(".."))
+						{
+							nfdchar_t * path = nullptr;
+							
+							if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+							{
+							// todo : make relative to document path ?
+								nodePlacement.templatePath = path;
+							}
+						
+							if (path != nullptr)
+							{
+								free(path);
+								path = nullptr;
+							}
+						}
+					#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+						ImGui::SameLine();
+						const char * dialogKey = "PlacementTemplatePath";
+						if (ImGui::Button(".."))
+						{
+							ImGuiFileDialog::Instance()->OpenModal(
+								dialogKey,
+								"Select file..",
+								".*",
+								"",
+								nodePlacement.templatePath.c_str());
+						}
+						if (ImGuiFileDialog::Instance()->Display(dialogKey))
+						{
+							if (ImGuiFileDialog::Instance()->IsOk())
+							{
+								auto selection = ImGuiFileDialog::Instance()->GetSelection();
+								
+								if (!selection.empty())
+								{
+								// todo : make relative to document path ?
+									nodePlacement.templatePath = selection.begin()->second;
+								}
+							}
+							
+							ImGuiFileDialog::Instance()->Close();
+						}
+					#endif
+					}
+				}
+				
 				// visibility options
 				
 				if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1569,7 +1571,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						ImGui::SameLine();
 						ImGui::PushItemWidth(80.f);
 						ImGui::PushID("Tick Mult");
-						ImGui::SliderFloat("", &preview.tickMultiplier, 0.f, 100.f, "%.2f", 4.f);
+						ImGui::SliderFloat("", &preview.tickMultiplier, 0.f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 						ImGui::PopID();
 						ImGui::PopItemWidth();
 						ImGui::SameLine();
@@ -1594,7 +1596,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					ImGui::Unindent();
 				}
 				
-				// node structure
+				// scene structure
 				
 				if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
 				{
@@ -1612,6 +1614,11 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					
 					ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 					{
+					#if SCENEEDIT_USE_IMGUIFILEDIALOG
+						const char * attachSceneDialogKey = "AttachScene";
+						const char * importSceneDialogKey = "ImportScene";
+					#endif
+					
 						nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
 						nodeUi.nodesToOpen_deferred.clear();
 						
@@ -1635,6 +1642,9 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						case kNodeStructureEditingAction_NodePasteSibling:
 							performAction_pasteSibling();
 							break;
+						case kNodeStructureEditingAction_NodeDuplicate:
+							performAction_duplicate();
+							break;
 							
 						case kNodeStructureEditingAction_NodeRemove:
 							deferredBegin();
@@ -1650,16 +1660,70 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							break;
 							
 						case kNodeStructureEditingAction_NodeSceneAttach:
-							performAction_sceneAttach();
+						#if SCENEEDIT_USE_LIBNFD
+							performAction_sceneAttach(nullptr, nullptr);
+						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+							ImGuiFileDialog::Instance()->OpenModal(
+								attachSceneDialogKey,
+								"Attach Scene..",
+								".*",
+								"",
+								"");
+						#endif
 							break;
 						case kNodeStructureEditingAction_NodeSceneAttachUpdate:
 							performAction_sceneAttachUpdate();
 							break;
 							
 						case kNodeStructureEditingAction_NodeSceneImport:
-							performAction_sceneImport();
+						#if SCENEEDIT_USE_LIBNFD
+							performAction_sceneImport(nullptr);
+						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+							ImGuiFileDialog::Instance()->OpenModal(
+								importSceneDialogKey,
+								"Import Scene..",
+								".*",
+								"",
+								"");
+						#endif
 							break;
 						}
+						
+					#if SCENEEDIT_USE_IMGUIFILEDIALOG
+						if (ImGuiFileDialog::Instance()->Display(attachSceneDialogKey))
+						{
+							if (ImGuiFileDialog::Instance()->IsOk())
+							{
+								auto selection = ImGuiFileDialog::Instance()->GetSelection();
+								
+								if (!selection.empty())
+								{
+									const char * path = selection.begin()->second.c_str();
+									
+									performAction_sceneAttach(path, nullptr);
+								}
+							}
+							
+							ImGuiFileDialog::Instance()->Close();
+						}
+						
+						if (ImGuiFileDialog::Instance()->Display(importSceneDialogKey))
+						{
+							if (ImGuiFileDialog::Instance()->IsOk())
+							{
+								auto selection = ImGuiFileDialog::Instance()->GetSelection();
+								
+								if (!selection.empty())
+								{
+									const char * path = selection.begin()->second.c_str();
+									
+									performAction_sceneImport(path);
+								}
+							}
+							
+							ImGuiFileDialog::Instance()->Close();
+						}
+					#endif
 					}
 					ImGui::EndChild();
 					
@@ -1706,11 +1770,16 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 		
 		if (ImGui::BeginMainMenuBar())
 		{
+		#if SCENEEDIT_USE_IMGUIFILEDIALOG
+			const char * loadSceneDialogKey = "LoadScene";
+			const char * saveSceneDialogKey = "SaveScene";
+		#endif
+				
 			if (ImGui::BeginMenu("File"))
 			{
 				if (ImGui::MenuItem("Load"))
 				{
-				#if USE_NFD
+				#if SCENEEDIT_USE_LIBNFD
 					nfdchar_t * path = nullptr;
 					
 					if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
@@ -1723,6 +1792,13 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						free(path);
 						path = nullptr;
 					}
+				#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+					ImGuiFileDialog::Instance()->OpenModal(
+						loadSceneDialogKey,
+						"Load Scene..",
+						".*",
+						"",
+						"");
 				#endif
 				}
 				
@@ -1736,14 +1812,14 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					}
 				}
 				
-				if (ImGui::MenuItem("Save"))
+				if (ImGui::MenuItem("Save", nullptr, false, !documentInfo.path.empty()))
 				{
 					performAction_save();
 				}
 				
 				if (ImGui::MenuItem("Save as.."))
 				{
-				#if USE_NFD
+				#if SCENEEDIT_USE_LIBNFD
 					nfdchar_t * path = nullptr;
 					
 					if (NFD_SaveDialog(nullptr, nullptr, &path) == NFD_OKAY)
@@ -1756,6 +1832,13 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						free(path);
 						path = nullptr;
 					}
+				#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+					ImGuiFileDialog::Instance()->OpenModal(
+						saveSceneDialogKey,
+						"Save Scene..",
+						".*",
+						"",
+						"");
 				#endif
 				}
 				
@@ -1784,15 +1867,6 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				ImGui::EndMenu();
 			}
 			
-		#if ENABLE_RENDERER
-			if (ImGui::BeginMenu("Renderer"))
-			{
-				parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
-				
-				ImGui::EndMenu();
-			}
-		#endif
-			
 			if (ImGui::BeginMenu("Parameters"))
 			{
 				ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
@@ -1803,6 +1877,54 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				
 				ImGui::EndMenu();
 			}
+			
+			if (ImGui::BeginMenu("Editing Mode"))
+			{
+				if (ImGui::MenuItem("Node Selection"))
+					editingMode = kEditingMode_NodeSelection;
+				if (ImGui::MenuItem("Node Placement"))
+					editingMode = kEditingMode_NodePlacement;
+					
+				ImGui::EndMenu();
+			}
+			
+			//
+			
+		#if SCENEEDIT_USE_IMGUIFILEDIALOG
+			if (ImGuiFileDialog::Instance()->Display(loadSceneDialogKey))
+			{
+				if (ImGuiFileDialog::Instance()->IsOk())
+				{
+					auto selection = ImGuiFileDialog::Instance()->GetSelection();
+					
+					if (!selection.empty())
+					{
+						const char * path = selection.begin()->second.c_str();
+						
+						performAction_load(path);
+					}
+				}
+				
+				ImGuiFileDialog::Instance()->Close();
+			}
+			
+			if (ImGuiFileDialog::Instance()->Display(saveSceneDialogKey))
+			{
+				if (ImGuiFileDialog::Instance()->IsOk())
+				{
+					auto selection = ImGuiFileDialog::Instance()->GetSelection();
+					
+					if (!selection.empty())
+					{
+						const char * path = selection.begin()->second.c_str();
+						
+						performAction_save(path, true);
+					}
+				}
+				
+				ImGuiFileDialog::Instance()->Close();
+			}
+		#endif
 		}
 		ImGui::EndMainMenuBar();
 	
@@ -1927,13 +2049,11 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		
 		transformGizmo.show(globalTransform);
 		
-	// todo : add undo/redo support
-		if (hasPointer &&
-			transformGizmo.tick(
+		if (transformGizmo.tick(
 				pointerOrigin_world,
 				pointerDirection_world,
 				pointerIsActive,
-				pointerBecameActive,
+				pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
 				inputIsCaptured))
 		{
 			// transform the global transform into local space
@@ -2016,14 +2136,33 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	#endif
 	}
 	
-	if (inputIsCaptured == false && hasPointer && pointerBecameActive)
+	if (editingMode == kEditingMode_NodeSelection)
 	{
-		// action: add node from template. todo : this is a test action. remove! instead, have a template list or something and allow adding instances from there
-		if (keyboard.isDown(SDLK_RSHIFT))
+		// action: select node(s)
+		if (inputIsCaptured == false && hasPointer && pointerBecameActive)
 		{
 			inputIsCaptured = true;
 			
-			// todo : make action dependent on editing mode. in this case, 'editing mode = node placement'. for the vr version of the app, it would be nice to have a selection wheel to select the editing mode
+			if (!modShift())
+				selection = Selection();
+			
+			if (hoverNode != nullptr)
+			{
+				selection.selectedNodes.insert(hoverNode->id);
+				markNodeOpenUntilRoot(hoverNode->id);
+				nodeUi.nodeToGiveFocus = hoverNode->id;
+			}
+		}
+	}
+	
+	if (editingMode == kEditingMode_NodePlacement)
+	{
+		// action: duplicate node at raycast position
+		if (inputIsCaptured == false && hasPointer && pointerBecameActive)
+		{
+			inputIsCaptured = true;
+			
+			// todo : for the vr version of the app, it would be nice to have a selection wheel to select the editing mode, and also to have access to context sensitive editing actions
 		
 			// find intersection point with the ground plane
 		
@@ -2035,56 +2174,41 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 				{
 					const Vec3 groundPosition = pointerOrigin_world + pointerDirection_world * t;
 					
-					if (keyboard.isDown(SDLK_c))
+					bool success = true;
+
+					deferredBegin();
 					{
-						bool success = true;
+						std::vector<int> rootNodeIds;
 						
-						deferredBegin();
+						const int nodeId = attachScene(
+							nodePlacement.templatePath.c_str(),
+							scene.rootNodeId);
+						
+						success &= nodeId != -1;
+						
+						if (nodeId != -1)
 						{
-							for (auto & parentNodeId : selection.selectedNodes)
+							auto * node = deferred.getNodeToAdd(nodeId);
+							
+							auto parentNodeId = node->parentId;
+							
+							auto & parentNode = scene.getNode(parentNodeId);
+							
+							auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
+							
+							auto * transformComp = node->components.find<TransformComponent>();
+							
+							Assert(sceneNodeComp != nullptr && transformComp != nullptr);
+							if (sceneNodeComp != nullptr && transformComp != nullptr)
 							{
-								auto & parentNode = scene.getNode(parentNodeId);
+								const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
 								
-								auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
-								
-								Assert(sceneNodeComp != nullptr);
-								if (sceneNodeComp != nullptr)
-								{
-									const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
-									
-									const int rootNodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
-									
-									success &= rootNodeId != -1;
-								}
+								transformComp->position = groundPosition_parent;
 							}
 						}
-						deferredEnd(success);
 					}
-					else
-					{
-						bool success = true;
-						
-						deferredBegin();
-						{
-							const int rootNodeId = addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
-							
-							success &= rootNodeId != -1;
-						}
-						deferredEnd(success);
-					}
+					deferredEnd(success);
 				}
-			}
-		}
-		else
-		{
-			if (!modShift())
-				selection = Selection();
-			
-			if (hoverNode != nullptr)
-			{
-				selection.selectedNodes.insert(hoverNode->id);
-				markNodeOpenUntilRoot(hoverNode->id);
-				nodeUi.nodeToGiveFocus = hoverNode->id;
 			}
 		}
 	}
@@ -2234,7 +2358,7 @@ void SceneEditor::performAction_save()
 {
 	if (documentInfo.path.empty())
 	{
-	#if USE_NFD
+	#if SCENEEDIT_USE_LIBNFD
 		nfdchar_t * path = nullptr;
 					
 		if (NFD_SaveDialog(nullptr, nullptr, &path) == NFD_OKAY)
@@ -2260,6 +2384,13 @@ void SceneEditor::performAction_save(const char * path, const bool updateDocumen
 #if ENABLE_SAVE_LOAD_TIMING
 	auto t1 = g_TimerRT.TimeUS_get();
 #endif
+	
+	undoCaptureBegin();
+	{
+		// todo : scene IO currently does this, but it breaks undo verification. should scene IO do this ? should it have a callback. or more general, should scene incorporate deferred actions and do this deferred ?
+		scene.assignAutoGeneratedNodeNames();
+	}
+	undoCaptureEnd();
 	
 	LineWriter line_writer;
 	
@@ -2734,31 +2865,69 @@ bool SceneEditor::performAction_addChild(const int parentNodeId)
 	return success;
 }
 
-bool SceneEditor::performAction_sceneAttach()
+bool SceneEditor::performAction_sceneAttach(const char * path, std::vector<int> * out_rootNodeIds)
 {
 	bool success = true;
 	
-#if USE_NFD
-	nfdchar_t * path = nullptr;
-
-	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+	if (path != nullptr)
 	{
 		deferredBegin();
 		{
 			for (auto nodeId : selection.selectedNodes)
-				success &= attachScene(path, nodeId) != -1;
+			{
+				const int rootNodeId = attachScene(path, nodeId);
+				
+				success &= rootNodeId != -1;
+				
+				if (out_rootNodeIds != nullptr)
+				{
+					out_rootNodeIds->push_back(rootNodeId);
+				}
+			}
 		}
 		deferredEnd(success);
 	}
-
-	if (path != nullptr)
+	else
 	{
-		free(path);
-		path = nullptr;
+	#if SCENEEDIT_USE_LIBNFD
+		nfdchar_t * path = nullptr;
+
+		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		{
+			deferredBegin();
+			{
+				for (auto nodeId : selection.selectedNodes)
+				{
+					const int rootNodeId = attachScene(path, nodeId);
+					
+					success &= rootNodeId != -1;
+					
+					if (out_rootNodeIds != nullptr)
+					{
+						out_rootNodeIds->push_back(rootNodeId);
+					}
+				}
+			}
+			deferredEnd(success);
+		}
+
+		if (path != nullptr)
+		{
+			free(path);
+			path = nullptr;
+		}
+	#else
+		success &= false;
+	#endif
 	}
-#else
-	success = false;
-#endif
+	
+	if (success == false)
+	{
+		if (out_rootNodeIds != nullptr)
+		{
+			out_rootNodeIds->clear();
+		}
+	}
 	
 	return success;
 }
@@ -2777,14 +2946,35 @@ bool SceneEditor::performAction_sceneAttachUpdate()
 	return success;
 }
 
-bool SceneEditor::performAction_sceneImport()
+bool SceneEditor::performAction_sceneImport(const char * path)
 {
 	bool success = true;
 	
-#if USE_NFD
-	nfdchar_t * path = nullptr;
+	if (path == nullptr)
+	{
+	#if SCENEEDIT_USE_LIBNFD
+		nfdchar_t * path = nullptr;
 
-	if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
+		{
+			deferredBegin();
+			{
+				for (auto nodeId : selection.selectedNodes)
+					success &= addNodesFromScene(path, nodeId) != -1;
+			}
+			deferredEnd(success);
+		}
+
+		if (path != nullptr)
+		{
+			free(path);
+			path = nullptr;
+		}
+	#else
+		success &= false;
+	#endif
+	}
+	else
 	{
 		deferredBegin();
 		{
@@ -2793,15 +2983,6 @@ bool SceneEditor::performAction_sceneImport()
 		}
 		deferredEnd(success);
 	}
-
-	if (path != nullptr)
-	{
-		free(path);
-		path = nullptr;
-	}
-#else
-	success = false;
-#endif
 
 	return success;
 }

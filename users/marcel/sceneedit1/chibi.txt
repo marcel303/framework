@@ -20,7 +20,6 @@ library marcel-sceneedit
 	depend_library framework-gltf
 	depend_library imgui-framework
 	depend_library jsoncpp
-	depend_library libnfd
 	depend_library libreflection
 	depend_library libreflection-bindtofile
 	depend_library libreflection-jsonio
@@ -28,6 +27,15 @@ library marcel-sceneedit
 	depend_library marcel-scene
 	#depend_library vfxgraph
 	#depend_library vfxgraph-nodes
+	
+	#with_platform macos|linux|windows depend_library libnfd
+	with_platform macos|linux|windows depend_library ImGuiFileDialog
+	with_platform macos|linux|windows compile_definition SCENEEDIT_USE_LIBNFD 0
+	with_platform macos|linux|windows compile_definition SCENEEDIT_USE_IMGUIFILEDIALOG 1
+	
+	with_platform iphoneos|android depend_library ImGuiFileDialog
+	with_platform iphoneos|android compile_definition SCENEEDIT_USE_IMGUIFILEDIALOG 1
+	
 	scan_files *.cpp exclude_path main.cpp
 	scan_files *.h
 	scan_files *.cpp path editor group editor

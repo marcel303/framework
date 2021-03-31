@@ -39,7 +39,10 @@ int main(int argc, char * argv[])
 			}
 			ImGui::End();
 			
-			if (ImGuiFileDialog::Instance()->Display("FileDialog"))
+			const ImVec2 maxSize = ImVec2(800, 600);
+			const ImVec2 minSize = ImVec2(400, 300);
+
+			if (ImGuiFileDialog::Instance()->Display("FileDialog", ImGuiWindowFlags_NoCollapse, minSize, maxSize))
 			{
 				if (ImGuiFileDialog::Instance()->IsOk())
 				{

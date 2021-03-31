@@ -3,7 +3,6 @@
 #include "helpers2.h" // g_typeDB
 
 #include "imgui.h"
-#include "nfd.h"
 
 // libreflection
 #include "lineReader.h"
@@ -16,16 +15,18 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+// filedialog
+#if SCENEEDIT_USE_LIBNFD
+	#include "nfd.h"
+#endif
+#if SCENEEDIT_USE_IMGUIFILEDIALOG
+	#include "ImGuiFileDialog.h"
+#endif
+
 #if defined(ANDROID) || defined(IPHONEOS)
 	#define HAS_KEYBOARD 0
 #else
 	#define HAS_KEYBOARD 1
-#endif
-
-#if defined(ANDROID) || defined(IPHONEOS)
-	#define USE_NFD 0
-#else
-	#define USE_NFD 1
 #endif
 
 namespace ImGui
@@ -271,7 +272,9 @@ namespace ImGui
 						auto * curveExponential = member.findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
 						
 						if (ImGui::SliderFloat(member.name, &value, limits->min, limits->max, "%.3f",
-							curveExponential == nullptr ? 1.f : curveExponential->exponential))
+							curveExponential && curveExponential->exponential > 1.f
+								? ImGuiSliderFlags_Logarithmic
+								: 0))
 						{
 							result = true;
 						}
@@ -532,7 +535,7 @@ namespace ImGui
 						if (ImGui::IsItemDeactivatedAfterEdit())
 							valueDidChange(callbacks);
 						
-					#if USE_NFD
+					#if SCENEEDIT_USE_LIBNFD
 						ImGui::SameLine();
 						if (ImGui::Button(".."))
 						{
@@ -558,6 +561,43 @@ namespace ImGui
 								free(filename);
 								filename = nullptr;
 							}
+						}
+					#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+						char dialogKey[32];
+						sprintf_s(dialogKey, sizeof(dialogKey), "%p", &value);
+						
+						ImGui::SameLine();
+						if (ImGui::Button(".."))
+						{
+							ImGuiFileDialog::Instance()->OpenModal(
+								dialogKey,
+								"Select file..",
+								".*",
+								"",
+								value);
+						}
+						
+						if (ImGuiFileDialog::Instance()->Display(dialogKey))
+						{
+							if (ImGuiFileDialog::Instance()->IsOk())
+							{
+								auto selection = ImGuiFileDialog::Instance()->GetSelection();
+								
+								if (!selection.empty())
+								{
+									std::string relativePath = selection.begin()->second;
+									
+									if (callbacks && callbacks->makePathRelative)
+										callbacks->makePathRelative(relativePath);
+								
+									value = relativePath;
+									result = true;
+									
+									valueDidChange(callbacks);
+								}
+							}
+							
+							ImGuiFileDialog::Instance()->Close();
 						}
 					#endif
 					}
