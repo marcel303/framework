@@ -2189,16 +2189,20 @@ bool Framework::tickVirtualDesktop(
 void Framework::drawVirtualDesktop()
 {
 #if WINDOW_IS_3D
-	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	pushCullMode(CULL_NONE, CULL_CCW);
 	{
-		if (window->hasSurface() && !window->isHidden())
+		for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		{
-			window->draw3d();
+			if (window->hasSurface() && !window->isHidden())
+			{
+				window->draw3d();
 
-			if (window->hasFocus())
-				window->draw3dCursor();
+				if (window->hasFocus())
+					window->draw3dCursor();
+			}
 		}
 	}
+	popCullMode();
 #endif
 }
 

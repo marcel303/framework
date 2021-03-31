@@ -45,6 +45,8 @@ void poolhack_begin()
 
 void poolhack_end()
 {
+	assert(s_poolCount > 0);
+	
 	s_poolCount--;
 	
 	[s_pools[s_poolCount] release];

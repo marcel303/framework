@@ -164,7 +164,6 @@ void FrameworkOvr::process()
 	{
 		for (int i = 0; i < 2; ++i)
 		{
-			Assert(vrPointer[i].DeviceID != -1);
 			if (vrPointer[i].DeviceID == activeInputDeviceId)
 				vrPointer[i].isPrimary = true;
 		}
