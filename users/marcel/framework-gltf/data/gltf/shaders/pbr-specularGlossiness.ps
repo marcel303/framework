@@ -91,6 +91,8 @@ void main()
 
     shader_fragColor = vec4(color, surfaceProperties.opacity);
 
+    shader_fragNormal = vec4(surfaceProperties.N, 0.0);
+
 #if 0 // todo : use temporal or dither based alpha offset to improve the blending result we get when using the alpha to coverage method
     // Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
     vec2 sampleCoord = v_texcoord0 * 1231541.0;

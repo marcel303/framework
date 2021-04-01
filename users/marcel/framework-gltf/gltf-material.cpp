@@ -374,8 +374,14 @@ namespace gltf
 	
 	void setDefaultMaterialShaders(MaterialShaders & shaders)
 	{
-		static Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
-		static Shader specularGlossinessShader("gltf/shaders/pbr-specularGlossiness");
+		// note : static so they remain valid after leaving function scope
+		static Shader metallicRoughnessShader;
+		static Shader specularGlossinessShader;
+		
+		// note : not just cached once but assigned each time, to ensure
+		//        the right shader version is selected wrt shader outputs
+		metallicRoughnessShader = Shader("gltf/shaders/pbr-metallicRoughness");
+		specularGlossinessShader = Shader("gltf/shaders/pbr-specularGlossiness");
 		
 		shaders.metallicRoughnessShader = &metallicRoughnessShader;
 		shaders.specularGlossinessShader = &specularGlossinessShader;

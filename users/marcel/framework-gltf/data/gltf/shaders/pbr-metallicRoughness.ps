@@ -85,4 +85,6 @@ void main()
     // -- store
 
     shader_fragColor = vec4(color, surfaceProperties.opacity);
+
+    shader_fragNormal = vec4(surfaceProperties.N, 0.0);
 }
