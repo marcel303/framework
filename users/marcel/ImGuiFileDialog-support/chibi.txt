@@ -2,6 +2,7 @@ library ImGuiFileDialog
 	depend_library imgui
 	scan_files cpp path ../ImGuiFileDialog
 	scan_files h   path ../ImGuiFileDialog
+	license_file ../ImGuiFileDialog/LICENSE
 	header_path ../ImGuiFileDialog expose
 
 app ImGuiFileDialog-test
