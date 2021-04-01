@@ -44,6 +44,9 @@ struct ModelComponentMgr : ComponentMgr<ModelComponent>
 	void draw() const;
 };
 
+extern ModelComponentMgr g_modelComponentMgr;
+
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -51,7 +54,7 @@ struct ModelComponentMgr : ComponentMgr<ModelComponent>
 struct ModelComponentType : ComponentType<ModelComponent>
 {
 	ModelComponentType()
-		: ComponentType("ModelComponent")
+		: ComponentType("ModelComponent", &g_modelComponentMgr)
 	{
 		add("filename", &ModelComponent::filename)
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);

@@ -54,6 +54,9 @@ struct ParameterComponentMgr : ComponentMgr<ParameterComponent>
 {
 };
 
+extern ParameterComponentMgr g_parameterComponentMgr;
+
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -61,7 +64,7 @@ struct ParameterComponentMgr : ComponentMgr<ParameterComponent>
 struct ParameterComponentType : ComponentType<ParameterComponent>
 {
 	ParameterComponentType()
-		: ComponentType("ParameterComponent")
+		: ComponentType("ParameterComponent", &g_parameterComponentMgr)
 	{
 		tickPriority = kComponentPriority_Parameter;
 		

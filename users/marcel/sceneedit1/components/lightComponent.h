@@ -30,6 +30,9 @@ struct LightComponentMgr : ComponentMgr<LightComponent>
 {
 };
 
+extern LightComponentMgr g_lightComponentMgr;
+
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -37,10 +40,12 @@ struct LightComponentMgr : ComponentMgr<LightComponent>
 struct LightComponentType : ComponentType<LightComponent>
 {
 	LightComponentType()
-		: ComponentType("LightComponent")
+		: ComponentType("LightComponent", &g_lightComponentMgr)
 	{
 		tickPriority = kComponentPriority_Light;
 		
+	// todo : need to resolve how to add enumeration types. and remove g_typeDB when resolved
+	
 		g_typeDB.addEnum<LightComponent::LightType>("LightComponent::LightType")
 			.add("directional", LightComponent::kLightType_Directional)
 			.add("point", LightComponent::kLightType_Point)

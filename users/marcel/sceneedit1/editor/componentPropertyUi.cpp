@@ -1,6 +1,5 @@
 #include "componentPropertyUi.h"
 #include "componentType.h"
-#include "helpers2.h" // g_typeDB
 
 #include "imgui.h"
 
@@ -53,7 +52,7 @@ namespace ImGui
 		
 		auto & member_scalar = static_cast<const Member_Scalar&>(member);
 		
-		auto * member_type = g_typeDB.findType(member_scalar.typeIndex);
+		auto * member_type = typeDB.findType(member_scalar.typeIndex);
 		auto * member_object = member_scalar.scalar_access(component);
 		
 		auto * default_member_object =
@@ -577,7 +576,14 @@ namespace ImGui
 								value);
 						}
 						
-						if (ImGuiFileDialog::Instance()->Display(dialogKey))
+						const ImVec2 minSize(
+							ImGui::GetIO().DisplaySize.x / 2,
+							ImGui::GetIO().DisplaySize.y / 2);
+						const ImVec2 maxSize(
+							ImGui::GetIO().DisplaySize.x,
+							ImGui::GetIO().DisplaySize.y);
+						
+						if (ImGuiFileDialog::Instance()->Display(dialogKey, ImGuiWindowFlags_NoCollapse, minSize, maxSize))
 						{
 							if (ImGuiFileDialog::Instance()->IsOk())
 							{
@@ -796,7 +802,7 @@ namespace ImGui
 					{
 						auto * member_scalar = static_cast<const Member_Scalar*>(member);
 						
-						auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
+						auto * member_type = typeDB.findType(member_scalar->typeIndex);
 						auto * member_object = member_scalar->scalar_access(object);
 						
 						Assert(member_type != nullptr);

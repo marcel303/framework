@@ -1,7 +1,6 @@
 #include "component.h"
 #include "componentType.h"
-#include "helpers.h" // findComponentType
-#include "helpers2.h" // g_typeDB
+#include "componentTypeDB.h"
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "Log.h"
@@ -16,7 +15,7 @@ bool copySceneNodeToLines(const TypeDB & typeDB, const SceneNode & node, LineWri
 {
 	for (ComponentBase * component = node.components.head; component != nullptr; component = component->next_in_set)
 	{
-		auto * component_type = findComponentType(component->typeIndex());
+		auto * component_type = g_componentTypeDB.findComponentType(component->typeIndex());
 		
 		Assert(component_type != nullptr);
 		if (component_type == nullptr)
@@ -26,7 +25,7 @@ bool copySceneNodeToLines(const TypeDB & typeDB, const SceneNode & node, LineWri
 		
 		indent++;
 		{
-			if (object_tolines_recursive(g_typeDB, component_type, component, line_writer, indent) == false)
+			if (object_tolines_recursive(typeDB, component_type, component, line_writer, indent) == false)
 				continue;
 		}
 		indent--;
@@ -52,7 +51,7 @@ bool pasteSceneNodeFromLines(const TypeDB & typeDB, LineReader & line_reader, Sc
 			return false;
 		}
 		
-		auto * component_type = findComponentType(component_type_name);
+		auto * component_type = g_componentTypeDB.findComponentType(component_type_name);
 		
 		Assert(component_type != nullptr);
 		if (component_type == nullptr)
@@ -65,7 +64,7 @@ bool pasteSceneNodeFromLines(const TypeDB & typeDB, LineReader & line_reader, Sc
 		
 		line_reader.push_indent();
 		{
-			if (object_fromlines_recursive(g_typeDB, component_type, component, line_reader) == false)
+			if (object_fromlines_recursive(typeDB, component_type, component, line_reader) == false)
 			{
 				node.freeComponents();
 				return false;

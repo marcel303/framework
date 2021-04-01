@@ -224,3 +224,8 @@ struct ComponentSet
 		return false;
 	}
 };
+
+// -- component set helper functions
+
+void freeComponentsInComponentSet(ComponentSet & componentSet);
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& component);

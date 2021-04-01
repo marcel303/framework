@@ -21,8 +21,9 @@ struct ComponentTypeBase : StructuredType
 	
 	ComponentMgrBase * componentMgr = nullptr;
 	
-	ComponentTypeBase(const char * in_typeName)
+	ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr)
 		: StructuredType(in_typeName)
+		, componentMgr(in_componentMgr)
 	{
 	}
 };
@@ -86,8 +87,8 @@ struct ComponentMemberAdder_Float
 template <typename T>
 struct ComponentType : ComponentTypeBase
 {
-	ComponentType(const char * in_typeName)
-		: ComponentTypeBase(in_typeName)
+	ComponentType(const char * in_typeName, ComponentMgrBase * in_componentMgr)
+		: ComponentTypeBase(in_typeName, in_componentMgr)
 	{
 	}
 	

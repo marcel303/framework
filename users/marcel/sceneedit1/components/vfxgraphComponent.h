@@ -45,6 +45,8 @@ struct VfxgraphComponentMgr : ComponentMgr<VfxgraphComponent>
 	virtual ~VfxgraphComponentMgr() override final;
 };
 
+extern VfxgraphComponentMgr g_vfxgraphComponentMgr;
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"

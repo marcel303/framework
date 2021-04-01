@@ -17,6 +17,7 @@ struct GltfComponent : Component<GltfComponent>
 	
 	gltf::BoundingBox modelAabb;
 	
+	bool aabbIsValid = false;
 	Vec3 aabbMin;
 	Vec3 aabbMax;
 
@@ -43,6 +44,9 @@ struct GltfComponentMgr : ComponentMgr<GltfComponent>
 	void draw() const;
 };
 
+extern GltfComponentMgr g_gltfComponentMgr;
+
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -50,7 +54,7 @@ struct GltfComponentMgr : ComponentMgr<GltfComponent>
 struct GltfComponentType : ComponentType<GltfComponent>
 {
 	GltfComponentType()
-		: ComponentType("GltfComponent")
+		: ComponentType("GltfComponent", &g_gltfComponentMgr)
 	{
 		add("filename", &GltfComponent::filename)
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);

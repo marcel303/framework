@@ -21,6 +21,8 @@ struct CameraComponentMgr : ComponentMgr<CameraComponent>
 {
 };
 
+extern CameraComponentMgr g_cameraComponentMgr;
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -28,7 +30,7 @@ struct CameraComponentMgr : ComponentMgr<CameraComponent>
 struct CameraComponentType : ComponentType<CameraComponent>
 {
 	CameraComponentType()
-		: ComponentType("CameraComponent")
+		: ComponentType("CameraComponent", &g_cameraComponentMgr)
 	{
 		tickPriority = kComponentPriority_Camera;
 

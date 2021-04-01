@@ -17,6 +17,8 @@ struct SceneNodeComponentMgr : ComponentMgr<SceneNodeComponent>
 {
 };
 
+extern SceneNodeComponentMgr g_sceneNodeComponentMgr;
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -24,7 +26,7 @@ struct SceneNodeComponentMgr : ComponentMgr<SceneNodeComponent>
 struct SceneNodeComponentType : ComponentType<SceneNodeComponent>
 {
 	SceneNodeComponentType()
-		: ComponentType("SceneNodeComponent")
+		: ComponentType("SceneNodeComponent", &g_sceneNodeComponentMgr)
 	{
 		add("name", &SceneNodeComponent::name);
 		

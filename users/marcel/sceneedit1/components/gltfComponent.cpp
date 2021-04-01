@@ -10,6 +10,8 @@
 
 using namespace gltf;
 
+GltfComponentMgr g_gltfComponentMgr;
+
 GltfComponent::~GltfComponent()
 {
 	free();
@@ -20,6 +22,8 @@ bool GltfComponent::init()
 	cacheElem = &g_gltfCache.findOrCreate(filename.c_str());
 
 	// compute scaled AABB
+	
+	aabbIsValid = cacheElem->m_aabb->hasMinMax;
 	
 	if (cacheElem->m_aabb->hasMinMax)
 	{
@@ -50,6 +54,8 @@ void GltfComponent::propertyChanged(void * address)
 	if (address == &filename || address == &scale || address == &centimetersToMeters)
 	{
 		// compute scaled AABB
+		
+		aabbIsValid = cacheElem->m_aabb->hasMinMax;
 		
 		if (cacheElem->m_aabb->hasMinMax)
 		{

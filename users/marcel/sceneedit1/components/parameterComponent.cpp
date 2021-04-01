@@ -2,6 +2,8 @@
 #include "parameterComponent.h"
 #include "Parse.h"
 
+ParameterComponentMgr g_parameterComponentMgr;
+
 void ParameterComponent::add(ParameterBase * parameter)
 {
 	parameterMgr.add(parameter);

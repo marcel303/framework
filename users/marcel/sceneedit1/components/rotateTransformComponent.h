@@ -13,6 +13,8 @@ struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
 {
 };
 
+extern RotateTransformComponentMgr g_rotateTransformComponentMgr;
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -20,7 +22,7 @@ struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
 struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
 {
 	RotateTransformComponentType()
-		: ComponentType("RotateTransformComponent")
+		: ComponentType("RotateTransformComponent", &g_rotateTransformComponentMgr)
 	{
 		add("speed", &RotateTransformComponent::speed);
 	}

@@ -1,5 +1,7 @@
 #pragma once
 
+// todo : move to libparticle-ui
+
 struct UiCaptureElem
 {
 	bool hasCapture = false;

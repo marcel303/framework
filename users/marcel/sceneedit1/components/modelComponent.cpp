@@ -2,6 +2,8 @@
 #include "modelComponent.h"
 #include "sceneNodeComponent.h"
 
+ModelComponentMgr g_modelComponentMgr;
+
 ModelComponent::~ModelComponent()
 {
 	delete model;

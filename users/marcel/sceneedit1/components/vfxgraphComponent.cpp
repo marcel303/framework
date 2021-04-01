@@ -7,7 +7,7 @@
 
 #include "helpers.h" // g_resourceDatabase
 
-extern VfxgraphComponentMgr s_vfxgraphComponentMgr;
+VfxgraphComponentMgr g_vfxgraphComponentMgr;
 
 VfxgraphComponent::~VfxgraphComponent()
 {

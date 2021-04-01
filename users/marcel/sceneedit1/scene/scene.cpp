@@ -1,6 +1,7 @@
 #include "componentType.h"
+#include "componentTypeDB.h"
 #include "Debugging.h"
-#include "helpers.h" // findComponentType
+#include "helpers.h" // freeComponentsInComponentSet
 #include "lineWriter.h"
 #include "Log.h"
 #include "reflection-textio.h"
@@ -12,10 +13,6 @@
 #include <algorithm>
 #include <set>
 
-// -- scene node component type
-
-extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
-
 // -- scene node
 
 bool SceneNode::initComponents()
@@ -26,7 +23,7 @@ bool SceneNode::initComponents()
 	{
 		if (component->init() == false)
 		{
-			auto * componentType = findComponentType(component->typeIndex());
+			auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 			
 			LOG_ERR("failed to initialize component of type %s",
 				componentType == nullptr
@@ -113,7 +110,7 @@ void Scene::createRootNode()
 	SceneNode * rootNode = new SceneNode();
 	rootNode->id = allocNodeId();
 	
-	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(rootNode->components.id);
+	auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(rootNode->components.id);
 	sceneNodeComponent->name = "root";
 	rootNode->components.add(sceneNodeComponent);
 	

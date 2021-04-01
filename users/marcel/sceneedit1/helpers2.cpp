@@ -1,3 +1,4 @@
+#include "componentTypeDB.h"
 #include "helpers.h"
 #include "helpers2.h"
 #include "reflection.h"
@@ -10,19 +11,8 @@
 #include "components/parameterComponent.h"
 #include "components/rotateTransformComponent.h"
 #include "components/transformComponent.h"
-#include "components/vfxgraphComponent.h"
+//#include "components/vfxgraphComponent.h"
 #include "scene/sceneNodeComponent.h"
-
-// todo : remove component mgr globals
-CameraComponentMgr s_cameraComponentMgr;
-GltfComponentMgr s_gltfComponentMgr;
-LightComponentMgr s_lightComponentMgr;
-ModelComponentMgr s_modelComponentMgr;
-ParameterComponentMgr s_parameterComponentMgr;
-RotateTransformComponentMgr s_rotateTransformComponentMgr;
-SceneNodeComponentMgr s_sceneNodeComponentMgr;
-TransformComponentMgr s_transformComponentMgr;
-//VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 //
 
@@ -56,17 +46,17 @@ void registerBuiltinTypes(TypeDB & typeDB)
 		.add("max", &ParameterDefinition::max);
 }
 
-void registerComponentTypes(TypeDB & typeDB)
+void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
 {
-	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
-	registerComponentType(new GltfComponentType(), &s_gltfComponentMgr);
-	registerComponentType(new LightComponentType(), &s_lightComponentMgr);
-	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
-	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
-	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
-	registerComponentType(new SceneNodeComponentType(), &s_sceneNodeComponentMgr);
-	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
-	//registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
+	componentTypeDB.registerComponentType(new CameraComponentType());
+	componentTypeDB.registerComponentType(new GltfComponentType());
+	componentTypeDB.registerComponentType(new LightComponentType());
+	componentTypeDB.registerComponentType(new ModelComponentType());
+	componentTypeDB.registerComponentType(new ParameterComponentType());
+	componentTypeDB.registerComponentType(new RotateTransformComponentType());
+	componentTypeDB.registerComponentType(new SceneNodeComponentType());
+	componentTypeDB.registerComponentType(new TransformComponentType());
+	//componentTypeDB.registerComponentType(new VfxgraphComponentType());
 }
 
 //

@@ -8,6 +8,9 @@
 
 // ecs-scene
 #define DEFINE_COMPONENT_TYPES
+#include "components/gltfComponent.h"
+#include "components/modelComponent.h"
+#include "components/parameterComponent.h"
 #include "components/transformComponent.h"
 #include "helpers.h" // findComponentType
 #include "scene.h"
@@ -17,6 +20,7 @@
 
 // ecs-component
 #include "componentType.h"
+#include "componentTypeDB.h"
 
 // ecs-parameter
 #include "parameterUi.h"
@@ -66,19 +70,11 @@
 
 #define ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE 1
 
-// todo : remove. need a generic way to ask for a node's bounding box
-
-#include "components/gltfComponent.h"
-#include "components/modelComponent.h"
-#include "components/parameterComponent.h"
-extern GltfComponentMgr s_gltfComponentMgr;
-extern ModelComponentMgr s_modelComponentMgr;
-extern ParameterComponentMgr s_parameterComponentMgr;
-
-//
-
-extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
-extern TransformComponentMgr s_transformComponentMgr;
+#if SCENEEDIT_USE_IMGUIFILEDIALOG
+static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
+static void openImGuiSaveDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
+static const char * doImGuiFileDialog(const SceneEditor & sceneEditor, const char * key);
+#endif
 
 //
 
@@ -139,6 +135,48 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 	sy = preview.viewportSy == -1 ? viewportSy : preview.viewportSy;
 }
 
+// todo : generalize this function
+static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
+{
+	bool hasMinMax = false;
+	
+	const auto * modelComponent = node.components.find<ModelComponent>();
+	
+	if (modelComponent != nullptr) // todo : check if aabb is valid
+	{
+		if (hasMinMax)
+		{
+			min = min.Min(modelComponent->aabbMin);
+			max = max.Max(modelComponent->aabbMax);
+		}
+		else
+		{
+			min = modelComponent->aabbMin;
+			max = modelComponent->aabbMax;
+			hasMinMax = true;
+		}
+	}
+	
+	const auto * gltfComponent = node.components.find<GltfComponent>();
+	
+	if (gltfComponent != nullptr && gltfComponent->aabbIsValid)
+	{
+		if (hasMinMax)
+		{
+			min = min.Min(gltfComponent->aabbMin);
+			max = max.Max(gltfComponent->aabbMax);
+		}
+		else
+		{
+			min = gltfComponent->aabbMin;
+			max = gltfComponent->aabbMax;
+			hasMinMax = true;
+		}
+	}
+	
+	return hasMinMax;
+}
+
 SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore) const
 {
 	SceneNode * bestNode = nullptr;
@@ -151,35 +189,39 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 		if (nodesToIgnore.count(node.id) != 0)
 			continue;
 		
+		Vec3 min(false);
+		Vec3 max(false);
+		if (!getBoundingBoxForNode(node, min, max))
+			continue;
+			
 		const auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
-		const auto * modelComponent = node.components.find<ModelComponent>();
 		
 		Assert(sceneNodeComp != nullptr);
-		if (sceneNodeComp != nullptr && modelComponent != nullptr && modelComponent->hasModelAabb)
+		if (sceneNodeComp == nullptr)
+			continue;;
+			
+		const auto & objectToWorld = sceneNodeComp->objectToWorld;
+		const auto worldToObject = objectToWorld.CalcInv();
+		
+		const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
+		const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
+		
+		float distance;
+		if (intersectBoundingBox3d(
+			&min[0],
+			&max[0],
+			rayOrigin_object[0],
+			rayOrigin_object[1],
+			rayOrigin_object[2],
+			1.f / rayDirection_object[0],
+			1.f / rayDirection_object[1],
+			1.f / rayDirection_object[2],
+			distance))
 		{
-			const auto & objectToWorld = sceneNodeComp->objectToWorld;
-			const auto worldToObject = objectToWorld.CalcInv();
-			
-			const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
-			const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
-			
-			float distance;
-			if (intersectBoundingBox3d(
-				&modelComponent->aabbMin[0],
-				&modelComponent->aabbMax[0],
-				rayOrigin_object[0],
-				rayOrigin_object[1],
-				rayOrigin_object[2],
-				1.f / rayDirection_object[0],
-				1.f / rayDirection_object[1],
-				1.f / rayDirection_object[2],
-				distance))
+			if (distance < bestDistance)
 			{
-				if (distance < bestDistance)
-				{
-					bestNode = &node;
-					bestDistance = distance;
-				}
+				bestNode = &node;
+				bestDistance = distance;
 			}
 		}
 	}
@@ -236,6 +278,8 @@ void SceneEditor::deferredEndCommit()
 				
 				removeNodesToRemove();
 				
+				parentNodesToParent();
+				
 				selectNodesToSelect(false);
 				
 				deferred.isProcessing = false;
@@ -255,6 +299,10 @@ void SceneEditor::deferredEndCommit()
 			for (auto nodeId : deferred.nodesToRemove)
 				stackItem.nodesToRemove.insert(nodeId);
 			deferred.nodesToRemove.clear();
+			
+			for (auto parent : deferred.nodesToParent)
+				stackItem.nodesToParent.insert(parent);
+			deferred.nodesToParent.clear();
 			
 			for (auto nodeId : deferred.nodesToSelect)
 				stackItem.nodesToSelect.insert(nodeId);
@@ -296,6 +344,7 @@ void SceneEditor::deferredEndCancel()
 		
 		deferred.nodesToAdd.clear();
 		deferred.nodesToRemove.clear();
+		deferred.nodesToParent.clear();
 		deferred.nodesToSelect.clear();
 		
 		Assert(deferred.isFlushed());
@@ -335,6 +384,7 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 		
 		deferred.nodesToRemove.erase(nodeId);
 		deferred.nodesToSelect.erase(nodeId);
+		deferred.nodesToParent.erase(nodeId);
 	}
 }
 
@@ -374,6 +424,29 @@ void SceneEditor::removeNodesToRemove()
 		
 		removeNodeSubTree(nodeId);
 	}
+}
+
+void SceneEditor::parentNodesToParent()
+{
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!");
+	
+	for (auto & nodeToParent : deferred.nodesToParent)
+	{
+		auto & childNode = scene.getNode(nodeToParent.first);
+		auto & oldParent = scene.getNode(childNode.parentId);
+		auto & newParent = scene.getNode(nodeToParent.second);
+		
+		oldParent.childNodeIds.erase(
+			std::find(
+				oldParent.childNodeIds.begin(),
+				oldParent.childNodeIds.end(),
+				childNode.id));
+				
+		newParent.childNodeIds.push_back(childNode.id);
+		childNode.parentId = newParent.id;
+	}
+	
+	deferred.nodesToParent.clear();
 }
 
 void SceneEditor::selectNodesToSelect(const bool append)
@@ -459,6 +532,18 @@ void SceneEditor::undoCaptureEnd()
 	}
 }
 
+void SceneEditor::undoCaptureFastForward()
+{
+#if defined(DEBUG)
+	std::string text;
+	
+	if (undoCapture(text))
+	{
+		undo.currentVersion = text;
+	}
+#endif
+}
+
 void SceneEditor::undoReset()
 {
 	undo.versions.clear();
@@ -495,7 +580,7 @@ void SceneEditor::editNode(const int nodeId)
 			
 			if (do_filter)
 			{
-				const auto * componentType = findComponentType(component->typeIndex());
+				const auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 				
 				passes_filter =
 					componentType != nullptr &&
@@ -515,8 +600,8 @@ void SceneEditor::editNode(const int nodeId)
 		std::sort(sorted_components, sorted_components + num_components,
 			[](const ComponentBase * first, const ComponentBase * second) -> bool
 				{
-					const auto * first_type = findComponentType(first->typeIndex());
-					const auto * second_type = findComponentType(second->typeIndex());
+					const auto * first_type = g_componentTypeDB.findComponentType(first->typeIndex());
+					const auto * second_type = g_componentTypeDB.findComponentType(second->typeIndex());
 					
 					if (first_type == nullptr || second_type == nullptr)
 						return first_type > second_type;
@@ -537,7 +622,7 @@ void SceneEditor::editNode(const int nodeId)
 				
 				ImGui::BeginGroup();
 				{
-					const auto * componentType = findComponentType(component->typeIndex());
+					const auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 					
 					Assert(componentType != nullptr);
 					if (componentType != nullptr)
@@ -698,7 +783,7 @@ bool SceneEditor::pasteNodeFromLines(const int parentId, LineReader & line_reade
 	{
 		if (childNode->components.contains<SceneNodeComponent>() == false)
 		{
-			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
+			auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(childNode->components.id);
 			childNode->components.add(sceneNodeComponent);
 		}
 		
@@ -753,7 +838,7 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 		
 		if (node.components.contains<SceneNodeComponent>() == false)
 		{
-			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node.components.id);
+			auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(node.components.id);
 			node.components.add(sceneNodeComponent);
 		}
 		
@@ -970,7 +1055,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 		
 		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 		{
-			auto * componentType = findComponentType(component->typeIndex());
+			auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 			if (componentType != nullptr && strcmp(componentType->typeName, clipboardInfo.componentTypeName.c_str()) == 0)
 				hasComponentOfType = true;
 		}
@@ -983,7 +1068,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 			clipboardInfo.component_lineIndex,
 			clipboardInfo.component_lineIndent);
 		
-		auto * componentType = findComponentType(clipboardInfo.componentTypeName.c_str());
+		auto * componentType = g_componentTypeDB.findComponentType(clipboardInfo.componentTypeName.c_str());
 		
 		if (componentType != nullptr)
 		{
@@ -1009,7 +1094,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 		
 		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 		{
-			auto * componentType = findComponentType(component->typeIndex());
+			auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 			
 			if (componentType != nullptr && strcmp(componentType->typeName, clipboardInfo.componentTypeName.c_str()) == 0)
 			{
@@ -1044,7 +1129,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 
 	if (ImGui::BeginMenu("Add component.."))
 	{
-		for (auto * componentType : g_componentTypes)
+		for (auto * componentType : g_componentTypeDB.componentTypes)
 		{
 			// check if the node already has a component of this type
 			
@@ -1144,6 +1229,24 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 			if (!ImGui::GetIO().KeyShift)
 				selection = Selection();
 			selection.selectedNodes.insert(node.id);
+		}
+		
+		if (ImGui::BeginDragDropTarget())
+		{
+		// todo : peek payload. check if it's ok to drop here, and accept or not
+			const ImGuiPayload * payload;
+			if ((payload = ImGui::AcceptDragDropPayload("SceneNodeId")) != nullptr)
+			{
+				const int childNodeId = *(int*)payload->Data;
+				deferred.nodesToParent.insert({ childNodeId, node.id });
+			}
+			ImGui::EndDragDropTarget();
+		}
+		
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("SceneNodeId", &nodeId, sizeof(nodeId));
+			ImGui::EndDragDropSource();
 		}
 	
 		if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
@@ -1247,7 +1350,7 @@ void SceneEditor::updateNodeVisibility()
 				
 				for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
 				{
-					auto * componentType = findComponentType(component->typeIndex());
+					auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 					Assert(componentType != nullptr);
 					if (componentType != nullptr)
 						passes_component_filter |= strcasestr(componentType->typeName, nodeUi.componentTypeNameFilter) != nullptr;
@@ -1296,13 +1399,13 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 	
 	// 2.2 assign its display name
 	
-	auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode.components.id);
+	auto * sceneNodeComponent = g_sceneNodeComponentMgr.getComponent(rootNode.components.id);
 	
 	sceneNodeComponent->name = Path::GetBaseName(path);
 	
 	// 3. and make sure it has a transform component
 	
-	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
+	auto * transformComponent = g_transformComponentMgr.createComponent(rootNode.components.id);
 	rootNode.components.add(transformComponent);
 	
 	// 4. load scene from file
@@ -1384,7 +1487,7 @@ int SceneEditor::attachScene(const char * path, const int parentId)
 			SceneNode * rootNode = deferred.getNodeToAdd(rootNodeId);
 			Assert(rootNode != nullptr);
 				
-			auto * sceneNodeComponent = s_sceneNodeComponentMgr.getComponent(rootNode->components.id);
+			auto * sceneNodeComponent = g_sceneNodeComponentMgr.getComponent(rootNode->components.id);
 		
 			sceneNodeComponent->attachedFromScene = path;
 		}
@@ -1491,10 +1594,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				{
 					if (ImGui::CollapsingHeader("Node Placement", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						char path[256];
-						strcpy_s(path, sizeof(path), nodePlacement.templatePath.c_str());
-						if (ImGui::InputText("Template", path, sizeof(path)))
-							nodePlacement.templatePath = path;
+						char templatePath[256];
+						strcpy_s(templatePath, sizeof(templatePath), nodePlacement.templatePath.c_str());
+						if (ImGui::InputText("Template", templatePath, sizeof(templatePath)))
+							nodePlacement.templatePath = templatePath;
 							
 					#if SCENEEDIT_USE_LIBNFD
 						ImGui::SameLine();
@@ -1504,8 +1607,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							
 							if (NFD_OpenDialog(nullptr, nullptr, &path) == NFD_OKAY)
 							{
-							// todo : make relative to document path ?
-								nodePlacement.templatePath = path;
+								nodePlacement.templatePath = makePathRelativeToDocumentPath(path);
 							}
 						
 							if (path != nullptr)
@@ -1519,27 +1621,18 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						const char * dialogKey = "PlacementTemplatePath";
 						if (ImGui::Button(".."))
 						{
-							ImGuiFileDialog::Instance()->OpenModal(
+							openImGuiOpenDialog(
 								dialogKey,
 								"Select file..",
 								".*",
-								"",
 								nodePlacement.templatePath.c_str());
 						}
-						if (ImGuiFileDialog::Instance()->Display(dialogKey))
+						
+						const char * path = doImGuiFileDialog(*this, dialogKey);
+						
+						if (path != nullptr)
 						{
-							if (ImGuiFileDialog::Instance()->IsOk())
-							{
-								auto selection = ImGuiFileDialog::Instance()->GetSelection();
-								
-								if (!selection.empty())
-								{
-								// todo : make relative to document path ?
-									nodePlacement.templatePath = selection.begin()->second;
-								}
-							}
-							
-							ImGuiFileDialog::Instance()->Close();
+							nodePlacement.templatePath = makePathRelativeToDocumentPath(path);
 						}
 					#endif
 					}
@@ -1622,8 +1715,14 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
 						nodeUi.nodesToOpen_deferred.clear();
 						
-						const NodeStructureEditingAction action = editNodeStructure_traverse(scene.rootNodeId);
+						NodeStructureEditingAction action;
 						
+						deferredBegin();
+						{
+							action = editNodeStructure_traverse(scene.rootNodeId);
+						}
+						deferredEnd(true);
+					
 						switch (action)
 						{
 						case kNodeStructureEditingAction_None:
@@ -1663,11 +1762,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						#if SCENEEDIT_USE_LIBNFD
 							performAction_sceneAttach(nullptr, nullptr);
 						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-							ImGuiFileDialog::Instance()->OpenModal(
+							openImGuiOpenDialog(
 								attachSceneDialogKey,
 								"Attach Scene..",
 								".*",
-								"",
 								"");
 						#endif
 							break;
@@ -1679,49 +1777,26 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						#if SCENEEDIT_USE_LIBNFD
 							performAction_sceneImport(nullptr);
 						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-							ImGuiFileDialog::Instance()->OpenModal(
+							openImGuiOpenDialog(
 								importSceneDialogKey,
 								"Import Scene..",
 								".*",
-								"",
 								"");
 						#endif
 							break;
 						}
 						
 					#if SCENEEDIT_USE_IMGUIFILEDIALOG
-						if (ImGuiFileDialog::Instance()->Display(attachSceneDialogKey))
+						const char * path;
+					
+						if ((path = doImGuiFileDialog(*this, attachSceneDialogKey)))
 						{
-							if (ImGuiFileDialog::Instance()->IsOk())
-							{
-								auto selection = ImGuiFileDialog::Instance()->GetSelection();
-								
-								if (!selection.empty())
-								{
-									const char * path = selection.begin()->second.c_str();
-									
-									performAction_sceneAttach(path, nullptr);
-								}
-							}
-							
-							ImGuiFileDialog::Instance()->Close();
+							performAction_sceneAttach(makePathRelativeToDocumentPath(path).c_str(), nullptr);
 						}
 						
-						if (ImGuiFileDialog::Instance()->Display(importSceneDialogKey))
+						if ((path = doImGuiFileDialog(*this, importSceneDialogKey)))
 						{
-							if (ImGuiFileDialog::Instance()->IsOk())
-							{
-								auto selection = ImGuiFileDialog::Instance()->GetSelection();
-								
-								if (!selection.empty())
-								{
-									const char * path = selection.begin()->second.c_str();
-									
-									performAction_sceneImport(path);
-								}
-							}
-							
-							ImGuiFileDialog::Instance()->Close();
+							performAction_sceneImport(makePathRelativeToDocumentPath(path).c_str());
 						}
 					#endif
 					}
@@ -1760,7 +1835,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					// one or more transforms may have been edited or invalidated due to a parent node being invalidated
 					// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
 					// to work
-					s_transformComponentMgr.calculateTransforms(scene);
+					g_transformComponentMgr.calculateTransforms(scene);
 				}
 			}
 			ImGui::End();
@@ -1793,11 +1868,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						path = nullptr;
 					}
 				#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-					ImGuiFileDialog::Instance()->OpenModal(
+					openImGuiOpenDialog(
 						loadSceneDialogKey,
 						"Load Scene..",
 						".*",
-						"",
 						"");
 				#endif
 				}
@@ -1833,11 +1907,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						path = nullptr;
 					}
 				#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-					ImGuiFileDialog::Instance()->OpenModal(
+					openImGuiSaveDialog(
 						saveSceneDialogKey,
 						"Save Scene..",
 						".*",
-						"",
 						"");
 				#endif
 				}
@@ -1873,7 +1946,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
 				ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
 				
-				doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
+				doParameterUi(g_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
 				
 				ImGui::EndMenu();
 			}
@@ -1891,38 +1964,16 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 			//
 			
 		#if SCENEEDIT_USE_IMGUIFILEDIALOG
-			if (ImGuiFileDialog::Instance()->Display(loadSceneDialogKey))
+			const char * path;
+			
+			if ((path = doImGuiFileDialog(*this, loadSceneDialogKey)))
 			{
-				if (ImGuiFileDialog::Instance()->IsOk())
-				{
-					auto selection = ImGuiFileDialog::Instance()->GetSelection();
-					
-					if (!selection.empty())
-					{
-						const char * path = selection.begin()->second.c_str();
-						
-						performAction_load(path);
-					}
-				}
-				
-				ImGuiFileDialog::Instance()->Close();
+				performAction_load(path);
 			}
 			
-			if (ImGuiFileDialog::Instance()->Display(saveSceneDialogKey))
+			if ((path = doImGuiFileDialog(*this, saveSceneDialogKey)))
 			{
-				if (ImGuiFileDialog::Instance()->IsOk())
-				{
-					auto selection = ImGuiFileDialog::Instance()->GetSelection();
-					
-					if (!selection.empty())
-					{
-						const char * path = selection.begin()->second.c_str();
-						
-						performAction_save(path, true);
-					}
-				}
-				
-				ImGuiFileDialog::Instance()->Close();
+				performAction_save(path, true);
 			}
 		#endif
 		}
@@ -2390,7 +2441,7 @@ void SceneEditor::performAction_save(const char * path, const bool updateDocumen
 		// todo : scene IO currently does this, but it breaks undo verification. should scene IO do this ? should it have a callback. or more general, should scene incorporate deferred actions and do this deferred ?
 		scene.assignAutoGeneratedNodeNames();
 	}
-	undoCaptureEnd();
+	undoCaptureFastForward();
 	
 	LineWriter line_writer;
 	
@@ -2416,11 +2467,17 @@ void SceneEditor::performAction_save(const char * path, const bool updateDocumen
 			{
 				// update file paths so they become relative to the new document path
 				
-				updateFilePaths(
-					scene,
-					typeDB,
-					Path::GetDirectory(documentInfo.path).c_str(),
-					Path::GetDirectory(path).c_str());
+				undoCaptureBegin();
+				{
+					updateFilePaths(
+						scene,
+						typeDB,
+						Path::GetDirectory(documentInfo.path).c_str(),
+						Path::GetDirectory(path).c_str());
+				}
+				undoCaptureFastForward();
+				
+			// todo : update nodePlacement.templatePath
 				
 				// remember path as current path
 								
@@ -2533,6 +2590,8 @@ void SceneEditor::performAction_undo()
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
 						{
+						// todo : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
+						
 							for (auto & node_itr : scene.nodes)
 								deferred.nodesToRemove.insert(node_itr.second->id);
 							
@@ -2598,6 +2657,8 @@ void SceneEditor::performAction_redo()
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
 						{
+						// todo : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
+						
 							for (auto & node_itr : scene.nodes)
 								deferred.nodesToRemove.insert(node_itr.second->id);
 							
@@ -2836,11 +2897,11 @@ bool SceneEditor::performAction_addChild(const int parentNodeId)
 	childNode->id = scene.allocNodeId();
 	childNode->parentId = parentNodeId;
 	
-	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
+	auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(childNode->components.id);
 	sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 	childNode->components.add(sceneNodeComponent);
 	
-	auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
+	auto * transformComponent = g_transformComponentMgr.createComponent(childNode->components.id);
 	childNode->components.add(transformComponent);
 	
 	if (childNode->initComponents() == false)
@@ -3029,13 +3090,10 @@ void SceneEditor::drawNodeBoundingBox(const SceneNode & node) const
 	const bool isHovered = node.id == hoverNodeId;
 	const bool isSelected = selection.selectedNodes.count(node.id) != 0;
 	
-	const ModelComponent * modelComp = node.components.find<ModelComponent>();
-
-	if (modelComp != nullptr)
+	Vec3 min(false);
+	Vec3 max(false);
+	if (getBoundingBoxForNode(node, min, max))
 	{
-		const Vec3 & min = modelComp->aabbMin;
-		const Vec3 & max = modelComp->aabbMax;
-		
 		const Vec3 position = (min + max) / 2.f;
 		const Vec3 size = (max - min) / 2.f;
 		
@@ -3165,9 +3223,9 @@ void SceneEditor::drawSceneOpaque() const
 	
 	if (preview.drawScene)
 	{
-		s_modelComponentMgr.draw();
+		g_modelComponentMgr.draw();
 		
-		s_gltfComponentMgr.draw();
+		g_gltfComponentMgr.draw();
 	}
 }
 
@@ -3399,7 +3457,7 @@ void SceneEditor::resetDocument()
 	undoReset();
 }
 
-void SceneEditor::updateFilePaths(Scene & scene, TypeDB * typeDB, const char * oldBasePath, const char * newBasePath)
+void SceneEditor::updateFilePaths(Scene & scene, const TypeDB * typeDB, const char * oldBasePath, const char * newBasePath)
 {
 	// when we change document paths, all relative paths should be updated to reflect the new 'base path' (the path where the scene is saved)
 	
@@ -3415,7 +3473,7 @@ void SceneEditor::updateFilePaths(Scene & scene, TypeDB * typeDB, const char * o
 		
 		for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
 		{
-			auto * componentType = findComponentType(component->typeIndex());
+			auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 			
 			for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 			{
@@ -3512,3 +3570,92 @@ void SceneEditor::updateFilePaths(Scene & scene, TypeDB * typeDB, const char * o
 		}
 	}
 }
+
+std::string SceneEditor::makePathRelativeToDocumentPath(const char * path) const
+{
+	if (documentInfo.path.empty())
+	{
+		return path;
+	}
+	else
+	{
+		auto isAbsolutePath = [](const char * path)
+		{
+			return
+				path[0] == '/' ||
+				strchr(path, ':') != nullptr;
+		};
+		
+		Assert(isAbsolutePath(documentInfo.path.c_str()));
+		
+		const std::string absolutePath =
+			isAbsolutePath(path)
+				? path
+				: Path::MakeAbsolute(getDirectory(), path);
+				
+		return Path::MakeRelative(Path::GetDirectory(documentInfo.path), absolutePath);
+	}
+}
+
+#if SCENEEDIT_USE_IMGUIFILEDIALOG
+
+static std::string s_fileDialogResult;
+
+static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath)
+{
+	ImGuiFileDialog::Instance()->OpenModal(
+		key,
+		caption,
+		filter,
+		initialPath);
+}
+
+static void openImGuiSaveDialog(const char * key, const char * caption, const char * filter, const char * initialPath)
+{
+	ImGuiFileDialog::Instance()->OpenModal(
+		key,
+		caption,
+		filter,
+		initialPath,
+		1,
+		nullptr,
+		ImGuiFileDialogFlags_ConfirmOverwrite);
+}
+
+static const char * doImGuiFileDialog(const SceneEditor & sceneEditor, const char * key)
+{
+	const char * result = nullptr;
+	
+	const ImVec2 minSize(
+		ImGui::GetIO().DisplaySize.x / 2,
+		ImGui::GetIO().DisplaySize.y / 2);
+	const ImVec2 maxSize(
+		ImGui::GetIO().DisplaySize.x,
+		ImGui::GetIO().DisplaySize.y);
+	
+	if (ImGuiFileDialog::Instance()->Display(key, ImGuiWindowFlags_NoCollapse, minSize, maxSize))
+	{
+		if (ImGuiFileDialog::Instance()->IsOk())
+		{
+		// fixme : selection method doesn't work well.. when manually entering filename,
+		//         and hitting enter, it will not be set to the filename the user entered..
+		//         instead, it's the initial filename (if any). this causes files to be
+		//         unexpectedly overwritten
+		
+			auto selection = ImGuiFileDialog::Instance()->GetSelection();
+			
+			if (!selection.empty())
+			{
+				s_fileDialogResult = selection.begin()->second.c_str();
+				
+				result = s_fileDialogResult.c_str();
+			}
+		}
+		
+		ImGuiFileDialog::Instance()->Close();
+	}
+	
+	return result;
+}
+
+#endif

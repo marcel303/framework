@@ -1,4 +1,4 @@
-#include "helpers.h"
+#include "helpers.h" // instantiateComponentsFromTemplate
 
 // ecs-scene
 #include "scene.h"
@@ -9,6 +9,7 @@
 
 // ecs-component
 #include "componentType.h"
+#include "componentTypeDB.h"
 
 // libreflection-textio
 #include "lineReader.h"
@@ -24,7 +25,7 @@
 // std
 #include <string.h>
 
-extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
+// todo : ability to drag and drop nodes to organize them
 
 static int calculateIndentationLevel(const char * line)
 {
@@ -455,7 +456,7 @@ bool parseSceneObjectStructureFromLines(
 		
 		if (node->components.contains<SceneNodeComponent>() == false)
 		{
-			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
+			auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(node->components.id);
 			sceneNodeComponent->name = node->name;
 			node->components.add(sceneNodeComponent);
 		}
@@ -481,7 +482,7 @@ bool parseComponentFromLines(
 	LineReader & line_reader,
 	ComponentBase & out_component)
 {
-	auto * componentType = findComponentType(out_component.typeIndex());
+	auto * componentType = g_componentTypeDB.findComponentType(out_component.typeIndex());
 
 	if (componentType == nullptr)
 	{
@@ -553,7 +554,7 @@ bool writeComponentToLines(
 	LineWriter & line_writer,
 	const int in_indent)
 {
-	auto * componentType = findComponentType(component.typeIndex());
+	auto * componentType = g_componentTypeDB.findComponentType(component.typeIndex());
 
 	if (componentType == nullptr)
 	{

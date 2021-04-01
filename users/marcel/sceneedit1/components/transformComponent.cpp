@@ -5,6 +5,8 @@
 #include "transformComponent.h"
 #include <math.h>
 
+TransformComponentMgr g_transformComponentMgr;
+
 void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const
 {
 	auto * sceneNodeComp = node.components.find<SceneNodeComponent>();

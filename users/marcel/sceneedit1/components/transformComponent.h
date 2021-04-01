@@ -22,6 +22,8 @@ struct TransformComponentMgr : ComponentMgr<TransformComponent>
 	void calculateTransforms(Scene & scene) const;
 };
 
+extern TransformComponentMgr g_transformComponentMgr;
+
 #if defined(DEFINE_COMPONENT_TYPES)
 
 #include "componentType.h"
@@ -29,7 +31,7 @@ struct TransformComponentMgr : ComponentMgr<TransformComponent>
 struct TransformComponentType : ComponentType<TransformComponent>
 {
 	TransformComponentType()
-		: ComponentType("TransformComponent")
+		: ComponentType("TransformComponent", &g_transformComponentMgr)
 	{
 		tickPriority = kComponentPriority_Transform;
 		

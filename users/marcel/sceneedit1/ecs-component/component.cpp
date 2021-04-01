@@ -103,3 +103,44 @@ void ComponentSet::remove(ComponentBase * component)
 	
 	component->next_in_set = nullptr;
 }
+
+// -- component set helper functions
+
+#include "componentType.h"
+#include "componentTypeDB.h"
+
+void freeComponentsInComponentSet(ComponentSet & componentSet)
+{
+	ComponentBase * next;
+
+	for (auto * component = componentSet.head; component != nullptr; component = next)
+	{
+		// the component will be removed and next_in_set will become invalid, so we need to fetch it now
+		
+		next = component->next_in_set;
+		
+		auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+		Assert(componentType != nullptr);
+		
+		auto * componentMgr = componentType->componentMgr;
+
+		componentMgr->destroyComponent(componentSet.id);
+		component = nullptr;
+	}
+
+	componentSet.head = nullptr;
+}
+
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& component)
+{
+	componentSet.remove(component);
+	
+	auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+	Assert(componentType != nullptr);
+	
+	auto * componentMgr = componentType->componentMgr;
+	Assert(componentMgr != nullptr);
+
+	componentMgr->destroyComponent(componentSet.id);
+	component = nullptr;
+}

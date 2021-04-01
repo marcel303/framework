@@ -2,6 +2,8 @@
 #include "transformComponent.h"
 #include <math.h>
 
+RotateTransformComponentMgr g_rotateTransformComponentMgr;
+
 void RotateTransformComponent::tick(const float dt)
 {
 	// fetch transform component and update its rotation

@@ -104,6 +104,7 @@ struct SceneEditor
 	{
 		std::set<int> nodesToRemove;
 		std::vector<SceneNode*> nodesToAdd; // note : this needs to be a vector, to ensure nodes are added in the same order to the scene as they were added here
+		std::map<int, int> nodesToParent;
 		std::set<int> nodesToSelect;
 		
 		bool isFlushed() const
@@ -111,6 +112,7 @@ struct SceneEditor
 			return
 				nodesToRemove.empty() &&
 				nodesToAdd.empty() &&
+				nodesToParent.empty() &&
 				nodesToSelect.empty();
 		}
 	};
@@ -190,7 +192,7 @@ struct SceneEditor
 	
 	//
 	
-	void init(TypeDB * in_typeDB);
+	void init(TypeDB * typeDB);
 	void shut();
 
 	void getEditorViewport(int & x, int & y, int & sx, int & sy) const;
@@ -224,6 +226,7 @@ struct SceneEditor
 	
 	void addNodesToAdd();
 	void removeNodesToRemove();
+	void parentNodesToParent();
 	void selectNodesToSelect(const bool append);
 	
 	/**
@@ -236,6 +239,7 @@ struct SceneEditor
 	bool undoCapture(std::string & text) const; // capture the entire scene into text format
 	void undoCaptureBegin(const bool isPristine = true); // begin a scene capture
 	void undoCaptureEnd();   // end a scene capture and add it to the undo history
+	void undoCaptureFastForward(); // end a scene capture without adding it to the undo history
 	void undoReset(); // reset the undo history
 	
 	void editNode(const int nodeId);
@@ -313,5 +317,7 @@ struct SceneEditor
 	
 	void resetDocument();
 	
-	static void updateFilePaths(Scene & scene, TypeDB * typeDB, const char * oldBasePath, const char * newBasePath);
+	static void updateFilePaths(Scene & scene, const TypeDB * typeDB, const char * oldBasePath, const char * newBasePath);
+	
+	std::string makePathRelativeToDocumentPath(const char * path) const;
 };

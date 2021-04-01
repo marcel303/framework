@@ -1,7 +1,7 @@
 #pragma once
 
-#include "component.h"
-#include <map>
+#include "component.h" // ComponentSet
+#include <map> // nodes
 #include <string>
 #include <vector>
 
