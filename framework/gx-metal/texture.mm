@@ -153,7 +153,6 @@ void GxTexture::free()
 	{
 		auto & texture = s_textures[id];
 		
-		[texture release];
 		texture = nullptr;
 		
 		s_textures.erase(id);
@@ -201,7 +200,7 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 	{
 		auto & texture = s_textures[id];
 		
-		ColorTarget target(texture);
+		ColorTarget target((__bridge void*)texture);
 		target.setClearColor(r, g, b, a);
 		
 		pushRenderPass(&target, true, nullptr, false, "GxTexture::clearf");
@@ -222,7 +221,7 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 	{
 		auto & texture = s_textures[id];
 		
-		ColorTarget target(texture);
+		ColorTarget target((__bridge void*)texture);
 		
 		// todo : use blit encoder to write zeroes ?
 		// todo : use a separate shader for this. perhaps a Metal compute shader ?
@@ -361,7 +360,6 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int i
 			dstX, dstY, 0,
 			metalFormat);
 		
-		[src_texture release];
 		src_texture = nullptr;
 	}
 }
@@ -532,7 +530,7 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 		
 		auto device = metal_get_device();
 		
-		MTLTextureDescriptor * descriptor = [[MTLTextureDescriptor new] autorelease];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
 		descriptor.textureType = MTLTextureType3D;
 		descriptor.pixelFormat = metalFormat;
 		descriptor.width = sx;
@@ -551,7 +549,6 @@ void GxTexture3d::free()
 	{
 		auto & texture = s_textures[id];
 		
-		[texture release];
 		texture = nullptr;
 		
 		s_textures.erase(id);
@@ -599,7 +596,7 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 		
 		const MTLPixelFormat metalFormat = toMetalFormat(format);
 
-		MTLTextureDescriptor * descriptor = [[MTLTextureDescriptor new] autorelease];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
 		descriptor.textureType = MTLTextureType3D;
 		descriptor.pixelFormat = metalFormat;
 		descriptor.width = srcSx;
@@ -652,7 +649,6 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 			dstX, dstY, dstZ,
 			metalFormat);
 		
-		[src_texture release];
 		src_texture = nullptr;
 	}
 	

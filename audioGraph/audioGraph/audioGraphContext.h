@@ -45,13 +45,25 @@ struct AudioGraphContext
 
 	struct Memf
 	{
-		float value1 = 0.f;
-		float value2 = 0.f;
-		float value3 = 0.f;
-		float value4 = 0.f;
+		float value1_mainThread = 0.f;
+		float value2_mainThread = 0.f;
+		float value3_mainThread = 0.f;
+		float value4_mainThread = 0.f;
+		
+		float value1_audioThread = 0.f;
+		float value2_audioThread = 0.f;
+		float value3_audioThread = 0.f;
+		float value4_audioThread = 0.f;
+		
+		void syncMainToAudio()
+		{
+			value1_audioThread = value1_mainThread;
+			value2_audioThread = value2_mainThread;
+			value3_audioThread = value3_mainThread;
+			value4_audioThread = value4_mainThread;
+		}
 	};
 	
-// todo : add a method for adding 'objects'. query objects by typeid
 // todo : document 'objects'
 // todo : do the same for vfxgraph! useful for registering FsfxLibrary, ...
 /*
@@ -76,7 +88,8 @@ struct AudioGraphContext
 	}
 */
 	
-	AudioMutexBase * audioMutex;
+	AudioMutexBase * mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutexBase * mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	AudioVoiceManager * voiceMgr;
 	
@@ -93,28 +106,37 @@ struct AudioGraphContext
 	AudioGraphContext();
 	
 	// called from the app thread
-	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
+	void init(
+		AudioMutexBase * mutex_mem,
+		AudioMutexBase * mutex_reg,
+		AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the audio thread
 	void tickAudio(const float dt);
 	
 	// called from any thread
+	void registerMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
+	void lockControlValues();
+	void unlockControlValues();
+	
+	// called from the audio thread
+	void updateControlValues(const float dt);
 	void exportControlValues();
 	
 	// called from any thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
-	Memf getMemf(const char * name);
+	Memf getMemf(const char * name, const bool isMainThread);
 
 	// called from the app thread
-	template <typename T> void addObject(T * object)
+	template <typename T> void addObject(T * object, const char * name)
 	{
-		return addObject(std::type_index(typeid(T)), object);
+		return addObject(std::type_index(typeid(T)), object, name);
 	}
 
-	void addObject(const std::type_index & type, void * object);
+	void addObject(const std::type_index & type, void * object, const char * name);
 	
 	// called from the audio thread
 	template <typename T> T * findObject()

@@ -144,7 +144,10 @@ void VfxNodeDatatable::tick(const float dt)
 						dynamicOutputs[i].type = kVfxPlugType_Channel;
 						dynamicOutputs[i].mem = &outputChannels[i];
 						
-						outputChannels[i].setData(channelData.data + channelSize * i, false, channelSize);
+						outputChannels[i].setData(
+							channelData.data + channelSize * i,
+							false,
+							channelSize);
 					}
 					
 					setDynamicOutputs(dynamicOutputs.data(), dynamicOutputs.size());

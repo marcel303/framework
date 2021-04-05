@@ -116,7 +116,11 @@ struct GraphEdit_RealTimeConnection
 	{
 	}
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+	virtual void nodeAdd(const GraphNode & node)
+	{
+	}
+	
+	virtual void nodeInit(const GraphNode & node)
 	{
 	}
 	

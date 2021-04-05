@@ -140,6 +140,24 @@ public:
 		return r;
 	}
 
+	inline Vec4 Abs() const
+	{
+		Vec4 r;
+
+	#if defined(__clang__)
+		r[0] = __builtin_fabsf(m_v[0]);
+		r[1] = __builtin_fabsf(m_v[1]);
+		r[2] = __builtin_fabsf(m_v[2]);
+		r[3] = __builtin_fabsf(m_v[3]);
+	#else
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+		r[2] = fabsf(m_v[2]);
+		r[3] = fabsf(m_v[3]);
+	#endif
+
+		return r;
+	}
 
 	inline const Vec3 XYZ() const
 	{

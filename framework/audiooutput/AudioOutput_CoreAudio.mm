@@ -30,6 +30,10 @@
 #include "AudioOutput_CoreAudio.h"
 #include "framework.h"
 
+#if defined(IPHONEOS)
+	#include "AVFoundation/AVAudioSession.h"
+#endif
+
 /*
 
 from : https://developer.apple.com/library/archive/documentation/MusicAudio/Conceptual/AudioUnitHostingGuide_iOS/AudioUnitHostingFundamentals/AudioUnitHostingFundamentals.html#//apple_ref/doc/uid/TP40009492-CH3-SW11,
@@ -96,6 +100,8 @@ void AudioOutput_CoreAudio::unlock()
 bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampleRate, const int bufferSize)
 {
 	{
+		// create the output/remoteio audio component
+		
 		AudioComponentDescription desc;
 		memset(&desc, 0, sizeof(desc));
 		
@@ -113,15 +119,15 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		
 		if (m_audioComponent == nullptr)
 			return false;
-	}
-	
-	{
+		
 		auto status = AudioComponentInstanceNew(m_audioComponent, &m_audioUnit);
 		if (checkStatus(status) == false)
 			return false;
 	}
 
 	{
+		// set the stream format on the output component
+		
 		AudioStreamBasicDescription sdesc;
 		memset(&sdesc, 0, sizeof(sdesc));
 		
@@ -200,6 +206,8 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 
 #if defined(IPHONEOS)
 	{
+		// set input/output enables
+		
 		// verified correctness : https://developer.apple.com/library/archive/samplecode/aurioTouch/Listings/Classes_AudioController_mm.html#//apple_ref/doc/uid/DTS40007770-Classes_AudioController_mm-DontLinkElementID_4
 		
 		UInt32 flag = 1;
@@ -233,11 +241,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// set maximum frame count
 	
-	#if defined(IPHONEOS)
-		UInt32 maxFramesPerSlice = bufferSize;
-	#else
-		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size when in power saving mode
-	#endif
+		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size (4096) when in power saving mode
 		
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -253,7 +257,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// set the hardware buffer size
 		
-		UInt32 bufferSize = 256;
+		UInt32 bufferSize = 256; // todo : use specified buffer size or try multiples thereof. make sure during Provide to use the specified buffer size!
 	
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -287,10 +291,6 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	
 	m_numChannels = numChannels;
 	m_sampleRate = sampleRate;
-	
-	status = AudioOutputUnitStart(m_audioUnit);
-	if (checkStatus(status) == false)
-		return false;
 
 	return true;
 }
@@ -301,10 +301,7 @@ bool AudioOutput_CoreAudio::shutCoreAudio()
 	
 	if (m_audioUnit != nullptr)
 	{
-		auto status = AudioOutputUnitStop(m_audioUnit);
-		result &= checkStatus(status);
-		
-		status = AudioComponentInstanceDispose(m_audioUnit);
+		auto status = AudioComponentInstanceDispose(m_audioUnit);
 		result &= checkStatus(status);
 		
 		m_audioUnit = nullptr;
@@ -327,6 +324,8 @@ OSStatus AudioOutput_CoreAudio::outputCallback(
 	AudioOutput_CoreAudio * self = (AudioOutput_CoreAudio*)inRefCon;
 	
 	Assert(ioData->mNumberBuffers == 1);
+	
+	self->m_bufferPresentTime = inTimeStamp->mHostTime;
 	
 	for (int i = 0; i < ioData->mNumberBuffers && i < 1; ++i)
 	{
@@ -452,10 +451,22 @@ void AudioOutput_CoreAudio::Play(AudioStream * stream)
 		m_stream = stream;
 	}
 	unlock();
+	
+	if (m_audioUnit != nullptr)
+	{
+		if (checkStatus(AudioOutputUnitStart(m_audioUnit)) == false)
+			logError("failed to start audio unit");
+	}
 }
 
 void AudioOutput_CoreAudio::Stop()
 {
+	if (m_audioUnit != nullptr)
+	{
+		if (checkStatus(AudioOutputUnitStop(m_audioUnit)) == false)
+			logError("failed to stop audio unit");
+	}
+		
 	lock();
 	{
 		m_isPlaying = false;
@@ -492,6 +503,18 @@ bool AudioOutput_CoreAudio::HasFinished_get()
 double AudioOutput_CoreAudio::PlaybackPosition_get()
 {
 	return m_position / double(m_sampleRate);
+}
+
+uint64_t AudioOutput_CoreAudio::getBufferPresentTime(const bool addOutputLatency) const
+{
+	uint64_t result = m_bufferPresentTime;
+	
+#if defined(IPHONEOS)
+	if (addOutputLatency)
+		result += [AVAudioSession sharedInstance].outputLatency;
+#endif
+
+	return result;
 }
 
 #endif

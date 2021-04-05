@@ -45,7 +45,7 @@ Surface * g_currentVfxSurface = nullptr;
 
 //
 
-void MemoryComponent::registerMemf(const char * name, const int numElements)
+void VfxMemoryComponent::registerMemf(const char * name, const int numElements)
 {
 	auto & mem = memf[name];
 	
@@ -55,7 +55,7 @@ void MemoryComponent::registerMemf(const char * name, const int numElements)
 		mem.numElements = numElements;
 }
 
-void MemoryComponent::unregisterMemf(const char * name)
+void VfxMemoryComponent::unregisterMemf(const char * name)
 {
 	auto mem_itr = memf.find(name);
 	Assert(mem_itr != memf.end());
@@ -68,7 +68,7 @@ void MemoryComponent::unregisterMemf(const char * name)
 	}
 }
 
-void MemoryComponent::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+void VfxMemoryComponent::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	auto mem_itr = memf.find(name);
 	
@@ -80,7 +80,7 @@ void MemoryComponent::setMemf(const char * name, const float value1, const float
 	}
 }
 
-bool MemoryComponent::getMemf(const char * name, Vec4 & result) const
+bool VfxMemoryComponent::getMemf(const char * name, Vec4 & result) const
 {
 	auto i = memf.find(name);
 	
@@ -93,14 +93,14 @@ bool MemoryComponent::getMemf(const char * name, Vec4 & result) const
 	}
 }
 
-void MemoryComponent::registerMems(const char * name)
+void VfxMemoryComponent::registerMems(const char * name)
 {
 	auto & mem = mems[name];
 	
 	mem.refCount++;
 }
 
-void MemoryComponent::unregisterMems(const char * name)
+void VfxMemoryComponent::unregisterMems(const char * name)
 {
 	auto mem_itr = mems.find(name);
 	Assert(mem_itr != mems.end());
@@ -113,7 +113,7 @@ void MemoryComponent::unregisterMems(const char * name)
 	}
 }
 
-void MemoryComponent::setMems(const char * name, const char * value)
+void VfxMemoryComponent::setMems(const char * name, const char * value)
 {
 	auto mem_itr = mems.find(name);
 	
@@ -125,7 +125,7 @@ void MemoryComponent::setMems(const char * name, const char * value)
 	}
 }
 
-bool MemoryComponent::getMems(const char * name, std::string & result) const
+bool VfxMemoryComponent::getMems(const char * name, std::string & result) const
 {
 	auto i = mems.find(name);
 	

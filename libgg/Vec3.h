@@ -133,6 +133,23 @@ public:
 		return r;
 	}
 
+	inline Vec3 Abs() const
+	{
+		Vec3 r;
+
+	#if defined(__clang__)
+		r[0] = __builtin_fabsf(m_v[0]);
+		r[1] = __builtin_fabsf(m_v[1]);
+		r[2] = __builtin_fabsf(m_v[2]);
+	#else
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+		r[2] = fabsf(m_v[2]);
+	#endif
+
+		return r;
+	}
+
 	inline Vec3 operator+(const Vec3 & v) const
 	{
 		Vec3 r;

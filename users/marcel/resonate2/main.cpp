@@ -1190,7 +1190,7 @@ int main(int argc, char * argv[])
 					{
 						ImGui::PushID(i);
 						ImGui::PushItemWidth(200.f);
-						ImGui::InputFloat3("Plane", &shapeDefinition.planes[i].normal[0], -1.f, +1.f);
+						ImGui::InputFloat3("Plane", &shapeDefinition.planes[i].normal[0]);
 						ImGui::PopItemWidth();
 						
 						ImGui::SameLine();

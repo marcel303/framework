@@ -103,7 +103,7 @@ void createVfxEnumTypeDefinitions(
 		}
 		
 		// create additional elems if the enum has dynamic elements
-		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enum dynamically
+		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enums dynamically
 		
 		if (registration->getElems != nullptr)
 		{
@@ -148,7 +148,10 @@ void createVfxNodeTypeDefinitions(
 			typeDefinition.displayName = registration->displayName;
 		}
 		
-		typeDefinition.resourceTypeName = registration->resourceTypeName;
+		typeDefinition.mainResourceType = registration->mainResourceType;
+		typeDefinition.mainResourceName = registration->mainResourceName;
+		
+		Assert(typeDefinition.mainResourceType.empty() == typeDefinition.mainResourceName.empty()); // both must either be set or not set
 		
 		for (int i = 0; i < registration->inputs.size(); ++i)
 		{
@@ -162,6 +165,7 @@ void createVfxNodeTypeDefinitions(
 			inputSocket.defaultValue = src.defaultValue;
 			inputSocket.hasDefaultValue = true;
 			inputSocket.displayName = src.displayName;
+			inputSocket.renames = src.renames;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
 		}
@@ -176,6 +180,7 @@ void createVfxNodeTypeDefinitions(
 			outputSocket.isEditable = src.isEditable;
 			outputSocket.index = i;
 			outputSocket.displayName = src.displayName;
+			outputSocket.renames = src.renames;
 			
 			typeDefinition.outputSockets.push_back(outputSocket);
 		}

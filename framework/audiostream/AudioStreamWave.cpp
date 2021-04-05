@@ -86,12 +86,12 @@ int AudioStreamWave::Provide(int numFrames, AudioSample* __restrict buffer)
 		// read source values and convert them into int16 destination values
 		// we will convert this data to stereo later on
 		
-		const int numFramesRemaining = mDurationInFrames - mPositionInFrames;
+		const int64_t numFramesRemaining = mDurationInFrames - mPositionInFrames;
 		
 		const int numFramesToRead =
 			numFramesRemaining > numFramesTodo
 				? numFramesTodo
-				: numFramesRemaining;
+				: (int)numFramesRemaining;
 		
 		const int numSamplesToRead = numFramesToRead * mNumChannels;
 		
@@ -165,7 +165,9 @@ int AudioStreamWave::Provide(int numFrames, AudioSample* __restrict buffer)
 				
 				for (int i = 0; i < numSamplesToRead; ++i)
 				{
-					dst[i] =
+					uint32_t & dst_u32 = (uint32_t&)dst[i];
+					
+					dst_u32 =
 						(src[i * 4 + 0] << 0) |
 						(src[i * 4 + 1] << 8) |
 						(src[i * 4 + 2] << 16) |
@@ -251,7 +253,7 @@ void AudioStreamWave::Open(const char* fileName, bool loop)
 
 	if (headers.hasData == false)
 	{
-		LOG_ERR("Wave Audio Stream: missing DATA chunk. cannot load WAVE data when we don't know the format yet");
+		LOG_ERR("Wave Audio Stream: missing DATA chunk");
 		Close();
 		return;
 	}
@@ -321,14 +323,4 @@ void AudioStreamWave::Close()
 	
 	mFileName.clear();
 	mPositionInFrames = 0;
-}
-
-int AudioStreamWave::Position_get() const
-{
-	return mPositionInFrames;
-}
-
-bool AudioStreamWave::HasLooped_get() const
-{
-	return mHasLooped;
 }

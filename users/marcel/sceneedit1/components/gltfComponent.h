@@ -20,8 +20,7 @@ struct GltfComponent : Component<GltfComponent>
 	Vec3 aabbMin;
 	Vec3 aabbMax;
 
-	gltf::Scene scene;
-	gltf::BufferCache bufferCache;
+	class GltfCacheElem * cacheElem = nullptr;
 	
 	virtual ~GltfComponent() override final;
 	
@@ -56,7 +55,7 @@ struct GltfComponentType : ComponentType<GltfComponent>
 		add("filename", &GltfComponent::filename)
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
 		add("rotation", &GltfComponent::rotation);
-		in("scale", &GltfComponent::scale)
+		add("scale", &GltfComponent::scale)
 			.limits(0.f, 100.f)
 			.editingCurveExponential(2.f);
 		add("centimetersToMeters", &GltfComponent::centimetersToMeters);

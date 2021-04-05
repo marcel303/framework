@@ -39,6 +39,7 @@
     <node id="132" typeName="channel.fromFloat"/>
     <node id="134" typeName="audioGraph.poly">
         <input socket="file" value="audiographs/audioKey.xml"/>
+        <input socket="mode" value="2"/>
     </node>
     <node id="137" typeName="channel.literal">
         <input socket="text" value="200 50 300 80 1600 1800 2400"/>
@@ -160,7 +161,7 @@
     <link id="213" srcNodeId="121" srcNodeSocketName="source" dstNodeId="153" dstNodeSocketName="any"/>
     <link id="215" srcNodeId="154" srcNodeSocketName="channel" dstNodeId="134" dstNodeSocketName="voices"/>
     <link id="216" srcNodeId="149" srcNodeSocketName="y" dstNodeId="154" dstNodeSocketName="channel"/>
-    <link id="217" srcNodeId="155" srcNodeSocketName="channel" dstNodeId="154" dstNodeSocketName="channel"/>
+    <link id="217" srcNodeId="155" srcNodeSocketName="real" dstNodeId="154" dstNodeSocketName="channel"/>
     <link id="218" srcNodeId="155" srcNodeSocketName="real" dstNodeId="154" dstNodeSocketName="channel"/>
     <link id="219" srcNodeId="157" srcNodeSocketName="real" dstNodeId="155" dstNodeSocketName="real"/>
     <link id="220" srcNodeId="157" srcNodeSocketName="imag" dstNodeId="155" dstNodeSocketName="imag"/>
@@ -188,8 +189,8 @@
         <param name="out.max" value="0.400000"/>
         <param name="out.min" value="0.100000"/>
     </link>
-    <editor nextZKey="1362">
-        <dragAndZoom x="407.2713623046875" y="-61.158718109130859" zoom="0.7976188063621521"/>
+    <editor nextZKey="1363">
+        <dragAndZoom x="537.566650390625" y="-266.08013916015625" zoom="0.7976188063621521"/>
         <nodeDatas>
             <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
             <nodeData nodeId="115" x="-16" y="-64" zKey="955"/>
@@ -207,7 +208,7 @@
             <nodeData nodeId="130" x="-128" y="224" zKey="982"/>
             <nodeData nodeId="131" x="-128" y="320" zKey="976"/>
             <nodeData nodeId="132" x="-128" y="272" zKey="981"/>
-            <nodeData nodeId="134" x="304" y="-400" zKey="1342"/>
+            <nodeData nodeId="134" x="304" y="-400" zKey="1362"/>
             <nodeData nodeId="137" x="48" y="-224" zKey="1196"/>
             <nodeData nodeId="140" x="-240" y="-272" zKey="1129" folded="1"/>
             <nodeData nodeId="141" x="-112" y="-272" zKey="1128"/>
@@ -251,6 +252,12 @@
             <visualizer id="167" x="1168" y="-1072" zKey="1186" nodeId="166" dstSocketName="channel" sx="216" sy="148"/>
             <visualizer id="171" x="1568" y="-560" zKey="1208" nodeId="168" dstSocketName="values" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c"/>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="00000071" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="1" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="0" b="0" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
     </editor>
 </graph>

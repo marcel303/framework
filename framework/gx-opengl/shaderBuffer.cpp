@@ -38,29 +38,29 @@
 #endif
 
 ShaderBuffer::ShaderBuffer()
-	: m_buffer(0)
+	: m_bufferId(0)
 	, m_bufferSize(0)
 {
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
-	fassert(m_buffer == 0 && m_bufferSize == 0);
+	fassert(m_bufferId == 0 && m_bufferSize == 0);
 }
 
 void ShaderBuffer::alloc(const int numBytes)
 {
-	if (m_buffer != 0 && m_bufferSize == numBytes)
+	if (m_bufferId != 0 && m_bufferSize == numBytes)
 		return;
 	
 	free();
 	
-	glGenBuffers(1, &m_buffer);
+	glGenBuffers(1, &m_bufferId);
 	checkErrorGL();
 	
-	if (m_buffer != 0)
+	if (m_bufferId != 0)
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, m_bufferId);
 		checkErrorGL();
 
 		glBufferData(GL_UNIFORM_BUFFER, numBytes, nullptr, GL_DYNAMIC_DRAW);
@@ -75,23 +75,23 @@ void ShaderBuffer::alloc(const int numBytes)
 
 void ShaderBuffer::free()
 {
-	if (m_buffer != 0)
+	if (m_bufferId != 0)
 	{
-		glDeleteBuffers(1, &m_buffer);
+		glDeleteBuffers(1, &m_bufferId);
 		checkErrorGL();
 		
-		m_buffer = 0;
+		m_bufferId = 0;
 		m_bufferSize = 0;
 	}
 }
 
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
-	fassert(m_buffer != 0 && m_bufferSize >= numBytes);
+	fassert(m_bufferId != 0 && m_bufferSize >= numBytes);
 
-	if (m_buffer != 0)
+	if (m_bufferId != 0)
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+		glBindBuffer(GL_UNIFORM_BUFFER, m_bufferId);
 		checkErrorGL();
 
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, numBytes, bytes);
@@ -105,18 +105,18 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 //
 
 ShaderBufferRw::ShaderBufferRw()
-	: m_buffer(0)
+	: m_bufferId(0)
 {
-	glGenBuffers(1, &m_buffer);
+	glGenBuffers(1, &m_bufferId);
 	checkErrorGL();
 }
 
 ShaderBufferRw::~ShaderBufferRw()
 {
-	if (m_buffer)
+	if (m_bufferId)
 	{
-		glDeleteBuffers(1, &m_buffer);
-		m_buffer = 0;
+		glDeleteBuffers(1, &m_bufferId);
+		m_bufferId = 0;
 		checkErrorGL();
 	}
 }
@@ -126,11 +126,11 @@ void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 #if ENABLE_DESKTOP_OPENGL == 0
 	AssertMsg(false, "not supported");
 #else
-	fassert(m_buffer);
+	fassert(m_bufferId);
 
-	if (m_buffer)
+	if (m_bufferId)
 	{
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffer);
+		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_bufferId);
 		checkErrorGL();
 
 		glBufferData(GL_SHADER_STORAGE_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);

@@ -37,20 +37,23 @@ struct VfxNodeAudioGraph : VfxNodeBase
 {
 	struct VoiceMgr : AudioVoiceManager
 	{
-		AudioVoiceManager * parentVoiceMgr;
+		AudioGraphManager * graphMgr;
+		AudioVoiceManager * voiceMgr;
 		
 		std::set<AudioVoice*> voices;
 		
 		VoiceMgr()
 			: AudioVoiceManager(kType_Basic)
-			, parentVoiceMgr(nullptr)
+			, graphMgr(nullptr)
+			, voiceMgr(nullptr)
 			, voices()
 		{
 		}
 		
-		void init(AudioVoiceManager * in_parentVoiceMgr)
+		void init(AudioGraphManager * in_graphMgr, AudioVoiceManager * in_voiceMgr)
 		{
-			parentVoiceMgr = in_parentVoiceMgr;
+			graphMgr = in_graphMgr;
+			voiceMgr = in_voiceMgr;
 		}
 		
 		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;
@@ -77,9 +80,9 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	
 	enum OutputMode
 	{
-		kOutputMode_None = -1,
 		kOutputMode_Mono,
-		kOutputMode_Stereo
+		kOutputMode_Stereo,
+		kOutputMode_MultiChannel
 	};
 	
 	VoiceMgr voiceMgr;
@@ -101,6 +104,8 @@ struct VfxNodeAudioGraph : VfxNodeBase
 	VfxNodeAudioGraph();
 	
 	virtual ~VfxNodeAudioGraph() override;
+	
+	virtual void init(const GraphNode & node) override;
 	
 	void updateDynamicInputs();
 	void updateDynamicOutputs(const int numSamples, const int numChannels);

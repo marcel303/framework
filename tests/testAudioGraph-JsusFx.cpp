@@ -40,8 +40,8 @@ EnsureLinkage(jgmod_audiograph);
 
 #define ENABLE_AUDIO_RTE 1
 
-// todo : ask a few plugin developers if it's ok to bundle their app on framework's repo as a test/demo of jsfx support
-// todo : add and remove the ability to add JSFX script paths
+// todo : ask a few plugin developers if it's ok to bundle their scripts on framework's repo as a test/demo of jsfx support
+// todo : add the ability to add and remove JSFX script paths
 
 #define JSFX_SEARCH_PATH_1 "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
 #define JSFX_SEARCH_PATH_2 "/Users/thecat/framework/jsfx-geraintluff/" // fixme : remove hard coded ATK scripts path
@@ -60,8 +60,6 @@ static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 #else
 static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
-
-extern AudioMutexBase * g_vfxAudioMutex;
 
 //
 
@@ -97,19 +95,11 @@ static void initAudioGraph()
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
-	s_paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
-	
-	//
-	
-	g_vfxAudioMutex = s_audioMutex;
+	s_paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
 }
 
 static void shutAudioGraph()
 {
-	g_vfxAudioMutex = nullptr;
-	
-	//
-	
 	if (s_paObject != nullptr)
 	{
 		s_paObject->shut();
@@ -167,6 +157,8 @@ void testAudioGraph_JsusFx()
 		const float dt = framework.timeStep;
 		
 		bool inputIsCaptured = false;
+		
+		s_audioGraphMgr->tickMain();
 		
 		inputIsCaptured |= s_audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, false);
 		

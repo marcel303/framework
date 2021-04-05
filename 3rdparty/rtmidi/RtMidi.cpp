@@ -39,13 +39,6 @@
 #include "RtMidi.h"
 #include <sstream>
 
-#if defined(__MACOSX_CORE__)
-  #if TARGET_OS_IPHONE
-    #define AudioGetCurrentHostTime CAHostTimeBase::GetCurrentTime
-    #define AudioConvertHostTimeToNanos CAHostTimeBase::ConvertToNanos
-  #endif
-#endif
-
 // Default for Windows is to add an identifier to the port names; this
 // flag can be undefined to disable this behaviour.
 #define RTMIDI_ENSURE_UNIQUE_PORTNAMES
@@ -435,8 +428,38 @@ MidiOutApi :: ~MidiOutApi( void )
 
 // OS-X CoreMIDI header files.
 #include <CoreMIDI/CoreMIDI.h>
-#include <CoreAudio/HostTime.h>
-#include <CoreServices/CoreServices.h>
+
+#if (TARGET_OS_IPHONE == 0)
+  #include <CoreAudio/HostTime.h>
+  #include <CoreServices/CoreServices.h>
+#endif
+
+#if (TARGET_OS_IPHONE == 1)
+
+    #define AudioGetCurrentHostTime CAHostTimeBase::GetCurrentTime
+    #define AudioConvertHostTimeToNanos CAHostTimeBase::ConvertToNanos
+
+    #include <mach/mach_time.h>
+    class CTime2nsFactor
+    {
+    public:
+        CTime2nsFactor()
+        {
+            mach_timebase_info_data_t tinfo;
+            mach_timebase_info(&tinfo);
+            Factor = (double)tinfo.numer / tinfo.denom;
+        }
+        static double Factor;
+    };
+    double CTime2nsFactor::Factor;
+    static CTime2nsFactor InitTime2nsFactor;
+    #undef AudioGetCurrentHostTime
+    #undef AudioConvertHostTimeToNanos
+	#define AudioGetCurrentHostTime (uint64_t) mach_absolute_time
+	#define AudioConvertHostTimeToNanos(t) t *CTime2nsFactor::Factor
+	#define EndianS32_BtoN(n) n
+
+#endif
 
 // A structure to hold variables related to the CoreMIDI API
 // implementation.

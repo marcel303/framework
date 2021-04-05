@@ -43,11 +43,11 @@ public:
 	void Open(const char* fileName, bool loop);
 	void Close();
 	
-	int SampleRate_get() const { return mSampleRate; }
-	int Duration_get() const { return mDurationInFrames; }
+	int32_t SampleRate_get() const { return mSampleRate; }
+	int64_t Duration_get() const { return mDurationInFrames; }
 	
-	int Position_get() const;
-	bool HasLooped_get() const;
+	int64_t Position_get() const { return mPositionInFrames; }
+	bool HasLooped_get() const { return mHasLooped; }
 
 	bool IsOpen_get() const { return mFile != 0; }
 	const char * FileName_get() const { return mFileName.c_str(); }
@@ -58,12 +58,12 @@ private:
 	FILE* mFile;
 	int16_t mNumChannels;
 	int32_t mSampleRate;
-	int32_t mDurationInFrames;
-	int32_t mPositionInFrames;
+	int64_t mDurationInFrames;
+	int64_t mPositionInFrames;
 	bool mLoop;
 	bool mHasLooped;
 	
-	int32_t mDataOffset;
+	int64_t mDataOffset;
 	int16_t mCompressionType;
 	int16_t mBitDepth;
 	int16_t mNumBytesPerSample;

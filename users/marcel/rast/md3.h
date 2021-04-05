@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../libgg/SIMD.h"
+#include "SimdVec.h"
 
 class DataVert
 {

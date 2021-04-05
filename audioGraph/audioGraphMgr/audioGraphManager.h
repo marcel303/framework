@@ -78,7 +78,7 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) = 0;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) = 0;
 	virtual void freeContext(AudioGraphContext *& context) = 0;
 	virtual AudioGraphContext * getContext() = 0;
 	
@@ -90,6 +90,10 @@ struct AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) = 0;
 	virtual void tickVisualizers() = 0;
+	
+	// called from any thread
+	virtual void lockAudio() = 0;
+	virtual void unlockAudio() = 0;
 };
 
 /*
@@ -119,6 +123,8 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	std::list<AudioGraphInstance*> instances;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -132,7 +138,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	
@@ -144,6 +150,10 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
+	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
 };
 
 /*
@@ -162,6 +172,8 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	AudioGraphFile * selectedFile;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -181,7 +193,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	
@@ -193,6 +205,10 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
+	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
 	
 	// called from the app thread
 	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
@@ -210,6 +226,8 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	AudioGraphFile * selectedFile;
 	
 	AudioMutexBase * audioMutex;
+	AudioMutex mutex_mem; // mutex guarding VALUES of memf, mems, events and flags
+	AudioMutex mutex_reg; // mutex guarding REGISTRATION of memf, mems, events
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -229,7 +247,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	virtual AudioGraphContext * getContext() override;
 	
@@ -241,6 +259,10 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	// called from the audio thread
 	virtual void tickAudio(const float dt) override;
 	virtual void tickVisualizers() override;
+	
+	// called from any thread
+	virtual void lockAudio() override;
+	virtual void unlockAudio() override;
 	
 	// called from the app thread
 	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);

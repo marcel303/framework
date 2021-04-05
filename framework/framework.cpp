@@ -29,6 +29,10 @@
 	#define NOMINMAX
 #endif
 
+#if defined(MACOS) || defined(IPHONEOS)
+	#define GLES_SILENCE_DEPRECATION
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <inttypes.h>
@@ -202,6 +206,8 @@ Framework::Framework()
 	vrOrigin.Set(0, 0, 0);
 	enableVrMovement = true;
 	
+	backgrounded = false;
+	
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
@@ -263,7 +269,7 @@ bool Framework::init(int sx, int sy)
 	if (portraitMode)
 		SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
 	else
-	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+		SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
 
 #if ENABLE_OPENGL
@@ -431,6 +437,9 @@ bool Framework::init(int sx, int sy)
 	
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
+	
+	windowSx = sx;
+	windowSy = sy;
 
 #if ENABLE_OPENGL
 	int drawableSx;
@@ -788,6 +797,8 @@ bool Framework::shutdown()
 	// destroy metal context
 	
 	metal_detach(globals.mainWindow->getWindow());
+	
+	metal_shut();
 #endif
 
 #if ENABLE_OPENGL
@@ -883,6 +894,8 @@ bool Framework::shutdown()
 	
 	vrOrigin.Set(0, 0, 0);
 	enableVrMovement = true;
+	
+	backgrounded = false;
 	
 	m_lastTick = -1;
 	
@@ -1180,6 +1193,14 @@ void Framework::process()
 		else if (e.type == SDL_QUIT)
 		{
 			quitRequested = true;
+		}
+		else if (e.type == SDL_APP_DIDENTERBACKGROUND)
+		{
+			backgrounded = true;
+		}
+		else if (e.type == SDL_APP_DIDENTERFOREGROUND || e.type == SDL_APP_WILLENTERFOREGROUND)
+		{
+			backgrounded = false;
 		}
 	}
 
@@ -1733,10 +1754,10 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			FILE * file;
 			if (fopen_s(&file, f, "rb") == 0)
 			{
-				fseek(file, 0, SEEK_END);
-				const int size = ftell(file);
+				Verify(fseek(file, 0, SEEK_END) == 0);
+				const int64_t size = ftell(file);
 				fclose(file);
-				if (size <= 512*1024)
+				if (size >=0 && size <= 512*1024)
 					g_soundCache.findOrCreate(f);
 			}
 		}
@@ -1962,10 +1983,10 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 
 	Assert(eyeIndex == 0);
 	beginDraw(
-		scale255(clearColor.r),
-		scale255(clearColor.g),
-		scale255(clearColor.b),
-		scale255(clearColor.a));
+		clearColor.r * 255.f,
+		clearColor.g * 255.f,
+		clearColor.b * 255.f,
+		clearColor.a * 255.f);
 	
 	if (vrMode)
 	{
@@ -2168,16 +2189,20 @@ bool Framework::tickVirtualDesktop(
 void Framework::drawVirtualDesktop()
 {
 #if WINDOW_IS_3D
-	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	pushCullMode(CULL_NONE, CULL_CCW);
 	{
-		if (window->hasSurface() && !window->isHidden())
+		for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		{
-			window->draw3d();
+			if (window->hasSurface() && !window->isHidden())
+			{
+				window->draw3d();
 
-			if (window->hasFocus())
-				window->draw3dCursor();
+				if (window->hasFocus())
+					window->draw3dCursor();
+			}
 		}
 	}
+	popCullMode();
 #endif
 }
 
@@ -2532,8 +2557,6 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 			for (auto i = doc.firstRow(); i != doc.lastRow(); i = doc.nextRow(i))
 			{
 				const char * path = i[path_index];
-				
-				logDebug("resource path: %s", path);
 				
 				registerResourcePath(path);
 				
@@ -4396,7 +4419,11 @@ SDL_Surface * getWindowSurface()
 void setupPaths(const char * chibiResourcePaths)
 {
 #if FRAMEWORK_USE_SDL
-	changeDirectory(SDL_GetBasePath());
+	char * basePath = SDL_GetBasePath();
+	
+	changeDirectory(basePath);
+	
+	SDL_free(basePath);
 #endif
 	
 	if (chibiResourcePaths != nullptr)

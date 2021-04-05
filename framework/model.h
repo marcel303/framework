@@ -247,6 +247,9 @@ public:
 	
 	std::string rootNode;
 	
+	// for drawing we put the shader buffer here. this allows us to share a single shader buffer between all models
+	ShaderBuffer * skinningMatrices;
+	
 	ModelCacheElem();
 	void free();
 	void load(const char * filename);

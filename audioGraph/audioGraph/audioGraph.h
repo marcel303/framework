@@ -88,84 +88,44 @@ struct AudioGraph
 	
 	struct Memf
 	{
-		float value1;
-		float value2;
-		float value3;
-		float value4;
+		float value1_mainThread;
+		float value2_mainThread;
+		float value3_mainThread;
+		float value4_mainThread;
 		
-		float pushed_value1;
-		float pushed_value2;
-		float pushed_value3;
-		float pushed_value4;
-		
-		float active_value1;
-		float active_value2;
-		float active_value3;
-		float active_value4;
+		float value1_audioThread;
+		float value2_audioThread;
+		float value3_audioThread;
+		float value4_audioThread;
 		
 		Memf()
-			: value1(0.f)
-			, value2(0.f)
-			, value3(0.f)
-			, value4(0.f)
+			: value1_mainThread(0.f)
+			, value2_mainThread(0.f)
+			, value3_mainThread(0.f)
+			, value4_mainThread(0.f)
 		{
-			finalize();
 		}
 		
-		void finalize()
+		void syncMainToAudio()
 		{
-			pushed_value1 = value1;
-			pushed_value2 = value2;
-			pushed_value3 = value3;
-			pushed_value4 = value4;
-			
-			active_value1 = value1;
-			active_value2 = value2;
-			active_value3 = value3;
-			active_value4 = value4;
+			value1_audioThread = value1_mainThread;
+			value2_audioThread = value2_mainThread;
+			value3_audioThread = value3_mainThread;
+			value4_audioThread = value4_mainThread;
 		}
 	};
 	
 	struct Mems
 	{
-		std::string value;
+		std::string value_mainThread;
 		
-		std::string pushed_value;
-		std::string active_value;
+		std::string value_audioThread;
 		
-		void finalize()
+		void syncMainToAudio()
 		{
-			pushed_value = value;
-			active_value = value;
+			value_audioThread = value_mainThread;
 		}
 	};
-	
-	/*
-	StateDescriptor contains all of the input data used to drive synthesis. most of the state has read/write access only by the audio thread. none of the data is read or written by both the audio thread and main thread at the same time. for the most part, the main thread schedules updates to the state descriptor through state descriptor update messages. these update messages are scheduled during tickMain, which takes place on the main thread at a rate of once per tick.
-	
-	Before StateDescriptor update messages were used to update the state, a fine-grained mutex-based solution was used. the down sides of this were the many small mutex locks and unlocks, difficulty optimizing state updates, and updates possibly being applied at slightly different audio times. using state descriptor update messages, a batch of changes is always applied 'atomically', which is to say, in between audio synthesis blocks. so say a trigger is fired and a bunch of control values are set, the control values are guaranteed to be set by the time the trigger node sees the event. or suppose you want to trigger a bunch of events at exactly the same time, with 'atomic' updates that's possible.
-	*/
-	struct StateDescriptor
-	{
-		std::map<std::string, Memf> memf;
-		std::map<std::string, Mems> mems;
-		
-		std::vector<AudioControlValue> controlValues;
-		
-		std::set<std::string> flags;
-		std::set<std::string> activeFlags;
-		
-		std::vector<AudioEvent> events;
-		std::set<std::string> activeEvents;
-	};
-	
-	struct StateDescriptorUpdateMessage
-	{
-		std::set<std::string> activeFlags;
-	};
-	
-	std::set<std::string> triggeredEvents;
-	std::set<std::string> triggeredEvents_pushed;
 	
 	std::atomic<bool> isPaused;
 	std::atomic<bool> rampDownRequested;
@@ -186,18 +146,18 @@ struct AudioGraph
 	
 	double time;
 	
-	StateDescriptor stateDescriptor;
-	StateDescriptorUpdateMessage stateDescriptorUpdate;
-	StateDescriptorUpdateMessage * pushedStateDescriptorUpdate;
+	std::map<std::string, Memf> memf; // registered float type memory
+	std::map<std::string, Mems> mems; // registered string type memory
 	
-	std::set<std::string> activeFlags;
+	std::vector<AudioControlValue> controlValues; // registered control values
 	
-	AudioGraphContext * context;
+	std::set<std::string> activeFlags; // flags to communicate state between main <-> audio threads
 	
-	AudioMutex mutex;
+	std::vector<AudioEvent> events; // registered events
+	std::set<std::string> triggeredEvents_mainThread;  // events triggered from the main thread (authorative)
+	std::set<std::string> triggeredEvents_audioThread; // triggered events as captured from the authorative copy
 	
-	AudioMutex rteMutex_main;
-	AudioMutex rteMutex_audio;
+	AudioGraphContext * context; 
 	
 	AudioGraph(AudioGraphContext * context, const bool isPaused);
 	~AudioGraph();
@@ -209,15 +169,14 @@ struct AudioGraph
 	void freeVoice(AudioVoice *& voice);
 	
 	// called from the main thread
-	void tickMain();
 	void lockControlValues();
 	void unlockControlValues();
 	
 	// called from the audio thread
-	void syncMainToAudio(); // synchronize control values and other state from the main thread to the audio thread
-	void tickAudio(const float dt, const bool fetchStateUpdates);
+	void syncMainToAudio(const float dt); // synchronize control values and other state from the main thread to the audio thread
+	void tickAudio(const float dt, const bool syncMainToAudio);
 	
-	// called from the main thread
+	// called from the main & audio thread
 	void setFlag(const char * name, const bool value = true);
 	void resetFlag(const char * name);
 	// called from the audio thread
@@ -229,21 +188,17 @@ struct AudioGraph
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
 	void unregisterControlValue(const char * name);
 	
-	// called from the main thread
-	void pushStateDescriptorUpdate();
-	
 	// called from any thread
 	void registerEvent(const char * name);
 	void unregisterEvent(const char * name);
+	bool isEventTriggered(const char * name, const bool isMainThread);
 	
-	// called from the main thread
+	// called from the main & audio thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
-	// called from the audio thread
-	Memf getMemf(const char * name) const;
+	Memf getMemf(const char * name, const bool isMainThread) const;
 	
-	// called from the main thread
+	// called from the main & audio thread
 	void setMems(const char * name, const char * value);
-	// called from the audio thread
 	void getMems(const char * name, std::string & result) const;
 	
 	// called from the main thread
@@ -259,8 +214,7 @@ void popAudioGraph();
 
 AudioNodeBase * createAudioNode(
 	const GraphNodeId nodeId,
-	const std::string & typeName,
-	AudioGraph * audioGraph);
+	const std::string & typeName);
 
 AudioGraph * constructAudioGraph(
 	const Graph & graph,

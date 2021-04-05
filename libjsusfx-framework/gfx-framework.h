@@ -102,6 +102,9 @@ struct JsusFxGfx_Framework : JsusFxGfx
 	bool inputEnabled = true;
 	
 	Mat4x4 drawTransform;
+	
+	bool needsClear = false;
+	int clearColor = 0;
 
 	JsusFxGfx_Framework(JsusFx & _jsusFx);
 	

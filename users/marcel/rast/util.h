@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../libgg/SIMD.h"
+#include "SimVec.h"
 
 typedef unsigned int ptr_t;
 typedef unsigned char u8;

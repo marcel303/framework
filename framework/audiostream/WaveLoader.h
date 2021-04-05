@@ -49,8 +49,8 @@ struct WaveHeadersReader
 	int16_t fmtExtraLength;
 	
 	bool hasData = false;
-	int32_t dataOffset = 0;
-	int32_t dataLength = 0;
+	size_t dataOffset = 0;
+	size_t dataLength = 0;
 	
 	bool read(FILE * file);
 };

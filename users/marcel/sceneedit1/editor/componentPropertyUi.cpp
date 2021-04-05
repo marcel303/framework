@@ -1,15 +1,27 @@
 #include "componentPropertyUi.h"
 #include "componentType.h"
 #include "helpers2.h" // g_typeDB
+
 #include "imgui.h"
+
+// libreflection
 #include "lineReader.h"
 #include "lineWriter.h"
-#include "nfd.h"
 #include "reflection-textio.h"
+
+// libgg
 #include "StringEx.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
+
+// filedialog
+#if SCENEEDIT_USE_LIBNFD
+	#include "nfd.h"
+#endif
+#if SCENEEDIT_USE_IMGUIFILEDIALOG
+	#include "ImGuiFileDialog.h"
+#endif
 
 #if defined(ANDROID) || defined(IPHONEOS)
 	#define HAS_KEYBOARD 0
@@ -33,7 +45,8 @@ namespace ImGui
 		ComponentBase * component,
 		const bool signalChanges,
 		bool & isSet,
-		ComponentBase * defaultComponent)
+		ComponentBase * defaultComponent,
+		Reflection_Callbacks * callbacks)
 	{
 		if (member.isVector) // todo : add support for vector types
 			return false;
@@ -73,7 +86,8 @@ namespace ImGui
 						member_object,
 						isSet,
 						default_member_object,
-						nullptr))
+						nullptr,
+						callbacks))
 					{
 						if (signalChanges)
 							component->propertyChanged(member_object);
@@ -88,7 +102,7 @@ namespace ImGui
 		{
 			auto & plain_type = static_cast<const PlainType&>(*member_type);
 			
-			if (Reflection_PlainTypeMember(member, plain_type, member_object, isSet, default_member_object))
+			if (Reflection_PlainTypeMember(member, plain_type, member_object, isSet, default_member_object, callbacks))
 			{
 				if (signalChanges)
 					component->propertyChanged(member_object);
@@ -135,12 +149,19 @@ namespace ImGui
 		return result;
 	}
 
+	static void valueDidChange(Reflection_Callbacks * callbacks)
+	{
+		if (callbacks && callbacks->propertyDidChange)
+			callbacks->propertyDidChange();
+	}
+	
 	bool Reflection_PlainTypeMember(
 		const Member & member,
 		const PlainType & plain_type,
 		void * member_object,
 		bool & isSet,
-		void * default_member_object)
+		void * default_member_object,
+		Reflection_Callbacks * callbacks)
 	{
 		bool result = false;
 		
@@ -164,6 +185,9 @@ namespace ImGui
 				{
 					result = true;
 				}
+				
+				if (ImGui::IsItemDeactivatedAfterEdit())
+					valueDidChange(callbacks);
 			}
 			break;
 		case kDataType_Int:
@@ -186,6 +210,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -195,6 +222,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -202,6 +232,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -226,6 +259,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -236,10 +272,15 @@ namespace ImGui
 						auto * curveExponential = member.findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
 						
 						if (ImGui::SliderFloat(member.name, &value, limits->min, limits->max, "%.3f",
-							curveExponential == nullptr ? 1.f : curveExponential->exponential))
+							curveExponential && curveExponential->exponential > 1.f
+								? ImGuiSliderFlags_Logarithmic
+								: 0))
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -249,6 +290,9 @@ namespace ImGui
 							{
 								result = true;
 							}
+							
+							if (ImGui::IsItemDeactivatedAfterEdit())
+								valueDidChange(callbacks);
 						}
 						else
 						{
@@ -256,6 +300,9 @@ namespace ImGui
 							{
 								result = true;
 							}
+							
+							if (ImGui::IsItemDeactivatedAfterEdit())
+								valueDidChange(callbacks);
 						}
 					}
 				}
@@ -279,6 +326,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -286,6 +336,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 			}
 			break;
@@ -310,6 +363,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else if (isOrientation)
 				{
@@ -317,6 +373,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -326,6 +385,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -333,6 +395,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -357,6 +422,9 @@ namespace ImGui
 					{
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -366,6 +434,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -373,6 +444,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -400,10 +474,11 @@ namespace ImGui
 					if (ImGui::SliderFloat(member.name, &value_as_float, limits->min, limits->max, "%.3f",
 						curveExponential == nullptr ? 1.f : curveExponential->exponential))
 					{
-						value = value_as_float;
-						
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 				else
 				{
@@ -413,6 +488,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 					else
 					{
@@ -420,6 +498,9 @@ namespace ImGui
 						{
 							result = true;
 						}
+						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
 					}
 				}
 			}
@@ -448,10 +529,13 @@ namespace ImGui
 						if (ImGui::InputText("", buffer, sizeof(buffer)))
 						{
 							value = buffer;
-							
 							result = true;
 						}
 						
+						if (ImGui::IsItemDeactivatedAfterEdit())
+							valueDidChange(callbacks);
+						
+					#if SCENEEDIT_USE_LIBNFD
 						ImGui::SameLine();
 						if (ImGui::Button(".."))
 						{
@@ -459,10 +543,17 @@ namespace ImGui
 
 							if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 							{
-							// todo : compute relative path
-								value = filename;
+								// compute relative path
 								
+								std::string relativePath = filename;
+								
+								if (callbacks && callbacks->makePathRelative)
+									callbacks->makePathRelative(relativePath);
+							
+								value = relativePath;
 								result = true;
+								
+								valueDidChange(callbacks);
 							}
 						
 							if (filename != nullptr)
@@ -471,6 +562,44 @@ namespace ImGui
 								filename = nullptr;
 							}
 						}
+					#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+						char dialogKey[32];
+						sprintf_s(dialogKey, sizeof(dialogKey), "%p", &value);
+						
+						ImGui::SameLine();
+						if (ImGui::Button(".."))
+						{
+							ImGuiFileDialog::Instance()->OpenModal(
+								dialogKey,
+								"Select file..",
+								".*",
+								"",
+								value);
+						}
+						
+						if (ImGuiFileDialog::Instance()->Display(dialogKey))
+						{
+							if (ImGuiFileDialog::Instance()->IsOk())
+							{
+								auto selection = ImGuiFileDialog::Instance()->GetSelection();
+								
+								if (!selection.empty())
+								{
+									std::string relativePath = selection.begin()->second;
+									
+									if (callbacks && callbacks->makePathRelative)
+										callbacks->makePathRelative(relativePath);
+								
+									value = relativePath;
+									result = true;
+									
+									valueDidChange(callbacks);
+								}
+							}
+							
+							ImGuiFileDialog::Instance()->Close();
+						}
+					#endif
 					}
 					ImGui::PopID();
 				}
@@ -482,9 +611,11 @@ namespace ImGui
 					if (ImGui::InputText(member.name, buffer, sizeof(buffer)))
 					{
 						value = buffer;
-						
 						result = true;
 					}
+					
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						valueDidChange(callbacks);
 				}
 			}
 			break;
@@ -519,9 +650,13 @@ namespace ImGui
 				{
 					if (ImGui::Combo(member.name, &selectedItem, items.data(), items.size()))
 					{
+						if (callbacks && callbacks->propertyWillChange)
+							callbacks->propertyWillChange();
+							
 						enum_type.set(member_object, items[selectedItem]);
-						
 						result = true;
+						
+						valueDidChange(callbacks);
 					}
 				}
 			}
@@ -548,7 +683,8 @@ namespace ImGui
 		const Member * in_member,
 		bool & isSet,
 		void * default_object,
-		void ** changedMemberObject)
+		void ** changedMemberObject,
+		Reflection_Callbacks * callbacks)
 	{
 		bool result = false;
 		
@@ -605,7 +741,8 @@ namespace ImGui
 											member,
 											isSet,
 											nullptr,
-											changedMemberObject);
+											changedMemberObject,
+											callbacks);
 										
 										if (ImGui::BeginPopupContextItem("Vector"))
 										{
@@ -677,7 +814,8 @@ namespace ImGui
 								member,
 								isSet,
 								default_member_object,
-								changedMemberObject);
+								changedMemberObject,
+								callbacks);
 						}
 					}
 				}
@@ -695,7 +833,7 @@ namespace ImGui
 			
 			auto & plain_type = static_cast<const PlainType&>(type);
 			
-			if (Reflection_PlainTypeMember(*in_member, plain_type, object, isSet, default_object))
+			if (Reflection_PlainTypeMember(*in_member, plain_type, object, isSet, default_object, callbacks))
 			{
 				result = true;
 				
@@ -713,7 +851,8 @@ namespace ImGui
 		void * object,
 		bool & isSet,
 		void * default_object,
-		void ** changedMemberObject)
+		void ** changedMemberObject,
+		Reflection_Callbacks * callbacks)
 	{
 		Assert(changedMemberObject == nullptr || *changedMemberObject == nullptr);
 		
@@ -724,6 +863,7 @@ namespace ImGui
 			nullptr,
 			isSet,
 			default_object,
-			changedMemberObject);
+			changedMemberObject,
+			callbacks);
 	}
 }

@@ -116,6 +116,21 @@ public:
 		
 		return r;
 	}
+
+	inline Vec2 Abs() const
+	{
+		Vec2 r;
+
+	#if defined(__clang__)
+		r[0] = __builtin_fabsf(m_v[0]);
+		r[1] = __builtin_fabsf(m_v[1]);
+	#else
+		r[0] = fabsf(m_v[0]);
+		r[1] = fabsf(m_v[1]);
+	#endif
+
+		return r;
+	}
 	
 	inline Vec2 operator+(const Vec2 & v) const
 	{

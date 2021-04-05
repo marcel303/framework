@@ -35,6 +35,7 @@ struct AudioNodeImpulseResponse : AudioNodeBase
 	{
 		kInput_Value,
 		kInput_Frequency,
+		kInput_DecayPerMs,
 		kInput_COUNT
 	};
 	

@@ -56,7 +56,7 @@ AUDIO_NODE_TYPE(AudioNodeSourceSine)
 	
 	in("fine", "bool", "1");
 	inEnum("type", "audioSineType");
-	inEnum("mode", "audioSineMode", "1");
+	inEnum("mode", "audioSineMode", AudioNodeSourceSine::kMode_MinMax);
 	in("frequency", "audioValue", "1");
 	in("skew", "audioValue", "0.5");
 	in("a", "audioValue", "0");

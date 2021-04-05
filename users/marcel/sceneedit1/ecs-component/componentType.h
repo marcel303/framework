@@ -11,7 +11,7 @@ enum ComponentPriority
 	kComponentPriority_Parameter = 100,
 	kComponentPriority_Transform = 200,
 	kComponentPriority_Camera = 400,
-	kComponentPriority_Light = 420,
+	kComponentPriority_Light = 500,
 	kComponentPriority_Default = 1000
 };
 
@@ -91,16 +91,33 @@ struct ComponentType : ComponentTypeBase
 	{
 	}
 	
-	ComponentMemberAdder_Int in(const char * name, int T::* member)
+	// note : we duplicate some adders inherited from StructuredType, so they are
+	//        treated with equal priority. if we don't, only our own specific
+	//        versions would be considered by the compiler as valid overloads,
+	//        causing compile errors
+	
+	template <typename C, typename MT>
+	StructuredType & add(const char * name, std::vector<MT> C::* C_member)
 	{
-		add(name, member);
+		return ComponentTypeBase::add(name, C_member);
+	}
+	
+	template <typename C, typename MT>
+	StructuredType & add(const char * name, MT C::* C_member)
+	{
+		return ComponentTypeBase::add(name, C_member);
+	}
+	
+	ComponentMemberAdder_Int add(const char * name, int T::* member)
+	{
+		ComponentTypeBase::add(name, member);
 		
 		return ComponentMemberAdder_Int(members_tail);
 	}
 	
-	ComponentMemberAdder_Float in(const char * name, float T::* member)
+	ComponentMemberAdder_Float add(const char * name, float T::* member)
 	{
-		add(name, member);
+		ComponentTypeBase::add(name, member);
 		
 		return ComponentMemberAdder_Float(members_tail);
 	}

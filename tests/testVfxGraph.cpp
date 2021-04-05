@@ -59,8 +59,6 @@ static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
-extern AudioMutexBase * g_vfxAudioMutex;
-
 extern OscEndpointMgr g_oscEndpointMgr;
 
 static void initAudioGraph();
@@ -431,7 +429,7 @@ struct FileWindow
 	{
 		pushWindow(window);
 		{
-			const int c = framework.windowIsActive ? 50 : 20;
+			const int c = framework.windowIsActive ? 30 : 20;
 			
 			framework.beginDraw(c, c, c, 0);
 			{
@@ -445,6 +443,7 @@ struct FileWindow
 					float hoverY;
 					itemIndexToView(hoverIndex, hoverX, hoverY);
 					
+					setColor(0, 0, 255);
 					hqBegin(HQ_FILLED_ROUNDED_RECTS);
 					{
 						hqFillRoundedRect(
@@ -465,6 +464,7 @@ struct FileWindow
 					
 					for (auto & filename : filenames)
 					{
+						setAlpha(255);
 						if (itemIndex == pressIndex && pressIndex == hoverIndex)
 							setLumi(50);
 						else if (itemIndex == hoverIndex)
@@ -562,16 +562,40 @@ void testVfxGraph()
 			
 		#if ENABLE_AUDIO_RTE
 			makeActive(graphEdit.uiState, true, true);
-			g_drawX = 10;
-			g_drawY = GFX_SY - 160;
+			
+			const int bottomY = GFX_SY - 90;
+			const int topY = bottomY - kUiItemHeight /* switch button */ - 10 - kUiItemHeight * s_audioGraphMgr->files.size() /* audio graphs */ - kUiItemHeight /* vfx graph */;
+			
 			pushMenu("graph-select");
-			if (doAudioGraphSelect(*s_audioGraphMgr))
-				editor = 1;
+			{
+				g_drawX = 10;
+				g_drawY = topY;
+				if (doAudioGraphSelect(*s_audioGraphMgr))
+					editor = 1;
+				if (doButton(graphEdit.documentInfo.filename.c_str()))
+					editor = 0;
+			}
 			popMenu();
+			
 			pushMenu("editor-type");
-			g_drawY = GFX_SY - 110;
-			if (doButton("Switch editor type"))
-				editor = 1 - editor;
+			{
+				g_drawX = 10;
+				g_drawY = bottomY - kUiItemHeight;
+				if (doButton("Switch editor type"))
+					editor = 1 - editor;
+			}
+			popMenu();
+			
+			pushMenu("graph-instance-select");
+			{
+				g_drawY = topY;
+				g_drawX += graphEdit.uiState->sx + 10;
+				if (editor == 1)
+				{
+					static std::string activeAudioGraphInstanceName;
+					doAudioGraphInstanceSelect(*s_audioGraphMgr, activeAudioGraphInstanceName, true);
+				}
+			}
 			popMenu();
 		#endif
 			
@@ -593,7 +617,6 @@ static void initAudioGraph()
 	Assert(s_audioMutex == nullptr);
 	s_audioMutex = new AudioMutex();
 	s_audioMutex->init();
-	g_vfxAudioMutex = s_audioMutex;
 	
 	Assert(s_audioVoiceMgr == nullptr);
 	s_audioVoiceMgr = new AudioVoiceManagerBasic();
@@ -616,7 +639,7 @@ static void initAudioGraph()
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
-	s_paObject->init(SAMPLE_RATE, 2, 2, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
+	s_paObject->init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, s_audioUpdateHandler);
 }
 
 static void shutAudioGraph()

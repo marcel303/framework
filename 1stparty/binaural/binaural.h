@@ -107,7 +107,7 @@ within the triangle.
 
 namespace binaural
 {
-	static const int HRIR_BUFFER_SIZE = 512;
+	static const int HRIR_BUFFER_SIZE = 64; // todo : make effective FFT size depend on the sample set. let this be merely the maximum HRIR buffer size
 	static const int HRTF_BUFFER_SIZE = HRIR_BUFFER_SIZE;
 	static const int AUDIO_BUFFER_SIZE = HRIR_BUFFER_SIZE;
 

@@ -1,0 +1,11 @@
+library ImGuiFileDialog
+	depend_library imgui
+	scan_files cpp path ../ImGuiFileDialog
+	scan_files h   path ../ImGuiFileDialog
+	header_path ../ImGuiFileDialog expose
+
+app ImGuiFileDialog-test
+	depend_library imgui-framework
+	depend_library ImGuiFileDialog
+	add_files test.cpp
+	resource_path data

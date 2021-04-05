@@ -89,8 +89,6 @@ struct AudioNodeSourceMix : AudioNodeBase
 		const AudioFloat * gain3 = getInputAudioFloat(kInput_Gain3, &AudioFloat::One);
 		const AudioFloat * gain4 = getInputAudioFloat(kInput_Gain4, &AudioFloat::One);
 		
-		const bool normalizeGain = false;
-		
 		struct Input
 		{
 			const AudioFloat * source;
@@ -117,8 +115,8 @@ struct AudioNodeSourceMix : AudioNodeBase
 		
 		if (numInputs == 0)
 		{
-			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-				audioOutput.samples[i] = 0.f;
+			audioBufferSetZero(audioOutput.samples, AUDIO_UPDATE_SIZE);
+			
 			return;
 		}
 		
@@ -142,27 +140,6 @@ struct AudioNodeSourceMix : AudioNodeBase
 			else
 			{
 				audioOutput.addMul(*input.source, *input.gain);
-			}
-		}
-		
-		if (normalizeGain)
-		{
-			float totalGain = 0.f;
-			
-			for (auto & input : inputs)
-			{
-				// todo : do this on a per-sample basis !
-				
-				totalGain += input.gain->getMean();
-			}
-			
-			if (totalGain > 0.f)
-			{
-				float gainScale = 1.f;
-				
-				gainScale = 1.f / totalGain;
-				
-				audioOutput.mul(gainScale);
 			}
 		}
 	}

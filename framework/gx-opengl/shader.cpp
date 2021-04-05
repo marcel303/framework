@@ -45,7 +45,7 @@ Shader::Shader(const char * name, const char * outputs)
 {
 	m_cacheElem = nullptr;
 
-	const int name_length = strlen(name);
+	const int name_length = (int)strlen(name);
 	const int file_length = name_length + 3 + 1;
 	
 	char * vs = (char*)alloca(file_length * sizeof(char));
@@ -432,7 +432,7 @@ void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 	fassert(globals.shader == this);
 
 	glUniformBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getOpenglBuffer());
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getOpenglBufferId());
 
 	checkErrorGL();
 }
@@ -463,7 +463,7 @@ void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 	fassert(globals.shader == this);
 
 	glShaderStorageBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getOpenglBuffer());
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getOpenglBufferId());
 
 	checkErrorGL();
 #endif

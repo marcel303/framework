@@ -56,3 +56,9 @@ void AudioNodePcmData::tick(const float dt)
 		}
 	}
 }
+
+void AudioNodePcmData::getDescription(AudioNodeDescription & d)
+{
+	d.add("filename: %s", currentFilename.c_str());
+	d.add("length (samples): %d", pcmData.numSamples);
+}

@@ -48,6 +48,8 @@ class AudioOutput_CoreAudio : public AudioOutput
 	std::atomic<int64_t> m_position;
 	std::atomic<bool> m_isDone;
 	
+	uint64_t m_bufferPresentTime = 0; // time stamp provided by CoreAudio, to indicate the time at which the audio will become audible. use this for very accurate timing
+	
 	void lock();
 	void unlock();
 	
@@ -76,6 +78,10 @@ public:
 	virtual bool IsPlaying_get() override;
 	virtual bool HasFinished_get() override;
 	virtual double PlaybackPosition_get() override;
+	
+	uint64_t getBufferPresentTime(const bool addOutputLatency) const;
+	
+	AudioComponentInstance __nullable getAudioUnit() const { return m_audioUnit; }
 };
 
 #endif

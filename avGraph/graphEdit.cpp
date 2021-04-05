@@ -36,6 +36,9 @@
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
 #include "particle_ui.h"
+
+#include "nfd.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -1079,7 +1082,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	//
 	
 	y += kPadding;
-	fassert(y == sy); // fixme
+	fassert(y == sy);
 }
 
 //
@@ -2066,7 +2069,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	inputIsCaptured |= (state != kState_Idle);
 	
-	if (inputIsCaptured == false || state == kState_TouchDrag || state == kState_TouchZoom)
+	if (inputIsCaptured == false ||
+		state == kState_TouchDecide ||
+		state == kState_TouchDrag ||
+		state == kState_TouchZoom)
 	{
 		inputIsCaptured |= tickTouches();
 	}
@@ -2627,7 +2633,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						newNode.id = graph->allocNodeId();
 						newNode.isPassthrough = false;
 						newNode.inputValues.clear();
-						newNode.editorValue.clear();
 						
 						graph->addNode(newNode);
 						
@@ -2635,18 +2640,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						Assert(newNodeData != nullptr);
 						if (newNodeData != nullptr)
 						{
-							*newNodeData = *nodeData;
-							
 							newNodeData->x = nodeData->x + kGridSize;
 							newNodeData->y = nodeData->y + kGridSize;
 							newNodeData->zKey = nextZKey++;
+							newNodeData->displayName = nodeData->displayName;
+							newNodeData->isFolded = nodeData->isFolded;
 						}
 						
 						newSelectedNodes.insert(newNode.id);
 						
 						oldToNewNodeIds.insert({ node->id, newNode.id});
 						
-						if (commandMod())
+						if (commandMod() == false)
 						{
 							auto * newNodePtr = tryGetNode(newNode.id);
 							Assert(newNodePtr != nullptr);
@@ -2656,45 +2661,28 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(newNode.typeName);
 							Assert(typeDefinition != nullptr);
 							
-							// let real-time editing know the socket values have changed
+							// set immediate input values
+							
 							for (auto & inputValueItr : node->inputValues)
 							{
 								auto & srcSocketName = inputValueItr.first;
 								auto & srcSocketValue = inputValueItr.second;
 								
-								newNodePtr->inputValues[srcSocketName] = srcSocketValue;
-								
 								if (typeDefinition != nullptr)
 								{
-									auto & inputSockets = getInputSockets(*typeDefinition, *nodeData);
+									auto & inputSockets = getInputSockets(*typeDefinition, *newNodeData);
 									
 									for (auto & srcSocket : inputSockets)
 									{
 										if (srcSocket.name == srcSocketName)
 										{
+											newNodePtr->inputValues[srcSocketName] = srcSocketValue;
+											
 											if (realTimeConnection != nullptr)
 											{
 												realTimeConnection->setSrcSocketValue(newNode.id, srcSocket.index, srcSocket.name, srcSocketValue);
 											}
 										}
-									}
-								}
-							}
-							
-							if (!node->editorValue.empty())
-							{
-								newNodePtr->editorValue = node->editorValue;
-								
-								if (realTimeConnection != nullptr)
-								{
-									auto & outputSockets = getOutputSockets(*typeDefinition, *nodeData);
-									
-									for (auto & outputSocket : outputSockets)
-									{
-										if (!outputSocket.isEditable)
-											continue;
-										
-										realTimeConnection->setDstSocketValue(newNodePtr->id, outputSocket.index, outputSocket.name, newNodePtr->editorValue);
 									}
 								}
 							}
@@ -3653,11 +3641,18 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 
 bool GraphEdit::tickTouches()
 {
-	if ((state != kState_Idle && state != kState_TouchDrag && state != kState_TouchZoom) || !framework.windowIsActive)
+	if (framework.windowIsActive == false ||
+		(
+			state != kState_Idle &&
+			state != kState_TouchDecide &&
+			state != kState_TouchDrag &&
+			state != kState_TouchZoom
+		))
 	{
 		// cancel touch state
 		
-		if (state == kState_TouchDrag ||
+		if (state == kState_TouchDecide ||
+			state == kState_TouchDrag ||
 			state == kState_TouchZoom)
 		{
 			state = kState_Idle;
@@ -3680,135 +3675,59 @@ bool GraphEdit::tickTouches()
 		{
 			//logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
 			
-			if (state == kState_Idle)
+			if (touches.finger1.id == 0)
 			{
-				if (touches.finger1.id == 0)
-				{
-					//logDebug("touch down: fingerId=%d, x=%.2f, y=%.2f", event.tfinger.fingerId, event.tfinger.x, event.tfinger.y);
-					
-					touches.finger1.id = event.tfinger.fingerId;
-					touches.finger1.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
-					touches.finger1.initialPosition = touches.finger1.position;
-				}
-				else if (touches.finger2.id == 0)
-				{
-					touches.finger2.id = event.tfinger.fingerId;
-					touches.finger2.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
-					touches.finger2.initialPosition = touches.finger2.position;
-					
-					//
-					
-					touches.distance = touches.getDistance();
-					touches.initialDistance = touches.getDistance();
-				}
+				touches.finger1.id = event.tfinger.fingerId;
 			}
-			else if (state == kState_TouchDrag)
+			else if (touches.finger2.id == 0)
 			{
-				Assert(touches.finger1.id != 0);
-				
-				if (touches.finger2.id == 0)
-				{
-					touches.finger2.id = event.tfinger.fingerId;
-					touches.finger2.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
-					touches.finger2.initialPosition = touches.finger2.position;
-					
-					touches.distance = touches.getDistance();
-					touches.initialDistance = touches.getDistance();
-				}
-			}
-			else
-			{
-				// ignore touch event
+				touches.finger2.id = event.tfinger.fingerId;
 			}
 		}
 		else if (event.type == SDL_FINGERUP)
 		{
 			//logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
 			
-			if (state == kState_Idle)
+			if (event.tfinger.fingerId == touches.finger1.id)
 			{
-				if (event.tfinger.fingerId == touches.finger1.id)
+				touches.finger1 = touches.finger2;
+				touches.finger2 = Touches::FingerInfo();
+			}
+			else if (event.tfinger.fingerId == touches.finger2.id)
+			{
+				touches.finger2 = Touches::FingerInfo();
+			}
+			
+			if (state == kState_TouchDecide)
+			{
+				if (touches.finger1.id == 0 || touches.finger2.id == 0)
 				{
-					touches.finger1 = touches.finger2;
-					touches.finger2 = Touches::FingerInfo();
+					//logDebug("touch up: TouchDecide -> Idle");
 					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
-				}
-				
-				if (event.tfinger.fingerId == touches.finger2.id)
-				{
-					touches.finger2 = Touches::FingerInfo();
-					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
+					state = kState_Idle;
 				}
 			}
 			else if (state == kState_TouchDrag)
 			{
-				Assert(touches.finger1.id != 0);
-				
-				if (event.tfinger.fingerId == touches.finger1.id)
+				if (touches.finger1.id == 0 || touches.finger2.id == 0)
 				{
-					touches.finger1 = touches.finger2;
-					touches.finger2 = Touches::FingerInfo();
-					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
-				}
-				
-				if (event.tfinger.fingerId == touches.finger2.id)
-				{
-					touches.finger2 = Touches::FingerInfo();
-					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
-				}
-				
-				if (touches.finger1.id == 0 && touches.finger2.id == 0)
-				{
-					//logDebug("touch down: TouchDrag -> Idle");
+					//logDebug("touch up: TouchDrag -> Idle");
 					
 					state = kState_Idle;
 				}
 			}
 			else if (state == kState_TouchZoom)
 			{
-				if (event.tfinger.fingerId == touches.finger1.id)
-				{
-					Assert(touches.finger1.id != 0);
-					Assert(touches.finger2.id != 0);
+				Assert(touches.finger1.id == 0 || touches.finger2.id == 0);
 				
-					touches.finger1 = touches.finger2;
-					touches.finger2 = Touches::FingerInfo();
-					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
-					
-					if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
-						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
-					
-					//logDebug("touch down: TouchZoom -> TouchDrag");
-					
-					state = kState_TouchDrag;
-				}
-				else if (event.tfinger.fingerId == touches.finger2.id)
+				if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
 				{
-					Assert(touches.finger1.id != 0);
-					Assert(touches.finger2.id != 0);
-				
-					touches.finger2 = Touches::FingerInfo();
-					
-					touches.distance = 0.f;
-					touches.initialDistance = 0.f;
-					
-					if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
-						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
-					
-					//logDebug("touch down: TouchZoom -> TouchDrag");
-					
-					state = kState_TouchDrag;
+					dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
 				}
+				
+				//logDebug("touch up: TouchZoom -> Idle");
+				
+				state = kState_Idle;
 			}
 		}
 		else if (event.type == SDL_FINGERMOTION)
@@ -3819,9 +3738,43 @@ bool GraphEdit::tickTouches()
 				continue;
 			}
 			
-		// todo : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. otherwise, things like checking old vs new distances won't work correctly, as both fingers may move very quickly, 'temporarily' yielding a large distance between the two as the touch locations are partly updated
+			// note : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. this is due to how touches are commonly implemented in windowing systems, where, to avoid issues with presses being confused with touch (movement) gestures, the windowing system first waits until a considerable amount of movement occurs, before sending touch movement events. so it's very likely the first touch movement event shows a very large positional delta compared to the first recorded touch position. and this would result in a 'jump' if we didn't consider this here. so to avoid these jumps, we first wait until the windowing system considers both fingers to be moving around
 		
-			auto & finger = event.tfinger.fingerId == touches.finger1.id ? touches.finger1 : touches.finger2;
+			auto & finger =
+				event.tfinger.fingerId == touches.finger1.id
+				? touches.finger1
+				: touches.finger2;
+				
+			if (event.tfinger.firstMove)
+			{
+				continue;
+			}
+			
+			if (!touches.finger1.hasPosition ||
+				!touches.finger2.hasPosition)
+			{
+				finger.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+				finger.hasPosition = true;
+				
+				if (touches.finger1.hasPosition && touches.finger2.hasPosition)
+				{
+					Assert(state == kState_Idle);
+					
+					if (state == kState_Idle)
+					{
+						//logDebug("touch move: Idle -> TouchDecide");
+						
+						state = kState_TouchDecide;
+						touches.finger1.initialPosition = touches.finger1.position;
+						touches.finger2.initialPosition = touches.finger2.position;
+						touches.initialDistance = touches.getDistance();
+					}
+				}
+				else
+				{
+					continue;
+				}
+			}
 			
 			const float dragSpeed = 1.f / 2.f / std::max(.02f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
 			
@@ -3831,32 +3784,39 @@ bool GraphEdit::tickTouches()
 			
 			finger.position = position;
 			
-			if (state == kState_Idle)
+			if (state == kState_TouchDecide)
 			{
-				touches.distance = touches.getDistance();
+				const Vec2 delta1 = touches.finger1.initialPosition - touches.finger1.position;
+				const Vec2 delta2 = touches.finger2.initialPosition - touches.finger2.position;
+				const float distance1 = delta1.CalcSize();
+				const float distance2 = delta2.CalcSize();
 				
-				if (touches.finger1.id != 0 && touches.finger2.id != 0)
+				if (delta1 * delta2 > 0.f &&
+					distance1 >= 5.f &&
+					distance2 >= 5.f)
 				{
-					const float delta = std::abs(touches.getDistance() - touches.initialDistance);
+					//logDebug("touch move: TouchDecide -> TouchDrag");
 					
-					if (delta > 40.f)
+					state = kState_TouchDrag;
+				}
+				else
+				{
+					const float distance = fabsf(touches.getDistance() - touches.initialDistance);
+					
+					//logDebug("decide: distance: %.2f", distance);
+					
+					if (distance >= 40.f)
 					{
+						//logDebug("touch move: TouchDecide -> TouchZoom");
+						
 						state = kState_TouchZoom;
-						
-						continue;
-					}
-					else if (lengthFromInitialPosition > 40.f)
-					{
-						state = kState_TouchDrag;
-						
-						continue;
+						touches.distance = touches.getDistance();
+						touches.initialDistance = touches.getDistance();
 					}
 				}
 			}
 			else if (state == kState_TouchDrag)
 			{
-				Assert(touches.finger1.id != 0);
-				
 				if (enabled(kFlag_Drag))
 				{
 					dragAndZoom.focusX -= delta[0] * dragSpeed;
@@ -3864,22 +3824,8 @@ bool GraphEdit::tickTouches()
 					
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
-				}
-				
-				if (touches.finger2.id != 0)
-				{
-					Assert(touches.finger1.id != 0);
 					
-					touches.distance = touches.getDistance();
-					
-					const float delta = std::abs(touches.getDistance() - touches.initialDistance);
-					
-					if (delta > 40.f)
-					{
-						state = kState_TouchZoom;
-						
-						//logDebug("touch down: TouchDrag -> TouchZoom");
-					}
+					dragAndZoom.updateTransform();
 				}
 			}
 			else if (state == kState_TouchZoom)
@@ -3887,54 +3833,45 @@ bool GraphEdit::tickTouches()
 				Assert(touches.finger1.id != 0);
 				Assert(touches.finger2.id != 0);
 				
+				// update zoom
+				
 				{
+					const float kZoomPixels = 1000.f / 3.f;
+					
+					// calculate movement
+			
+					const float distance = touches.getDistance();
+					
 					// update zoom
 					
-					{
-						const float kZoomPixels = 1000.f / 3.f;
-						
-						// calculate movement
-				
-						const float distance = touches.getDistance();
-						
-						// update zoom
-						
-						const float deltaLength = distance - touches.distance;
-						
-						const float zoomDelta = deltaLength / kZoomPixels;
-
-						// update current touch distance
-						
-						touches.distance = distance;
-						
-						// update zoom info
-						
-						if (enabled(kFlag_Zoom))
-						{
-							dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
-							dragAndZoom.desiredZoom = dragAndZoom.zoom;
-						}
-					}
-				
-				#if false
-					// update movement
+					const float deltaLength = distance - touches.distance;
 					
-					if (enabled(kFlag_Drag))
+					const float zoomDelta = deltaLength / kZoomPixels;
+
+					// update current touch distance
+					
+					touches.distance = distance;
+					
+					// update zoom info
+					
+					if (enabled(kFlag_Zoom))
 					{
-						dragAndZoom.focusX -= delta[0] * dragSpeed;
-						dragAndZoom.focusY -= delta[1] * dragSpeed;
+						dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
+						dragAndZoom.desiredZoom = dragAndZoom.zoom;
 						
-						dragAndZoom.desiredFocusX = dragAndZoom.focusX;
-						dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+						dragAndZoom.updateTransform();
 					}
-				#else
+				}
+				
+				// update movement
+				
+				if (enabled(kFlag_Drag))
+				{
 					// focus onto the mouse cursor location
 					// this makes it easier to zoom into part of the graph, by
 					// hovering over the area of interest, and use pinch to zoom in on it
 					// note : this naive implementation isn't compatible with the drag gesture
 					//        being active at the same time
-					
-					dragAndZoom.updateTransform();
 				
 					const Vec2 oldMousePosition(mousePosition.x, mousePosition.y);
 					const Vec2 srcMousePosition(mouse.x, mouse.y);
@@ -3945,7 +3882,8 @@ bool GraphEdit::tickTouches()
 				
 					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
-				#endif
+					
+					dragAndZoom.updateTransform();
 				}
 			}
 		}
@@ -3953,6 +3891,7 @@ bool GraphEdit::tickTouches()
 #endif
 	
 	return
+		state == kState_TouchDecide ||
 		state == kState_TouchDrag ||
 		state == kState_TouchZoom;
 }
@@ -4144,19 +4083,25 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 		Assert(typeDefinition != nullptr);
 		if (typeDefinition != nullptr)
 		{
-			auto & resourceTypeName = typeDefinition->resourceTypeName;
-			
-			if (resourceTypeName.empty() == false)
+			if (typeDefinition->mainResourceType.empty() == false &&
+				typeDefinition->mainResourceName.empty() == false)
 			{
 				nodeResourceEditor.nodeId = nodeId;
-				nodeResourceEditor.resourceTypeName = resourceTypeName;
+				nodeResourceEditor.resourceType = typeDefinition->mainResourceType;
+				nodeResourceEditor.resourceName = typeDefinition->mainResourceName;
+				
 				if (typeDefinition->resourceEditor.create != nullptr)
+				{
 					nodeResourceEditor.resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
+				}
 				
 				Assert(nodeResourceEditor.resourceEditor != nullptr);
 				if (nodeResourceEditor.resourceEditor != nullptr)
 				{
-					nodeResourceEditor.resourceEditor->setResource(*node, resourceTypeName.c_str(), "editorData");
+					nodeResourceEditor.resourceEditor->setResource(
+						*node,
+						nodeResourceEditor.resourceType.c_str(),
+						nodeResourceEditor.resourceName.c_str());
 					
 					// calculate the position based on size and move the editor over there
 					
@@ -4187,11 +4132,16 @@ void GraphEdit::nodeResourceEditSave()
 			
 			if (nodeResourceEditor.resourceEditor->serializeResource(resourceData))
 			{
-				node->setResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData", resourceData.c_str());
+				node->setResource(
+					nodeResourceEditor.resourceType.c_str(),
+					nodeResourceEditor.resourceName.c_str(),
+					resourceData.c_str());
 			}
 			else
 			{
-				node->clearResource(nodeResourceEditor.resourceTypeName.c_str(), "editorData");
+				node->clearResource(
+					nodeResourceEditor.resourceType.c_str(),
+					nodeResourceEditor.resourceName.c_str());
 			}
 		}
 	}
@@ -4275,8 +4225,15 @@ void GraphEdit::doMenu(const float dt)
 		{
 			const std::string filename = documentInfo.filename.c_str();
 			
-			load(filename.c_str());
-			showNotification("Loaded '%s'", documentInfo.filename.c_str());
+			nfdchar_t * path = nullptr;
+			if (NFD_OpenDialog("xml", filename.c_str(), &path) == NFD_OKAY)
+			{
+				load(path);
+				showNotification("Loaded '%s'", documentInfo.filename.c_str());
+				
+				free(path);
+				path = nullptr;
+			}
 		}
 		
 		if (doButton("save", size * 1, size, false))
@@ -4285,11 +4242,19 @@ void GraphEdit::doMenu(const float dt)
 			showNotification("Saved '%s'", documentInfo.filename.c_str());
 		}
 		
-	// todo : present a file dialog
 		if (doButton("save as", size * 2, size, true))
 		{
-			save(documentInfo.filename.c_str());
-			showNotification("Saved as '%s'", documentInfo.filename.c_str());
+			const std::string filename = documentInfo.filename.c_str();
+			
+			nfdchar_t * path = nullptr;
+			if (NFD_SaveDialog("xml", filename.c_str(), &path) == NFD_OKAY)
+			{
+				save(path);
+				showNotification("Saved as '%s'", documentInfo.filename.c_str());
+				
+				free(path);
+				path = nullptr;
+			}
 		}
 		
 		if (doTextBox(documentInfo.filename, "filename", dt))
@@ -6409,16 +6374,18 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 	return true;
 }
 
-void GraphEdit::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+void GraphEdit::nodeAdd(const GraphNode & node)
 {
-	Assert(tryGetNode(nodeId) != nullptr);
-	
 	// allocate nodeData
-	nodeDatas[nodeId];
+	nodeDatas[node.id];
 	
 	if (realTimeConnection != nullptr)
 	{
-		realTimeConnection->nodeAdd(nodeId, typeName);
+		realTimeConnection->nodeAdd(node);
+		
+		// todo : set input literals. should probably guard in RTE handler not to connect literal when loading
+		
+		realTimeConnection->nodeInit(node);
 	}
 }
 

@@ -107,9 +107,12 @@ AudioNodeControlValue::~AudioNodeControlValue()
 	}
 }
 
-void AudioNodeControlValue::updateControlValueRegistration()
+void AudioNodeControlValue::updateControlValueRegistration(const bool isMainThread)
 {
-	const char * name = getInputString(kInput_Name, "");
+	const char * name =
+		isPassthrough
+			? ""
+			: getInputString(kInput_Name, "");
 	const Type type = (Type)getInputInt(kInput_Type, 0);
 	const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
 	const float min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero)->getMean();
@@ -136,29 +139,28 @@ void AudioNodeControlValue::updateControlValueRegistration()
 	{
 		// unregister
 		
-		if (currentScope == kScope_None)
+		if (isRegistered)
 		{
-			//
-		}
-		else if (currentScope == kScope_Shared)
-		{
-			if (isRegistered)
+			if (currentScope == kScope_None)
+			{
+				//
+			}
+			else if (currentScope == kScope_Shared)
 			{
 				g_currentAudioGraph->context->unregisterControlValue(currentName.c_str());
+				
 				isRegistered = false;
 			}
-		}
-		else if (currentScope == kScope_PerInstance)
-		{
-			if (isRegistered)
+			else if (currentScope == kScope_PerInstance)
 			{
 				g_currentAudioGraph->unregisterControlValue(currentName.c_str());
+				
 				isRegistered = false;
 			}
-		}
-		else
-		{
-			Assert(false);
+			else
+			{
+				Assert(false);
+			}
 		}
 		
 		//
@@ -178,6 +180,8 @@ void AudioNodeControlValue::updateControlValueRegistration()
 			type == kType_Random1D ? AudioControlValue::kType_Random1d :
 			type == kType_Random2D ? AudioControlValue::kType_Random2d :
 			AudioControlValue::kType_Vector1d;
+		
+		// register
 		
 		if (!currentName.empty())
 		{
@@ -213,7 +217,10 @@ void AudioNodeControlValue::updateControlValueRegistration()
 			}
 		}
 	}
-	
+}
+
+void AudioNodeControlValue::updateControlValueOutput(const bool isMainThread)
+{
 	if (isPassthrough)
 	{
 		valueOutput[0].setScalar(0.f);
@@ -221,19 +228,22 @@ void AudioNodeControlValue::updateControlValueRegistration()
 	}
 	else
 	{
+		const char * name = getInputString(kInput_Name, "");
+		const Scope scope = (Scope)getInputInt(kInput_Scope, 0);
+		
 		if (scope == kScope_Shared)
 		{
-			AudioGraphContext::Memf memf = g_currentAudioGraph->context->getMemf(name);
+			const AudioGraphContext::Memf memf = g_currentAudioGraph->context->getMemf(name, isMainThread);
 
-			valueOutput[0].setScalar(memf.value1);
-			valueOutput[1].setScalar(memf.value2);
+			valueOutput[0].setScalar(isMainThread ? memf.value1_mainThread : memf.value1_audioThread);
+			valueOutput[1].setScalar(isMainThread ? memf.value2_mainThread : memf.value2_audioThread);
 		}
 		else if (scope == kScope_PerInstance)
 		{
-			AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name);
+			const AudioGraph::Memf memf = g_currentAudioGraph->getMemf(name, isMainThread);
 
-			valueOutput[0].setScalar(memf.value1);
-			valueOutput[1].setScalar(memf.value2);
+			valueOutput[0].setScalar(isMainThread ? memf.value1_mainThread : memf.value1_audioThread);
+			valueOutput[1].setScalar(isMainThread ? memf.value2_mainThread : memf.value2_audioThread);
 		}
 		else
 		{
@@ -247,10 +257,12 @@ void AudioNodeControlValue::updateControlValueRegistration()
 
 void AudioNodeControlValue::init(const GraphNode & node)
 {
-	updateControlValueRegistration();
+	updateControlValueRegistration(true);
+	updateControlValueOutput(true);
 }
 
 void AudioNodeControlValue::tick(const float dt)
 {
-	updateControlValueRegistration();
+	updateControlValueRegistration(false);
+	updateControlValueOutput(false);
 }

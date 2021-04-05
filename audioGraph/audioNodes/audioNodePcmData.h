@@ -59,4 +59,6 @@ struct AudioNodePcmData : AudioNodeBase
 	}
 	
 	virtual void tick(const float dt) override;
+	
+	virtual void getDescription(AudioNodeDescription & d) override;
 };

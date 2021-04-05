@@ -1,0 +1,5 @@
+app marcel-freeverb1-1
+	depend_library framework
+	depend_library libparticle-ui
+	add_files main.cpp
+	resource_path data

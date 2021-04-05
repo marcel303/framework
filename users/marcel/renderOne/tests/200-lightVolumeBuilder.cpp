@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
 					{
 						// draw bounding boxes for the lights, to give an indication where the lights are positioned
 						
-						beginCubeBatch();
+						//beginCubeBatch(); // fixme : add cube patch for line cubes ?
 						{
 							for (auto & light : lights)
 							{
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
 										light.att_end));
 							}
 						}
-						endCubeBatch();
+						//endCubeBatch();
 						
 						for (auto & light : lights)
 						{
@@ -320,6 +320,8 @@ int main(int argc, char * argv[])
 		
 		helper.reset();
 	}
+	
+	helper.free();
 	
 	framework.shutdown();
 	

@@ -268,7 +268,7 @@ void ComputeShader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffe
 	fassert(globals.shader == this);
 
 	glUniformBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getOpenglBuffer());
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getOpenglBufferId());
 
 	checkErrorGL();
 }
@@ -292,7 +292,7 @@ void ComputeShader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & b
 	fassert(globals.shader == this);
 
 	glShaderStorageBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getOpenglBuffer());
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getOpenglBufferId());
 
 	checkErrorGL();
 }

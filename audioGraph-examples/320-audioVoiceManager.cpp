@@ -187,7 +187,7 @@ void AudioSourceWavefield1D::generate(float * __restrict samples, const int numS
 	{
 		m_sampleLocation += m_sampleLocationSpeed * dt;
 		
-		samples[i] = m_wavefield.sample(m_sampleLocation);
+		samples[i] = m_wavefield.sample(m_sampleLocation, closedEnds);
 		
 		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
@@ -314,7 +314,7 @@ void AudioSourceWavefield2D::generate(float * __restrict samples, const int numS
 		m_sampleLocation[0] += m_sampleLocationSpeed[0] * dt;
 		m_sampleLocation[1] += m_sampleLocationSpeed[1] * dt;
 		
-		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1]);
+		samples[i] = m_wavefield.sample(m_sampleLocation[0], m_sampleLocation[1], closedEnds);
 		
 		m_wavefield.tick(dt, m_tension, vRetainPerSecond, pRetainPerSecond, closedEnds);
 	}
@@ -456,7 +456,7 @@ struct VoiceWorld : AudioUpdateTask
 	}
 };
 
-static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation, const bool enabled)
+static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation, const bool enabled, const bool closedEnds)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -493,7 +493,7 @@ static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation, c
 	{
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			const float p = w.sample(sampleLocation);
+			const float p = w.sample(sampleLocation, closedEnds);
 			const float a = 1.f;
 			
 			setColorf(1.f, 1.f, 0.f, a);
@@ -513,7 +513,7 @@ static void drawWavefield1D(const Wavefield1D & w, const float sampleLocation, c
 	gxPopMatrix();
 }
 
-static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, const float sampleLocationY, const bool enabled)
+static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, const float sampleLocationY, const bool enabled, const bool closedEnds)
 {
 	gxPushMatrix();
 	gxTranslatef(GFX_SX/2, GFX_SY/2, 0);
@@ -527,7 +527,7 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 		{
 			for (int y = 0; y < w.numElems; ++y)
 			{
-				const float p = w.sample(x, y);
+				const float p = w.sample(x, y, closedEnds);
 				const float a = saturate(w.f[x][y]);
 				
 				setColorf(1.f, 1.f, 1.f, a);
@@ -541,7 +541,7 @@ static void drawWavefield2D(const Wavefield2D & w, const float sampleLocationX, 
 	{
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
-			const float p = w.sample(sampleLocationX, sampleLocationY);
+			const float p = w.sample(sampleLocationX, sampleLocationY, closedEnds);
 			const float a = 1.f;
 			
 			setColorf(1.f, 1.f, 0.f, a);
@@ -707,7 +707,7 @@ int main(int argc, char * argv[])
 				}
 				s_audioMutex.unlock();
 				
-				drawWavefield1D(w, sampleLocation, wavefield1DEnabled);
+				drawWavefield1D(w, sampleLocation, wavefield1DEnabled, wavefield1D.m_closedEnds);
 			}
 			
 			//
@@ -725,7 +725,7 @@ int main(int argc, char * argv[])
 				}
 				s_audioMutex.unlock();
 				
-				drawWavefield2D(w, sampleLocationX, sampleLocationY, wavefield2DEnabled);
+				drawWavefield2D(w, sampleLocationX, sampleLocationY, wavefield2DEnabled, wavefield2D.m_closedEnds);
 			}
 		
 			//

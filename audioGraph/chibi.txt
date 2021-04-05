@@ -17,7 +17,7 @@ library audiograph-core
 
 library audiograph-voice
 
-	# description : provides the AudioVoiceMgr base object and a basic implementation
+	# description : provides AudioVoiceManager base object and a basic implementation
 
 	depend_library audiograph-core
 
@@ -28,7 +28,7 @@ library audiograph-voice
 
 library audiograph-graph
 
-	# description : provides AudioGraph and AudioGraphContext and integrates core and voice types
+	# description : provides AudioGraph and AudioGraphContext and integrates audiograph-core and audiograph-voice
 	
 	depend_library audiograph-core
 	depend_library audiograph-voice
@@ -40,6 +40,8 @@ library audiograph-graph
 
 library audiograph-graphMgr
 
+	# description provides various AudioGraphManager implementations, ranging from very basic, to supporting real-time editing for multiple graphs and instances
+	
 	depend_library audiograph-graph
 	depend_library libavgraph
 
@@ -50,8 +52,7 @@ library audiograph-graphMgr
 
 library audiograph-nodes
 
-	# todo : remove framework dependency
-	#        used by resource editors
+	# todo : remove framework dependency. depending on it here due to resource editors
 	depend_library framework
 
 	# todo : remove libavgraph dependency. depending on it here due to resource editors
@@ -62,7 +63,7 @@ library audiograph-nodes
 	depend_library binaural
 	depend_library libavgraph-core
 
-	# todo : remove portaudio dependency
+	# todo : remove portaudio dependency. depending on it here due to paobject
 	with_platform macos   depend_library portaudio
 	with_platform linux   depend_library portaudio
 	with_platform windows depend_library portaudio
@@ -76,7 +77,7 @@ library audiograph-nodes
 	scan_files cpp path audioNodes conglomerate conglomerates/audioNodes_all.h
 	scan_files h   path audioNodes
 
-# todo : remove portaudio dependency
+# todo : remove portaudio dependency. depending on it here due to paobject
 	with_platform android compile_definition STUB_PAOBJECT * expose
 
 	link_translation_unit_using_function_call linkAudioNodes

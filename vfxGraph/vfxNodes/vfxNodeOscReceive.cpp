@@ -36,7 +36,7 @@
 
 //
 
-OscEndpointMgr g_oscEndpointMgr;
+OscEndpointMgr g_oscEndpointMgr; // todo : should be an object?
 
 //
 
@@ -44,7 +44,8 @@ VFX_NODE_TYPE(VfxNodeOscReceive)
 {
 	typeName = "osc.receive";
 	
-	resourceTypeName = "osc.path";
+	mainResourceType = "osc.path";
+	mainResourceName = "editorData";
 	
 	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{

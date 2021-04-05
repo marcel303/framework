@@ -712,7 +712,7 @@ int main(int argc, char * argv[])
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
 								
-								ImGui::ComponentProperty(typeDB, *member, component_instance.component, false, propertyIsSet, component_with_value);
+								ImGui::ComponentProperty(typeDB, *member, component_instance.component, false, propertyIsSet, component_with_value, nullptr);
 								
 								component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 							}

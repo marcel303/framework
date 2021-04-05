@@ -5,6 +5,8 @@
 #include "Mat4x4.h"
 #include <string>
 
+class Model;
+
 struct ModelComponent : Component<ModelComponent>
 {
 	std::string filename;
@@ -20,6 +22,10 @@ struct ModelComponent : Component<ModelComponent>
 	
 	Vec3 aabbMin;
 	Vec3 aabbMax;
+	
+	Model * model = nullptr;
+	
+	virtual ~ModelComponent() override;
 	
 	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
@@ -50,7 +56,7 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		add("filename", &ModelComponent::filename)
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
 		add("rotation", &ModelComponent::rotation);
-		in("scale", &ModelComponent::scale)
+		add("scale", &ModelComponent::scale)
 			.limits(0.f, 100.f)
 			.editingCurveExponential(2.f);
 		add("colorTexcoords", &ModelComponent::colorTexcoords);

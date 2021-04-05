@@ -60,13 +60,14 @@ struct AudioNodeJsusFx : AudioNodeBase
 		float defaultValue;
 		int sliderIndex;
 		int socketIndex;
+		
+		float valueFromResource;
+		bool hasValueFromResource;
 	};
 	
 	std::string filename;
 	
 	std::vector<SliderInput> sliderInputs;
-	
-	std::string currentFilename;
 	
 	int numAudioInputs;
 	int numAudioOutputs;
@@ -91,7 +92,9 @@ struct AudioNodeJsusFx : AudioNodeBase
 	
 	void clearOutputs();
 	
-	virtual void init(const GraphNode & node) override;
+	void updateFromResource();
+	
+	virtual void initSelf(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	

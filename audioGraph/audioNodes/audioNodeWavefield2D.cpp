@@ -95,6 +95,8 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 	
 	AudioRNG rng;
 	
+	const bool closedEnds = true;
+	
 	ResourceEditor_Wavefield2D()
 		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
@@ -153,7 +155,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 			wavefield.numElems = resource->numElems;
 			
 			for (int i = 0; i < 10; ++i)
-				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, true);
+				wavefield.tick(dt / 100.0, 100000.0, 0.8, 0.8, closedEnds);
 		}
 		
 		if (g_doDraw)
@@ -170,7 +172,7 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 				{
 					for (int y = 0; y < wavefield.numElems; ++y)
 					{
-						const float p = wavefield.sample(x, y);
+						const float p = wavefield.sample(x, y, closedEnds);
 						const float a = saturate(wavefield.f[x][y]);
 						
 						setColorf(1.f, 1.f, 1.f, a);
@@ -316,6 +318,15 @@ struct ResourceEditor_Wavefield2D : GraphEdit_ResourceEditorBase
 
 //
 
+AUDIO_ENUM_TYPE(wavefield_2d_softClip)
+{
+	enumName = "wavefield.2d.softClip";
+	
+	elem("none", AudioNodeWavefield2D::kSoftClip_None);
+	elem("sigmoid.fast", AudioNodeWavefield2D::kSoftClip_SigmoidFast);
+	elem("sigmoid.sqrt", AudioNodeWavefield2D::kSoftClip_SigmoidSqrt);
+}
+
 AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 {
 	typeName = "wavefield.2d";
@@ -327,6 +338,7 @@ AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 	in("wrap", "bool", "0");
 	in("sample.pos.x", "audioValue", "0.5");
 	in("sample.pos.y", "audioValue", "0.5");
+	inEnum("clip", "wavefield.2d.softClip", AudioNodeWavefield1D::kSoftClip_SigmoidSqrt);
 	in("trigger!", "trigger");
 	in("trigger.pos.x", "audioValue", "0.5");
 	in("trigger.pos.y", "audioValue", "0.5");
@@ -335,7 +347,8 @@ AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 	in("randomize!", "trigger");
 	out("audio", "audioValue");
 	
-	resourceTypeName = "wavefield.2d";
+	mainResourceType = "wavefield.2d";
+	mainResourceName = "editorData";
 	
 	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
@@ -359,6 +372,7 @@ AudioNodeWavefield2D::AudioNodeWavefield2D()
 	addInput(kInput_Wrap, kAudioPlugType_Bool);
 	addInput(kInput_SampleLocationX, kAudioPlugType_FloatVec);
 	addInput(kInput_SampleLocationY, kAudioPlugType_FloatVec);
+	addInput(kInput_SoftClip, kAudioPlugType_Int);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
 	addInput(kInput_TriggerLocationX, kAudioPlugType_FloatVec);
 	addInput(kInput_TriggerLocationY, kAudioPlugType_FloatVec);
@@ -422,14 +436,14 @@ void AudioNodeWavefield2D::syncWavefieldResource()
 	wavefieldData->unlock();
 }
 
-void AudioNodeWavefield2D::init(const GraphNode & node)
+void AudioNodeWavefield2D::initSelf(const GraphNode & node)
 {
 	createAudioNodeResource(node, "wavefield.2d", "editorData", wavefieldData);
 	
 	syncWavefieldResource();
 }
 
-void AudioNodeWavefield2D::tick(const float _dt)
+void AudioNodeWavefield2D::tick(const float in_dt)
 {
 	audioCpuTimingBlock(AudioNodeWavefield2D);
 	
@@ -442,6 +456,7 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	const bool wrap = getInputBool(kInput_Wrap, false);
 	const AudioFloat * sampleLocationX = getInputAudioFloat(kInput_SampleLocationX, &AudioFloat::Half);
 	const AudioFloat * sampleLocationY = getInputAudioFloat(kInput_SampleLocationY, &AudioFloat::Half);
+	const SoftClip softClip = (SoftClip)getInputInt(kInput_SoftClip, kSoftClip_SigmoidSqrt);
 	
 	//
 
@@ -470,19 +485,38 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	//
 	
-	const double dt = 1.0 / double(SAMPLE_RATE);
+	const double dtPerSample = 1.0 / double(SAMPLE_RATE);
 	
 	const double maxTension = 2000000000.0;
+	
+	const bool closedEnds = (wrap == false);
 	
 	for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 	{
 		const double c = Wavefield::clamp<double>(tension->samples[i] * 1000000.0, -maxTension, +maxTension);
 		
-		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
+		wavefield->tick(dtPerSample, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], closedEnds);
 		
 		audioOutput.samples[i] = wavefield->sample(
 			sampleLocationX->samples[i] * wavefield->numElems,
-			sampleLocationY->samples[i] * wavefield->numElems);
+			sampleLocationY->samples[i] * wavefield->numElems,
+			closedEnds);
+	}
+	
+	// soft clip wavefield position. abrupt tension changes could boost velocity too much, causing huge values for position
+	
+	switch (softClip)
+	{
+		case kSoftClip_None:
+			break;
+			
+		case kSoftClip_SigmoidFast:
+			audioBufferClip_SigmoidFast(audioOutput.samples, AUDIO_UPDATE_SIZE);
+			break;
+		
+		case kSoftClip_SigmoidSqrt:
+			audioBufferClip_SigmoidSqrt(audioOutput.samples, AUDIO_UPDATE_SIZE);
+			break;
 	}
 	
 	audioOutput.mul(*gain);
@@ -502,10 +536,10 @@ void AudioNodeWavefield2D::handleTrigger(const int inputSocketIndex)
 			const int elemX = int(std::round(std::abs(triggerPositionX) * wavefield->numElems)) % wavefield->numElems;
 			const int elemY = int(std::round(std::abs(triggerPositionY) * wavefield->numElems)) % wavefield->numElems;
 			
-			if (triggerSize == 1.f)
+			if (triggerSize <= 1.f)
 				wavefield->d[elemX][elemY] += triggerAmount;
 			else
-				wavefield->doGaussianImpact(elemX, elemX, triggerSize, triggerAmount, 1.f);
+				wavefield->doGaussianImpact(elemX, elemY, triggerSize, triggerAmount, 1.f);
 		}
 	}
 	else if (inputSocketIndex == kInput_Randomize)

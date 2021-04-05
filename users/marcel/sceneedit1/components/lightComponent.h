@@ -51,7 +51,7 @@ struct LightComponentType : ComponentType<LightComponent>
 			.add("areaCircle", LightComponent::kLightType_AreaCircle);
 		
 		add("type", &LightComponent::type);
-		in("intensity", &LightComponent::intensity)
+		add("intensity", &LightComponent::intensity)
 			.limits(0.f, 100.f)
 			.editingCurveExponential(4.f);
 		add("color", &LightComponent::color)

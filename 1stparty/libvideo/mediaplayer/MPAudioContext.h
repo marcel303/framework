@@ -39,33 +39,45 @@ namespace MP
 	class AudioContext
 	{
 	public:
-		AudioContext();
 		~AudioContext();
 
-		bool Initialize(Context * context, const size_t streamIndex, const AudioOutputMode outputMode);
+		bool Initialize(
+			Context * context,
+			const size_t streamIndex,
+			const AudioOutputMode outputMode);
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
 
 		bool FillAudioBuffer();
-		bool RequestAudio(int16_t * out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime);
+		bool RequestAudio(
+			int16_t * out_samples,
+			const size_t frameCount,
+			bool   & out_gotAudio,
+			double & out_audioTime);
 
 		bool IsQueueFull() const;
 		bool AddPacket(AVPacket & packet);
 		bool ProcessPacket(AVPacket & packet);
 		bool Depleted() const;
+		
+		int GetSampleRate() const;
+		int GetOutputChannelCount() const;
+		
+		void ClearBuffers();
 
-	//private: // FIXME.
-		PacketQueue * m_packetQueue;
-		AudioBuffer * m_audioBuffer;
-		AVCodecContext * m_codecContext;
-		AVCodec * m_codec;
-		SwrContext * m_swrContext;
-		int m_outputChannelCount;
-		double m_timeBase;
+	private:
+		PacketQueue    * m_packetQueue  = nullptr;
+		AudioBuffer    * m_audioBuffer  = nullptr;
+		AVCodecContext * m_codecContext = nullptr;
+		AVCodec        * m_codec        = nullptr;
+		SwrContext     * m_swrContext   = nullptr;
+		
+		int    m_outputChannelCount = 0;
+		double m_timeBase = 0.0;
 
-		size_t m_streamIndex;
+		size_t m_streamIndex = -1;
 
-		bool m_initialized;
+		bool m_initialized = false;
 	};
 };

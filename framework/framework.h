@@ -43,6 +43,7 @@
 #include "Vec4.h"
 
 #if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL_main.h>
 	#include <SDL2/SDL_mutex.h>
 	#include <SDL2/SDL_thread.h>
 	#include <SDL2/SDL_timer.h>
@@ -328,7 +329,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 // GX types
 
 typedef int32_t GxImmediateIndex;
-typedef uint32_t GxShaderBufferId;
 
 #if USE_LEGACY_OPENGL
 
@@ -542,6 +542,8 @@ public:
 	
 	Vec3 vrOrigin;
 	bool enableVrMovement;
+	
+	bool backgrounded;
 	
 private:
 	uint64_t m_lastTick;
@@ -810,6 +812,8 @@ public:
 	
 	void blitTo(Surface * surface) const;
 	void blit(BLEND_MODE blendMode) const;
+	
+	static SURFACE_FORMAT toSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat);
 };
 
 void blitBackBufferToSurface(Surface * surface);
@@ -995,8 +999,17 @@ public:
 
 class ShaderBuffer
 {
-	GxShaderBufferId m_buffer;
-	int m_bufferSize;
+#if ENABLE_METAL
+	mutable class DynamicBufferPool * m_bufferPool;
+	mutable class DynamicBufferPoolElem * m_bufferPoolElem;
+	mutable bool m_bufferPoolElemIsUsed; // if true, setData is required to allocate a new buffer
+	uint32_t m_bufferSize;
+#endif
+
+#if ENABLE_OPENGL
+	uint32_t m_bufferId;
+	uint32_t m_bufferSize;
+#endif
 	
 public:
 	ShaderBuffer();
@@ -1008,10 +1021,13 @@ public:
 	void setData(const void * bytes, int numBytes);
 	
 #if ENABLE_OPENGL
-	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
+	uint32_t getOpenglBufferId() const { return m_bufferId; }
+	int getBufferSize() const { return m_bufferSize; }
 #endif
 #if ENABLE_METAL
-	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
+	void markMetalBufferIsUsed() const;
+	void * getMetalBuffer() const;
+	int getBufferSize() const { return m_bufferSize; }
 #endif
 };
 
@@ -1019,7 +1035,7 @@ public:
 
 class ShaderBufferRw
 {
-	GxShaderBufferId m_buffer;
+	uint32_t m_bufferId;
 
 public:
 	ShaderBufferRw();
@@ -1034,10 +1050,10 @@ public:
 	}
 	
 #if ENABLE_OPENGL
-	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
+	uint32_t getOpenglBufferId() const { return m_bufferId; }
 #endif
 #if ENABLE_METAL
-	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
+	uint32_t getMetalBufferId() const { return m_bufferId; }
 #endif
 };
 
@@ -1230,8 +1246,6 @@ public:
 	bool animRootMotionEnabled;
 	
 	float drawNormalsScale = 1.f;
-	
-	mutable ShaderBuffer skinningMatrices;
 	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
@@ -1547,6 +1561,7 @@ Vec2 transformToScreen(const Vec3 & v, float & w);
 
 void pushSurface(Surface * surface, const bool clearSurface = false);
 void popSurface();
+
 void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
 

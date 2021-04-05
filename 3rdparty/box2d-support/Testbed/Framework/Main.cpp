@@ -504,7 +504,8 @@ int main(int, char**)
 			{
 				ImGui::SetNextWindowPos(ImVec2(0,0));
 				ImGui::SetNextWindowSize(ImVec2((float)g_camera.m_width, (float)g_camera.m_height));
-				ImGui::Begin("Overlay", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoScrollbar);
+				ImGui::SetNextWindowBgAlpha(0.f);
+				ImGui::Begin("Overlay", NULL, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoScrollbar);
 				ImGui::SetCursorPos(ImVec2(5, (float)g_camera.m_height - 20));
 				ImGui::Text("%.1f ms", 1000.0 * frameTime);
 				ImGui::End();

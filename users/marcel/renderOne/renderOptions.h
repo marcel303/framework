@@ -75,10 +75,10 @@ namespace rOne
 		// render pass enables
 		
 		bool enableOpaquePass = true;
-		bool drawNormals = false;
-		
 		bool enableBackgroundPass = true;
 		bool enableTranslucentPass = true;
+		
+		bool drawNormals = false;
 		
 		// deferred shading
 		

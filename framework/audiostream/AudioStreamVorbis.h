@@ -42,11 +42,11 @@ public:
 	void Open(const char* fileName, bool loop);
 	void Close();
 	
-	int SampleRate_get() const { return mSampleRate; }
-	int Duration_get() const { return mDuration; }
+	int32_t SampleRate_get() const { return mSampleRate; }
+	int64_t Duration_get() const { return mDuration; }
 	
-	int Position_get() const;
-	bool HasLooped_get() const;
+	int64_t Position_get() const { return mPosition; }
+	bool HasLooped_get() const { return mHasLooped; }
 
 	bool IsOpen_get() const { return mFile != 0; }
 	const char * FileName_get() const { return mFileName.c_str(); }
@@ -56,10 +56,10 @@ private:
 	std::string mFileName;
 	FILE* mFile;
 	struct OggVorbis_File* mVorbisFile;
-	int mNumChannels;
-	int mSampleRate;
-	int mDuration;
-	int mPosition;
+	int16_t mNumChannels;
+	int32_t mSampleRate;
+	int64_t mDuration;
+	int64_t mPosition;
 	bool mLoop;
 	bool mHasLooped;
 };

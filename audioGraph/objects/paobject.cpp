@@ -267,6 +267,18 @@ bool PortAudioObject::initImpl(
 			outputDeviceIndex = supportedOutputDeviceIndex;
 	}
 	
+	if (inputDeviceIndex != -1)
+	{
+		auto * deviceInfo = Pa_GetDeviceInfo(inputDeviceIndex);
+		LOG_INF("using audio input device: %s", deviceInfo->name);
+	}
+	
+	if (outputDeviceIndex != -1)
+	{
+		auto * deviceInfo = Pa_GetDeviceInfo(outputDeviceIndex);
+		LOG_INF("using audio output device: %s", deviceInfo->name);
+	}
+	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
 	

@@ -119,7 +119,9 @@ void VfxNodeImageDownsample::tick(const float dt)
 		const int sx = std::max(1, image->getSx() / pixelSize);
 		const int sy = std::max(1, image->getSy() / pixelSize);
 		
-		if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
+		if (surface == nullptr ||
+			sx != surface->getWidth() ||
+			sy != surface->getHeight())
 		{
 			allocateImage(sx, sy);
 		}
@@ -166,9 +168,13 @@ void VfxNodeImageDownsample::allocateImage(const int sx, const int sy)
 {
 	freeImage();
 
-	// todo : use the correct surface format
+	// translate the texture format to surface format
 	
-	surface = new Surface(sx, sy, false, false, SURFACE_RGBA8, 1);
+	const VfxImageBase * image = getInputImage(kInput_Image, nullptr);
+	const GX_TEXTURE_FORMAT textureFormat = (GX_TEXTURE_FORMAT)image->getTextureFormat();
+	const SURFACE_FORMAT surfaceFormat = Surface::toSurfaceFormat(textureFormat);
+	
+	surface = new Surface(sx, sy, false, false, surfaceFormat, 1);
 	
 	imageOutput.texture = surface->getTexture();
 }

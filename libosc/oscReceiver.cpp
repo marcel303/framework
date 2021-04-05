@@ -189,7 +189,16 @@ bool OscReceiver::init(const char * ipAddress, const int udpPort)
 
 bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 {
-	shut();
+	if (packetListener != nullptr)
+	{
+		shut();
+	}
+	else
+	{
+		Assert(packetListener == nullptr);
+		Assert(receiveSocket == nullptr);
+		Assert(messageThreadPtr == nullptr);
+	}
 	
 	//
 	

@@ -22,7 +22,7 @@ struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
 	RotateTransformComponentType()
 		: ComponentType("RotateTransformComponent")
 	{
-		in("speed", &RotateTransformComponent::speed);
+		add("speed", &RotateTransformComponent::speed);
 	}
 };
 

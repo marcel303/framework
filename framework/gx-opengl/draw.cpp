@@ -25,6 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if defined(MACOS) || defined(IPHONEOS)
+	#define GLES_SILENCE_DEPRECATION
+#endif
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
@@ -1078,8 +1082,8 @@ int gxGetMatrixParity()
 
 void gxBegin(GLenum type)
 {
+	checkErrorGL(); // note : it's not valid to call glGetError between glBegin/glEnd pairs, we still call it here, so we know the error state was good *before* the glBegin call
 	glBegin(type);
-	checkErrorGL();
 }
 
 void gxEnd()

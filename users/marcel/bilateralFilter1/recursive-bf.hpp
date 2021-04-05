@@ -158,17 +158,19 @@ inline void _recursive_bf(
 		
 		float yp[channel];
         for (int i = 0; i < channel; ++i)
-        	*temp_x++ = yp[i] = *in_x++;
+        	temp_x[i] = yp[i] = in_x[i];
+		in_x += channel;
+		temp_x += channel;
 		
-		uint8_t lp = *luminance_x++;
+		uint8_t lp = luminance_x[0];
 		
 		float fp;
-        *temp_factor_x++ = fp = 1;
+        temp_factor_x[0] = fp = 1;
 
         // from left to right
         for (int x = 1; x < width; x++)
         {
-			const uint8_t lc = *luminance_x++;
+			const uint8_t lc = luminance_x[x];
             const uint8_t range_dist = abs(lc - lp);
             const float weight = range_table[range_dist];
             const float alpha_ = weight * alpha;
@@ -176,15 +178,14 @@ inline void _recursive_bf(
             for (int i = 0; i < channel; ++i)
             {
             	const float yc =
-            		inv_alpha_ * (*in_x) +
+            		inv_alpha_ * (in_x[i]) +
             		alpha_ * yp[i];
 				
-            	*temp_x = yc;
+            	temp_x[i] = yc;
             	yp[i] = yc;
-				
-            	temp_x++;
-            	in_x++;
 			}
+			in_x += channel;
+			temp_x += channel;
 			
 			lp = lc;
 
@@ -192,7 +193,7 @@ inline void _recursive_bf(
 				inv_alpha_ +
 				alpha_ * fp;
 			
-            *temp_factor_x++ = fc;
+            temp_factor_x[x] = fc;
             fp = fc;
         }
 		
@@ -205,20 +206,16 @@ inline void _recursive_bf(
         	yp[i] = *in_x;
 		}
 		
-		--luminance_x;
-		lp = *luminance_x;
+		lp = luminance_x[width - 1];
 
-        --temp_factor_x;
-        *temp_factor_x = 0.5f * ((*temp_factor_x) + 1);
+        temp_factor_x[width - 1] = 0.5f * ((temp_factor_x[width - 1]) + 1);
 		
         fp = 1;
 
         // from right to left
         for (int x = width - 2; x >= 0; x--) 
         {
-        	--luminance_x;
-			
-			const uint8_t lc = *luminance_x;
+			const uint8_t lc = luminance_x[x];
             const uint8_t range_dist = abs(lc - lp);
             const float weight = range_table[range_dist];
             const float alpha_ = weight * alpha;
@@ -242,8 +239,7 @@ inline void _recursive_bf(
             	inv_alpha_ +
             	alpha_ * fp;
 			
-            --temp_factor_x;
-            *temp_factor_x = 0.5f * ((*temp_factor_x) + fc);
+            temp_factor_x[x] = 0.5f * (temp_factor_x[x] + fc);
             fp = fc;
         }
     }
@@ -258,30 +254,33 @@ inline void _recursive_bf(
         const uint8_t * __restrict tpy = &lum[(y - 1) * width];
         const uint8_t * __restrict tcy = &lum[y * width];
 		
-        float * __restrict xcy = &img_temp[y * width_channel];
-        float * __restrict ypy = &img_out_f[(y - 1) * width_channel];
-        float * __restrict ycy = &img_out_f[y * width_channel];
+        const float * __restrict xcy = &img_temp[y * width_channel];
+        const float * __restrict ypy = &img_out_f[(y - 1) * width_channel];
+              float * __restrict ycy = &img_out_f[y * width_channel];
 
-        float * __restrict xcf = &in_factor[y * width];
-        float * __restrict ypf = &map_factor_b[(y - 1) * width];
-        float * __restrict ycf = &map_factor_b[y * width];
+        const float * __restrict xcf = &in_factor[y * width];
+        const float * __restrict ypf = &map_factor_b[(y - 1) * width];
+              float * __restrict ycf = &map_factor_b[y * width];
 		
         for (int x = 0; x < width; x++)
         {
-            const uint8_t range_dist = abs((*tcy++) - (*tpy++));
+            const uint8_t range_dist = abs((tcy[x]) - (tpy[x]));
             const float weight = range_table[range_dist];
             const float alpha_ = weight * alpha;
 			
             for (int c = 0; c < channel; c++)
             {
-                *ycy++ =
-                	inv_alpha_ * (*xcy++) +
-                	alpha_ * (*ypy++);
+                ycy[c] =
+                	inv_alpha_ * xcy[c] +
+                	alpha_ * ypy[c];
 			}
+			xcy += channel;
+			ypy += channel;
+			ycy += channel;
 			
-            *ycf++ =
-            	inv_alpha_ * (*xcf++) +
-            	alpha_ * (*ypf++);
+            ycf[x] =
+            	inv_alpha_ * xcf[x] +
+            	alpha_ * ypf[x];
         }
     }
 	
@@ -311,44 +310,47 @@ inline void _recursive_bf(
     {
         const uint8_t * __restrict tpy = &lum[(y + 1) * width];
         const uint8_t * __restrict tcy = &lum[y * width];
-        float * __restrict xcy = &img_temp[y * width_channel];
 		
-        float * __restrict ycy_ = ycy;
-        float * __restrict ypy_ = ypy;
-        float * __restrict out_ = &img_out_f[y * width_channel];
+        const float * __restrict xcy_ = &img_temp[y * width_channel];
+		
+              float * __restrict ycy_ = ycy;
+        const float * __restrict ypy_ = ypy;
+              float * __restrict out_ = &img_out_f[y * width_channel];
 
-        float * __restrict xcf = &in_factor[y * width];
+        const float * __restrict xcf = &in_factor[y * width];
 		
-        float * __restrict ycf_ = ycf;
-        float * __restrict ypf_ = ypf;
-        float * __restrict factor_ = &map_factor_b[y * width];
+              float * __restrict ycf_ = ycf;
+        const float * __restrict ypf_ = ypf;
+              float * __restrict factor = &map_factor_b[y * width];
 		
         for (int x = 0; x < width; x++)
         {
-            const uint8_t range_dist = abs((*tcy++) - (*tpy++));
+            const uint8_t range_dist = abs(tcy[x] - tpy[x]);
             const float weight = range_table[range_dist];
             const float alpha_ = weight * alpha;
 
             const float fcc =
-            	inv_alpha_ * (*xcf++) +
-            	alpha_ * (*ypf_++);
+            	inv_alpha_ * xcf[x] +
+            	alpha_ * ypf_[x];
 			
-            *ycf_++ = fcc;
-            *factor_ = 0.5f * (*factor_ + fcc);
+            ycf_[x] = fcc;
+            factor[x] = 0.5f * (factor[x] + fcc);
 
             for (int c = 0; c < channel; c++)
             {
                 const float ycc =
-                	inv_alpha_ * (*xcy++) +
-                	alpha_ * (*ypy_++);
+                	inv_alpha_ * xcy_[c] +
+                	alpha_ * ypy_[c];
 				
-                *ycy_++ = ycc;
+                ycy_[c] = ycc;
 				
-                *out_ = 0.5f * (*out_ + ycc) / (*factor_);
-                out_++;
+                out_[c] = 0.5f * (out_[c] + ycc) / factor[x];
             }
 			
-            factor_++;
+            xcy_ += channel;
+            ycy_ += channel;
+            ypy_ += channel;
+            out_ += channel;
         }
 		
         memcpy(ypy, ycy, sizeof(float) * width_channel);

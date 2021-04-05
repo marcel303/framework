@@ -44,7 +44,8 @@ VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 {
 	typeName = "osc.receiveChannels";
 	
-	resourceTypeName = "osc.pathList";
+	mainResourceType = "osc.pathList";
+	mainResourceName = "editorData";
 	
 	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{

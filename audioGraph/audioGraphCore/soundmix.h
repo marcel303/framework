@@ -143,6 +143,9 @@ extern float audioBufferSum(
 extern void audioBufferClip_Hard(
 	float * __restrict audioBuffer,
 	const int numSamples);
-extern void audioBufferClip_FastSigmoid(
+extern void audioBufferClip_SigmoidSqrt(
+	float * __restrict audioBuffer,
+	const int numSamples);
+extern void audioBufferClip_SigmoidFast(
 	float * __restrict audioBuffer,
 	const int numSamples);

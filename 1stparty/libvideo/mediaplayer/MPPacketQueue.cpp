@@ -29,15 +29,8 @@
 #include "MPDebug.h"
 #include "MPPacketQueue.h"
 
-// TODO: Make packet queue maintain total size of buffered data (packet.size) &
-//       query it instead of # packets in determining whether the packet queue is full yes/no.
-
 namespace MP
 {
-	PacketQueue::PacketQueue()
-	{
-	}
-
 	PacketQueue::~PacketQueue()
 	{
 		while (GetSize() > 0)

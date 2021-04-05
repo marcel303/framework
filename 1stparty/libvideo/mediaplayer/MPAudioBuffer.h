@@ -36,31 +36,22 @@
 
 namespace MP
 {
-	class AudioBufferSegment
+	struct AudioBufferSegment
 	{
-	public:
-		AudioBufferSegment()
-			: m_numSamples(0)
-			, m_readOffset(0)
-			, m_time(0.0)
-		{
-		}
-
-		int16_t m_samples[AVCODEC_MAX_AUDIO_FRAME_SIZE/2];
-		int m_numSamples;
-		int m_readOffset;
-		double m_time;
+		int16_t m_samples[AVCODEC_MAX_AUDIO_FRAME_SIZE / 2];
+		int m_numSamples = 0;
+		int m_readOffset = 0;
+		double m_time    = 0.0;
 	};
 
 	class AudioBuffer
 	{
 	public:
-		AudioBuffer();
-
 		void AddSegment(const AudioBufferSegment & segment);
 		bool ReadSamples(
 			int16_t * __restrict samples, const size_t numSamples,
-			size_t & out_numSamplesRead, double & out_timeStamp);
+			size_t & out_numSamplesRead,
+			double & out_timeStamp);
 
 		bool Depleted() const;
 		void Clear();

@@ -33,7 +33,8 @@
 GraphEdit_NodeResourceEditorWindow::GraphEdit_NodeResourceEditorWindow()
 	: graphEdit(nullptr)
 	, nodeId(kGraphNodeIdInvalid)
-	, resourceTypeName()
+	, resourceType()
+	, resourceName()
 	, window(nullptr)
 	, resourceEditor(nullptr)
 {
@@ -63,20 +64,38 @@ bool GraphEdit_NodeResourceEditorWindow::init(GraphEdit * in_graphEdit, const Gr
 		Assert(typeDefinition != nullptr);
 		if (typeDefinition != nullptr)
 		{
-			if (typeDefinition->resourceTypeName.empty() == false)
+		// todo : GraphEdit : add UI to list all node resources
+		// todo : GraphEdit : allow to edit any node resource
+		
+			if (typeDefinition->mainResourceType.empty() == false &&
+				typeDefinition->mainResourceName.empty() == false)
 			{
-				resourceTypeName = typeDefinition->resourceTypeName;
+				resourceType = typeDefinition->mainResourceType;
+				resourceName = typeDefinition->mainResourceName;
+				
 				if (typeDefinition->resourceEditor.create != nullptr)
+				{
 					resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
+				}
 				
 				Assert(resourceEditor != nullptr);
 				if (resourceEditor != nullptr)
 				{
-					resourceEditor->setResource(*node, resourceTypeName.c_str(), "editorData");
+					resourceEditor->setResource(
+						*node,
+						resourceType.c_str(),
+						resourceName.c_str());
 					
-					resourceEditor->init(0, 0, resourceEditor->initSx, resourceEditor->initSy);
+					resourceEditor->init(
+						0,
+						0,
+						resourceEditor->initSx,
+						resourceEditor->initSy);
 					
-					window = new Window("Resource editor", resourceEditor->sx, resourceEditor->sy, true);
+					window = new Window(
+						"Resource editor",
+						resourceEditor->sx,
+						resourceEditor->sy, true);
 				}
 			}
 		}
@@ -139,11 +158,16 @@ void GraphEdit_NodeResourceEditorWindow::save()
 		
 		if (resourceEditor->serializeResource(resourceData))
 		{
-			node->setResource(resourceTypeName.c_str(), "editorData", resourceData.c_str());
+			node->setResource(
+				resourceType.c_str(),
+				resourceName.c_str(),
+				resourceData.c_str());
 		}
 		else
 		{
-			node->clearResource(resourceTypeName.c_str(), "editorData");
+			node->clearResource(
+				resourceType.c_str(),
+				resourceName.c_str());
 		}
 	}
 }

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <string>
+
 struct ComponentBase;
 struct Member;
 struct PlainType;
@@ -8,13 +11,21 @@ struct TypeDB;
 
 namespace ImGui
 {
+	struct Reflection_Callbacks
+	{
+		std::function<void(std::string & path)> makePathRelative;
+		std::function<void()> propertyWillChange;
+		std::function<void()> propertyDidChange;
+	};
+	
 	bool ComponentProperty(
 		const TypeDB & typeDB,
 		const Member & member,
 		ComponentBase * component,
 		const bool signalChanges,
 		bool & isSet,
-		ComponentBase * defaultComponent);
+		ComponentBase * defaultComponent,
+		Reflection_Callbacks * callbacks);
 }
 
 namespace ImGui
@@ -35,7 +46,8 @@ namespace ImGui
 		const PlainType & plain_type,
 		void * member_object,
 		bool & isSet,
-		void * default_member_object);
+		void * default_member_object,
+		Reflection_Callbacks * callbacks);
 
 	/**
 	 * Presents an editor for editing a structured type object.
@@ -54,5 +66,6 @@ namespace ImGui
 		void * object,
 		bool & isSet,
 		void * default_object,
-		void ** changedMemberObject); // note : since we can store only one pointer, changedMemberObject is the address of the first member that's changed
+		void ** changedMemberObject,
+		Reflection_Callbacks * callbacks); // note : since we can store only one pointer, changedMemberObject is the address of the first member that's changed
 }

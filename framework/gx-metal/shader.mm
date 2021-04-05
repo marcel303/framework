@@ -71,11 +71,14 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
 					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
-					logDebug("found vs uniform buffer: %s", bufferName);
+					logDebug("found vs uniform buffer: %s @%d", bufferName, arg.index);
 					vsInfo.bufferName[arg.index] = bufferName;
 					
 					vsInfo.initUniforms(arg);
 					addUniforms(arg, 'v');
+					
+					if (strcmp(bufferName, "ShaderUniforms") == 0)
+						vsMainUniformBufferIndex = arg.index;
 					
 					Assert(vsUniformData[arg.index] == nullptr);
 					vsUniformData[arg.index] = malloc(arg.bufferDataSize);
@@ -101,11 +104,14 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
 					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
-					logDebug("found ps uniform buffer: %s", bufferName);
+					logDebug("found ps uniform buffer: %s @%d", bufferName, arg.index);
 					psInfo.bufferName[arg.index] = bufferName;
 					
 					psInfo.initUniforms(arg);
 					addUniforms(arg, 'p');
+					
+					if (strcmp(bufferName, "ShaderUniforms") == 0)
+						psMainUniformBufferIndex = arg.index;
 					
 					Assert(psUniformData[arg.index] == nullptr);
 					psUniformData[arg.index] = malloc(arg.bufferDataSize);
@@ -127,7 +133,6 @@ void ShaderCacheElem_Metal::shut()
 	
 	for (auto & pipeline : m_pipelines)
 	{
-		[pipeline.second release];
 		pipeline.second = nullptr;
 	}
 	
@@ -159,8 +164,6 @@ void ShaderCacheElem_Metal::shut()
 	vsInfo = StageInfo();
 	psInfo = StageInfo();
 	
-	[vsFunction release];
-	[psFunction release];
 	vsFunction = nullptr;
 	psFunction = nullptr;
 	
@@ -179,7 +182,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 	{
 		@autoreleasepool
 		{
-			id <MTLDevice> device = metal_get_device();
+			__unsafe_unretained id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
 			
@@ -244,7 +247,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			{
 				// get reflection info for this shader
 				
-				MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
+				MTLRenderPipelineDescriptor * pipelineDescriptor = [MTLRenderPipelineDescriptor new];
 				pipelineDescriptor.label = @"reflection pipeline";
 				pipelineDescriptor.vertexFunction = vsFunction;
 				pipelineDescriptor.fragmentFunction = psFunction;
@@ -282,17 +285,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 					NSLog(@"%@", error);
 				}
 				
-				[pipelineState release];
+				pipelineState = nil;
 			}
-			
-		#if 1
-			//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-			[library_vs release];
-			[library_ps release];
-			//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-		#endif
 			
 			//
 			
@@ -1069,33 +1063,35 @@ void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool
 	}
 }
 
-id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId);
-
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
-// todo : optimize buffers. for now (to keep things simple so we can get up and running quickly), we just do a memcpy, when we should be setting the MTLBuffer directly
-
 	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
-	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getMetalBuffer());
+	buffer.markMetalBufferIsUsed();
+	
+	__unsafe_unretained id <MTLBuffer> metal_buffer = (__bridge id <MTLBuffer>)buffer.getMetalBuffer();
 	
 	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);
 	const int psIndex = m_cacheElem->psInfo.getBufferIndex(name);
 	
 	if (vsIndex >= 0)
 	{
-		const int shaderBufferLength = m_cacheElem->vsInfo.uniformBufferSize[vsIndex];
-		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the vs expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
-		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
-		memcpy(m_cacheElem->vsUniformData[vsIndex], metal_buffer.contents, copySize);
+		AssertMsg(
+			buffer.getBufferSize() <= m_cacheElem->vsInfo.uniformBufferSize[vsIndex],
+			"the buffer is larger than what the vs expects. length=%d, expected=%d",
+			buffer.getBufferSize(),
+			m_cacheElem->vsInfo.uniformBufferSize[vsIndex]);
+		
+		m_cacheElem->vsBuffers[vsIndex] = metal_buffer;
 	}
 	
 	if (psIndex >= 0)
 	{
-		const int shaderBufferLength = m_cacheElem->psInfo.uniformBufferSize[psIndex];
-		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the ps expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
-		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
-		memcpy(m_cacheElem->psUniformData[psIndex], metal_buffer.contents, copySize);
+		AssertMsg(
+			buffer.getBufferSize() <= m_cacheElem->psInfo.uniformBufferSize[psIndex],
+			"the buffer is larger than what the ps expects. length=%d, expected=%d",
+			buffer.getBufferSize(),
+			m_cacheElem->psInfo.uniformBufferSize[psIndex]);
 		
 		m_cacheElem->psBuffers[psIndex] = metal_buffer;
 	}

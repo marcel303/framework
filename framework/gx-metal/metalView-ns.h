@@ -35,7 +35,7 @@
 @property (nonatomic, assign) CAMetalLayer *metalLayer;
 @property (nonatomic, assign) bool wantsDepthBuffer;
 
-@property (nonatomic, assign) id <MTLTexture> depthTexture;
+@property (nonatomic, retain) id <MTLTexture> depthTexture;
 
 - (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
 

@@ -95,7 +95,6 @@
 	{
 		@autoreleasepool
 		{
-			[self.depthTexture release];
 			self.depthTexture = nullptr;
 			
 			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:size.width height:size.height mipmapped:NO];

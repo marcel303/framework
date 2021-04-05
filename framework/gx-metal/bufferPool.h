@@ -30,17 +30,17 @@
 #import <Metal/Metal.h>
 #import <mutex>
 
+struct DynamicBufferPoolElem
+{
+	DynamicBufferPoolElem * m_next = nullptr;
+	id <MTLBuffer> m_buffer = nullptr;
+};
+
 struct DynamicBufferPool
 {
-	struct PoolElem
-	{
-		PoolElem * m_next = nullptr;
-		id <MTLBuffer> m_buffer = nullptr;
-	};
-	
 	std::mutex m_mutex;
 	
-	PoolElem * m_freeList = nullptr;
+	DynamicBufferPoolElem * m_freeList = nullptr;
 	
 	int m_numBytesPerBuffer = 0;
 	
@@ -48,9 +48,9 @@ struct DynamicBufferPool
 	~DynamicBufferPool();
 	
 	void init(const int numBytesPerBuffer);
-	void free();
+	void shut();
 	
-	PoolElem * allocBuffer();
-	void freeBuffer(PoolElem * buffer);
+	DynamicBufferPoolElem * allocBuffer();
+	void freeBuffer(DynamicBufferPoolElem * buffer);
 };
 

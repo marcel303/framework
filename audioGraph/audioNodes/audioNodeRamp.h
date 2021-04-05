@@ -36,6 +36,8 @@ struct AudioNodeRamp : AudioNodeBase
 		kInput_StartRamped,
 		kInput_Value,
 		kInput_RampTime,
+		kInput_RampUpTime,
+		kInput_RampDownTime,
 		kInput_RampUp,
 		kInput_RampDown,
 		kInput_COUNT
@@ -44,6 +46,7 @@ struct AudioNodeRamp : AudioNodeBase
 	enum Output
 	{
 		kOutput_Value,
+		kOutput_RampValue,
 		kOutput_RampedUp,
 		kOutput_RampedDown,
 		kOutput_COUNT
@@ -54,19 +57,25 @@ struct AudioNodeRamp : AudioNodeBase
 	
 	AudioFloat valueOutput;
 	
+	AudioFloat rampValueOutput;
+	
 	AudioNodeRamp()
 		: AudioNodeBase()
 		, ramp(false)
 		, value(0.0)
 		, valueOutput()
+		, rampValueOutput()
 	{
 		resizeSockets(kInput_COUNT, kOutput_COUNT);
 		addInput(kInput_StartRamped, kAudioPlugType_Bool);
 		addInput(kInput_Value, kAudioPlugType_FloatVec);
 		addInput(kInput_RampTime, kAudioPlugType_FloatVec);
+		addInput(kInput_RampUpTime, kAudioPlugType_FloatVec);
+		addInput(kInput_RampDownTime, kAudioPlugType_FloatVec);
 		addInput(kInput_RampUp, kAudioPlugType_Trigger);
 		addInput(kInput_RampDown, kAudioPlugType_Trigger);
 		addOutput(kOutput_Value, kAudioPlugType_FloatVec, &valueOutput);
+		addOutput(kOutput_RampValue, kAudioPlugType_FloatVec, &rampValueOutput);
 		addOutput(kOutput_RampedUp, kAudioPlugType_Trigger, nullptr);
 		addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, nullptr);
 	}

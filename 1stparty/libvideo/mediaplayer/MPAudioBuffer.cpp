@@ -30,11 +30,6 @@
 
 namespace MP
 {
-	AudioBuffer::AudioBuffer()
-		: m_mutex()
-	{
-	}
-
 	void AudioBuffer::AddSegment(const AudioBufferSegment & segment)
 	{
 		m_mutex.Lock();
@@ -46,7 +41,8 @@ namespace MP
 
 	bool AudioBuffer::ReadSamples(
 		int16_t * __restrict samples, const size_t numSamples,
-		size_t & numSamplesRead, double & timeStamp)
+		size_t & numSamplesRead,
+		double & timeStamp)
 	{
 		bool hasMore = true;
 

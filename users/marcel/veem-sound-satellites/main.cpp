@@ -24,8 +24,6 @@
 const int GFX_SX = 480;
 const int GFX_SY = 320;
 
-extern AudioMutexBase * g_vfxAudioMutex;
-
 extern OscEndpointMgr g_oscEndpointMgr;
 
 enum Editor
@@ -268,8 +266,6 @@ struct SatellitesApp
 		
 		paObject = new PortAudioObject();
 		paObject->init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
-		
-		g_vfxAudioMutex = audioMutex;
 		
 		vfxGraph = new VfxGraph();
 		realTimeConnection = new RealTimeConnection(vfxGraph);

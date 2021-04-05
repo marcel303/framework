@@ -35,6 +35,13 @@ struct Wavefield1D;
 
 struct AudioNodeWavefield1D : AudioNodeBase
 {
+	enum SoftClip
+	{
+		kSoftClip_None,
+		kSoftClip_SigmoidFast,
+		kSoftClip_SigmoidSqrt
+	};
+	
 	enum Input
 	{
 		kInput_Gain,
@@ -43,6 +50,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 		kInput_Tension,
 		kInput_Wrap,
 		kInput_SampleLocation,
+		kInput_SoftClip,
 		kInput_Trigger,
 		kInput_TriggerLocation,
 		kInput_TriggerAmount,
@@ -72,7 +80,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	void randomize();
 	void syncWavefieldResource();
 	
-	virtual void init(const GraphNode & node) override;
+	virtual void initSelf(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 	

@@ -142,6 +142,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 	JsusFxGfx_Framework gfx;
 	bool jsusFxIsValid;
 	
+	bool sliderIsActive[JsusFx::kMaxSliders] = { };
+	
 	ResourceEditor_JsusFx(const char * filename, const char * dataRoot, const char * searchPath)
 		: GraphEdit_ResourceEditorBase(400, 400)
 		, resource(nullptr)
@@ -180,6 +182,93 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		Assert(resource == nullptr);
 	}
 	
+	static void doSlider(
+		const bool tick,
+		const bool draw,
+		JsusFx & fx,
+		JsusFx_Slider & slider,
+		int x, int y,
+		bool & isActive)
+	{
+		const int sx = 200;
+		const int sy = 12;
+		
+		if (tick)
+		{
+			const bool isInside =
+				x >= 0 && x <= sx &&
+				y >= 0 && y <= sy;
+				
+			if (isInside && mouse.wentDown(BUTTON_LEFT))
+				isActive = true;
+			
+			if (mouse.wentUp(BUTTON_LEFT))
+				isActive = false;
+			
+			if (isActive)
+			{
+				const float t = x / float(sx);
+				const float v = slider.min + (slider.max - slider.min) * t;
+				fx.moveSlider(&slider - fx.sliders, v);
+			}
+		}
+		
+		if (draw)
+		{
+			setColor(0, 0, 255, 127);
+			const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
+			drawRect(0, 0, sx * t, sy);
+			
+			if (slider.isEnum)
+			{
+				const int enumIndex = (int)slider.getValue();
+				
+				if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+				{
+					setColor(colorWhite);
+					drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+				}
+			}
+			else
+			{
+				setColor(colorWhite);
+				drawText(sx/2.f, sy/2.f, 10.f, 0.f, 0.f, "%s", slider.desc);
+			}
+			
+			setColor(63, 31, 255, 127);
+			drawRectLine(0, 0, sx, sy);
+		}
+	}
+
+	void doSliders(const bool tick, const bool draw, const bool inputIsCaptured)
+	{
+		int x = 10;
+		int y = 10;
+		
+		int sliderIndex = 0;
+		
+		for (auto & slider : jsusFx.sliders)
+		{
+			if (slider.exists && slider.desc[0] != '-')
+			{
+				gxPushMatrix();
+				gxTranslatef(x, y, 0);
+				doSlider(
+					tick, draw,
+					jsusFx,
+					slider,
+					mouse.x - x,
+					mouse.y - y,
+					sliderIsActive[sliderIndex]);
+				gxPopMatrix();
+				
+				y += 16;
+			}
+			
+			sliderIndex++;
+		}
+	}
+	
 	virtual bool tick(const float dt, const bool inputIsCaptured) override
 	{
 		if (jsusFxIsValid)
@@ -187,6 +276,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 			gfx.setup(nullptr, sx, sy, mouse.x, mouse.y, inputIsCaptured == false);
 			
 			jsusFx.process(nullptr, nullptr, AUDIO_UPDATE_SIZE, 0, 0);
+			
+			doSliders(true, false, inputIsCaptured);
 		}
 		
 		if (jsusFxIsValid && resource != nullptr)
@@ -240,6 +331,8 @@ struct ResourceEditor_JsusFx : GraphEdit_ResourceEditorBase
 		if (jsusFxIsValid)
 		{
 			const_cast<JsusFx_Framework&>(jsusFx).draw();
+			
+			const_cast<ResourceEditor_JsusFx*>(this)->doSliders(false, true, false);
 		}
 	}
 	
@@ -331,9 +424,6 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 				? slider.desc + 1
 				: slider.desc;
 			
-			char defaultString[64];
-			sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
-			
 			if (slider.isEnum)
 			{
 				// add enumeration type registration with a name unique to this node type ..
@@ -347,10 +437,13 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 				
 				// .. and add the enum input itself
 				
-				inEnum(sliderInput.name.c_str(), enumName.c_str(), defaultString, sliderDesc);
+				inEnum(sliderInput.name.c_str(), enumName.c_str(), (int)slider.def, sliderDesc);
 			}
 			else
 			{
+				char defaultString[64];
+				sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
+				
 				in(sliderInput.name.c_str(), "audioValue", defaultString, sliderDesc);
 			}
 			
@@ -379,7 +472,8 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 		
 		numOutputs = jsusFx.numOutputs;
 		
-		resourceTypeName = "jsusfx";
+		mainResourceType = "jsusfx";
+		mainResourceName = "editorData";
 	}
 };
 
@@ -471,7 +565,10 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 		{
 			const AudioNodeTypeRegistration_JsusFx * r = (AudioNodeTypeRegistration_JsusFx*)data;
 			
-			return new ResourceEditor_JsusFx(r->filename.c_str(), r->dataRoot.c_str(), r->searchPath.c_str());
+			return new ResourceEditor_JsusFx(
+				r->filename.c_str(),
+				r->dataRoot.c_str(),
+				r->searchPath.c_str());
 		};
 	}
 }
@@ -481,7 +578,6 @@ void createJsusFxAudioNodes(const char * dataRoot, const char * searchPath, cons
 AudioNodeJsusFx::AudioNodeJsusFx(const char * dataRoot, const char * searchPath)
 	: AudioNodeBase()
 	, filename()
-	, currentFilename()
 	, numAudioInputs(0)
 	, numAudioOutputs(0)
 	, audioOutputs()
@@ -536,15 +632,7 @@ void AudioNodeJsusFx::load(const char * filename)
 	
 	if (jsusFxIsValid)
 	{
-		resource->lock();
-		{
-			resourceVersion = resource->version;
-			
-			JsusFxSerializer_Basic serializer(resource->serializationData);
-			
-			jsusFx->serialize(serializer, false);
-		}
-		resource->unlock();
+		updateFromResource();
 		
 		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
@@ -568,6 +656,8 @@ void AudioNodeJsusFx::free()
 	
 	delete jsusFx;
 	jsusFx = nullptr;
+	
+	resourceVersion = -1;
 }
 
 void AudioNodeJsusFx::clearOutputs()
@@ -576,19 +666,67 @@ void AudioNodeJsusFx::clearOutputs()
 		audioOutput.setZero();
 }
 
-void AudioNodeJsusFx::init(const GraphNode & node)
+void AudioNodeJsusFx::updateFromResource()
+{
+	if (resourceVersion != resource->version)
+	{
+		resource->lock();
+		{
+			resourceVersion = resource->version;
+			
+			if (jsusFxIsValid)
+			{
+				JsusFxSerializer_Basic serializer(resource->serializationData);
+				
+				jsusFx->serialize(serializer, false);
+				
+				// update slider values from resource
+				
+				for (auto & sliderInput : sliderInputs)
+				{
+					Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
+					
+					// note : slider input default comes from either the serialized
+					// resource data (when set), or from the original default value
+					// set for the JSFX slider, if the aforementioned resource data
+					// isn't set. this ensures that when for instance a knob inside
+					// the resource editor is turned, the knob value will be used
+					// (when no connection exists to the input, which would override
+					// the value)
+					
+					// find the value inside the serialized resource data (if it exists)
+					
+					sliderInput.valueFromResource = 0.f;
+					sliderInput.hasValueFromResource = false;
+					
+					for (auto & resourceSlider : resource->serializationData.sliders)
+					{
+						if (resourceSlider.index == sliderInput.sliderIndex)
+						{
+							Assert(sliderInput.hasValueFromResource == false);
+							sliderInput.valueFromResource = resourceSlider.value;
+							sliderInput.hasValueFromResource = true;
+						}
+					}
+				}
+			}
+		}
+		resource->unlock();
+	}
+}
+
+void AudioNodeJsusFx::initSelf(const GraphNode & node)
 {
 	Assert(resource == nullptr);
 	createAudioNodeResource(node, "jsusfx", "editorData", resource);
 	
-	if (isPassthrough)
-		return;
+	load(filename.c_str());
 	
-	Assert(!filename.empty());
-	if (filename != currentFilename)
+	if (jsusFxIsValid)
 	{
-		load(filename.c_str());
-		currentFilename = filename;
+		updateFromResource();
+		
+		jsusFx->prepare(SAMPLE_RATE, AUDIO_UPDATE_SIZE);
 	}
 }
 
@@ -609,35 +747,16 @@ void AudioNodeJsusFx::tick(const float dt)
 		return;
 	}
 	
-	Assert(!filename.empty());
-	if (filename != currentFilename)
-	{
-		load(filename.c_str());
-		currentFilename = filename;
-	}
-	
-	if (resourceVersion != resource->version)
-	{
-		resource->lock();
-		{
-			resourceVersion = resource->version;
-			
-			if (jsusFxIsValid)
-			{
-				JsusFxSerializer_Basic serializer(resource->serializationData);
-				
-				jsusFx->serialize(serializer, false);
-			}
-		}
-		resource->unlock();
-	}
-	
 	if (jsusFxIsValid == false)
 	{
 		clearOutputs();
 	}
 	else
 	{
+		// update from resource, in case the resource is being edited in real-time
+		
+		updateFromResource();
+	
 		// update slider values
 		
 		AudioFloat defaultValue;
@@ -654,28 +773,12 @@ void AudioNodeJsusFx::tick(const float dt)
 			// (when no connection exists to the input, which would override
 			// the value)
 			
-			// find the value inside the serialize resource data (if it exists)
+			// if we have a slider value from the resource, use it as the
+			// default value for fetching the input value. otherwise, use
+			// the default value for the socket as authored inside the JSFX file
 			
-			float valueFromResource = 0.f;
-			bool hasValueFromResource = false;
-			
-			for (auto & resourceSlider : resource->serializationData.sliders)
-			{
-				if (resourceSlider.index == sliderInput.sliderIndex)
-				{
-					Assert(hasValueFromResource == false);
-					valueFromResource = resourceSlider.value;
-					hasValueFromResource = true;
-				}
-			}
-			
-			// if we found a value inside the resource, use it as the
-			// default value for fetching the input value
-			// otherwise, just the default value for the socket as
-			// authored inside the JSFX file
-			
-			if (hasValueFromResource)
-				defaultValue.setScalar(valueFromResource);
+			if (sliderInput.hasValueFromResource)
+				defaultValue.setScalar(sliderInput.valueFromResource);
 			else
 				defaultValue.setScalar(sliderInput.defaultValue);
 			
@@ -728,9 +831,14 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 		if (!slider.exists)
 			continue;
 		
-		d.add("slider %s. index=%d, default=%f, increment=%f, desc=%s", slider.name, i, slider.def, slider.inc, slider.desc);
+		d.add("slider %s: default=%f, increment=%f, desc=%s",
+			slider.name,
+			slider.def,
+			slider.inc,
+			slider.desc);
 	}
 	
+#if false
 	for (auto & sliderInput : sliderInputs)
 	{
 		d.add("registered slider input %s. socket_index=%d, slider_index=%d",
@@ -738,6 +846,7 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 			sliderInput.socketIndex,
 			sliderInput.sliderIndex);
 	}
+#endif
 }
 
 #undef SLIDER_INDEX

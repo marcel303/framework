@@ -34,7 +34,8 @@ VFX_NODE_TYPE(VfxNodeTimeline)
 {
 	typeName = "timeline";
 	
-	resourceTypeName = "timeline";
+	mainResourceType = "timeline";
+	mainResourceName = "editorData";
 	
 	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{

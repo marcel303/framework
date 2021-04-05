@@ -1,0 +1,79 @@
+// ----------------------------------------------------------------------
+//
+//  Copyright (C) 2010 Fons Adriaensen <fons@linuxaudio.org>
+//    
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
+// ----------------------------------------------------------------------
+
+#pragma once
+
+#include <math.h>
+#include <stdint.h>
+
+namespace ZitaRev1
+{
+	struct Pareq
+	{
+		Pareq();
+		
+		void set_fsamp(const float fsamp);
+		void set_param(const float f, const float g)
+		{
+			_f0 = f;
+			_g0 = powf(10.0f, 0.05f * g);
+			
+			_touch0++;
+		}
+		
+		void reset();
+		
+		void prepare(const int nsamp);
+		void process(const int nsamp, const int nchan, float * data[])
+		{
+			if (_state != BYPASS)
+			{
+				process1(nsamp, nchan, data);
+			}
+		}
+
+		enum
+		{
+			BYPASS,
+			STATIC,
+			SMOOTH,
+			MAXCH = 4
+		};
+
+		void calcpar1(const int nsamp, const float g, const float f);
+		void process1(const int nsamp, const int nchan, float * data[]);
+
+		// -- dirty tracking
+		volatile int16_t  _touch0; // todo : why volatile?
+		volatile int16_t  _touch1;
+		
+		int   _state;
+		float _fsamp;
+
+		float _g0,  _g1;
+		float _f0,  _f1;
+		float _c1, _dc1;
+		float _c2, _dc2;
+		float _gg, _dgg;
+
+		float _z1[MAXCH];
+		float _z2[MAXCH];
+	};
+}

@@ -137,12 +137,16 @@ public:
 	void * vsUniformData[kMaxBuffers] = { };
 	void * psUniformData[kMaxBuffers] = { };
 	
-	id <MTLBuffer> psBuffers[kMaxBuffers] = { };
+	int vsMainUniformBufferIndex = -1;
+	int psMainUniformBufferIndex = -1;
+	
+	__unsafe_unretained id <MTLBuffer> vsBuffers[kMaxBuffers] = { };
+	__unsafe_unretained id <MTLBuffer> psBuffers[kMaxBuffers] = { };
 	
 	std::vector<TextureInfo> textureInfos;
 	
-	id <MTLTexture> vsTextures[kMaxVsTextures] = { };
-	id <MTLTexture> psTextures[kMaxPsTextures] = { };
+	__unsafe_unretained id <MTLTexture> vsTextures[kMaxVsTextures] = { };
+	__unsafe_unretained id <MTLTexture> psTextures[kMaxPsTextures] = { };
 	
 	uint8_t vsTextureSamplers[kMaxPsTextures] = { };
 	uint8_t psTextureSamplers[kMaxPsTextures] = { };
@@ -179,7 +183,7 @@ public:
 			return nullptr;
 	}
 	
-	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
+	void addPipelineState(const uint32_t hash, __unsafe_unretained id <MTLRenderPipelineState> state) const
 	{
 		m_pipelines[hash] = state;
 	}

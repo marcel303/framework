@@ -1,7 +1,11 @@
 #pragma once
 
+#include "ui-capture.h"
+
 #include "Mat4x4.h"
 #include "Vec3.h"
+
+#include <functional>
 
 struct TransformGizmo
 {
@@ -36,6 +40,8 @@ struct TransformGizmo
 	
 	State state = kState_Hidden;
 	
+	UiCaptureElem uiCaptureElem;
+	
 	Mat4x4 gizmoToWorld = Mat4x4(true);
 	
 	Vec3 rayOriginInGizmoSpace; // used for determining on which side to draw the pads
@@ -56,6 +62,9 @@ struct TransformGizmo
 	
 	float ring_radius = 1.8f;
 	float ring_tubeRadius = .1f;
+	
+	std::function<void()> editingWillBegin;
+	std::function<void()> editingDidEnd;
 	
 	struct DragArrow
 	{
@@ -79,6 +88,8 @@ struct TransformGizmo
 	void show(const Mat4x4 & transform);
 	void hide();
 	
+	bool isActive() const;
+	
 	/**
 	 * Handles interaction between the user's mouse (where the cursor position is translated to a
 	 * world space ray with an origin and direction) and the gizmo. The gizmo supports translation
@@ -91,7 +102,8 @@ struct TransformGizmo
 		const bool pointer_isActive,
 		const bool pointer_becameActive,
 		bool & inputIsCaptured);
-	void draw() const;
+	void drawOpaque(const bool depthObscuredPass) const;
+	void drawTranslucent() const;
 
 private:
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;

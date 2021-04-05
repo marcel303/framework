@@ -90,7 +90,7 @@ struct PcmDataCache
 		
 		const auto t2 = g_TimerRT.TimeUS_get();
 		
-		printf("loading PCM data from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
+		LOG_INF("loading PCM data from %s took %.2fms", path, (t2 - t1) / 1000.0);
 	}
 
 	void clear()

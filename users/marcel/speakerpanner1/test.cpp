@@ -41,6 +41,7 @@ struct SoundObject : AudioSource
 			{
 				isFirstVoice = false;
 				
+			// fixme : only works when numSamples == AUDIO_UPDATE_SIZE
 				voice->source->generate(samples, numSamples);
 				
 				if (voice->gain != 1.f)

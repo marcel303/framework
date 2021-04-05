@@ -1,7 +1,7 @@
 #pragma once
 
 #include <limits>
-#include "SIMD.h"
+#include "SimdVec.h"
 
 #if 0
 static BOOL BT_IntersectSphere(const VecF& pos, const VecF& dir, const PlaneF& rayPlane, const SphereF& sphere)

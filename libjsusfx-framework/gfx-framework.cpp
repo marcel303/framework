@@ -170,23 +170,8 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	if (*m_gfx_clear > -1.0)
 	{
-		const int a = (int)*m_gfx_clear;
-		
-		const int r = (a >>  0) & 0xff;
-		const int g = (a >>  8) & 0xff;
-		const int b = (a >> 16) & 0xff;
-		
-		if (surface != nullptr)
-		{
-			surface->clear(r, g, b, 0);
-		}
-		else
-		{
-			setColorf(r, g, b, 0.f);
-			pushBlend(BLEND_OPAQUE);
-			drawRect(0, 0, w, h);
-			popBlend();
-		}
+		needsClear = true;
+		clearColor = *m_gfx_clear;
 	}
 	
 	*m_gfx_texth = m_fontSize;
@@ -286,6 +271,30 @@ void JsusFxGfx_Framework::beginDraw()
 	pushBlend(BLEND_OPAQUE);
 	currentBlendMode = -1;
 	updateBlendMode();
+	
+	if (needsClear)
+	{
+		const int a = clearColor;
+		
+		needsClear = false;
+		clearColor = 0;
+		
+		const int r = (a >>  0) & 0xff;
+		const int g = (a >>  8) & 0xff;
+		const int b = (a >> 16) & 0xff;
+		
+		if (surface != nullptr)
+		{
+			surface->clear(r, g, b, 0);
+		}
+		else
+		{
+			setColorf(r, g, b, 0.f);
+			pushBlend(BLEND_OPAQUE);
+			drawRect(0, 0, *m_gfx_w, *m_gfx_h);
+			popBlend();
+		}
+	}
 }
 
 void JsusFxGfx_Framework::endDraw()
@@ -825,7 +834,7 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	glPixelStorei(GL_PACK_ALIGNMENT, restorePackAlignment);
 	checkErrorGL();
 #else
-	AssertMsg(false, "gfx_getpixel: not implemented for current graphics api", 0);
+	//AssertMsg(false, "gfx_getpixel: not implemented for current graphics api");
 	
 	rgba[0] = 255;
 	rgba[1] = 0;
@@ -1017,7 +1026,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 	{
 		const JsusFx_Image & image = imageCache.images[img];
 		
-		Assert(image.isValid);
+		//Assert(image.isValid); // todo : use a separate ScriptAssert
 		
 		if (image.isValid)
 		{

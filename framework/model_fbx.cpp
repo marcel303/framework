@@ -145,7 +145,7 @@ static void fbxLog(int logIndent, LogLevel logLevel, const char * fmt, ...)
 
 static int getTimeMS()
 {
-	return clock() * 1000 / CLOCKS_PER_SEC;
+	return int(clock() * 1000 / CLOCKS_PER_SEC);
 }
 
 static RotationType convertRotationOrder(int order)
@@ -850,7 +850,7 @@ static FbxMesh * readFbxMeshProperties(int & logIndent, const FbxRecord & mesh, 
 			{
 				if (propertyValue_index < values.size())
 				{
-					rotationOrder = values[propertyValue_index].getInt();
+					rotationOrder = (int)values[propertyValue_index].getInt();
 					if (rotationOrder != 0)
 						fbxLogWrn(logIndent, "rotation order is not XYZ");
 				}
@@ -1038,14 +1038,14 @@ static FbxDeformer * readFbxDeformer(int & logIndent, const FbxRecord & deformer
 
 //
 
-template <typename Key, typename Value, unsigned int PoolSize>
+template <typename Key, typename Value, uint32_t PoolSize>
 class HashMap
 {
 	class Node
 	{
 	public:
 		Node * next;
-		unsigned int hash;
+		uint32_t hash;
 		Key key;
 		Value value;
 	};
@@ -1057,7 +1057,7 @@ class HashMap
 		public:
 			Block * next;
 			Node nodes[PoolSize];
-			unsigned int numNodes;
+			uint32_t numNodes;
 			
 			Block()
 			{
@@ -1117,19 +1117,19 @@ class HashMap
 	};
 	
 	Node ** m_buckets;
-	unsigned int m_bucketCount;
+	uint32_t m_bucketCount;
 	
 	Allocator m_nodeAlloc;
 	Node * m_currentAlloc;
 	
-	template <typename T> static unsigned int calcHash(const T & value)
+	template <typename T> static uint32_t calcHash(const T & value)
 	{
 		if (sizeof(T) < 4)
 		{
 			const int numBytes = sizeof(T);
 			const uint8_t * bytes = (uint8_t*)&value;
 			
-			unsigned int result = 0;
+			uint32_t result = 0;
 			
 			for (int i = 0; i < numBytes; ++i)
 				result = result * 17 + bytes[i];
@@ -1141,7 +1141,7 @@ class HashMap
 			const int numWords = sizeof(T) >> 2;
 			const uint32_t * words = (uint32_t*)&value;
 			
-			unsigned int result = 0;
+			uint32_t result = 0;
 			
 			for (int i = 0; i < numWords; ++i)
 				result = result * 982451653 + words[i];
@@ -1151,11 +1151,11 @@ class HashMap
 	}
 	
 public:
-	HashMap(unsigned int bucketCount)
+	HashMap(uint32_t bucketCount)
 	{
 		m_buckets = new Node*[bucketCount];
 		m_bucketCount = bucketCount;
-		for (unsigned int i = 0; i < bucketCount; ++i)
+		for (uint32_t i = 0; i < bucketCount; ++i)
 			m_buckets[i] = 0;
 		
 		m_currentAlloc = 0;
@@ -1177,8 +1177,8 @@ public:
 	
 	bool allocOrFetchValue(Value & value)
 	{
-		const unsigned int hash = calcHash(m_currentAlloc->key);
-		const unsigned int bucketIndex = hash % m_bucketCount;
+		const uint32_t hash = calcHash(m_currentAlloc->key);
+		const uint32_t bucketIndex = hash % m_bucketCount;
 		
 		for (const Node * node = m_buckets[bucketIndex]; node != 0; node = node->next)
 		{
@@ -1257,7 +1257,7 @@ public:
 		m_indices.reserve(vertexIndices.size());
 		
 		using WeldVertices = HashMap<Vertex, int, 1024>;
-		WeldVertices weldVertices((vertexIndices.size() + 2) / 3);
+		WeldVertices weldVertices((int(vertexIndices.size()) + 2) / 3);
 		
 		for (size_t i = 0; i < vertexIndices.size(); ++i)
 		{
@@ -1285,7 +1285,7 @@ public:
 			
 			if (!normalIndices.empty())
 			{
-				const int lookupIndex =
+				const size_t lookupIndex =
 					normalMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1314,7 +1314,7 @@ public:
 			}
 			else
 			{
-				const int normalIndex =
+				const size_t normalIndex =
 					normalMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1339,7 +1339,7 @@ public:
 			
 			if (!uvIndices.empty())
 			{
-				const int lookupIndex =
+				const size_t lookupIndex =
 					uvMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1363,7 +1363,7 @@ public:
 			}
 			else
 			{
-				const int uvIndex =
+				const size_t uvIndex =
 					uvMappingType == kMappingType_ByVertex
 						? vertexIndex
 						: i;
@@ -1728,10 +1728,13 @@ namespace AnimModel
 		}
 		else
 		{
-			const size_t p1 = ftell(file);
-			fseek(file, 0, SEEK_END);
-			const size_t p2 = ftell(file);
-			fseek(file, 0, SEEK_SET);
+			const int64_t p1 = ftell(file);
+			Verify(fseek(file, 0, SEEK_END) == 0);
+			
+			const int64_t p2 = ftell(file);
+			Verify(fseek(file, 0, SEEK_SET) == 0);
+			
+			Assert(p1 >= 0 && p2 >= 0);
 			
 			const size_t numBytes = p2 - p1;
 			bytes.resize(numBytes);
@@ -1956,7 +1959,7 @@ namespace AnimModel
 	#if 0
 		// purge objects that aren't connected to the scene
 		
-	// todo : restore garbage collection or remove this code. purging dead objects no longer works, as the nw fangled node connection handling works differently from before
+	// todo : restore garbage collection or remove this code. purging dead objects no longer works, as the new fangled node connection handling works differently from before
 	
 		using ObjectList = std::vector<FbxObject*>;
 		ObjectList garbage;
@@ -2176,6 +2179,12 @@ namespace AnimModel
 		
 		fbxLogInf(logIndent, "time: %d ms", time2 - time1);
 		
+		// free objects
+		
+		for (auto i : objectsByName)
+			delete i.second;
+		objectsByName.clear();
+		
 		// create meshes
 		
 		std::vector<Mesh*> meshes2;
@@ -2192,14 +2201,14 @@ namespace AnimModel
 			
 			mesh->m_name = meshName;
 			
-			mesh->allocateVB(meshBuilder.m_vertices.size());
+			mesh->allocateVB(int(meshBuilder.m_vertices.size()));
 			
 			if (!meshBuilder.m_vertices.empty())
 			{
 				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
 			}
 			
-			mesh->allocateIB(meshBuilder.m_indices.size());
+			mesh->allocateIB(int(meshBuilder.m_indices.size()));
 			
 			for (size_t j = 0; j < meshBuilder.m_indices.size(); ++j)
 			{
@@ -2217,7 +2226,7 @@ namespace AnimModel
 		// create mesh set
 		
 		MeshSet * meshSet = new MeshSet();
-		meshSet->allocate(meshes2.size());
+		meshSet->allocate(int(meshes2.size()));
 		
 		for (size_t i = 0; i < meshes2.size(); ++i)
 		{
@@ -2492,7 +2501,7 @@ namespace AnimModel
 		
 		BoneSet * boneSet = new BoneSet();
 		
-		boneSet->allocate(modelNameToBoneIndex.size());
+		boneSet->allocate(int(modelNameToBoneIndex.size()));
 		
 		for (ModelNameToBoneIndex::iterator i = modelNameToBoneIndex.begin(); i != modelNameToBoneIndex.end(); ++i)
 		{
@@ -2639,13 +2648,13 @@ namespace AnimModel
 			
 			Anim * animation = new Anim();
 			
-			animation->allocate(boneNameToBoneIndex.size(), numAnimKeys, RotationType_Quat, false);
+			animation->allocate(int(boneNameToBoneIndex.size()), numAnimKeys, RotationType_Quat, false);
 			
 			AnimKey * finalAnimKey = animation->m_keys;
 			
 			for (size_t boneIndex = 0; boneIndex < boneNameToBoneIndex.size(); ++boneIndex)
 			{
-				const std::map<int, const FbxAnimTransform*>::iterator i = boneIndexToAnimTransform.find(boneIndex);
+				const std::map<int, const FbxAnimTransform*>::iterator i = boneIndexToAnimTransform.find(int(boneIndex));
 				
 				if (i != boneIndexToAnimTransform.end())
 				{
@@ -2657,7 +2666,7 @@ namespace AnimModel
 						*finalAnimKey++ = animKeys[j];
 					}
 					
-					animation->m_numKeys[boneIndex] = animKeys.size();
+					animation->m_numKeys[boneIndex] = int(animKeys.size());
 				}
 				else
 				{

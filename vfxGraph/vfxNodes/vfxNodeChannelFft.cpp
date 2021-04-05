@@ -39,6 +39,8 @@ VFX_NODE_TYPE(VfxNodeChannelFft)
 	in("normalize", "bool");
 	out("real", "channel");
 	out("imag", "channel");
+	
+	inRename("real", "channel");
 }
 
 VfxNodeChannelFft::VfxNodeChannelFft()

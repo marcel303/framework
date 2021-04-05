@@ -62,7 +62,7 @@ struct VfxNodeOutput;
 extern VfxGraph * g_currentVfxGraph;
 extern Surface * g_currentVfxSurface;
 
-struct MemoryComponent
+struct VfxMemoryComponent
 {
 	struct Memf
 	{
@@ -170,7 +170,7 @@ struct VfxGraph
 	
 	Surface * dummySurface;
 	
-	MemoryComponent memory;
+	VfxMemoryComponent memory;
 	
 	int sx;
 	int sy;

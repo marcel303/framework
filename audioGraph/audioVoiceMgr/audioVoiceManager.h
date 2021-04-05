@@ -167,9 +167,9 @@ struct AudioVoice
 	
 	AudioVoice * next;    ///< Next voice in the list of voices maintained by the voice manager. Note that we use an intrusive linked list implementation. This is ok since each voice is allocated by, and belongs to, a single voice manager.
 	
-	AudioVoice(const Type _type = kType_Basic)
+	AudioVoice(const Type in_type = kType_Basic)
 		: channelIndex(-1)
-		, type(_type)
+		, type(in_type)
 		, speaker(kSpeaker_None)
 		, source(nullptr)
 		, gain(1.f)
@@ -218,7 +218,7 @@ struct AudioVoiceManager
 	
 	const Type type; ///< The type of the AudioVoiceManager implementation.
 	
-	AudioVoiceManager(const Type _type);
+	AudioVoiceManager(const Type type);
     virtual ~AudioVoiceManager() { } ///< Here to add a virtual destructor to AudioVoiceManager.
 	
 	/**

@@ -896,7 +896,7 @@ int main(int argc, char * argv[])
 		
 		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
 		audioGraphMgr->init(audioMutex, audioVoiceMgr);
-		audioGraphMgr->getContext()->addObject(&sampleSetCache);
+		audioGraphMgr->getContext()->addObject(&sampleSetCache, "HRIRSampleSetCache");
 		s_audioGraphMgr = audioGraphMgr;
 		
 		AudioUpdateHandler * audioUpdateHandler = new AudioUpdateHandler();

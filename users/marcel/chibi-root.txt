@@ -10,6 +10,7 @@ with_platform macos    add audiounit1
 with_platform iphoneos add audiounit1
 with_platform macos   add avpaint
 with_platform windows add avpaint
+add bilateralFilter1
 with_platform macos add biquad-simd
 add box2d1
 #add bullet1
@@ -28,6 +29,7 @@ with_platform windows add etherdream1
 add fbm1
 add fourier
 add fluidCube
+add freeverb1-1
 add geo
 add geopart1
 add gltf1
@@ -44,6 +46,7 @@ add hackerPoet/010-particleLife
 add hashSpaceCollide
 add holeFilling
 add homography
+add ImGuiFileDialog-support
 add interpolation1
 add jsusfx1
 add jsusfx2
@@ -91,5 +94,6 @@ add voxel1
 add voxelizer-test
 add voxviewer
 add voxworld1
+add zita-rev1
 
 add ../ggj2015/game

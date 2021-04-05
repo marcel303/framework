@@ -60,7 +60,8 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	virtual void loadBegin() override;
 	virtual void loadEnd(GraphEdit & graphEdit) override;
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName) override;
+	virtual void nodeAdd(const GraphNode & node) override;
+	virtual void nodeInit(const GraphNode & node) override;
 	virtual void nodeRemove(const GraphNodeId nodeId) override;
 
 	virtual void linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex) override;
@@ -101,7 +102,7 @@ struct AudioValueHistory
 	static const int kHistorySize = 8;
 	static const int kNumSamples = AUDIO_UPDATE_SIZE * kHistorySize;
 	
-	uint64_t lastUpdateTime;
+	uint64_t lastRequestTime;
 	
 	float samples[kNumSamples];
 	
@@ -146,4 +147,9 @@ struct AudioValueHistorySet
 	std::map<AudioValueHistory_SocketRef, AudioValueHistory> audioValues;
 	
 	void captureInto(AudioValueHistorySet & dst) const;
+	
+	void clear()
+	{
+		audioValues.clear();
+	}
 };

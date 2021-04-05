@@ -27,6 +27,8 @@
 
 #pragma once
 
+#if defined(IPHONEOS) && 0
+
 #import <UIKit/UIView.h>
 #import <MetalKit/MTKView.h>
 
@@ -37,3 +39,5 @@
 - (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
 
 @end
+
+#endif

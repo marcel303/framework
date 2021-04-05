@@ -235,8 +235,8 @@ struct AudioNodeBase
 	
 	// -- implementation
 	
-	virtual void initSelf(const GraphNode & node) { }
-	virtual void init(const GraphNode & node) { }
+	virtual void initSelf(const GraphNode & node) { } // perform expensive, isolated initialization here, as initSelf occurs outside of AUDIO_SCOPE
+	virtual void init(const GraphNode & node) { } // occurs inside AUDIO_SCOPE, so make sure to keep it light-weight!
 	virtual void shut() { }
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex) { }
@@ -320,7 +320,8 @@ struct AudioNodeTypeRegistration
 	std::string typeName;
 	std::string displayName;
 	
-	std::string resourceTypeName;
+	std::string mainResourceType;
+	std::string mainResourceName;
 	
 	std::vector<Input> inputs;
 	std::vector<Output> outputs;
@@ -328,7 +329,7 @@ struct AudioNodeTypeRegistration
 	AudioNodeTypeRegistration();
 	
 	void in(const char * name, const char * typeName, const char * defaultValue = "", const char * displayName = "");
-	void inEnum(const char * name, const char * enumName, const char * defaultValue = "", const char * displayName = "");
+	void inEnum(const char * name, const char * enumName, const int defaultValue = 0, const char * displayName = "");
 	void out(const char * name, const char * typeName, const char * displayName = "");
 	void outEditable(const char * name);
 };

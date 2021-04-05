@@ -82,7 +82,7 @@ struct Graph_EnumDefinition
 {
 	struct Elem
 	{
-		std::string valueText;
+		std::string valueText; // todo : why is valueText an std::string, and not just an int? because of the FSFX-v2 node that puts the PS filename in here?
 		std::string name;
 	};
 	
@@ -112,6 +112,10 @@ struct Graph_TypeDefinition
 		bool hasDefaultValue;
 		bool isDynamic;
 		
+		// backward compatibility
+		
+		std::vector<std::string> renames;
+		
 		// ui
 		
 		int index;
@@ -130,7 +134,7 @@ struct Graph_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const OutputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const OutputSocket & socket) const;
 	};
 	
 	struct OutputSocket
@@ -139,6 +143,10 @@ struct Graph_TypeDefinition
 		std::string name;
 		bool isEditable;
 		bool isDynamic;
+		
+		// backward compatibility
+		
+		std::vector<std::string> renames;
 		
 		// ui
 		
@@ -156,7 +164,7 @@ struct Graph_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const InputSocket & socket) const;
 	};
 	
 	struct ResourceEditor
@@ -182,7 +190,8 @@ struct Graph_TypeDefinition
 	
 	std::string displayName;
 	
-	std::string resourceTypeName;
+	std::string mainResourceType; // the type and name of the main node resource
+	std::string mainResourceName; // GraphEdit will edit this resource by default
 	
 	Graph_TypeDefinition()
 		: typeName()
@@ -190,7 +199,8 @@ struct Graph_TypeDefinition
 		, outputSockets()
 		, resourceEditor()
 		, displayName()
-		, resourceTypeName()
+		, mainResourceType()
+		, mainResourceName()
 	{
 	}
 	

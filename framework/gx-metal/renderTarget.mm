@@ -92,18 +92,18 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 			MTLTextureUsageShaderRead |
 			MTLTextureUsagePixelFormatView;
 		
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		id <MTLTexture> colorTexture = [device newTextureWithDescriptor:descriptor];
 
 		if (colorTexture == nullptr)
 			result = false;
 		else
 		{
-			m_colorTexture = colorTexture;
+			m_colorTexture = (__bridge_retained void*)colorTexture;
 			
 			// create texture view, for when used as a render target
 			id <MTLTexture> colorTextureView = [colorTexture newTextureViewWithPixelFormat:pixelFormatForView];
-			m_colorTextureView = colorTextureView;
+			m_colorTextureView = (__bridge_retained void*)colorTextureView;
 			m_colorTextureId = s_nextTextureId++;
 			s_textures[m_colorTextureId] = colorTextureView;
 		}
@@ -116,12 +116,10 @@ void ColorTarget::free()
 {
 	if (m_ownsTexture && m_colorTexture != nullptr)
 	{
-		id <MTLTexture> colorTextureView = (id <MTLTexture>)m_colorTextureView;
-		[colorTextureView release];
+		id <MTLTexture> colorTextureView = (__bridge_transfer id <MTLTexture>)m_colorTextureView;
 		colorTextureView = nullptr;
 		
-		id <MTLTexture> colorTexture = (id <MTLTexture>)m_colorTexture;
-		[colorTexture release];
+		id <MTLTexture> colorTexture = (__bridge_transfer id <MTLTexture>)m_colorTexture;
 		colorTexture = nullptr;
 		m_colorTexture = nullptr;
 		
@@ -172,14 +170,14 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
 		descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		
-		id <MTLDevice> device = metal_get_device();
+		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		id <MTLTexture> depthTexture = [device newTextureWithDescriptor:descriptor];
 
 		if (depthTexture == nullptr)
 			result = false;
 		else
 		{
-			m_depthTexture = depthTexture;
+			m_depthTexture = (__bridge_retained void*)depthTexture;
 			m_depthTextureId = s_nextTextureId++;
 			s_textures[m_depthTextureId] = depthTexture;
 		}
@@ -192,8 +190,7 @@ void DepthTarget::free()
 {
 	if (m_ownsTexture && m_depthTexture != nullptr)
 	{
-		id <MTLTexture> depthTexture = (id <MTLTexture>)m_depthTexture;
-		[depthTexture release];
+		id <MTLTexture> depthTexture = (__bridge_transfer id <MTLTexture>)m_depthTexture;
 		depthTexture = nullptr;
 		m_depthTexture = nullptr;
 		

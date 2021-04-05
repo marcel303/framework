@@ -36,7 +36,6 @@ namespace MP
 	class Context
 	{
 	public:
-		Context();
 		~Context();
 
 		bool Begin(
@@ -77,18 +76,22 @@ namespace MP
 		AVFormatContext * GetFormatContext();
 
 	private:
-		bool GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex, const int desiredAudioStreamIndex);
+		bool GetStreamIndices(
+			size_t & out_audioStreamIndex,
+			size_t & out_videoStreamIndex,
+			const int desiredAudioStreamIndex);
+			
 		bool NextPacket();
 		bool ProcessPacket(AVPacket & packet);
 		bool ReadPacket(AVPacket & out_packet);
 
-		bool m_begun;
+		bool        m_begun    = false;
 		std::string m_filename;
-		bool m_eof;
-		double m_time;
+		bool        m_eof      = false;
+		double      m_time     = 0.0;
 
-		AVFormatContext * m_formatContext;
-		AudioContext * m_audioContext;
-		VideoContext * m_videoContext;
+		AVFormatContext * m_formatContext = nullptr;
+		AudioContext    * m_audioContext = nullptr;
+		VideoContext    * m_videoContext = nullptr;
 	};
 };

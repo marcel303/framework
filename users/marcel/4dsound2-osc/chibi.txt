@@ -3,6 +3,7 @@ app 4dsound2-osc
 	depend_library framework
 	depend_library vfxgraph
 	depend_library vfxgraph-nodes
+	depend_library vfxgraph-ui
 
 	add_files main.cpp
 

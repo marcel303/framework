@@ -3,6 +3,12 @@
 #include "ui.h"
 #include <algorithm>
 
+#if defined(DEBUG)
+	#define DO_DEBUG_TEXT 0
+#else
+	#define DO_DEBUG_TEXT 0 // do not alter
+#endif
+
 void ColorWheel::getTriangleAngles(float a[3])
 {
 	a[0] = 2.f * float(M_PI) / 3.f * 0.f;
@@ -181,7 +187,7 @@ void ColorWheel::draw()
 		drawUiCircle(x, y, 3.5f, 1.f, 1.f, 1.f, 1.f);
 	}
 
-#if 0
+#if DO_DEBUG_TEXT
 	if (g_doDraw)
 	{
 		float r, g, b, a;
@@ -241,7 +247,7 @@ bool ColorWheel::intersectTriangle(const float x, const float y, float & baryWhi
 		baryBlack /= bs;
 	}
 
-#if 0
+#if DO_DEBUG_TEXT
 	if (g_doDraw)
 	{
 		setColor(colorWhite);

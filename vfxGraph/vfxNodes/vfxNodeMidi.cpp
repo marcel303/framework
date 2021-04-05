@@ -37,15 +37,6 @@ static const uint8_t POLYPHONIC_KEY_PRESSURE = 0xa0;
 static const uint8_t CONTROLLER_CHANGE = 0xb0;
 static const uint8_t PITCH_BEND = 0xe0;
 
-/*
-
-todo : send reset all controllers message on connect and expose it in the node ?
-
-https://www.midi.org/specifications/item/table-1-summary-of-midi-message
-Reset All Controllers. When Reset All Controllers is received, all controller values are reset to their default values. (See specific Recommended Practices for defaults).
-
-*/
-
 static float midiNoteToFrequency(const int note)
 {
 	return powf(2.f, (note - 69) / 12.f) * 440.f;

@@ -12,6 +12,7 @@ app tests
 	depend_library libvideo
 	depend_library libwebrequest-downloadcache
 	depend_library nanovg-framework
+	depend_library portaudio
 	depend_library vfxgraph
 	depend_library vfxgraph-nodes
 	depend_library vfxgraph-deepbelief

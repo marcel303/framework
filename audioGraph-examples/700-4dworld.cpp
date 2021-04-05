@@ -1724,14 +1724,14 @@ struct World : WorldInterface
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return wavefield.sample(samplePosition[0], samplePosition[1]);
+		return wavefield.sample(samplePosition[0], samplePosition[1], true);
 	}
 	
 	virtual float measureFlight(const Vec3 & p) override
 	{
 		const Vec2 samplePosition = wavefieldToWorld.Invert().Mul4(Vec2(p[0], p[2]));
 		
-		return wavefield.sample(samplePosition[0], samplePosition[1]);
+		return wavefield.sample(samplePosition[0], samplePosition[1], true);
 	}
 	
 	ALIGNED_AUDIO_NEW_AND_DELETE();
@@ -1981,7 +1981,7 @@ int main(int argc, char * argv[])
 
 			// perform soft clipping. since we need to go down to int16 range we need to ensure the sample range is within (-1, +1)
 			
-			audioBufferClip_FastSigmoid(outputBuffer, numSamples * 2);
+			audioBufferClip_SigmoidFast(outputBuffer, numSamples * 2);
 			
 			// convert from float (-1, +1) to int16
 			
@@ -2154,9 +2154,9 @@ int main(int argc, char * argv[])
 				//        block-process: interpolate control values. export to graph
 				//        audio-process: process audio graphs. generate audio
 					doLabel("shared memory", 0.f);
-					audioGraphMgr.context->audioMutex->lock();
+					audioGraphMgr.context->lockControlValues();
 					auto controlValues = audioGraphMgr.context->controlValues;
-					audioGraphMgr.context->audioMutex->unlock();
+					audioGraphMgr.context->unlockControlValues();
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2186,7 +2186,7 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					audioGraphMgr.context->audioMutex->lock();
+					audioGraphMgr.context->lockControlValues();
 					for (auto & srcControlValue : controlValues)
 					{
 						for (auto & dstControlValue : audioGraphMgr.context->controlValues)
@@ -2199,7 +2199,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					audioGraphMgr.context->audioMutex->unlock();
+					audioGraphMgr.context->unlockControlValues();
 					
 					// per instance control values
 					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
@@ -2208,7 +2208,7 @@ int main(int argc, char * argv[])
 						
 						audioGraph->lockControlValues();
 						{
-							auto & controlValues = audioGraph->stateDescriptor.controlValues;
+							auto & controlValues = audioGraph->controlValues;
 							
 							int padIndex = 0;
 							for (int i = 0; i < controlValues.size(); ++i)

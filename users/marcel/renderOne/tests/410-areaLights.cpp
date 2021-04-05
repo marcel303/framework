@@ -1,4 +1,5 @@
 #include "forwardLighting.h"
+#include "shadowMapDrawer.h"
 #include "framework.h"
 #include <vector>
 
@@ -52,6 +53,9 @@ int main(int argc, char * argv[])
 		Vec3 color = Vec3(1, 1, 1);
 		float intensity = 1.f;
 	};
+	
+	ShadowMapDrawer d;
+	d.alloc(1, 16);
 	
 	ForwardLightingHelper helper;
 	
@@ -181,6 +185,8 @@ int main(int argc, char * argv[])
 		
 		//
 		
+		d.drawShadowMaps(Mat4x4(true));
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
@@ -195,6 +201,7 @@ int main(int argc, char * argv[])
 					setShader(shader);
 					{
 						int nextTextureUnit = 0;
+						d.setShaderData(shader, nextTextureUnit, Mat4x4(true));
 						helper.setShaderData(shader, nextTextureUnit);
 						
 						drawOpaque();
@@ -268,8 +275,14 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 		
+		d.reset();
+		
 		helper.reset();
 	}
+	
+	helper.free();
+	
+	d.free();
 	
 	framework.shutdown();
 	

@@ -94,12 +94,6 @@
 	#include "stb_truetype.h"
 #endif
 
-#ifdef WIN32
-	#define ENABLE_EVENTS_WORKAROUND 0 // todo : remove this code, if it turns out memory corruption is fixed with the Stack<T> memory corruption fix
-#else
-	#define ENABLE_EVENTS_WORKAROUND 0
-#endif
-
 #if ENABLE_OPENGL
 	#include "gx-opengl/shaderCache.h"
 #endif
@@ -193,12 +187,7 @@ public:
 	int oldMouseX;
 	int oldMouseY;
 	
-#if ENABLE_EVENTS_WORKAROUND
-	SDL_Event events[32];
-	int numEvents = 0;
-#else
 	std::vector<SDL_Event> events;
-#endif
 
 	MouseData()
 	{
@@ -217,18 +206,12 @@ public:
 	
 	void addEvent(const SDL_Event & e)
 	{
-	#if ENABLE_EVENTS_WORKAROUND
-		events[numEvents++] = e;
-	#else
 		events.push_back(e);
-	#endif
 	}
 	
 	void processEvents()
 	{
-	#if !ENABLE_EVENTS_WORKAROUND
-		const int numEvents = events.size();
-	#endif
+		const size_t numEvents = events.size();
 	
 		if (numEvents == 0)
 			return;
@@ -282,30 +265,9 @@ public:
 		}
 		
 		if (eventIndex == numEvents)
-		#if ENABLE_EVENTS_WORKAROUND
-			numEvents = 0;
-		#else
 			events.clear();
-		#endif
 		else
-		{
-		#if ENABLE_EVENTS_WORKAROUND
-			std::reverse(events, events + numEvents);
-			for (int i = 0; i < eventIndex; ++i)
-				numEvents--;
-			std::reverse(events, events + numEvents);
-		#if 0
-			printf("size: %d\n", (int)events.size());
-			for (int i = 0; i < eventIndex; ++i)
-			{
-				auto itr = events.begin();
-				events.erase(itr);
-			}
-		#endif
-		#else
 			events.erase(events.begin(), events.begin() + eventIndex);
-		#endif
-		}
 	}
 	
 	void beginProcess()
@@ -392,6 +354,15 @@ public:
 	std::vector<SDL_Event> keyEvents;
 	std::vector<SDL_Event> pendingKeyEvents;
 	
+	WindowData()
+		: isActive(false)
+		, quitRequested(false)
+		, keyDownCount(0)
+		, keyChangeCount(0)
+		, keyRepeatCount(0)
+	{
+	}
+
 	void keyData_beginProcess()
 	{
 		keyChangeCount = 0;
@@ -654,7 +625,7 @@ class StbFont
 {
 public:
 	uint8_t * buffer;
-	int bufferSize;
+	size_t bufferSize;
 	
 	stbtt_fontinfo fontInfo;
 	

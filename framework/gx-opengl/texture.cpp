@@ -25,6 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if defined(MACOS) || defined(IPHONEOS)
+	#define GLES_SILENCE_DEPRECATION
+#endif
+
 #if !defined(IPHONEOS) && !defined(ANDROID)
 	#include <GL/glew.h>
 #endif

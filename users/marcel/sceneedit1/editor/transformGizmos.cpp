@@ -13,7 +13,20 @@ void TransformGizmo::show(const Mat4x4 & transform)
 
 void TransformGizmo::hide()
 {
+	if (isActive())
+	{
+		if (editingDidEnd != nullptr)
+			editingDidEnd();
+	}
+	
 	state = kState_Hidden;
+}
+
+bool TransformGizmo::isActive() const
+{
+	return
+		state != kState_Hidden &&
+		state != kState_Visible;
 }
 
 static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_direction)
@@ -28,25 +41,27 @@ static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_directio
 	return projection_axis;
 }
 
-bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, const bool pointer_isActive, const bool pointer_becameActive, bool & inputIsCaptured)
+bool TransformGizmo::tick(
+	Vec3Arg pointer_origin,
+	Vec3Arg pointer_direction,
+	const bool pointer_isActive,
+	const bool pointer_becameActive,
+	bool & inputIsCaptured)
 {
-	isInteractive = (inputIsCaptured == false);
+	isInteractive = isActive() || (inputIsCaptured == false);
 	
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
 	rayOriginInGizmoSpace = worldToGizmo.Mul4(pointer_origin);
 	
-	if (inputIsCaptured)
-	{
-		//
-	}
-	else if (state == kState_Hidden)
+	if (state == kState_Hidden)
 	{
 		//
 	}
 	else if (state == kState_DragArrow)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 		
 		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
@@ -66,11 +81,15 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_DragPad)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 		
 		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
@@ -90,11 +109,15 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_DragRing)
 	{
-		inputIsCaptured = true;
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
 	
 		// intersect the ray with the projection plane for the ring
 		
@@ -125,6 +148,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		if (!pointer_isActive)
 		{
 			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
 		}
 	}
 	else if (state == kState_Visible)
@@ -135,8 +161,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YAxis ||
 			intersectionResult.element == kElement_ZAxis)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
 				
 				state = kState_DragArrow;
@@ -153,6 +180,11 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 				const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragArrow.initialPosition = position_gizmo;
+				
+				//
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 		
@@ -160,8 +192,9 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YXPad ||
 			intersectionResult.element == kElement_ZYPad)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
 				
 				state = kState_DragPad;
@@ -181,6 +214,11 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragPad.initialPosition = position_gizmo;
 				dragPad.projection_axis = projection_axis;
+				
+				//
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 		
@@ -188,18 +226,28 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 			intersectionResult.element == kElement_YRing ||
 			intersectionResult.element == kElement_ZRing)
 		{
-			if (pointer_becameActive)
+			if (pointer_becameActive && inputIsCaptured == false)
 			{
+				Verify(uiCaptureElem.capture());
 				inputIsCaptured = true;
+				
 				state = kState_DragRing;
 				
 				dragRing = DragRing();
 				dragRing.axis = intersectionResult.element - kElement_XRing;
 				const Vec3 position_world = pointer_origin + pointer_direction * intersectionResult.t;
 				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis);
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
 			}
 		}
 	}
+	
+	Assert(
+		state == kState_Hidden ||
+		state == kState_Visible ||
+		(inputIsCaptured && uiCaptureElem.hasCapture));
 	
 	return
 		state == kState_DragRing ||
@@ -207,7 +255,47 @@ bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, con
 		state == kState_DragPad;
 }
 
-static void drawRing(const Vec3 & position, const int axis, const float radius, const float tubeRadius)
+static void drawRingLine(const Vec3 & position, const int axis, const float radius)
+{
+	gxPushMatrix();
+	gxTranslatef(position[0], position[1], position[2]);
+	
+	const int axis1 = (axis + 0) % 3;
+	const int axis2 = (axis + 1) % 3;
+	const int axis3 = (axis + 2) % 3;
+	
+	float coords[100][3];
+	
+	for (int i = 0; i < 100; ++i)
+	{
+		const float angle = 2.f * float(M_PI) * i / 100.f;
+		
+		const float c = cosf(angle);
+		const float s = sinf(angle);
+		
+		coords[i][axis1] = 0.f;
+		coords[i][axis2] = c * radius;
+		coords[i][axis3] = s * radius;
+	}
+	
+	float normal[3];
+	normal[axis1] = 1.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 0.f;
+	
+	gxBegin(GX_LINE_LOOP);
+	{
+		gxNormal3fv(normal);
+		
+		for (int i = 0; i < 100; ++i)
+			gxVertex3fv(coords[i]);
+	}
+	gxEnd();
+	
+	gxPopMatrix();
+}
+
+static void drawRingFill(const Vec3 & position, const int axis, const float radius, const float tubeRadius)
 {
 	gxPushMatrix();
 	gxTranslatef(position[0], position[1], position[2]);
@@ -262,21 +350,17 @@ static void drawRing(const Vec3 & position, const int axis, const float radius, 
 	gxPopMatrix();
 }
 
-void TransformGizmo::draw() const
+void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 {
 	if (state == kState_Hidden)
 		return;
 	
-	if (!isInteractive)
+	if (!isInteractive || depthObscuredPass)
 		pushColorPost(POST_RGB_TO_LUMI);
-	
-	pushBlend(BLEND_ALPHA); // fixme : draw gizmo in translucent pass or a separate pass where alpha blend is the default blend mode
 	
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
 	{
-		const int opacity = 60;
-		
 		// draw axis arrows
 		
 		setColorForArrow(0);
@@ -287,6 +371,79 @@ void TransformGizmo::draw() const
 		
 		setColorForArrow(2);
 		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length);
+		
+		// draw pads
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			const Color pad_colors[3] =
+			{
+				Color(255, 40, 40),
+				Color(40, 255, 40),
+				Color(40, 40, 255)
+			};
+			
+			const Color & pad_color = pad_colors[i];
+			const Color pad_color_highlight(255, 255, 40);
+			
+			const int axis1 = (i + 0) % 3;
+			const int axis2 = (i + 1) % 3;
+			const int axis3 = (i + 2) % 3;
+			
+			Vec3 position;
+			Vec3 size;
+			
+			position[axis1] = pad_offset;
+			position[axis2] = 0.f;
+			position[axis3] = pad_offset;
+			
+			if (rayOriginInGizmoSpace[axis1] < 0.f)
+				position[axis1] = -position[axis1];
+			if (rayOriginInGizmoSpace[axis3] < 0.f)
+				position[axis3] = -position[axis3];
+			
+			size[axis1] = pad_size;
+			size[axis2] = pad_thickness;
+			size[axis3] = pad_size;
+			
+			const Color color =
+				intersectionResult.element == (kElement_XZPad + i)
+					? pad_color_highlight
+					: pad_color;
+			
+			setColor(color);
+			lineCube(
+				position,
+				size);
+		}
+		
+		setColorForRing(0);
+		drawRingLine(Vec3(), 0, ring_radius);
+		
+		setColorForRing(1);
+		drawRingLine(Vec3(), 1, ring_radius);
+		
+		setColorForRing(2);
+		drawRingLine(Vec3(), 2, ring_radius);
+	}
+	gxPopMatrix();
+	
+	if (!isInteractive || depthObscuredPass)
+		popColorPost();
+}
+
+void TransformGizmo::drawTranslucent() const
+{
+	if (state == kState_Hidden)
+		return;
+	
+	if (!isInteractive)
+		pushColorPost(POST_RGB_TO_LUMI);
+	
+	gxPushMatrix();
+	gxMultMatrixf(gizmoToWorld.m_v);
+	{
+		const int opacity = 60;
 		
 		// draw pads
 		
@@ -331,24 +488,18 @@ void TransformGizmo::draw() const
 			fillCube(
 				position,
 				size);
-			setAlpha(255);
-			lineCube(
-				position,
-				size);
 		}
 		
-		setColorForRing(0);
-		drawRing(Vec3(), 0, ring_radius, ring_tubeRadius);
-		
-		setColorForRing(1);
-		drawRing(Vec3(), 1, ring_radius, ring_tubeRadius);
-		
-		setColorForRing(2);
-		drawRing(Vec3(), 2, ring_radius, ring_tubeRadius);
+		for (int i = 0; i < 3; ++i)
+		{
+			if (intersectionResult.element == kElement_XRing + i)
+			{
+				setColorForRing(i);
+				drawRingFill(Vec3(), i, ring_radius, ring_tubeRadius);
+			}
+		}
 	}
 	gxPopMatrix();
-	
-	popBlend();
 	
 	if (!isInteractive)
 		popColorPost();
@@ -508,9 +659,9 @@ void TransformGizmo::setColorForRing(const int axis) const
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
 	if (state == kState_DragRing && dragRing.axis == axis)
-		setColor(colorWhite);
-	else if (intersectionResult.element == kElement_XRing + axis)
 		setColor(colorYellow);
+	/*else if (intersectionResult.element == kElement_XRing + axis)
+		setColor(colorYellow);*/
 	else
 		setColor(colors[axis]);
 	setAlpha(100);

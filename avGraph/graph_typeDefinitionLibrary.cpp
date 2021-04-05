@@ -156,7 +156,8 @@ bool Graph_TypeDefinition::loadXml(const XMLElement * xmlType)
 	
 	displayName = stringAttrib(xmlType, "displayName", "");
 	
-	resourceTypeName = stringAttrib(xmlType, "resourceTypeName", "");
+	mainResourceType = stringAttrib(xmlType, "mainResourceType", "");
+	mainResourceName = stringAttrib(xmlType, "mainResourceName", "");
 	
 	for (auto xmlInput = xmlType->FirstChildElement("input"); xmlInput != nullptr; xmlInput = xmlInput->NextSiblingElement("input"))
 	{

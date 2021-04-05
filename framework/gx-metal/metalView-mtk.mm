@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(IPHONEOS)
+#if defined(IPHONEOS) && 0
 
 #import "framework.h"
 

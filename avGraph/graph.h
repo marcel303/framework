@@ -53,20 +53,20 @@ typedef unsigned int GraphLinkId;
 extern GraphNodeId kGraphNodeIdInvalid;
 extern GraphLinkId kGraphLinkIdInvalid;
 
+struct GraphNodeResource
+{
+	std::string type;
+	std::string name;
+	std::string data;
+};
+	
 struct GraphNode
 {
-	struct Resource
-	{
-		std::string type;
-		std::string name;
-		std::string data;
-	};
-	
 	GraphNodeId id;
 	std::string typeName;
 	bool isPassthrough;
 	
-	std::map<std::string, Resource> resources;
+	std::map<std::string, GraphNodeResource> resources;
 	
 	std::map<std::string, std::string> inputValues;
 	
@@ -127,11 +127,13 @@ struct GraphLink
 
 struct GraphEditConnection
 {
+	// GraphEditConnection is how the graph communicates changes to its structure to the editor
+	
 	virtual ~GraphEditConnection()
 	{
 	}
 	
-	virtual void nodeAdd(const GraphNodeId nodeId, const std::string & typeName)
+	virtual void nodeAdd(const GraphNode & node)
 	{
 	}
 	

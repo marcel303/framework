@@ -77,7 +77,7 @@ Color Color::fromHex(const char * str, bool * success)
 	}
 	else if (len == 3)
 	{
-		const uint32_t hex = std::stoul(str, 0, 16);
+		const uint32_t hex = (uint32_t)std::stoul(str, 0, 16);
 		const float r = scale255(((hex >> 8) & 0xf) * 255/15);
 		const float g = scale255(((hex >> 4) & 0xf) * 255/15);
 		const float b = scale255(((hex >> 0) & 0xf) * 255/15);
@@ -88,7 +88,7 @@ Color Color::fromHex(const char * str, bool * success)
 	}
 	else if (len == 4)
 	{
-		const uint32_t hex = std::stoul(str, 0, 16);
+		const uint32_t hex = (uint32_t)std::stoul(str, 0, 16);
 		const float r = scale255(((hex >> 12) & 0xf) * 255/15);
 		const float g = scale255(((hex >>  8) & 0xf) * 255/15);
 		const float b = scale255(((hex >>  4) & 0xf) * 255/15);
@@ -99,7 +99,7 @@ Color Color::fromHex(const char * str, bool * success)
 	}
 	else if (len == 6)
 	{
-		const uint32_t hex = std::stoul(str, 0, 16);
+		const uint32_t hex = (uint32_t)std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 16) & 0xff);
 		const float g = scale255((hex >>  8) & 0xff);
 		const float b = scale255((hex >>  0) & 0xff);
@@ -110,7 +110,7 @@ Color Color::fromHex(const char * str, bool * success)
 	}
 	else if (len == 8)
 	{
-		const uint32_t hex = std::stoul(str, 0, 16);
+		const uint32_t hex = (uint32_t)std::stoul(str, 0, 16);
 		const float r = scale255((hex >> 24) & 0xff);
 		const float g = scale255((hex >> 16) & 0xff);
 		const float b = scale255((hex >>  8) & 0xff);

@@ -160,8 +160,8 @@ int main(int argc, char * argv[])
 				{
 					const int count =
 						audioGraphMgr.context->controlValues.size() +
-						instance->audioGraph->stateDescriptor.controlValues.size() +
-						instance->audioGraph->stateDescriptor.events.size();
+						instance->audioGraph->controlValues.size() +
+						instance->audioGraph->events.size();
 					
 					if (count == 0)
 						selectedIndex = 0;
@@ -182,14 +182,14 @@ int main(int argc, char * argv[])
 						index++;
 					}
 					
-					for (auto & controlValue : instance->audioGraph->stateDescriptor.controlValues)
+					for (auto & controlValue : instance->audioGraph->controlValues)
 					{
 						doControlValue(controlValue, index, selectedIndex, 'L', c);
 						
 						index++;
 					}
 					
-					for (auto & event : instance->audioGraph->stateDescriptor.events)
+					for (auto & event : instance->audioGraph->events)
 					{
 						doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
 						

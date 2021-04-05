@@ -78,14 +78,25 @@ void AbletonLink::SessionState::commitAudio() const
 bool AbletonLink::init(const double bpm)
 {
 	link = new ableton::Link(bpm);
+	ownsLink = true;
+	
+	return true;
+}
+
+bool AbletonLink::init(ableton::Link * in_link)
+{
+	link = in_link;
+	ownsLink = false;
 	
 	return true;
 }
 
 void AbletonLink::shut()
 {
-	delete link;
+	if (ownsLink)
+		delete link;
 	link = nullptr;
+	ownsLink = false;
 }
 
 void AbletonLink::enable(const bool enable)
@@ -103,9 +114,19 @@ bool AbletonLink::isEnabled() const
 	return link->isEnabled();
 }
 
+int AbletonLink::numPeers() const
+{
+	return (int)link->numPeers();
+}
+
 uint64_t AbletonLink::getClockTick() const
 {
 	return link->clock().ticks();
+}
+
+uint64_t AbletonLink::getClockTicksPerSecond() const
+{
+	return link->clock().microsToTicks(ableton::Link::Clock::Micros(1000000));
 }
 
 AbletonLink::SessionState AbletonLink::captureAppSessionState() const

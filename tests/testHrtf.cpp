@@ -40,8 +40,6 @@
 #include <atomic>
 #include <complex>
 
-// todo : make 3D view optional
-
 #define HRTF_BUFFER_SIZE 512
 #define AUDIO_BUFFER_SIZE 512
 #define AUDIO_UPDATE_SIZE (AUDIO_BUFFER_SIZE/2)
@@ -54,7 +52,7 @@
 	#define ALIGN16
 #endif
 
-#define HACK2D 1
+#define HACK2D 1 // when true, the 3D HRTF data set is converted into 2d. otherwise, the full 3D sphere of sample points is used
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -148,7 +146,7 @@ static bool convertSoundDataToHRIR(const SoundData & soundData, float * __restri
 	// however, clamp the number of samples in case the sound data contains more samples,
 	// and pad with zeroes in case it's less
 	
-	const int numSamplesToCopy = std::min(soundData.sampleCount, HRTF_BUFFER_SIZE);
+	const int numSamplesToCopy = std::min(int(soundData.sampleCount), HRTF_BUFFER_SIZE);
 	
 	if (soundData.channelSize == 2)
 	{

@@ -38,10 +38,12 @@ namespace MP
 	class VideoContext
 	{
 	public:
-		VideoContext();
 		~VideoContext();
 
-		bool Initialize(Context * context, const size_t streamIndex, const OutputMode outputMode);
+		bool Initialize(
+			Context * context,
+			const size_t streamIndex,
+			const OutputMode outputMode);
 		bool Destroy();
 
 		size_t GetStreamIndex() const;
@@ -55,26 +57,34 @@ namespace MP
 		bool AddPacket(const AVPacket & packet);
 		bool ProcessPacket(AVPacket & packet);
 		bool Depleted() const;
+		
+		int GetVideoWidth() const;
+		int GetVideoHeight() const;
+		
+		VideoBuffer * GetVideoBuffer() { return m_videoBuffer; }
+		
+		void ClearBuffers();
 
-	//private:
+	private:
 		bool Convert(VideoFrame * out_frame);
 		void SetTimingForFrame(VideoFrame * out_frame);
 
-		PacketQueue * m_packetQueue;
-		AVCodecContext * m_codecContext;
-		AVCodec * m_codec;
-		VideoFrame * m_tempVideoFrame;
-		AVFrame * m_tempFrame;
-		uint8_t * m_tempFrameBuffer;
-		VideoBuffer * m_videoBuffer;
-		SwsContext * m_swsContext;
-		double m_timeBase;
+		PacketQueue    * m_packetQueue     = nullptr;
+		AVCodecContext * m_codecContext    = nullptr;
+		AVCodec        * m_codec           = nullptr;
+		VideoFrame     * m_tempVideoFrame  = nullptr;
+		AVFrame        * m_tempFrame       = nullptr;
+		uint8_t        * m_tempFrameBuffer = nullptr;
+		VideoBuffer    * m_videoBuffer     = nullptr;
+		SwsContext     * m_swsContext      = nullptr;
+		double           m_timeBase        = 0.0;
 
-		size_t m_streamIndex;
-		OutputMode m_outputMode;
-		double m_time;
-		size_t m_frameCount;
+		size_t m_streamIndex    = -1;
+		OutputMode m_outputMode = kOutputMode_RGBA;
+		
+		double m_time       = 0.0;
+		size_t m_frameCount = 0;
 
-		bool m_initialized;
+		bool m_initialized = false;
 	};
 };

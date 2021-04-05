@@ -80,7 +80,10 @@ int main()
 	for (int i = 0; i < kNumChannels; ++i)
 	{
 		audioChannelState[i].audioVoiceMgr.init(&audioMutex, kNumSteps);
-		audioChannelState[i].audioGraphContext.init(&audioMutex, &audioChannelState[i].audioVoiceMgr);
+		audioChannelState[i].audioGraphContext.init(
+			&audioMutex,
+			&audioMutex,
+			&audioChannelState[i].audioVoiceMgr);
 		audioChannelState[i].load(graph, types);
 	}
 	
@@ -235,10 +238,6 @@ int main()
 			nextStep = (nextStep + 1) % kNumSteps;
 		}
 		
-		for (int c = 0; c < kNumChannels; ++c)
-			for (int s = 0; s < kNumSteps; ++s)
-				audioChannelState[c].audioGraph[s]->tickMain();
-	
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			// ui: connect/disconnect option

@@ -34,10 +34,13 @@ AUDIO_NODE_TYPE(AudioNodeRamp)
 	
 	in("startRamped", "bool", "1");
 	in("value", "audioValue", "1");
-	in("rampTime", "audioValue", "1"); // todo : separate ramp up and down time
+	in("rampTime", "audioValue", "1");
+	in("rampUpTime", "audioValue", "0");
+	in("rampDownTime", "audioValue", "0");
 	in("rampUp!", "trigger");
 	in("rampDown!", "trigger");
 	out("value", "audioValue");
+	out("rampValue", "audioValue");
 	out("rampedUp!", "trigger");
 	out("rampedDown!", "trigger");
 }
@@ -46,42 +49,78 @@ void AudioNodeRamp::tick(const float dt)
 {
 	const AudioFloat * input = getInputAudioFloat(kInput_Value, &AudioFloat::One);
 	const AudioFloat * rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One);
+	const AudioFloat * rampUpTime = getInputAudioFloat(kInput_RampUpTime, rampTime);
+	const AudioFloat * rampDownTime = getInputAudioFloat(kInput_RampDownTime, rampTime);
 	
 	if (isPassthrough)
 	{
 		valueOutput.setScalar(0.f);
+		
+		rampValueOutput.setScalar(0.f);
 	}
 	else
 	{
-		input->expand();
-		rampTime->expand();
-		
-		//
-		
 		if (ramp == true && value == 1.0)
+		{
 			valueOutput.set(*input);
+			
+			rampValueOutput.set(1.f);
+		}
 		else if (ramp == false && value == 0.0)
+		{
 			valueOutput.setZero();
+			
+			rampValueOutput.set(0.f);
+		}
 		else
 		{
+			input->expand();
+			
+			if (ramp)
+				rampUpTime->expand();
+			else
+				rampDownTime->expand();
+			
 			valueOutput.setVector();
+			
+			rampValueOutput.setVector();
+			
+			const double dtPerSample = 1.0 / double(SAMPLE_RATE);
+			
+			const float minRampTime = .1f / SAMPLE_RATE;
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				const double step = 1.0 / (double(SAMPLE_RATE) * rampTime->samples[i]);
-				
 				if (ramp)
+				{
+					const double step = dtPerSample / fmaxf(minRampTime, rampUpTime->samples[i]);
+					
 					value = std::min(1.0, value + step);
+				}
 				else
+				{
+					const double step = dtPerSample / fmaxf(minRampTime, rampDownTime->samples[i]);
+					
 					value = std::max(0.0, value - step);
+				}
 				
-				valueOutput.samples[i] = input->samples[i] * value;
+				const float valueAsFloat = float(value);
+				
+				valueOutput.samples[i] = input->samples[i] * valueAsFloat;
+				
+				rampValueOutput.samples[i] = valueAsFloat;
 			}
 			
-			if (ramp == true && value == 1.0)
-				trigger(kOutput_RampedUp);
-			else if (ramp == false && value == 0.0)
-				trigger(kOutput_RampedDown);
+			if (ramp)
+			{
+				if (value == 1.0)
+					trigger(kOutput_RampedUp);
+			}
+			else
+			{
+				if (value == 0.0)
+					trigger(kOutput_RampedDown);
+			}
 		}
 	}
 }

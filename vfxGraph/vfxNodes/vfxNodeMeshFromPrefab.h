@@ -30,7 +30,6 @@
 #include "gx_mesh.h"
 #include "vfxNodeBase.h"
 
-// todo : let DrawMesh node support instancing. channels for position, orientation, scale
 // todo : mesh.fromPrefab: add sphere type
 
 struct VfxNodeMeshFromPrefab : VfxNodeBase
@@ -73,59 +72,4 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 	virtual ~VfxNodeMeshFromPrefab() override;
 	
 	virtual void tick(const float dt) override;
-};
-
-#include "framework.h"
-
-struct VfxNodeDrawMesh : VfxNodeBase
-{
-	enum PositionMode
-	{
-		kPositionMode_Regular,
-		kPositionMode_CartesianProduct
-	};
-	
-	enum Input
-	{
-		kInput_Mesh,
-		kInput_PositionMode,
-		kInput_PositionX,
-		kInput_PositionY,
-		kInput_PositionZ,
-		kInput_RotationAngle,
-		kInput_RotationAxisX,
-		kInput_RotationAxisY,
-		kInput_RotationAxisZ,
-		kInput_Scale,
-		kInput_ScaleX,
-		kInput_ScaleY,
-		kInput_ScaleZ,
-		kInput_Shader,
-		kInput_Instanced,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Draw,
-		kOutput_COUNT
-	};
-	
-	struct Stats
-	{
-		int numInstancesDrawn = 0;
-	};
-	
-	mutable ShaderBuffer shaderBuffer;
-	
-	mutable Stats stats;
-	
-	VfxNodeDrawMesh();
-	virtual ~VfxNodeDrawMesh() override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void draw() const override;
-	
-	virtual void getDescription(VfxNodeDescription & d) override;
 };

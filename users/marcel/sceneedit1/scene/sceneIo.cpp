@@ -41,7 +41,7 @@ static bool is_whitespace(const char c)
 	return isspace(c);
 }
 
-static bool eat_word_v2(char *& line, const char *& word)
+static bool eat_word_v2(const char *& line, const char *& word_begin, const char *& word_end)
 {
 	while (*line != 0 && is_whitespace(*line) == true)
 		line++;
@@ -55,26 +55,22 @@ static bool eat_word_v2(char *& line, const char *& word)
 	{
 		line++;
 
-		word = line;
+		word_begin = line;
 		
 		while (*line != 0 && *line != '"')
 			line++;
 	}
 	else
 	{
-		word = line;
+		word_begin = line;
 		
 		while (*line != 0 && is_whitespace(*line) == false)
 			line++;
 	}
 	
-	if (line > word)
+	if (line > word_begin)
 	{
-		if (*line != 0)
-		{
-			*line = 0;
-			line++;
-		}
+		word_end = line;
 		
 		return true;
 	}
@@ -84,9 +80,9 @@ static bool eat_word_v2(char *& line, const char *& word)
 	}
 }
 
-static bool match_text(const char * text, const char * other)
+static bool match_text(const char * text_begin, const char * text_end, const char * other)
 {
-	return strcmp(text, other) == 0;
+	return memcmp(text_begin, other, text_end - text_begin) == 0;
 }
 
 // todo : add callback function for fetching templates. if set, use it as a fallback for when there is no inline template found
@@ -101,7 +97,7 @@ bool parseSceneFromLines(
 	
 	std::map<std::string, Template> entities;
 	
-	char * line; // fixme : make const char
+	const char * line;
 	
 	while ((line = (char*)line_reader.get_next_line(true)))
 	{
@@ -113,23 +109,30 @@ bool parseSceneFromLines(
 			return false;
 		}
 		
-		const char * word;
+		const char * word_begin;
+		const char * word_end;
 
-		if (!eat_word_v2(line, word))
+		if (!eat_word_v2(line, word_begin, word_end))
 		{
 			LOG_ERR("failed to eat word");
 			return false;
 		}
 		
-		if (match_text(word, "template"))
+		if (match_text(word_begin, word_end, "template"))
 		{
-			const char * name;
+			const char * name_begin;
+			const char * name_end;
 			
-			if (!eat_word_v2(line, name))
+			if (!eat_word_v2(line, name_begin, name_end))
 			{
 				LOG_ERR("missing template name");
 				return false;
 			}
+			
+			const size_t name_length = name_end - name_begin;
+			char * name = (char*)alloca(name_length + 1);
+			memcpy(name, name_begin, name_length);
+			name[name_length] = 0;
 			
 			// parse the template
 			
@@ -150,15 +153,25 @@ bool parseSceneFromLines(
 			
 			templates.insert({ name, t });
 		}
-		else if (match_text(word, "entity"))
+		else if (match_text(word_begin, word_end, "entity"))
 		{
-			const char * name;
+			// note : entities are basically the same as templates, with the difference
+			//        being that when we encounter an entity, we will instantiate it,
+			//        rather than adding it to the collection of known templates
 			
-			if (!eat_word_v2(line, name))
+			const char * name_begin;
+			const char * name_end;
+			
+			if (!eat_word_v2(line, name_begin, name_end))
 			{
 				LOG_ERR("missing entity name");
 				return false;
 			}
+			
+			const size_t name_length = name_end - name_begin;
+			char * name = (char*)alloca(name_length + 1);
+			memcpy(name, name_begin, name_length);
+			name[name_length] = 0;
 			
 			// parse the template
 			
@@ -175,7 +188,24 @@ bool parseSceneFromLines(
 			}
 			line_reader.pop_indent();
 			
-			// recursively apply overlays
+			// check if an entity with the same name exists already
+			
+			if (entities.count(name) != 0)
+			{
+				LOG_ERR("entity with name '%s' already exists", name);
+				return false;
+			}
+			
+			// add the entity to the map
+			
+			entities.insert({ name, t });
+		}
+		else if (match_text(word_begin, word_end, "scene"))
+		{
+			// recursively apply overlays for entities
+			
+			// note : we defer applying overlays until we encounter the 'scene' section,
+			//        as entities may depend on templates defined after their own definition
 			
 			struct FetchContext
 			{
@@ -218,33 +248,26 @@ bool parseSceneFromLines(
 			context.basePath = basePath;
 			context.templates = &templates;
 			
-			if (!recursivelyOverlayBaseTemplates(
-				t,
-				true,
-				true,
-				fetchTemplate,
-				&context))
+			for (auto & entity_itr : entities)
 			{
-				LOG_ERR("failed to parse template (entity)");
-				return false;
+				auto & t = entity_itr.second;
+				
+				if (!recursivelyOverlayBaseTemplates(
+					t,
+					true,
+					true,
+					fetchTemplate,
+					&context))
+				{
+					LOG_ERR("failed to parse template (entity)");
+					return false;
+				}
+				
+				//dumpTemplateToLog(t);
 			}
 			
-			//dumpTemplateToLog(t);
+			// load/instantiate the scene objects
 			
-			// check if an entity with the same name exists already
-			
-			if (entities.count(name) != 0)
-			{
-				LOG_ERR("entity with name '%s' already exists", name);
-				return false;
-			}
-			
-			// add the entity to the map
-			
-			entities.insert({ name, t });
-		}
-		else if (match_text(word, "scene"))
-		{
 			line_reader.push_indent();
 			{
 				if (!parseSceneObjectFromLines(
@@ -261,7 +284,7 @@ bool parseSceneFromLines(
 		}
 		else
 		{
-			LOG_ERR("syntax error: %s", word);
+			LOG_ERR("syntax error: %.*s", word_end - word_begin, word_begin);
 			return false;
 		}
 	}
@@ -307,7 +330,7 @@ bool parseSceneObjectFromLines(
 	Scene & out_scene,
 	std::map<std::string, Template> & templates)
 {
-	char * line; // fixme : use const char
+	const char * line;
 	
 	while ((line = (char*)line_reader.get_next_line(true)))
 	{
@@ -321,17 +344,16 @@ bool parseSceneObjectFromLines(
 		
 		//
 		
-		const char * word;
-		
-	// fixme : destructive operation!
+		const char * word_begin;
+		const char * word_end;
 	
-		if (!eat_word_v2(line, word))
+		if (!eat_word_v2(line, word_begin, word_end))
 		{
 			LOG_ERR("failed to eat word");
 			return false;
 		}
 		
-		if (match_text(word, "nodes"))
+		if (match_text(word_begin, word_end, "nodes"))
 		{
 			line_reader.push_indent();
 			{
@@ -360,7 +382,7 @@ bool parseSceneObjectStructureFromLines(
 	
 	node_stack.push_back(&out_scene.getRootNode());
 	
-	char * line; // fixme : make const char
+	const char * line;
 	
 	int current_level = -1;
 	
@@ -390,13 +412,19 @@ bool parseSceneObjectStructureFromLines(
 		
 		//
 		
-		const char * name;
+		const char * name_begin;
+		const char * name_end;
 		
-		if (!eat_word_v2(line, name))
+		if (!eat_word_v2(line, name_begin, name_end))
 		{
 			LOG_ERR("failed to eat word");
 			return false;
 		}
+		
+		const size_t name_length = name_end - name_begin;
+		char * name = (char*)alloca(name_length + 1);
+		memcpy(name, name_begin, name_length);
+		name[name_length] = 0;
 		
 		auto template_itr = templates.find(name);
 		

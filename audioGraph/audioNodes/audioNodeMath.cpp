@@ -145,7 +145,7 @@ AUDIO_NODE_TYPE(AudioNodeMath)
 {
 	typeName = "math";
 	
-	inEnum("type", "mathType", "1");
+	inEnum("type", "mathType", AudioNodeMath::kType_Add);
 	in("a", "audioValue");
 	in("b", "audioValue");
 	out("result", "audioValue");

@@ -306,7 +306,7 @@ bool ReadOnlyCsvDocument::parseLine(const char * begin, const char * end, const 
 	*const_cast<char*>(begin) = 0;
 	
 	if (m_numColumns == 0)
-		m_numColumns = m_cells.size();
+		m_numColumns = (int)m_cells.size();
 	
 	return result;
 }
@@ -336,7 +336,7 @@ int ReadOnlyCsvDocument::getColumnIndex(const char * name) const
 {
 	for (size_t i = 0; i < m_header.size(); ++i)
 		if (strcmp(m_header[i], name) == 0)
-			return i;
+			return int(i);
 	
 	return -1;
 }

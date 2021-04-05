@@ -280,7 +280,7 @@ namespace AnimModel
 		}
 		
 		MeshSet * meshSet = new MeshSet();
-		meshSet->allocate(meshes.size());
+		meshSet->allocate(int(meshes.size()));
 		for (size_t i = 0; i < meshes.size(); ++i)
 		{
 			meshes[i]->finalize();
@@ -618,7 +618,7 @@ namespace AnimModel
 								*finalAnimKey++ = animKeys[j];
 							}
 							
-							animation->m_numKeys[i] = animKeys.size();
+							animation->m_numKeys[i] = int(animKeys.size());
 						}
 						
 						animations[animName] = animation;

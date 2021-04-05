@@ -158,8 +158,6 @@ bool MediaPlayer::Context::presentedLastFrame() const
 {
 	if (SDL_GetThreadID(nullptr) == s_mpThreadId)
 	{
-		// todo : actually check if the frame was presented
-
 		return mpContext.HasBegun() && mpContext.Depleted();
 	}
 	else

@@ -17,6 +17,7 @@ app refine
 	depend_library rtmidi
 	depend_library vfxgraph
 	depend_library vfxgraph-nodes
+	depend_library vfxgraph-ui
 	scan_files cpp
 	scan_files h
 	resource_path data
