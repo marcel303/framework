@@ -36,7 +36,7 @@ struct SDL_cond;
 struct SDL_Thread;
 struct SDL_mutex;
 
-class GxTexture;
+struct GxTexture;
 
 struct MediaPlayer : public AudioStream
 {
