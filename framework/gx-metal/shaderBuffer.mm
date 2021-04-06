@@ -100,6 +100,8 @@ ShaderBuffer::ShaderBuffer()
 
 ShaderBuffer::~ShaderBuffer()
 {
+	fassert(m_bufferPoolElem == nullptr);
+
 	free();
 }
 
