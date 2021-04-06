@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if defined(MACOS) || defined(IPHONEOS)
+
 #include "poolhack.h"
 #include <QuartzCore/QuartzCore.h>
 #include <assert.h>
@@ -52,3 +54,5 @@ void poolhack_end()
 	[s_pools[s_poolCount] release];
 	s_pools[s_poolCount] = nullptr;
 }
+
+#endif
