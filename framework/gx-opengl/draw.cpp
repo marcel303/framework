@@ -275,17 +275,15 @@ struct GxVertex
 
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
-#if defined(MACOS)
-    #define GX_USE_ELEMENT_ARRAY_BUFFER 1
-#else
-    #define GX_USE_ELEMENT_ARRAY_BUFFER 0
-#endif
+#define GX_USE_ELEMENT_ARRAY_BUFFER 1
 
 #define GX_VERTEX_BUFFER_SIZE (1024*16)
 
 static GLuint s_gxVertexArrayObject = 0;
 static GLuint s_gxVertexBufferObject = 0;
+#if GX_USE_ELEMENT_ARRAY_BUFFER
 static GLuint s_gxIndexBufferObject = 0; // index buffer for drawing quads
+#endif
 static GxVertex s_gxVertexBuffer[GX_VERTEX_BUFFER_SIZE];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -332,9 +330,11 @@ void gxInitialize()
 	glGenBuffers(1, &s_gxVertexBufferObject);
 	checkErrorGL();
 	
+#if GX_USE_ELEMENT_ARRAY_BUFFER
 	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxIndexBufferObject);
 	checkErrorGL();
+#endif
 	
 	fassert(s_gxVertexArrayObject == 0);
 	glGenVertexArrays(1, &s_gxVertexArrayObject);
@@ -418,11 +418,13 @@ void gxShutdown()
 		s_gxVertexBufferObject = 0;
 	}
 
+#if GX_USE_ELEMENT_ARRAY_BUFFER
 	if (s_gxIndexBufferObject != 0)
 	{
 		glDeleteBuffers(1, &s_gxIndexBufferObject);
 		s_gxIndexBufferObject = 0;
 	}
+#endif
 	
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
