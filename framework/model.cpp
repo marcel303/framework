@@ -1575,8 +1575,13 @@ ModelCacheElem::ModelCacheElem()
 
 void ModelCacheElem::free()
 {
-	delete skinningMatrices;
-	skinningMatrices = 0;
+	if (skinningMatrices != nullptr)
+	{
+		skinningMatrices->free();
+
+		delete skinningMatrices;
+		skinningMatrices = 0;
+	}
 	
 	delete meshSet;
 	meshSet = 0;
