@@ -1,7 +1,5 @@
 #pragma once
 
-// todo : rename file to sceneIo-helpers ?
-
 // forward declarations
 
 struct ComponentSet;

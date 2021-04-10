@@ -25,8 +25,6 @@
 // std
 #include <string.h>
 
-// todo : ability to drag and drop nodes to organize them
-
 static int calculateIndentationLevel(const char * line)
 {
 	int result = 0;

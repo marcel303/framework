@@ -87,5 +87,6 @@ app marcel-sceneedit-800-realtimeEditing
 
 app marcel-sceneedit1
 	depend_library marcel-sceneedit
+	depend_library renderOne
 	add_files main.cpp
 	resource_path data

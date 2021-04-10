@@ -11,6 +11,7 @@
 
 // ecs-component
 #include "componentType.h"
+#include "componentTypeDB.h"
 
 // ecs-parameter
 #include "parameter.h"
@@ -24,6 +25,10 @@
 // sceneedit
 #include "helpers2.h" // g_typeDB
 
+// renderOne
+#include "lightDrawer.h"
+#include "renderer.h"
+
 // ui
 #include "editor/ui-capture.h"
 
@@ -36,6 +41,8 @@
 #include "TextIO.h"
 #include "Timer.h"
 
+#include "components/gltfCache.h" // todo : remove
+
 #if defined(DEBUG)
 	#define ENABLE_PERFORMANCE_TEST     1
 	#define ENABLE_TEMPLATE_TEST        1
@@ -47,17 +54,12 @@
 #if defined(ANDROID)
 	#define USE_GUI_WINDOW 1
 #else
-	#define USE_GUI_WINDOW 0
+	#define USE_GUI_WINDOW 1
 #endif
 
 /*
 
 todo :
-
-- add lookat/focus option to scene structure view
-	- as a context menu
-- add 'Paste tree' to scene structure context menu
-- add support for copying node tree 'Copy tree'
 
 - add template file list / browser
 - add support for template editing
@@ -65,6 +67,10 @@ todo :
 
 done :
 
++ add lookat/focus option to scene structure view
+	+ as a context menu
++ add 'Paste tree' to scene structure context menu
++ add support for copying node tree 'Copy tree'
 + add libreflection-jsonio
 + remove json references from scene edit
 + add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
@@ -80,24 +86,13 @@ done :
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
-// todo : move these instances to helpers.cpp
-extern TransformComponentMgr s_transformComponentMgr;
-extern LightComponentMgr s_lightComponentMgr;
-extern ParameterComponentMgr s_parameterComponentMgr;
-
 //
 
-#include <functional>
-
-typedef std::function<void()> RenderSceneCallback;
-
-struct Renderer
+struct MyRenderOptions
 {
 	enum Mode
 	{
-		kMode_Wireframe,
-		kMode_Colors,
-		kMode_Normals,
+		kMode_Flat,
 		kMode_Lit,
 		kMode_LitWithShadows
 	};
@@ -105,363 +100,22 @@ struct Renderer
 	ParameterMgr parameterMgr;
 	
 	ParameterEnum * mode = nullptr;
-	ParameterBool * anaglyphic = nullptr;
-	ParameterFloat * eyeSeparation = nullptr;
+	ParameterBool * drawWireframe = nullptr;
+	ParameterBool * drawNormals = nullptr;
 	
-	RenderSceneCallback drawOpaque = nullptr;
-	RenderSceneCallback drawTranslucent = nullptr;
-	
-	mutable DepthTarget depthMap;
-	mutable ColorTarget normalMap;
-	mutable ColorTarget colorMap;
-	mutable ColorTarget lightMap;
-	mutable ColorTarget compositeMap;
-	
-	mutable ColorTarget eyeLeft;
-	mutable ColorTarget eyeRight;
-	mutable DepthTarget eyeDepth;
-	
-	struct
+	MyRenderOptions()
 	{
-		Mat4x4 projectionMatrix;
-		Mat4x4 viewMatrix;
-	} mutable drawState;
-	
-	bool init()
-	{
-		bool result = true;
-
 		parameterMgr.init("renderer");
 		
-		mode = parameterMgr.addEnum("mode", kMode_Colors,
+		mode = parameterMgr.addEnum("Mode", kMode_Flat,
 			{
-				{ "Wireframe", kMode_Wireframe },
-				{ "Colors", kMode_Colors },
-				{ "Normals", kMode_Normals },
+				{ "Flat", kMode_Flat },
 				{ "Lit", kMode_Lit },
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
-		anaglyphic = parameterMgr.addBool("anaglyphic", false);
-		
-		/*
-		From Wikipedia, https://en.wikipedia.org/wiki/Pupillary_distance#Measuring_pupillary_distance
-		
-		Interpupillary distance (IPD)
-		(distance in mm)
-		
-		Gender  Sample size Mean  Standard deviation  Minimum  Maximum
-		Female  1986        61.7  3.6                 51.0     74.5
-		Male    4082        64.0  3.4                 53.0     77.0
-		*/
-		
-		eyeSeparation = parameterMgr.addFloat("eyeSepration", .062f);
-		eyeSeparation->setLimits(0.f, .1f);
-		
-		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
-		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
-		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
-		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
-		result &= compositeMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
-		
-		result &= eyeLeft.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
-		result &= eyeRight.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
-		result &= eyeDepth.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
-		
-		return result;
-	}
-	
-	void drawColorPass() const
-	{
-		pushShaderOutputs("c");
-		{
-			if (drawOpaque != nullptr)
-				drawOpaque();
-		}
-		popShaderOutputs();
-	}
-	
-	void drawNormalPass() const
-	{
-		pushShaderOutputs("n");
-		{
-			if (drawOpaque != nullptr)
-				drawOpaque();
-		}
-		popShaderOutputs();
-	}
-	
-	void drawTranslucentPass() const
-	{
-		pushDepthTest(true, DEPTH_LESS, false);
-		pushBlend(BLEND_ALPHA);
-		{
-			if (drawTranslucent != nullptr)
-				drawTranslucent();
-		}
-		popBlend();
-		popDepthTest();
-	}
-	
-	void pushMatrices(const bool drawToSurface) const
-	{
-		gxMatrixMode(GX_PROJECTION);
-		gxPushMatrix();
-		gxLoadMatrixf(drawState.projectionMatrix.m_v);
-		
-		gxMatrixMode(GX_MODELVIEW);
-		gxPushMatrix();
-		gxLoadMatrixf(drawState.viewMatrix.m_v);
-		
-		updateCullFlip();
-	}
-	
-	void popMatrices() const
-	{
-		gxMatrixMode(GX_PROJECTION);
-		gxPopMatrix();
-		gxMatrixMode(GX_MODELVIEW);
-		gxPopMatrix();
-		
-		updateCullFlip();
-	}
-	
-	void draw(const Mat4x4 & projectionMatrix, const Mat4x4 & viewMatrix) const
-	{
-		if (anaglyphic->get())
-		{
-			drawFromEye(projectionMatrix, viewMatrix, Vec3(-eyeSeparation->get()/2.f, 0.f, 0.f), &eyeLeft, &eyeDepth);
-			drawFromEye(projectionMatrix, viewMatrix, Vec3(+eyeSeparation->get()/2.f, 0.f, 0.f), &eyeRight, &eyeDepth);
-			
-			// composite eye buffers using anaglyphic shader
-			
-			projectScreen2d();
-			
-			pushBlend(BLEND_OPAQUE);
-			{
-				Shader shader("shaders/anaglyphic-compose");
-				setShader(shader);
-				{
-					shader.setImmediate("mode", 0);
-					shader.setTexture("colormapL", 0, eyeLeft.getTextureId(), false);
-					shader.setTexture("colormapR", 1, eyeRight.getTextureId(), false);
-					
-					drawRect(0, 0, eyeLeft.getWidth(), eyeLeft.getHeight());
-				}
-				clearShader();
-			}
-			popBlend();
-		}
-		else
-		{
-			drawFromEye(projectionMatrix, viewMatrix, Vec3(), nullptr, nullptr);
-		}
-	}
-	
-	void drawFromEye(
-		const Mat4x4 & projectionMatrix,
-		const Mat4x4 & viewMatrix,
-		Vec3Arg eyeOffset,
-		ColorTarget * colorTarget,
-		DepthTarget * depthTarget) const
-	{
-		drawState.projectionMatrix = projectionMatrix.Translate(eyeOffset);
-		drawState.viewMatrix = viewMatrix;
-		
-		if (mode->get() == kMode_Wireframe)
-		{
-			if (colorTarget != nullptr)
-				pushRenderPass(colorTarget, true, depthTarget, true, "Wireframe");
-			
-			pushMatrices(false);
-			pushWireframe(true);
-			{
-				drawColorPass();
-				drawTranslucentPass();
-			}
-			popWireframe();
-			popMatrices();
-			
-			if (colorTarget != nullptr)
-				popRenderPass();
-		}
-		else if (mode->get() == kMode_Colors)
-		{
-			if (colorTarget != nullptr)
-				pushRenderPass(colorTarget, true, depthTarget, true, "Colors");
-			
-			pushMatrices(false);
-			{
-				drawColorPass();
-				drawTranslucentPass();
-			}
-			popMatrices();
-			
-			if (colorTarget != nullptr)
-				popRenderPass();
-		}
-		else if (mode->get() == kMode_Normals)
-		{
-			if (colorTarget != nullptr)
-				pushRenderPass(colorTarget, true, depthTarget, true, "Normals");
-			
-			pushMatrices(false);
-			{
-				drawNormalPass();
-				drawTranslucentPass();
-			}
-			popMatrices();
-			
-			if (colorTarget != nullptr)
-				popRenderPass();
-		}
-		else if (mode->get() == kMode_Lit || mode->get() == kMode_LitWithShadows)
-		{
-			// todo : if shadows are enabled, render the shadow maps here
-			
-			// draw to the normal and depth maps
-			
-			ColorTarget * targets[2] = { &normalMap, &colorMap };
-			
-			pushRenderPass(targets, 2, true, &depthMap, true, "Depth Normal Color");
-			pushShaderOutputs("nc");
-			{
-				pushMatrices(true);
-				{
-					if (drawOpaque != nullptr)
-						drawOpaque();
-				}
-				popMatrices();
-			}
-			popShaderOutputs();
-			popRenderPass();
-		
-			// accumulate lights for the opaque part of the scene into the light map
-			
-			pushRenderPass(&lightMap, true, nullptr, false, "Light");
-			pushBlend(BLEND_ADD_OPAQUE);
-			{
-				projectScreen2d();
-				
-				// draw lights using depth and normal maps as inputs
-				
-				for (auto * light = s_lightComponentMgr.head; light != nullptr; light = light->next)
-				{
-					if (light->type == LightComponent::kLightType_Point)
-					{
-						// draw point light
-						
-						auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
-						
-						Vec3 lightPosition_world;
-						
-						if (sceneNode != nullptr)
-						{
-							lightPosition_world = sceneNode->objectToWorld.GetTranslation();
-						}
-						
-						const Vec3 lightPosition_view = viewMatrix.Mul4(lightPosition_world);
-						const Vec3 lightColor = light->color * light->intensity;
-						
-						Shader shader("shaders/point-light");
-						setShader(shader);
-						shader.setTexture("depthTexture", 0, depthMap.getTextureId(), false, true);
-						shader.setTexture("normalTexture", 1, normalMap.getTextureId(), false, true);
-						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
-						shader.setImmediate("lightPosition_view",
-							lightPosition_view[0],
-							lightPosition_view[1],
-							lightPosition_view[2]);
-						shader.setImmediate("lightColor",
-							lightColor[0],
-							lightColor[1],
-							lightColor[2]);
-						shader.setImmediate("lightAttenuationParams",
-							light->innerRadius,
-							light->outerRadius);
-						drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
-						clearShader();
-					}
-					else if (light->type == LightComponent::kLightType_Directional)
-					{
-						// draw full screen directional light
-						
-						Vec3 lightDir_world(0, 0, 1);
-						
-						auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
-						
-						if (sceneNode != nullptr)
-						{
-							lightDir_world = sceneNode->objectToWorld.Mul3(lightDir_world);
-						}
-						
-						const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
-						const Vec3 lightColor1 = light->color * light->intensity; // light color when the light is coming from 'above'
-						const Vec3 lightColor2 = light->bottomColor * light->intensity; // light color when the light is coming from 'below'
-						
-						Shader shader("shaders/directional-light");
-						setShader(shader);
-						shader.setTexture("depthTexture", 0, depthMap.getTextureId(), false, true);
-						shader.setTexture("normalTexture", 1, normalMap.getTextureId(), false, true);
-						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
-						shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
-						shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
-						shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
-						drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
-						clearShader();
-					}
-				}
-			}
-			popBlend();
-			popRenderPass();
-			
-			// perform light application. the light application pass combines
-			// the color and light maps to produce a lit result
-			
-			pushRenderPass(&compositeMap, true, nullptr, false, "Composite");
-			{
-				projectScreen2d();
-				
-				Shader shader("shaders/light-application");
-				setShader(shader);
-				shader.setTexture("colorTexture", 0, colorMap.getTextureId(), false, true);
-				shader.setTexture("lightTexture", 1, lightMap.getTextureId(), false, true);
-				drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
-				clearShader();
-			}
-			popRenderPass();
-			
-			// draw translucent pass on top of the composited result
-
-			pushRenderPass(&compositeMap, false, &depthMap, false, "Translucent");
-			{
-				pushMatrices(true);
-				{
-					drawTranslucentPass();
-				}
-				popMatrices();
-			}
-			popRenderPass();
-			
-			projectScreen2d();
-			
-			if (colorTarget != nullptr)
-				pushRenderPass(colorTarget, true, depthTarget, true, mode->get() == kMode_Lit ? "Lit" : "LitWithShadows");
-			
-			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(compositeMap.getTextureId());
-			setColor(colorWhite);
-		#if ENABLE_OPENGL
-			drawRect(0, compositeMap.getHeight(), compositeMap.getWidth(), 0);
-		#else
-			drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
-		#endif
-			gxSetTexture(0);
-			popBlend();
-			
-			if (colorTarget != nullptr)
-				popRenderPass();
-		}
+		drawWireframe = parameterMgr.addBool("Draw Wireframe", false);
+		drawNormals = parameterMgr.addBool("Draw Normals", false);
 	}
 };
 
@@ -505,11 +159,8 @@ struct ResourcePtrTestComponentType : ComponentType<ResourcePtrTestComponent>
 	}
 };
 
-static bool testResourcePointers()
+static bool testResourcePointers(const TypeDB & typeDB)
 {
-	if (!framework.init(VIEW_SX, VIEW_SY))
-		return false;
-	
 	registerBuiltinTypes();
 	registerComponentTypes();
 	
@@ -524,7 +175,7 @@ static bool testResourcePointers()
 	{
 		ComponentSet componentSet;
 		
-		instantiateComponentsFromTemplate(g_typeDB, t, componentSet);
+		instantiateComponentsFromTemplate(typeDB, t, componentSet);
 		
 		for (auto * component = componentSet.head; component != nullptr; component = component->next_in_set)
 		{
@@ -553,42 +204,54 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
+#if FRAMEWORK_IS_NATIVE_VR || 1
 	framework.vrMode = true;
 	framework.enableVrMovement = true;
+#endif
 
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
-
-#if 0
-	testResourcePointers();
-	return 0;
-#endif
+	
+	framework.windowIsResizable = true;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
-	registerBuiltinTypes(g_typeDB);
-	registerComponentTypes(g_typeDB);
+	auto & typeDB = g_typeDB;
+
+	registerBuiltinTypes(typeDB);
+	registerComponentTypes(typeDB, g_componentTypeDB);
 	
-	initComponentMgrs();
+	g_componentTypeDB.initComponentMgrs();
 	
 	testResources(); // todo : remove
 	
+#if 0
+	testResourcePointers(typeDB); // todo : remove
+#endif
+	
 	SceneEditor editor;
-	editor.init(&g_typeDB);
+	editor.init(&typeDB);
+	
+	MyRenderOptions myRenderOptions;
 	
 #if USE_GUI_WINDOW
-	Window guiWindow("Gui", 400, 600, true);
+	Window * guiWindow = new Window("Gui", 400, 600, true);
 #endif
 	
 	auto drawOpaque = [&]()
 		{
-			pushDepthTest(true, DEPTH_LEQUAL);
 			pushCullMode(CULL_BACK, CULL_CCW);
-			pushBlend(BLEND_OPAQUE);
 			{
-				editor.drawSceneOpaque();
+				if (myRenderOptions.drawWireframe->get())
+					pushWireframe(true);
+				{
+					editor.drawSceneOpaque();
+				}
+				if (myRenderOptions.drawWireframe->get())
+					popWireframe();
+				
 				editor.drawEditorOpaque();
 				
 				pushCullMode(CULL_BACK, CULL_CCW);
@@ -603,18 +266,21 @@ int main(int argc, char * argv[])
 				}
 				popDepthTest();
 
-			#if USE_GUI_WINDOW
-				framework.drawVirtualDesktop();
-			#endif
+				if (framework.vrMode)
+				{
+					framework.drawVirtualDesktop();
+				}
 			}
-			popBlend();
 			popCullMode();
-			popDepthTest();
 		};
 	
+	auto drawOpaqueUnlit = [&]()
+		{
+			editor.drawView3d();
+		};
+		
 	auto drawTranslucent = [&]()
 		{
-			pushDepthTest(true, DEPTH_LESS, false);
 			pushBlend(BLEND_ALPHA);
 			{
 				editor.drawSceneTranslucent();
@@ -622,13 +288,72 @@ int main(int argc, char * argv[])
 				editor.drawEditorGizmosTranslucent();
 			}
 			popBlend();
-			popDepthTest();
 		};
 
-	Renderer renderer;
-	renderer.init();
-	renderer.drawOpaque = [&]() { drawOpaque(); };
-	renderer.drawTranslucent = [&]() { drawTranslucent(); };
+	auto drawLights = [&]()
+		{
+			// draw lights using depth and normal maps as inputs
+			
+			for (auto * light = g_lightComponentMgr.head; light != nullptr; light = light->next)
+			{
+				if (light->type == LightComponent::kLightType_Point)
+				{
+					// draw point light
+					
+					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+					
+					Vec3 lightPosition_world;
+					
+					if (sceneNode != nullptr)
+					{
+						lightPosition_world = sceneNode->objectToWorld.GetTranslation();
+					}
+					
+					rOne::g_lightDrawer.drawDeferredPointLight(
+						lightPosition_world,
+						light->innerRadius,
+						light->outerRadius,
+						light->color,
+						light->intensity);
+				}
+				else if (light->type == LightComponent::kLightType_Directional)
+				{
+					// draw full screen directional light
+					
+					Vec3 lightDir_world(0, 0, 1);
+					
+					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+					
+					if (sceneNode != nullptr)
+					{
+						lightDir_world = sceneNode->objectToWorld.Mul3(lightDir_world);
+					}
+					
+					rOne::g_lightDrawer.drawDeferredDirectionalLight(
+						lightDir_world.CalcNormalized(),
+						light->color,
+						light->bottomColor,
+						light->intensity);
+				}
+			}
+		};
+		
+	rOne::Renderer renderer;
+	renderer.registerShaderOutputs();
+	
+	rOne::RenderFunctions renderFunctions;
+	renderFunctions.drawOpaque = drawOpaque;
+	renderFunctions.drawOpaqueUnlit = drawOpaqueUnlit;
+	renderFunctions.drawTranslucent = drawTranslucent;
+	renderFunctions.drawLights = drawLights;
+	
+	rOne::RenderOptions renderOptions;
+	renderOptions.deferredLighting.enableStencilVolumes = false;
+	renderOptions.bloom.enabled = true;
+	//renderOptions.motionBlur.enabled = true;
+	//renderOptions.depthSilhouette.enabled = true;
+	renderOptions.lightScatter.enabled = true;
+	renderOptions.linearColorSpace = true;
 	
 	for (;;)
 	{
@@ -644,21 +369,26 @@ int main(int argc, char * argv[])
 		
 		bool inputIsCaptured = false;
 		
-	#if USE_GUI_WINDOW
 		uiCaptureBeginFrame(inputIsCaptured);
 		
+		if (framework.vrMode)
 		{
-			const Mat4x4 transform = Mat4x4(true).Translate(framework.vrOrigin).Mul(vrPointer[0].transform);
+			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
+			const bool transformIsValud = vrPointer[0].hasTransform;
+			
 			const int buttonMask =
 				vrPointer[0].isDown(VrButton_Trigger) << 0 |
 				vrPointer[0].isDown(VrButton_GripTrigger) << 1;
 			
-			inputIsCaptured |= framework.tickVirtualDesktop(transform, buttonMask, false);
+			inputIsCaptured |= framework.tickVirtualDesktop(
+				transform,
+				transformIsValud,
+				buttonMask,
+				false);
 		}
-	#endif
 		
 	#if USE_GUI_WINDOW
-		pushWindow(guiWindow);
+		pushWindow(*guiWindow);
 	#endif
 		{
 		#if USE_GUI_WINDOW
@@ -673,129 +403,167 @@ int main(int argc, char * argv[])
 			{
 				if (ImGui::BeginMenu("Renderer"))
 				{
-					parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
-					
+				#if 1 // todo : add libreflection-imgui which enables editing reflected types through a gui
+					parameterUi::doParameterUi(myRenderOptions.parameterMgr, nullptr, false);
+				#endif
+				
 					ImGui::EndMenu();
 				}
 				
 				ImGui::EndMainMenuBar();
 			}
 		
-		#if ENABLE_TEMPLATE_TEST
-			if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
+			if (ImGui::BeginMainMenuBar())
 			{
-				inputIsCaptured = true;
-				
-				// load scene description text file
-		
-				const char * path = "textfiles/scene-v1.txt";
-				const std::string basePath = Path::GetDirectory(path);
-				
-				std::vector<std::string> lines;
-				TextIO::LineEndings lineEndings;
-				
-				Scene tempScene;
-				
-				bool load_ok = true;
-				
-				if (!TextIO::load(path, lines, lineEndings))
+				if (ImGui::BeginMenu("Tests"))
 				{
-					logError("failed to load text file");
-					load_ok = false;
-				}
-				else
-				{
-					editor.loadSceneFromLines_nonDestructive(lines, basePath.c_str());
-				}
-			}
-		#endif
-			
-		#if ENABLE_PERFORMANCE_TEST
-		// performance test. todo : remove this code
-			if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
-			{
-				inputIsCaptured = true;
-				
-				auto & rootNode = editor.scene.getRootNode();
-				
-				if (!rootNode.childNodeIds.empty())
-				{
-					auto nodeId = rootNode.childNodeIds[0];
-					
-					auto node_itr = editor.scene.nodes.find(nodeId);
-					Assert(node_itr != editor.scene.nodes.end());
+				#if ENABLE_TEMPLATE_TEST
+					if (ImGui::MenuItem("Template load test"))
 					{
-						auto * node = node_itr->second;
+						// load scene description text file
+				
+						const char * path = "textfiles/scene-v1.txt";
+						const std::string basePath = Path::GetDirectory(path);
 						
-						if (node->components.head != nullptr)
+						std::vector<std::string> lines;
+						TextIO::LineEndings lineEndings;
+						
+						Scene tempScene;
+						
+						bool load_ok = true;
+						
+						if (!TextIO::load(path, lines, lineEndings))
 						{
-							auto * component = node->components.head;
-							auto * componentType = findComponentType(component->typeIndex());
+							logError("failed to load text file");
+							load_ok = false;
+						}
+						else
+						{
+							editor.loadSceneFromLines_nonDestructive(lines, basePath.c_str());
+						}
+					}
+				#endif
+				
+				#if ENABLE_PERFORMANCE_TEST
+					if (ImGui::MenuItem("Save & load performance test"))
+					{
+						auto & rootNode = editor.scene.getRootNode();
+						
+						if (!rootNode.childNodeIds.empty())
+						{
+							auto nodeId = rootNode.childNodeIds[0];
 							
-							Assert(componentType != nullptr);
-							if (componentType != nullptr)
+							auto node_itr = editor.scene.nodes.find(nodeId);
+							Assert(node_itr != editor.scene.nodes.end());
 							{
-								auto t1 = g_TimerRT.TimeUS_get();
+								auto * node = node_itr->second;
 								
-								for (int i = 0; i < 100000; ++i)
+								if (node->components.head != nullptr)
 								{
-									int componentSetId = allocComponentSetId();
+									auto * component = node->components.head;
+									auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 									
-									LineWriter line_writer;
-									object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
-									
-									std::vector<std::string> lines = line_writer.to_lines();
-									
-									//for (auto & line : lines)
-									//	logInfo("%s", line.c_str());
-									
-									auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
-									
-									LineReader line_reader(lines, 0, 0);
-									if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
+									Assert(componentType != nullptr);
+									if (componentType != nullptr)
 									{
-										//logDebug("success!");
-									}
-									
-									componentType->componentMgr->destroyComponent(componentSetId);
-									component_copy = nullptr;
-									
-									freeComponentSetId(componentSetId);
-									Assert(componentSetId == kComponentSetIdInvalid);
-								}
+										auto t1 = g_TimerRT.TimeUS_get();
+										
+										const int numIterations = 100000;
+										
+										for (int i = 0; i < numIterations; ++i)
+										{
+											int componentSetId = allocComponentSetId();
+											
+											LineWriter line_writer;
+											object_tolines_recursive(typeDB, componentType, component, line_writer, 0);
+											
+											std::vector<std::string> lines = line_writer.to_lines();
+											
+											//for (auto & line : lines)
+											//	logInfo("%s", line.c_str());
+											
+											auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
+											
+											LineReader line_reader(lines, 0, 0);
+											if (object_fromlines_recursive(typeDB, componentType, component_copy, line_reader))
+											{
+												//logDebug("success!");
+											}
+											
+											componentType->componentMgr->destroyComponent(componentSetId);
+											component_copy = nullptr;
+											
+											freeComponentSetId(componentSetId);
+											Assert(componentSetId == kComponentSetIdInvalid);
+										}
 
-								auto t2 = g_TimerRT.TimeUS_get();
-								logDebug("time: %ums", (t2 - t1) / 1000);
-								logDebug("(done)");
+										auto t2 = g_TimerRT.TimeUS_get();
+										logDebug("save & load test took: %ums for %d iterations", (t2 - t1) / 1000, numIterations);
+										logDebug("(done)");
+									}
+								}
 							}
 						}
 					}
+				#endif
+					
+					ImGui::EndMenu();
 				}
+				
+				ImGui::EndMainMenuBar();
 			}
-		#endif
 		}
 	#if USE_GUI_WINDOW
 		popWindow();
 	#endif
 	
-		//
+		// update editor viewport for mouse picking
+		
+		if (framework.isStereoVr())
+		{
+			editor.preview.viewportX = 0;
+			editor.preview.viewportY = 0;
+			framework.getCurrentViewportSize(
+				editor.preview.viewportSx,
+				editor.preview.viewportSy);
+		}
+		else if (USE_GUI_WINDOW)
+		{
+			editor.preview.viewportX = 0;
+			editor.preview.viewportY = 0;
+			framework.getCurrentViewportSize(
+				editor.preview.viewportSx,
+				editor.preview.viewportSy);
+		}
+		else
+		{
+		// todo : add SceneEditor::drawPreview, when true, let the editor show a preview window
+		// todo : add SceneEditor::previewTextureId, and draw it before the editor draws itself
+			framework.getCurrentViewportSize(
+				editor.preview.viewportSx,
+				editor.preview.viewportSy);
+			editor.preview.viewportX = SceneEditor::kMainWindowWidth;
+			editor.preview.viewportSx -= SceneEditor::kMainWindowWidth;
+		}
+		
+		// tick editor viewport
 		
 		editor.tickView(dt, inputIsCaptured);
 	
 		//
 		
-		s_transformComponentMgr.calculateTransforms(editor.scene);
+		g_transformComponentMgr.calculateTransforms(editor.scene);
 		
 		if (editor.preview.tickScene)
 		{
 			const float dt_scene = dt * editor.preview.tickMultiplier;
 			
-			for (auto * type : g_componentTypes)
+			for (auto * type : g_componentTypeDB.componentTypes)
 			{
 				type->componentMgr->tick(dt_scene);
 			}
 			
-			s_transformComponentMgr.calculateTransforms(editor.scene);
+			g_transformComponentMgr.calculateTransforms(editor.scene);
 		}
 		
 		//
@@ -804,14 +572,12 @@ int main(int argc, char * argv[])
 	#if WINDOW_IS_3D
 		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
-			guiWindow.setTransform(
-				Mat4x4(true)
-					.Translate(framework.vrOrigin)
-					.Mul(vrPointer[1].transform));
+			guiWindow->setTransform(
+				vrPointer[1].getTransform(framework.vrOrigin));
 		}
 	#endif
 
-		pushWindow(guiWindow);
+		pushWindow(*guiWindow);
 		{
 			framework.beginDraw(0, 0, 0, 0);
 			{
@@ -828,31 +594,81 @@ int main(int argc, char * argv[])
 		{
 			framework.beginEye(i, colorBlack);
 			{
-				Mat4x4 projectionMatrix;
-				Mat4x4 viewMatrix;
-				
-				if (framework.isStereoVr())
-				{
-					gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-					gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
-				}
-				else
-				{
-					int viewportSx = 0;
-					int viewportSy = 0;
-					framework.getCurrentViewportSize(viewportSx, viewportSy);
-					
-					editor.camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
-					editor.camera.calculateViewMatrix(viewMatrix);
-				}
-				
-				renderer.draw(projectionMatrix, viewMatrix);
-
 				if (!framework.isStereoVr())
 				{
+					// set projection and view matrices based on editor camera
+					
+					if (framework.vrMode)
+					{
+						// reset the view matrix
+						Mat4x4 identity(true);
+						gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+					}
+					
+					editor.camera.pushProjectionMatrix();
+					editor.camera.pushViewMatrix();
+					
+					{
+						// hack to apply viewport origin
+						
+						Mat4x4 projectionMatrix;
+						gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+						int viewSx;
+						int viewSy;
+						framework.getCurrentViewportSize(viewSx, viewSy);
+						projectionMatrix = Mat4x4(true)
+							.Translate(
+								editor.preview.viewportX / float(viewSx),
+								editor.preview.viewportY / float(viewSy), 0)
+							.Mul(projectionMatrix);
+						gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+					}
+				}
+				
+				// render the scene
+				
+				switch (myRenderOptions.mode->get())
+				{
+				case MyRenderOptions::kMode_Flat:
+					renderOptions.renderMode = rOne::kRenderMode_Flat;
+					break;
+					
+				case MyRenderOptions::kMode_Lit:
+				case MyRenderOptions::kMode_LitWithShadows:
+					//renderOptions.renderMode = rOne::kRenderMode_ForwardShaded; // todo : switch to forward shaded
+					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+					break;
+				}
+				
+				renderOptions.drawNormals = myRenderOptions.drawNormals->get();
+				
+				renderer.render(renderFunctions, renderOptions, framework.timeStep);
+				
+				static int n = 0;
+				++n;
+				static int f = 0;
+				if ((int)framework.time != f)
+				{
+					logInfo("fps: %d", n / framework.getEyeCount());
+					n = 0;
+					f = (int)framework.time;
+				}
+				
+				if (!framework.isStereoVr())
+				{
+					// restore projection and view matrices
+					
+					editor.camera.popViewMatrix();
+					editor.camera.popProjectionMatrix();
+				}
+				
+				if (!framework.isStereoVr())
+				{
+					// draw 2D gui
+					
 					projectScreen2d();
 
-					editor.drawView();
+					editor.drawView2d();
 				}
 
 			#if !USE_GUI_WINDOW
@@ -862,14 +678,24 @@ int main(int argc, char * argv[])
 			framework.endEye();
 		}
 
-		framework.present();
+		if (framework.vrMode)
+		{
+			framework.present();
+		}
 	}
 	
+	renderer.free();
+	
+#if USE_GUI_WINDOW
+	delete guiWindow;
+	guiWindow = nullptr;
+#endif
+
 	editor.shut();
 	
-	// todo : shutdown renderer
+	g_componentTypeDB.shutComponentMgrs();
 	
-	shutComponentMgrs();
+	g_gltfCache.clear(); // todo : move to framework?
 	
 	framework.shutdown();
 
