@@ -2158,9 +2158,11 @@ MsdfFontCacheElem & MsdfFontCache::findOrCreate(const char * name)
 	}
 	else
 	{
+		const char * resolved_filename = framework.resolveResourcePath(name);
+		
 		MsdfFontCacheElem elem;
 		
-		elem.load(name);
+		elem.load(resolved_filename);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
