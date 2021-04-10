@@ -52,7 +52,7 @@ struct SceneEditor
 	
 	TypeDB * typeDB = nullptr;
 	
-	Scene scene; // todo : this should live outside the editor, but referenced
+	Scene scene;
 	
 	Camera camera;
 	bool cameraIsActive = false;
@@ -145,8 +145,15 @@ struct SceneEditor
 		kNodeStructureEditingAction_NodeAddChild,
 		kNodeStructureEditingAction_NodeSceneAttach,
 		kNodeStructureEditingAction_NodeSceneAttachUpdate,
-		kNodeStructureEditingAction_NodeSceneImport
+		kNodeStructureEditingAction_NodeSceneImport,
+		kNodeStructureEditingAction_NodeParent
 	};
+	
+	struct Action_NodeParent
+	{
+		int childNodeId = -1;
+		int newParentNodeId = -1;
+	} action_nodeParent;
 	
 	struct NodeUi
 	{
@@ -293,10 +300,13 @@ struct SceneEditor
 	bool performAction_paste(const int parentNodeId);
 	bool performAction_addChild();
 	bool performAction_addChild(const int parentNodeId);
+	void performAction_remove();
+	void performAction_remove(const int nodeId);
 	bool performAction_sceneAttach(const char * path, std::vector<int> * out_rootNodeIds);
 	bool performAction_sceneAttachUpdate();
 	bool performAction_sceneImport(const char * path);
 	bool performAction_duplicate();
+	bool performAction_parent(const int childNodeId, const int newParentId);
 	
 	void drawNodeBoundingBox(const SceneNode & node) const;
 	void drawNodes() const;
@@ -311,7 +321,8 @@ struct SceneEditor
 	void drawEditorSelectedNodeLabels() const;
 	
 	void drawGui() const;
-	void drawView() const;
+	void drawView2d() const;
+	void drawView3d() const;
 	
 	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath);
 	
@@ -320,4 +331,86 @@ struct SceneEditor
 	static void updateFilePaths(Scene & scene, const TypeDB * typeDB, const char * oldBasePath, const char * newBasePath);
 	
 	std::string makePathRelativeToDocumentPath(const char * path) const;
+	
+// todo : move InteractiveRing to its own source file
+	struct InteractiveRing
+	{
+		struct SegmentItem
+		{
+			typedef std::function<void(SceneEditor & sceneEditor)> ActionHandler;
+			typedef std::function<bool(const SceneEditor & sceneEditor)> IsEnabledCallback;
+			
+			std::string text;
+			ActionHandler action;
+			IsEnabledCallback isEnabled;
+			float hoverAnim = 0.f;
+			
+			SegmentItem(const char * in_text, const ActionHandler & in_action, const IsEnabledCallback & in_isEnabled)
+				: text(in_text)
+				, action(in_action)
+				, isEnabled(in_isEnabled)
+			{
+			}
+		};
+		
+		struct Segment
+		{
+			std::vector<SegmentItem> items;
+			
+			// animation
+			
+			float hoverAnim = 0.f;
+			
+			Segment(const std::initializer_list<SegmentItem> & in_items)
+				: items(in_items)
+			{
+			}
+		};
+		
+		Mat4x4 transform;
+		Mat4x4 rotation;
+	
+		UiCaptureElem captureElem;
+		float openAnim = 0.f;
+		
+		std::vector<Segment> segments;
+		
+		int hoverSegmentIndex = -1;
+		int hoverItemIndex = -1;
+		
+		struct
+		{
+			float angle = 0.f;
+		} debug;
+		
+		InteractiveRing();
+		
+		void show(const Mat4x4 & transform);
+		void hide();
+		
+		void tick(
+			SceneEditor & sceneEditor,
+			Vec3Arg pointerOrigin_world,
+			Vec3Arg pointerDirection_world,
+			const Mat4x4 & viewMatrix,
+			const bool pointerIsActive,
+			bool & inputIsCaptured,
+			const float dt);
+			
+		void tickInteraction(
+			SceneEditor & sceneEditor,
+			Vec3Arg pointerOrigin_world,
+			Vec3Arg pointerDirection_world,
+			const bool pointerIsActive,
+			bool & inputIsCaptured);
+			
+		void tickAnimation(
+			const Mat4x4 & viewMatrix,
+			const float dt);
+		
+		void draw(
+			const SceneEditor & sceneEditor) const;
+		
+		void calculateTransform(Mat4x4 & out_transform) const;
+	} interactiveRing;
 };

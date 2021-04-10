@@ -37,6 +37,7 @@
 #include "lineWriter.h"
 
 // libgg
+#include "Calc.h"
 #include "Path.h"
 #include "Quat.h"
 #include "StringEx.h"
@@ -135,14 +136,14 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 	sy = preview.viewportSy == -1 ? viewportSy : preview.viewportSy;
 }
 
-// todo : generalize this function
+// todo : generalize this function. query aabb interface on component type .. ?
 static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
 {
 	bool hasMinMax = false;
 	
 	const auto * modelComponent = node.components.find<ModelComponent>();
 	
-	if (modelComponent != nullptr) // todo : check if aabb is valid
+	if (modelComponent != nullptr && modelComponent->hasModelAabb)
 	{
 		if (hasMinMax)
 		{
@@ -492,6 +493,8 @@ bool SceneEditor::undoCapture(std::string & text) const
 
 void SceneEditor::undoCaptureBegin(const bool isPristine)
 {
+	Assert(deferred.numActivations == 0);
+	
 #if defined(DEBUG)
 	/**
 	 * For debugging purposes, we save the current version, and compare it later when we begin
@@ -1226,24 +1229,47 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 		
 		if (isClicked)
 		{
-			if (!ImGui::GetIO().KeyShift)
+			// note : we preserve the selection when additive mode (shift) is used or when the context menu is summoned
+			if (!ImGui::GetIO().KeyShift && !ImGui::IsItemClicked(1))
 				selection = Selection();
 			selection.selectedNodes.insert(node.id);
 		}
 		
 		if (ImGui::BeginDragDropTarget())
 		{
-		// todo : peek payload. check if it's ok to drop here, and accept or not
-			const ImGuiPayload * payload;
-			if ((payload = ImGui::AcceptDragDropPayload("SceneNodeId")) != nullptr)
+			const ImGuiPayload * payload = ImGui::AcceptDragDropPayload("SceneNodeId");
+			
+			if (payload != nullptr)
 			{
 				const int childNodeId = *(int*)payload->Data;
-				deferred.nodesToParent.insert({ childNodeId, node.id });
+				
+				// the new parent should not as one of its ancesters have the child node
+				// otherwise, a graph cycle will occur. check if there would be a cycle
+				// and discard the drag and drop operation if so
+				
+				bool generatesCycle = false;
+				int nextNodeId = node.id;
+				
+				for (;;)
+				{
+					auto & nextNode = scene.getNode(nextNodeId);
+					if (nextNode.parentId == -1)
+						break;
+					generatesCycle |= nextNode.parentId == childNodeId;
+					nextNodeId = nextNode.parentId;
+				}
+				
+				if (generatesCycle == false)
+				{
+					result = kNodeStructureEditingAction_NodeParent;
+					action_nodeParent.childNodeId = childNodeId;
+					action_nodeParent.newParentNodeId = node.id;
+				}
 			}
 			ImGui::EndDragDropTarget();
 		}
 		
-		if (ImGui::BeginDragDropSource())
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
 		{
 			ImGui::SetDragDropPayload("SceneNodeId", &nodeId, sizeof(nodeId));
 			ImGui::EndDragDropSource();
@@ -1746,12 +1772,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							break;
 							
 						case kNodeStructureEditingAction_NodeRemove:
-							deferredBegin();
-							{
-								for (auto nodeId : selection.selectedNodes)
-									deferred.nodesToRemove.insert(nodeId);
-							}
-							deferredEnd(true);
+							performAction_remove();
 							break;
 							
 						case kNodeStructureEditingAction_NodeAddChild:
@@ -1783,6 +1804,13 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 								".*",
 								"");
 						#endif
+							break;
+							
+						case kNodeStructureEditingAction_NodeParent:
+							performAction_parent(
+								action_nodeParent.childNodeId,
+								action_nodeParent.newParentNodeId);
+							action_nodeParent = Action_NodeParent();
 							break;
 						}
 						
@@ -2067,7 +2095,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	}
 	
 #if ENABLE_TRANSFORM_GIZMOS
-	// 2. transformation gizo interaction
+	// 2.1 transformation gizmo interaction
 	
 	transformGizmo.editingWillBegin = [this]()
 		{
@@ -2166,14 +2194,46 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	}
 #endif
 
+	// 2.1 interactive ring interaction
+	
+	const bool ringIsActive = secondaryIsActive && hasPointer;
+	
+	if (ringIsActive && !interactiveRing.captureElem.hasCapture)
+	{
+		inputIsCaptured = true;
+		
+		const float distance =
+			framework.isStereoVr()
+			? 2.f
+			: 5.f;
+			
+		const Mat4x4 transform =
+			Mat4x4(true)
+			.Translate(viewToWorld.GetTranslation())
+			.Translate(viewToWorld.GetAxis(2) * distance);
+		
+		interactiveRing.show(transform);
+	}
+	
+	interactiveRing.tick(
+		*this,
+		pointerOrigin_world,
+		pointerDirection_world,
+		viewToWorld,
+		ringIsActive,
+		inputIsCaptured,
+		dt);
+
 	// 3. determine which node is underneath the mouse cursor
 	
-	const SceneNode * hoverNode =
-		inputIsCaptured == false && hasPointer
-		? raycast(pointerOrigin_world, pointerDirection_world, selection.selectedNodes)
-		: nullptr;
-	
-	hoverNodeId = hoverNode ? hoverNode->id : -1;
+	{
+		const SceneNode * hoverNode =
+			inputIsCaptured == false && hasPointer
+			? raycast(pointerOrigin_world, pointerDirection_world, selection.selectedNodes)
+			: nullptr;
+		
+		hoverNodeId = hoverNode ? hoverNode->id : -1;
+	}
 	
 	// 4. update mouse cursor
 
@@ -2183,7 +2243,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	{
 	#if FRAMEWORK_USE_SDL
 		static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-		SDL_SetCursor(hoverNode == nullptr ? SDL_GetDefaultCursor() : cursorHand);
+		SDL_SetCursor(hoverNodeId == -1 ? SDL_GetDefaultCursor() : cursorHand);
 	#endif
 	}
 	
@@ -2197,11 +2257,11 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			if (!modShift())
 				selection = Selection();
 			
-			if (hoverNode != nullptr)
+			if (hoverNodeId != -1)
 			{
-				selection.selectedNodes.insert(hoverNode->id);
-				markNodeOpenUntilRoot(hoverNode->id);
-				nodeUi.nodeToGiveFocus = hoverNode->id;
+				selection.selectedNodes.insert(hoverNodeId);
+				markNodeOpenUntilRoot(hoverNodeId);
+				nodeUi.nodeToGiveFocus = hoverNodeId;
 			}
 		}
 	}
@@ -2212,8 +2272,6 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		if (inputIsCaptured == false && hasPointer && pointerBecameActive)
 		{
 			inputIsCaptured = true;
-			
-			// todo : for the vr version of the app, it would be nice to have a selection wheel to select the editing mode, and also to have access to context sensitive editing actions
 		
 			// find intersection point with the ground plane
 		
@@ -2432,64 +2490,59 @@ void SceneEditor::performAction_save()
 
 void SceneEditor::performAction_save(const char * path, const bool updateDocumentPath)
 {
-#if ENABLE_SAVE_LOAD_TIMING
-	auto t1 = g_TimerRT.TimeUS_get();
-#endif
+	// note : saving the scene may auto-generate some names, and update the
+	//        file paths. so we need to begin an undo capture here and fast forward it
+	//        to ensure undo debug checks work correctly
 	
 	undoCaptureBegin();
 	{
-		// todo : scene IO currently does this, but it breaks undo verification. should scene IO do this ? should it have a callback. or more general, should scene incorporate deferred actions and do this deferred ?
-		scene.assignAutoGeneratedNodeNames();
-	}
-	undoCaptureFastForward();
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t1 = g_TimerRT.TimeUS_get();
+	#endif
 	
-	LineWriter line_writer;
-	
-	if (writeSceneToLines(*typeDB, scene, line_writer, 0) == false)
-	{
-		logError("failed to save scene to lines");
-	}
-	else
-	{
-		auto lines = line_writer.to_lines();
+		LineWriter line_writer;
 		
-		if (TextIO::save(path, lines, TextIO::kLineEndings_Unix) == false)
-			logError("failed to save lines to file");
+		if (writeSceneToLines(*typeDB, scene, line_writer, 0) == false)
+		{
+			logError("failed to save scene to lines");
+		}
 		else
 		{
-		#if ENABLE_LOAD_AFTER_SAVE_TEST
-			const std::string basePath = Path::GetDirectory(path);
+			auto lines = line_writer.to_lines();
 			
-			loadSceneFromLines_nonDestructive(lines, basePath.c_str());
-		#endif
-		
-			if (updateDocumentPath)
+			if (TextIO::save(path, lines, TextIO::kLineEndings_Unix) == false)
+				logError("failed to save lines to file");
+			else
 			{
-				// update file paths so they become relative to the new document path
+			#if ENABLE_LOAD_AFTER_SAVE_TEST
+				const std::string basePath = Path::GetDirectory(path);
 				
-				undoCaptureBegin();
+				loadSceneFromLines_nonDestructive(lines, basePath.c_str());
+			#endif
+			
+				if (updateDocumentPath)
 				{
+					// update file paths so they become relative to the new document path
+					
 					updateFilePaths(
 						scene,
 						typeDB,
 						Path::GetDirectory(documentInfo.path).c_str(),
 						Path::GetDirectory(path).c_str());
+					
+					// remember path as current path
+									
+					documentInfo.path = path;
 				}
-				undoCaptureFastForward();
-				
-			// todo : update nodePlacement.templatePath
-				
-				// remember path as current path
-								
-				documentInfo.path = path;
 			}
 		}
+		
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t2 = g_TimerRT.TimeUS_get();
+		logDebug("save time: %ums", (t2 - t1));
+	#endif
 	}
-	
-#if ENABLE_SAVE_LOAD_TIMING
-	auto t2 = g_TimerRT.TimeUS_get();
-	logDebug("save time: %ums", (t2 - t1));
-#endif
+	undoCaptureFastForward();
 }
 
 void SceneEditor::performAction_load(const char * path)
@@ -2590,10 +2643,8 @@ void SceneEditor::performAction_undo()
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
 						{
-						// todo : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
-						
-							for (auto & node_itr : scene.nodes)
-								deferred.nodesToRemove.insert(node_itr.second->id);
+							// note : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
+							deferred.nodesToRemove.insert(scene.rootNodeId);
 							
 							removeNodesToRemove();
 						}
@@ -2832,7 +2883,7 @@ bool SceneEditor::performAction_paste(const int parentNodeId)
 				{
 					const char * id = line_reader.get_next_line(true);
 					
-					if (id == nullptr || id[0] == '\t')
+					if (id == nullptr)
 						break;
 
 					if (strcmp(id, "sceneNode") == 0)
@@ -2865,8 +2916,6 @@ bool SceneEditor::performAction_paste(const int parentNodeId)
 				}
 			}
 		}
-		
-		Assert(success);
 	}
 	deferredEnd(success);
 	
@@ -2924,6 +2973,25 @@ bool SceneEditor::performAction_addChild(const int parentNodeId)
 	}
 	
 	return success;
+}
+
+void SceneEditor::performAction_remove()
+{
+	deferredBegin();
+	{
+		for (auto nodeId : selection.selectedNodes)
+			deferred.nodesToRemove.insert(nodeId);
+	}
+	deferredEnd(true);
+}
+
+void SceneEditor::performAction_remove(const int nodeId)
+{
+	deferredBegin();
+	{
+		deferred.nodesToRemove.insert(nodeId);
+	}
+	deferredEnd(true);
 }
 
 bool SceneEditor::performAction_sceneAttach(const char * path, std::vector<int> * out_rootNodeIds)
@@ -3083,6 +3151,17 @@ bool SceneEditor::performAction_duplicate()
 	}
 	
 	return success;
+}
+
+bool SceneEditor::performAction_parent(const int childNodeId, const int newParentId)
+{
+	deferredBegin();
+	{
+		deferred.nodesToParent.insert({ childNodeId, newParentId });
+	}
+	deferredEnd(true);
+	
+	return true;
 }
 
 void SceneEditor::drawNodeBoundingBox(const SceneNode & node) const
@@ -3350,9 +3429,75 @@ void SceneEditor::drawGui() const
 	const_cast<SceneEditor*>(this)->guiContext.draw();
 }
 
-void SceneEditor::drawView() const
+void SceneEditor::drawView2d() const
 {
 	drawEditorSelectedNodeLabels();
+}
+
+void SceneEditor::drawView3d() const
+{
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	const Mat4x4 viewToWorld = worldToView.CalcInv();
+	
+// todo : draw gizmo here? we need to prevent lighting from interacting with it
+
+// todo : draw node name labels here? we need to prevent them from obscuring the interactive ring. also would be nice if they appear in vr mode
+
+// todo : draw node details
+	for (auto nodeId : selection.selectedNodes)
+	{
+		gxPushMatrix();
+		{
+			auto & node = scene.getNode(nodeId);
+			
+			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+			auto translation = sceneNodeComp->objectToWorld.GetTranslation();
+			
+			gxTranslatef(translation[0], translation[1], translation[2]);
+			
+			// todo : rotate to face the camera
+			const Vec3 forwardVector = viewToWorld.GetAxis(2);
+			const float rotationY = -atan2f(forwardVector[0], forwardVector[2]);
+			gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
+			
+			gxScalef(1, -1, 1);
+			
+			pushFontMode(FONT_SDF); // todo : font spec once
+			setFont("calibri.ttf");
+			
+			const float kFontSize = .2f;
+			
+			float y = 0.f;
+			
+			pushBlend(BLEND_ALPHA); // todo : opaque font rendering support. enforce alpha = 100% or 0% but no in-between values. but what about depth write? discard pixels?
+			beginTextBatch();
+			{
+				for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+				{
+					auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+					
+					setColor(100, 100, 200);
+					drawText(0, y, kFontSize, 0, 0, "%s", componentType->typeName);
+					y += kFontSize;
+					
+					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+					{
+						setColor(200, 100, 100);
+						drawText(kFontSize, y, kFontSize, 0, 0, "%s", member->name);
+						y += kFontSize;
+					}
+				}
+			}
+			endTextBatch();
+			popBlend();
+			
+			popFontMode();
+		}
+		gxPopMatrix();
+	}
+
+	interactiveRing.draw(*this);
 }
 
 bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath)
@@ -3597,6 +3742,375 @@ std::string SceneEditor::makePathRelativeToDocumentPath(const char * path) const
 	}
 }
 
+//
+
+#include "Calc.h"
+
+static const float kInnerRadius = .3f;
+static const float kFirstItemDistance = .75f;
+static const float kItemSpacing = .5f;
+
+static const float kRingOpenAnimTime = .2f;
+static const float kRingCloseAnimTime = .1f;
+static const float kSegmentAnimTime = .2f;
+static const float kItemAnimTime = .1f;
+
+static const Color kDefaultItemColor(200, 200, 200);
+static const Color kActiveSegmentItemColor(220, 220, 220);
+static const Color kHoverItemColor(255, 255, 255);
+
+static const Color kDefaultItemColor_Disabled(100, 100, 100);
+static const Color kActiveSegmentItemColor_Disabled(110, 110, 110);
+static const Color kHoverItemColor_Disabled(127, 127, 127);
+
+SceneEditor::InteractiveRing::InteractiveRing()
+{
+	segments =
+	{
+		{ {
+			{ "Copy", [](SceneEditor & sceneEditor) { sceneEditor.performAction_copy(true); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } },
+			{ "Copy Single", [](SceneEditor & sceneEditor) { sceneEditor.performAction_copy(false); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } }
+		} },
+		{ {
+			{ "Add", [](SceneEditor & sceneEditor) { sceneEditor.performAction_addChild(); }, [](const SceneEditor & sceneEditor) { return true; } },
+			{ "Add Sibling", [](SceneEditor & sceneEditor) { }, [](const SceneEditor & sceneEditor) { return true; } },
+			{ "Duplicate", [](SceneEditor & sceneEditor) { sceneEditor.performAction_duplicate(); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } },
+			{ "Attach Scene", [](SceneEditor & sceneEditor) { }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } } // todo : needs a path
+		} },
+		{ {
+			{ "Paste", [](SceneEditor & sceneEditor) { sceneEditor.performAction_paste(sceneEditor.scene.rootNodeId); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } },
+			{ "Paste Child", [](SceneEditor & sceneEditor) { sceneEditor.performAction_pasteChild(); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } },
+			{ "Paste Sibling", [](SceneEditor & sceneEditor) { sceneEditor.performAction_pasteSibling(); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } }
+		} },
+		{ {
+			{ "Remove", [](SceneEditor & sceneEditor) { sceneEditor.performAction_remove(); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } }
+		} }
+	};
+}
+
+void SceneEditor::InteractiveRing::show(const Mat4x4 & in_transform)
+{
+	Assert(!captureElem.hasCapture);
+
+	transform = in_transform;
+	
+	captureElem.capture();
+}
+
+void SceneEditor::InteractiveRing::hide()
+{
+	captureElem.discard();
+}
+
+void SceneEditor::InteractiveRing::tick(
+	SceneEditor & sceneEditor,
+	Vec3Arg pointerOrigin_world,
+	Vec3Arg pointerDirection_world,
+	const Mat4x4 & viewMatrix,
+	const bool pointerIsActive,
+	bool & inputIsCaptured,
+	const float dt)
+{
+	tickInteraction(
+		sceneEditor,
+		pointerOrigin_world,
+		pointerDirection_world,
+		pointerIsActive,
+		inputIsCaptured);
+	
+	tickAnimation(
+		viewMatrix,
+		dt);
+}
+
+void SceneEditor::InteractiveRing::tickInteraction(
+	SceneEditor & sceneEditor,
+	Vec3Arg pointerOrigin_world,
+	Vec3Arg pointerDirection_world,
+	const bool pointerIsActive,
+	bool & inputIsCaptured)
+{
+	if (captureElem.hasCapture &&
+		pointerIsActive &&
+		captureElem.capture())
+	{
+		Assert(inputIsCaptured);
+		
+		if (openAnim == 1.f)
+		{
+			// determine the hover segment and hover item (if any)
+			
+			Mat4x4 objectToWorld;
+			calculateTransform(objectToWorld);
+			
+			const Mat4x4 worldToObject = objectToWorld.CalcInv();
+			
+			const Vec3 pointerOrigin_object = worldToObject.Mul4(pointerOrigin_world);
+			const Vec3 pointerDirection_object = worldToObject.Mul3(pointerDirection_world);
+			
+			hoverSegmentIndex = -1;
+			hoverItemIndex = -1;
+			
+			// determine intersection point
+			
+			if (pointerDirection_object[2] > 0.f)
+			{
+				const float t = - pointerOrigin_object[2] / pointerDirection_object[2];
+				
+				const Vec3 intersectionPoint = pointerOrigin_object + pointerDirection_object * t;
+				
+				// determine hover segment
+				
+				const float angle = atan2f(intersectionPoint[1], intersectionPoint[0]);
+				
+				debug.angle = angle;
+				
+				const float distance = hypotf(intersectionPoint[0], intersectionPoint[1]);
+				
+				if (distance > kInnerRadius)
+				{
+					const float anglePerSegment = Calc::m2PI / segments.size();
+					const float anglePerSegmentToDraw = Calc::m2PI / (segments.size() + 1);
+					
+					for (size_t i = 0; i < segments.size(); ++i)
+					{
+						const float segmentAngle = i * anglePerSegment;
+						
+						float angleDifference = angle - segmentAngle;
+						
+						while (angleDifference < Calc::mPI)
+							angleDifference += Calc::m2PI;
+						while (angleDifference > Calc::mPI)
+							angleDifference -= Calc::m2PI;
+						
+						if (angleDifference >= - anglePerSegmentToDraw / 2.f &&
+							angleDifference <= + anglePerSegmentToDraw / 2.f)
+						{
+							hoverSegmentIndex = i;
+							
+							hoverItemIndex = (int)roundf((distance - kFirstItemDistance) / kItemSpacing);
+							
+							if (hoverItemIndex < 0 || hoverItemIndex >= segments[i].items.size())
+							{
+								hoverItemIndex = -1;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	if (captureElem.hasCapture && !pointerIsActive)
+	{
+		// invoke action
+		
+		if (hoverSegmentIndex != -1 && hoverItemIndex != -1)
+		{
+			auto & segment = segments[hoverSegmentIndex];
+			
+			if (segment.items[hoverItemIndex].action != nullptr)
+			{
+				segment.items[hoverItemIndex].action(sceneEditor);
+			}
+		}
+	}
+}
+
+void SceneEditor::InteractiveRing::tickAnimation(
+	const Mat4x4 & viewMatrix,
+	const float dt)
+{
+	rotation = viewMatrix;
+	rotation.SetTranslation(Vec3());
+	
+	if (captureElem.hasCapture)
+	{
+		openAnim = fminf(1.f, openAnim + dt / kRingOpenAnimTime);
+	}
+	else
+	{
+		openAnim = fmaxf(0.f, openAnim - dt / kRingCloseAnimTime);
+	}
+	
+	for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
+	{
+		auto & segment = segments[segmentIndex];
+		
+		if (captureElem.hasCapture && segmentIndex == hoverSegmentIndex)
+		{
+			segment.hoverAnim = fminf(1.f, segment.hoverAnim + dt / kSegmentAnimTime);
+		}
+		else
+		{
+			segment.hoverAnim = fmaxf(0.f, segment.hoverAnim - dt / kSegmentAnimTime);
+		}
+		
+		for (size_t itemIndex = 0; itemIndex < segment.items.size(); ++itemIndex)
+		{
+			auto & item = segment.items[itemIndex];
+			
+			if (captureElem.hasCapture && segmentIndex == hoverSegmentIndex && hoverItemIndex == itemIndex)
+			{
+				item.hoverAnim = fminf(1.f, item.hoverAnim + dt / kItemAnimTime);
+			}
+			else
+			{
+				item.hoverAnim = fmaxf(0.f, item.hoverAnim - dt / kItemAnimTime);
+			}
+		}
+	}
+}
+
+void SceneEditor::InteractiveRing::draw(const SceneEditor & sceneEditor) const
+{
+	if (openAnim == 0.f)
+		return;
+		
+	Mat4x4 objectToWorld;
+	calculateTransform(objectToWorld);
+	
+	pushCullMode(CULL_NONE, CULL_CCW);
+	
+	gxPushMatrix();
+	{
+		gxMultMatrixf(objectToWorld.m_v);
+		
+		// todo : default framework font doesn't work with MSDF library. why? and fix and/or change default font
+		setFont("calibri.ttf");
+		pushFontMode(FONT_SDF);
+		
+		// draw background
+		
+		setColor(100, 100, 100);
+		fillCircle(0, 0, kFirstItemDistance / 4.f, 40);
+		
+		// draw segments
+	
+		const float anglePerSegment = Calc::m2PI / segments.size();
+		const float anglePerSegmentToDraw = Calc::m2PI / (segments.size() + 1);
+					
+		for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
+		{
+			auto & segment = segments[segmentIndex];
+			
+			const float segmentAngle = segmentIndex * anglePerSegment;
+			
+			for (int itemIndex = segment.items.size() - 1; itemIndex >= 0; --itemIndex)
+			{
+				gxPushMatrix();
+				{
+					auto & item = segment.items[itemIndex];
+					
+					const bool itemIsEnabled =
+						item.isEnabled != nullptr
+						? item.isEnabled(sceneEditor)
+						: true;
+					
+					const float itemDistance = kFirstItemDistance + itemIndex * kItemSpacing;
+					
+					const float scale = lerp<float>(.9f, 1.f, segment.hoverAnim);
+					gxScalef(scale, scale, 1);
+					
+					const float angle1 = segmentAngle - anglePerSegmentToDraw / 2.f / 1.1f / itemDistance;
+					const float angle2 = segmentAngle + anglePerSegmentToDraw / 2.f / 1.1f / itemDistance;
+			
+					Color itemColor;
+					if (itemIsEnabled)
+					{
+						itemColor = kDefaultItemColor;
+						itemColor = itemColor.interp(kActiveSegmentItemColor, segment.hoverAnim);
+						itemColor = itemColor.interp(kHoverItemColor, item.hoverAnim);
+					}
+					else
+					{
+						itemColor = kDefaultItemColor_Disabled;
+						itemColor = itemColor.interp(kActiveSegmentItemColor_Disabled, segment.hoverAnim);
+						itemColor = itemColor.interp(kHoverItemColor_Disabled, item.hoverAnim);
+					}
+					
+					setColor(itemColor);
+					
+					gxBegin(GX_TRIANGLE_STRIP);
+					{
+						const int resolution = 20;
+						const float radius1 = itemDistance - kItemSpacing / 2.1f;
+						const float radius2 = itemDistance + kItemSpacing / 2.1f;
+						
+						for (int i = 0; i <= resolution; ++i)
+						{
+							const float angle = lerp<float>(angle1, angle2, i / float(resolution));
+							
+							gxVertex2f(cosf(angle) * radius1, sinf(angle) * radius1);
+							gxVertex2f(cosf(angle) * radius2, sinf(angle) * radius2);
+						}
+					}
+					gxEnd();
+					
+					gxPushMatrix();
+					{
+						const float textDistance = itemDistance;
+						
+						gxTranslatef(
+							cosf(segmentAngle) * textDistance,
+							sinf(segmentAngle) * textDistance,
+							-.01f);
+						
+						const float textAngle =
+							sinf(segmentAngle) < .01f
+							? segmentAngle * Calc::rad2deg + 90
+							: segmentAngle * Calc::rad2deg - 90;
+							
+						gxRotatef(textAngle, 0, 0, 1);
+						
+						pushBlend(BLEND_ALPHA); // todo : draw text using a batch. move blend scope surrounding batch
+						setColor(colorRed);
+						drawText(0, 0, .2f, 0, 0, "%s", item.text.c_str());
+						popBlend();
+					}
+					gxPopMatrix();
+				}
+				gxPopMatrix();
+			}
+		}
+		
+	#if defined(DEBUG) && false
+		gxPushMatrix();
+		{
+			gxTranslatef(0, 0, -.02f);
+			
+			setColor(colorRed);
+			drawLine(0, 0, cosf(debug.angle), sinf(debug.angle));
+			
+			pushBlend(BLEND_ALPHA);
+			{
+				setColor(colorBlue);
+				drawText(0, 1, .1f, 0, 0, "%.2f", debug.angle);
+			}
+			popBlend();
+		}
+		gxPopMatrix();
+	#endif
+		
+		popFontMode();
+	}
+	gxPopMatrix();
+	
+	popCullMode();
+}
+
+void SceneEditor::InteractiveRing::calculateTransform(Mat4x4 & out_transform) const
+{
+	out_transform =
+		Mat4x4(true)
+		.Mul(transform)
+		.Mul(rotation)
+		.Scale(openAnim, openAnim, 1)
+		.Scale(1, -1, 1);
+}
+
+//
+
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 
 static std::string s_fileDialogResult;
@@ -3642,6 +4156,23 @@ static const char * doImGuiFileDialog(const SceneEditor & sceneEditor, const cha
 		//         instead, it's the initial filename (if any). this causes files to be
 		//         unexpectedly overwritten
 		
+		#if 0
+			auto filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+			auto filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+			auto fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+			auto path = ImGuiFileDialog::Instance()->GetCurrentPath();
+			
+			logDebug("filePathName: %s", filePathName.c_str());
+			logDebug("filePath: %s", filePath.c_str());
+			logDebug("fileName: %s", fileName.c_str());
+			logDebug("path: %s", path.c_str());
+		#endif
+		
+		#if 1
+			s_fileDialogResult = ImGuiFileDialog::Instance()->GetFilePathName();
+			
+			result = s_fileDialogResult.c_str();
+		#else
 			auto selection = ImGuiFileDialog::Instance()->GetSelection();
 			
 			if (!selection.empty())
@@ -3650,6 +4181,7 @@ static const char * doImGuiFileDialog(const SceneEditor & sceneEditor, const cha
 				
 				result = s_fileDialogResult.c_str();
 			}
+		#endif
 		}
 		
 		ImGuiFileDialog::Instance()->Close();
