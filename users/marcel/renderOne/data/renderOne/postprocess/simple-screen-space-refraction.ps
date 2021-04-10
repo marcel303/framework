@@ -19,7 +19,7 @@ void main()
 	normal_view = normalize(normal_view);
 	normal_view = -normal_view;
 
-	vec2 texcoord_refracted = texcoord + normal_view.xy / textureSize(normalTexture, 0) * strength;
+	vec2 texcoord_refracted = texcoord + normal_view.xy / textureSizef(normalTexture, 0) * strength;
 
 	shader_fragColor = texture(colorTexture, texcoord_refracted);
 

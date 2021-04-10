@@ -229,7 +229,7 @@ vec3 lookupShadow_PCF_3x3(int id, vec3 position_view)
 	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
 	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
 	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
-	vec2 oscale = vec2(1.0) / vec2(textureSize(shadowDepthAtlas, 0));
+	vec2 oscale = vec2(1.0) / textureSizef(shadowDepthAtlas, 0);
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 
@@ -333,7 +333,7 @@ vec3 lookupShadow_PCF_7x7(int id, vec3 position_view)
 	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
 	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
 	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
-	vec2 oscale = vec2(1.0) / vec2(textureSize(shadowDepthAtlas, 0));
+	vec2 oscale = vec2(1.0) / textureSizef(shadowDepthAtlas, 0);
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 

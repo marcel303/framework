@@ -26,7 +26,7 @@ vec4 cubic(float v)
 
 vec4 textureBicubic(sampler2D sampler, vec2 texCoords)
 {
-	vec2 texSize = textureSize(sampler, 0);
+	vec2 texSize = textureSizef(sampler, 0);
 	vec2 invTexSize = 1.0 / texSize;
 
 	texCoords = texCoords * texSize - 0.5;
@@ -90,7 +90,7 @@ vec4 textureBetter(sampler2D sampler, vec2 texCoords)
     //---------------------------------------------	
 	// my own filtering 
     //---------------------------------------------	
-	vec2 textureResolution = textureSize( sampler, 0 );
+	vec2 textureResolution = textureSizef( sampler, 0 );
 	uv = uv*textureResolution + 0.5;
 	vec2 iuv = floor( uv );
 	vec2 fuv = fract( uv );

@@ -87,7 +87,7 @@ float spiralAO(vec2 uv, vec3 p, vec3 n, float rad)
     float inv = 1.0 / float(SAMPLES);
     float radius = 0.0;
 
-    vec2 uvSize = textureSize(depthTexture, 0);
+    vec2 uvSize = textureSizef(depthTexture, 0);
     float xScale = uvSize.y / uvSize.x;
 
     float rotatePhase = hash12( uv*uvSize ) * 6.28;

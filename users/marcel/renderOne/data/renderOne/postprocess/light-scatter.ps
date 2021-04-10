@@ -30,7 +30,7 @@ vec2 ditherCoord(vec2 sampleCoord)
 
 void main()
 {
-	vec2 viewSize = textureSize(colorTexture, 0);
+	vec2 viewSize = textureSizef(colorTexture, 0);
 	float xScale = viewSize.x / viewSize.y;
 
 	vec2 p1 = origin;
