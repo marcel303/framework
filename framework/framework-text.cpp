@@ -541,21 +541,31 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		
 		auto face = globals.font->face;
 		
-		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-		
-		for (size_t i = 0; i < textLength; ++i)
+		Assert(face != nullptr);
+		if (face != nullptr)
 		{
-			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
-		}
-		
-		float yTop;
+			const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+			
+			for (size_t i = 0; i < textLength; ++i)
+			{
+				glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
+			}
+			
+			float yTop;
 
-		measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
+			measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
+		}
+		else
+		{
+			sx = 0.f;
+			sy = 0.f;
+		}
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
 	else if (globals.fontMode == FONT_SDF)
 	{
+		Assert(globals.fontMSDF->m_glyphCache->m_isLoaded);
 		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
 		{
 			MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
@@ -697,43 +707,48 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 	#elif USE_FREETYPE
 		auto face = globals.font->face;
 		
-		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
-		
-		for (size_t i = 0; i < textLength; ++i)
+		Assert(face != nullptr);
+		if (face != nullptr)
 		{
-			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
-		}
+			const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
+			
+			for (size_t i = 0; i < textLength; ++i)
+			{
+				glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
+			}
+			
+			float sx, sy, yTop;
+			measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
 		
-		float sx, sy, yTop;
-		measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
-		
-	#if USE_GLYPH_ATLAS
-		x += sx * (alignX - 1.f) / 2.f;
-		y += sy * (alignY - 1.f) / 2.f;
-		
-		y -= yTop;
-		
-		drawText_FreeType(face, sizei, glyphs, textLength, x, y);
-	#else
-		gxMatrixMode(GX_MODELVIEW);
-		gxPushMatrix();
-		{
+		#if USE_GLYPH_ATLAS
 			x += sx * (alignX - 1.f) / 2.f;
 			y += sy * (alignY - 1.f) / 2.f;
 			
 			y -= yTop;
-
-			gxTranslatef(x, y, 0.f);
 			
-			drawText_FreeType(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
+			drawText_FreeType(face, sizei, glyphs, textLength, x, y);
+		#else
+			gxMatrixMode(GX_MODELVIEW);
+			gxPushMatrix();
+			{
+				x += sx * (alignX - 1.f) / 2.f;
+				y += sy * (alignY - 1.f) / 2.f;
+				
+				y -= yTop;
+
+				gxTranslatef(x, y, 0.f);
+				
+				drawText_FreeType(globals.font->face, sizei, glyphs, textLength, 0.f, 0.f);
+			}
+			gxPopMatrix();
+		#endif
 		}
-		gxPopMatrix();
-	#endif
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
 	else if (globals.fontMode == FONT_SDF)
 	{
+		Assert(globals.fontMSDF->m_glyphCache->m_isLoaded);
 		if (globals.fontMSDF->m_glyphCache->m_isLoaded)
 		{
 			MsdfGlyphCache & glyphCache = *globals.fontMSDF->m_glyphCache;
