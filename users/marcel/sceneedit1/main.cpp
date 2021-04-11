@@ -281,6 +281,7 @@ int main(int argc, char * argv[])
 		
 	auto drawTranslucent = [&]()
 		{
+			pushCullMode(CULL_BACK, CULL_CCW);
 			pushBlend(BLEND_ALPHA);
 			{
 				editor.drawSceneTranslucent();
@@ -288,6 +289,7 @@ int main(int argc, char * argv[])
 				editor.drawEditorGizmosTranslucent();
 			}
 			popBlend();
+			popCullMode();
 		};
 
 	auto drawLights = [&]()
@@ -694,6 +696,8 @@ int main(int argc, char * argv[])
 	editor.shut();
 	
 	g_componentTypeDB.shutComponentMgrs();
+	
+	Font("calibri.ttf").saveCache();
 	
 	g_gltfCache.clear(); // todo : move to framework?
 	

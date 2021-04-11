@@ -288,6 +288,9 @@ void SceneEditor::deferredEndCommit()
 			undoCaptureEnd();
 			
 			Assert(deferred.isFlushed());
+			
+			// one or more transforms may need to be updated, due to new nodes being added or due to parenting operations changing the tree structure
+			g_transformComponentMgr.calculateTransforms(scene);
 		}
 		else
 		{
@@ -1741,14 +1744,8 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
 						nodeUi.nodesToOpen_deferred.clear();
 						
-						NodeStructureEditingAction action;
+						const NodeStructureEditingAction action = editNodeStructure_traverse(scene.rootNodeId);
 						
-						deferredBegin();
-						{
-							action = editNodeStructure_traverse(scene.rootNodeId);
-						}
-						deferredEnd(true);
-					
 						switch (action)
 						{
 						case kNodeStructureEditingAction_None:
@@ -2016,6 +2013,14 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 {
 	tickKeyCommands(inputIsCaptured);
 	
+	Mat4x4 worldToView;
+	if (framework.isStereoVr())
+		gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	else
+		camera.calculateViewMatrix(worldToView);
+	
+	const Mat4x4 viewToWorld = worldToView.CalcInv();
+	
 	// -- mouse picking
 	
 	// 1. transform mouse coordinates into a world space direction vector
@@ -2025,6 +2030,8 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	bool hasPointer = false;
 	bool pointerIsActive = false;
 	bool pointerBecameActive = false;
+	bool secondaryIsActive = false;
+	bool secondaryBecameActive = false;
 	
 	if (framework.isStereoVr())
 	{
@@ -2033,10 +2040,14 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
 			pointerOrigin_world = transform.GetTranslation();
 			pointerDirection_world = transform.GetAxis(2);
-			pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
-			pointerBecameActive = vrPointer[0].wentDown(VrButton_Trigger);
 			hasPointer = true;
 		}
+		
+		pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
+		pointerBecameActive = vrPointer[0].wentDown(VrButton_Trigger);
+		
+		secondaryIsActive = vrPointer[0].isDown(VrButton_GripTrigger);
+		secondaryBecameActive = vrPointer[0].wentDown(VrButton_GripTrigger);
 	}
 	else
 	{
@@ -2049,9 +2060,6 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		Mat4x4 projectionMatrix;
 		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 		
-		Mat4x4 cameraToWorld;
-		camera.calculateWorldMatrix(cameraToWorld);
-		
 		if (camera.mode == Camera::kMode_Ortho)
 		{
 			const Vec2 mousePosition_screen(
@@ -2061,17 +2069,17 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 				(mousePosition_screen[0] - viewportX) / float(viewportSx) * 2.f - 1.f,
 				(mousePosition_screen[1] - viewportY) / float(viewportSy) * 2.f - 1.f,
 				0.f);
-			Vec3 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
-			mousePosition_camera[1] = -mousePosition_camera[1];
+			Vec3 mousePosition_view = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			mousePosition_view[1] = -mousePosition_view[1];
 			
-			pointerOrigin_world = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
+			pointerOrigin_world = viewToWorld.Mul4(mousePosition_view) - viewToWorld.GetAxis(2) * 10.f;
 			
-			pointerDirection_world = cameraToWorld.GetAxis(2);
+			pointerDirection_world = viewToWorld.GetAxis(2);
 			pointerDirection_world = pointerDirection_world.CalcNormalized();
 		}
 		else
 		{
-			pointerOrigin_world = cameraToWorld.GetTranslation();
+			pointerOrigin_world = viewToWorld.GetTranslation();
 			
 			const Vec2 mousePosition_screen(
 				mouse.x,
@@ -2079,19 +2087,23 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			const Vec2 mousePosition_clip(
 				(mousePosition_screen[0] - viewportX) / float(viewportSx) * 2.f - 1.f,
 				(mousePosition_screen[1] - viewportY) / float(viewportSy) * 2.f - 1.f);
-			Vec2 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			Vec2 mousePosition_view = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
 			
-			pointerDirection_world = cameraToWorld.Mul3(
+			pointerDirection_world = viewToWorld.Mul3(
 				Vec3(
-					+mousePosition_camera[0],
-					-mousePosition_camera[1],
+					+mousePosition_view[0],
+					-mousePosition_view[1],
 					1.f));
 			pointerDirection_world = pointerDirection_world.CalcNormalized();
 		}
 		
-		pointerIsActive = mouse.isDown(BUTTON_LEFT);
-		pointerBecameActive = mouse.wentDown(BUTTON_LEFT);
 		hasPointer = true;
+		
+		pointerIsActive = mouse.isDown(BUTTON_LEFT) && !keyCommand();
+		pointerBecameActive = mouse.wentDown(BUTTON_LEFT) && !keyCommand();
+		
+		secondaryIsActive = mouse.isDown(BUTTON_LEFT) && keyCommand();
+		secondaryBecameActive = mouse.wentDown(BUTTON_LEFT) && keyCommand();
 	}
 	
 #if ENABLE_TRANSFORM_GIZMOS
@@ -2131,7 +2143,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		if (transformGizmo.tick(
 				pointerOrigin_world,
 				pointerDirection_world,
-				pointerIsActive,
+				pointerIsActive && hasPointer,
 				pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
 				inputIsCaptured))
 		{
@@ -2190,6 +2202,12 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			
 				transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
 			}
+			
+			// update transforms after editing a transform using the transform gizmo
+			// note : we could optimize this by only calculating transforms for the
+			//        sub-tree starting at the node being edited by the gizmo. however,
+			//        this isn't so trivial to do at the moment
+			g_transformComponentMgr.calculateTransforms(scene);
 		}
 	}
 #endif
@@ -2650,6 +2668,8 @@ void SceneEditor::performAction_undo()
 						}
 						deferred.isProcessing = false;
 						
+						Assert(scene.nodes.empty());
+						
 						scene = tempScene;
 						tempScene.nodes.clear();
 					}
@@ -2708,14 +2728,14 @@ void SceneEditor::performAction_redo()
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
 						{
-						// todo : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
-						
-							for (auto & node_itr : scene.nodes)
-								deferred.nodesToRemove.insert(node_itr.second->id);
+							// note : we only need to insert the root node, as removeNodesToRemove recursively removes sub trees
+							deferred.nodesToRemove.insert(scene.rootNodeId);
 							
 							removeNodesToRemove();
 						}
 						deferred.isProcessing = false;
+						
+						Assert(scene.nodes.empty());
 						
 						scene = tempScene;
 						tempScene.nodes.clear();

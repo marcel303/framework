@@ -330,6 +330,8 @@ static void drawRingFill(const Vec3 & position, const int axis, const float radi
 	normal[axis2] = 0.f;
 	normal[axis3] = 0.f;
 	
+	pushCullMode(CULL_NONE, CULL_CCW);
+	
 	gxBegin(GX_QUADS);
 	{
 		gxNormal3fv(normal);
@@ -346,6 +348,8 @@ static void drawRingFill(const Vec3 & position, const int axis, const float radi
 		}
 	}
 	gxEnd();
+	
+	popCullMode();
 	
 	gxPopMatrix();
 }
