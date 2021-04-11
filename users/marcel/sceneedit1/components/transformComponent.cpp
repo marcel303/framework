@@ -14,7 +14,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 	
 	Mat4x4 newGlobalTransform;
 	
-	if (transformComp != nullptr)
+	if (transformComp != nullptr && transformComp->enabled)
 	{
 		Quat q;
 		q.fromAxisAngle(transformComp->angleAxis.axis, transformComp->angleAxis.angle * float(M_PI) / 180.f);

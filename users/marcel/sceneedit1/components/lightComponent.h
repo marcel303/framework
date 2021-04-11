@@ -37,6 +37,8 @@ extern LightComponentMgr g_lightComponentMgr;
 
 #include "componentType.h"
 
+extern TypeDB g_typeDB; // todo : remove
+
 struct LightComponentType : ComponentType<LightComponent>
 {
 	LightComponentType()

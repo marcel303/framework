@@ -25,6 +25,7 @@ struct ComponentTypeBase : StructuredType
 		: StructuredType(in_typeName)
 		, componentMgr(in_componentMgr)
 	{
+		add("enabled", &ComponentBase::enabled);
 	}
 };
 

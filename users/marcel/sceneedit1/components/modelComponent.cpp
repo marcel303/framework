@@ -57,7 +57,7 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 {
 	if (filename.empty())
 		return;
-	
+		
 	gxPushMatrix();
 	{
 		gxMultMatrixf(objectToWorld.m_v);
@@ -81,6 +81,9 @@ void ModelComponentMgr::draw() const
 {
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
+		if (i->enabled == false)
+			continue;
+			
 		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
 		
 		Assert(sceneNodeComp != nullptr);

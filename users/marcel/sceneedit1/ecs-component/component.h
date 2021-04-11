@@ -24,6 +24,8 @@ struct ComponentBase
 	ComponentSet * componentSet = nullptr;
 	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
+	bool enabled = true;
+	
 	virtual ~ComponentBase();
 	
 	virtual void tick(const float dt) { }

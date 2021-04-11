@@ -6,6 +6,9 @@ RotateTransformComponentMgr g_rotateTransformComponentMgr;
 
 void RotateTransformComponent::tick(const float dt)
 {
+	if (enabled == false)
+		return;
+		
 	// fetch transform component and update its rotation
 	
 	auto * transformComponent = componentSet->find<TransformComponent>();

@@ -100,6 +100,9 @@ void GltfComponentMgr::draw() const
 {
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
+		if (i->enabled == false)
+			continue;
+			
 		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
 		
 		Assert(sceneNodeComp != nullptr);
