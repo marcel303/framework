@@ -364,6 +364,9 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 		{ position[0]-size[0], position[1]+size[1], position[2]+size[2] }
 	};
 
+	// note : the vertex indices for these faces have been determined one by one to
+	//        cull correctly when the culling mode is set to CULL_BACK + CULL_CCW
+	
 	const int faces[6][4] =
 	{
 		{ 0, 1, 2, 3 },

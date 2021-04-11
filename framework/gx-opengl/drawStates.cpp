@@ -248,6 +248,8 @@ void setDepthBias(float depthBias, float slopeScale)
 
 void setAlphaToCoverage(bool enabled)
 {
+	globals.alphaToCoverageEnabled = enabled;
+	
 	if (enabled)
 	{
 		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);

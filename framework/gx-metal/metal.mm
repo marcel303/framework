@@ -1156,6 +1156,10 @@ void clearStencil(uint8_t value, uint32_t writeMask)
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 	
+	// update cull flip, since the projectScreen2d() call may have changed the matrix parity and updated the cull flip too
+	
+	updateCullFlip();
+	
 	// restore previous states
 	
 	if (restore_stencilTestEnabled)
@@ -1210,6 +1214,9 @@ void clearStencilTest()
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
+	globals.cullMode = mode;
+	globals.cullWinding = frontFaceWinding;
+	
 	const MTLCullMode metalCullMode =
 		mode == CULL_NONE ? MTLCullModeNone :
 		mode == CULL_FRONT ? MTLCullModeFront :
