@@ -338,7 +338,7 @@ void UiElem::tick(const int x1, const int y1, const int x2, const int y2)
 	
 	clicked = false;
 	
-	hasFocus = mouse.x >= x1 && mouse.x <= x2 && mouse.y >= y1 && mouse.y <= y2;
+	hasFocus = mouse.x >= x1 && mouse.x < x2 && mouse.y >= y1 && mouse.y < y2;
 	
 	isActive = (g_uiState->activeElem == this);
 	
