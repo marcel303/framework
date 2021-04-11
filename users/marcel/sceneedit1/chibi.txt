@@ -42,7 +42,10 @@ library marcel-sceneedit
 	scan_files *.h   path editor group editor
 	scan_files *.cpp path components group components
 	scan_files *.h   path components group components
+	
 	header_path . expose
+	
+	resource_path editor/data
 
 app marcel-sceneedit-100-bindStructToFile
 	depend_library libreflection-bindtofile

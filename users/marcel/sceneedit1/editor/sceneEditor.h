@@ -173,9 +173,15 @@ struct SceneEditor
 		bool showAnonymousComponents = false;
 	} parameterUi;
 	
+	struct UndoVersion
+	{
+		std::string sceneText;
+		std::set<std::string> selectedNodes;
+	};
+	
 	struct Undo
 	{
-		std::vector<std::string> versions;
+		std::vector<UndoVersion> versions;
 		int currentVersionIndex = -1;
 		
 		std::string currentVersion;

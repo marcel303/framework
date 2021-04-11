@@ -71,6 +71,8 @@
 
 #define ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE 1
 
+#define ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO 0 // todo : requires unique names for each nodes to always exist (not just on auto assign during save)
+
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
 static void openImGuiSaveDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
@@ -512,6 +514,14 @@ void SceneEditor::undoCaptureBegin(const bool isPristine)
 {
 	Assert(deferred.numActivations == 0);
 	
+#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
+	// note : we update the selected nodes during undoCaptureBegin, because
+	//        we always be as up to date as possible up to the point some
+	//        edits are made
+	
+	undo.versions[undo.currentVersionIndex].selectedNodes = selection.selectedNodes;
+#endif
+	
 #if defined(DEBUG)
 	/**
 	 * For debugging purposes, we save the current version, and compare it later when we begin
@@ -542,8 +552,14 @@ void SceneEditor::undoCaptureEnd()
 	
 	if (undoCapture(text))
 	{
+		// note : resize in case the current capture will obliterate some
+		//        older captures, due to undo going back a few versions
 		undo.versions.resize(undo.currentVersionIndex + 1);
-		undo.versions.push_back(text);
+	#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
+		undo.versions.emplace_back(UndoVersion { text, selection.selectedNodes });
+	#else
+		undo.versions.emplace_back(UndoVersion { text, { } });
+	#endif
 		undo.currentVersionIndex = undo.versions.size() - 1;
 		
 	#if defined(DEBUG)
@@ -571,7 +587,11 @@ void SceneEditor::undoReset()
 	undo.currentVersionIndex = -1;
 	
 	undoCapture(undo.currentVersion);
-	undo.versions.push_back(undo.currentVersion);
+#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
+	undo.versions.push_back({ undo.currentVersion, selection.selectedNodes });
+#else
+	undo.versions.push_back({ undo.currentVersion, { } });
+#endif
 	undo.currentVersionIndex = undo.versions.size() - 1;
 }
 
@@ -978,6 +998,12 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		result = kNodeStructureEditingAction_NodeRemove;
 	}
 
+// todo : add some add child node versions with content :
+// cube, cylinder, plane, quad, light (point, directional, spot, area)
+// audio emitter (with source), video
+// todo : add vfx graph nodes for : video by name
+// todo : vfx graph component : addObject<VfxNodeScene> .. or something .. that gives access to the scene .. allow access to scene nodes by name .. useful for video node for instance, to start / stop playback of a specific video hosted by a node
+// todo : automatically (?) add vfx node types for all registered component types and their inputs
 	if (ImGui::MenuItem("Add child node"))
 	{
 		result = kNodeStructureEditingAction_NodeAddChild;
@@ -2621,7 +2647,8 @@ void SceneEditor::performAction_undo()
 {
 	if (undo.currentVersionIndex > 0)
 	{
-		auto & text = undo.versions[undo.currentVersionIndex - 1];
+		auto & version = undo.versions[undo.currentVersionIndex - 1];
+		auto & text = version.sceneText;
 		
 		std::vector<std::string> lines;
 		TextIO::LineEndings lineEndings;
@@ -2655,9 +2682,11 @@ void SceneEditor::performAction_undo()
 				}
 				else
 				{
+				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
 					std::set<std::string> capturedSelectedNodes;
 					
 					backupSelectedNodes(*this, capturedSelectedNodes);
+				#endif
 					{
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
@@ -2674,7 +2703,13 @@ void SceneEditor::performAction_undo()
 						scene = tempScene;
 						tempScene.nodes.clear();
 					}
+				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
 					restoreSelectedNodes(*this, capturedSelectedNodes);
+				#endif
+				
+				#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
+					restoreSelectedNodes(*this, version.selectedNodes); // todo : also open nodes in the node structure UI ?
+				#endif
 					
 					undo.currentVersion = text;
 					undo.currentVersionIndex--;
@@ -2688,7 +2723,8 @@ void SceneEditor::performAction_redo()
 {
 	if (undo.currentVersionIndex + 1 < undo.versions.size())
 	{
-		auto & text = undo.versions[undo.currentVersionIndex + 1];
+		auto & version = undo.versions[undo.currentVersionIndex + 1];
+		auto & text = version.sceneText;
 		
 		std::vector<std::string> lines;
 		TextIO::LineEndings lineEndings;
@@ -2722,9 +2758,11 @@ void SceneEditor::performAction_redo()
 				}
 				else
 				{
+				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
 					std::set<std::string> capturedSelectedNodes;
 					
 					backupSelectedNodes(*this, capturedSelectedNodes);
+				#endif
 					{
 						Assert(!deferred.isProcessing && deferred.isFlushed());
 						deferred.isProcessing = true;
@@ -2741,7 +2779,13 @@ void SceneEditor::performAction_redo()
 						scene = tempScene;
 						tempScene.nodes.clear();
 					}
+				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
 					restoreSelectedNodes(*this, capturedSelectedNodes);
+				#endif
+				
+				#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
+					restoreSelectedNodes(*this, version.selectedNodes);
+				#endif
 					
 					undo.currentVersion = text;
 					undo.currentVersionIndex++;
@@ -3598,6 +3642,7 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 				
 // todo : draw node name labels here? we need to prevent them from obscuring the interactive ring. also would be nice if they appear in vr mode
 
+#if false // todo : make this into a nice card that we can inspect in VR when we want to
 	// draw node details
 	
 	for (auto nodeId : selection.selectedNodes)
@@ -3652,6 +3697,7 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 		}
 		gxPopMatrix();
 	}
+#endif
 
 	interactiveRing.drawOpaque(*this);
 }
