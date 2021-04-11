@@ -13,4 +13,6 @@ void drawAxisArrow(
 	const Vec3 & position,
 	const int axis,
 	const float radius,
-	const float length);
+	const float length,
+	const float top_radius,
+	const float top_length);

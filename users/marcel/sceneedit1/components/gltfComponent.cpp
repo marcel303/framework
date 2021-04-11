@@ -72,7 +72,7 @@ void GltfComponent::free()
 	cacheElem = nullptr;
 }
 
-void GltfComponent::draw(const Mat4x4 & objectToWorld) const
+void GltfComponent::drawOpaque(const Mat4x4 & objectToWorld) const
 {
 	if (filename.empty())
 		return;
@@ -85,10 +85,32 @@ void GltfComponent::draw(const Mat4x4 & objectToWorld) const
 		gxRotatef(rotation.angle, rotation.axis[0], rotation.axis[1], rotation.axis[2]);
 		gxScalef(finalScale, finalScale, finalScale);
 		
+	// todo : make material shader configurable at the component mgr level
 		MaterialShaders materialShaders;
 		setDefaultMaterialShaders(materialShaders);
 		
 		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, true);
+	}
+	gxPopMatrix();
+}
+
+void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld) const
+{
+	if (filename.empty())
+		return;
+	
+	gxPushMatrix();
+	{
+		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
+		
+		gxMultMatrixf(objectToWorld.m_v);
+		gxRotatef(rotation.angle, rotation.axis[0], rotation.axis[1], rotation.axis[2]);
+		gxScalef(finalScale, finalScale, finalScale);
+		
+	// todo : make material shader configurable at the component mgr level
+		MaterialShaders materialShaders;
+		setDefaultMaterialShaders(materialShaders);
+		
 		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, false);
 	}
 	gxPopMatrix();
@@ -96,7 +118,7 @@ void GltfComponent::draw(const Mat4x4 & objectToWorld) const
 
 //
 
-void GltfComponentMgr::draw() const
+void GltfComponentMgr::drawOpaque() const
 {
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
@@ -107,6 +129,21 @@ void GltfComponentMgr::draw() const
 		
 		Assert(sceneNodeComp != nullptr);
 		if (sceneNodeComp != nullptr)
-			i->draw(sceneNodeComp->objectToWorld);
+			i->drawOpaque(sceneNodeComp->objectToWorld);
+	}
+}
+
+void GltfComponentMgr::drawTranslucent() const
+{
+	for (auto * i = head; i != nullptr; i = i->next)
+	{
+		if (i->enabled == false)
+			continue;
+			
+		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
+		
+		Assert(sceneNodeComp != nullptr);
+		if (sceneNodeComp != nullptr)
+			i->drawTranslucent(sceneNodeComp->objectToWorld);
 	}
 }

@@ -95,7 +95,10 @@ void drawCylinder(
 	gxPopMatrix();
 }
 
-void drawAxisArrow(const Vec3 & position, const int axis, const float radius, const float length)
+void drawAxisArrow(
+	const Vec3 & position,
+	const int axis, const float radius, const float length,
+	const float top_radius, const float top_length)
 {
 	// draw a cylinder with a cone on top
 	
@@ -103,5 +106,5 @@ void drawAxisArrow(const Vec3 & position, const int axis, const float radius, co
 	
 	Vec3 offset;
 	offset[axis] = length;
-	drawCylinder(position + offset, axis, radius * 2.f, 0.f, radius * 3.f);
+	drawCylinder(position + offset, axis, top_radius, 0.f, top_length);
 }

@@ -139,6 +139,8 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 // todo : generalize this function. query aabb interface on component type .. ?
 static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
 {
+	const float kMinExtents = .5f;
+	
 	bool hasMinMax = false;
 	
 	const auto * modelComponent = node.components.find<ModelComponent>();
@@ -173,6 +175,18 @@ static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max
 			max = gltfComponent->aabbMax;
 			hasMinMax = true;
 		}
+	}
+	
+	if (hasMinMax)
+	{
+		min = min.Min(Vec3(-kMinExtents));
+		max = max.Max(Vec3(+kMinExtents));
+	}
+	else
+	{
+		min = Vec3(-kMinExtents);
+		max = Vec3(+kMinExtents);
+		hasMinMax = true;
 	}
 	
 	return hasMinMax;
@@ -1832,12 +1846,7 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 						if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
 							ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
 						{
-							deferredBegin();
-							{
-								for (auto nodeId : selection.selectedNodes)
-									deferred.nodesToRemove.insert(nodeId);
-							}
-							deferredEnd(true);
+							performAction_remove();
 						}
 					}
 				}
@@ -2126,88 +2135,90 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	{
 		auto & node = scene.getNode(*selection.selectedNodes.begin());
 		
-		// determine the current global transform
-		
-		Mat4x4 globalTransform(true);
-		
 		auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
-		Assert(sceneNodeComponent != nullptr);
+		auto * transformComponent = node.components.find<TransformComponent>();
 		
-		if (sceneNodeComponent != nullptr)
-			globalTransform = sceneNodeComponent->objectToWorld;
-		
-		// let the gizmo do it's thing
-		
-		transformGizmo.show(globalTransform);
-		
-		if (transformGizmo.tick(
-				pointerOrigin_world,
-				pointerDirection_world,
-				pointerIsActive && hasPointer,
-				pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
-				inputIsCaptured))
+		if (sceneNodeComponent == nullptr || transformComponent == nullptr)
 		{
-			// transform the global transform into local space
+			transformGizmo.hide();
+		}
+		else
+		{
+			// determine the current global transform
 			
-			Mat4x4 localTransform = transformGizmo.gizmoToWorld;
+			const Mat4x4 & globalTransform = sceneNodeComponent->objectToWorld;
+		
+			// let the gizmo do it's thing
 			
-			if (node.parentId != -1)
+			transformGizmo.show(globalTransform);
+			
+			if (transformGizmo.tick(
+					pointerOrigin_world,
+					pointerDirection_world,
+					pointerIsActive && hasPointer,
+					pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
+					inputIsCaptured))
 			{
-				auto & parentNode = scene.getNode(node.parentId);
+				// transform the global transform into local space
 				
-				auto * sceneNodeComponent_parent = parentNode.components.find<SceneNodeComponent>();
-				Assert(sceneNodeComponent_parent != nullptr);
-			
-				if (sceneNodeComponent_parent != nullptr)
-					localTransform = sceneNodeComponent_parent->objectToWorld.CalcInv() * localTransform;
-			}
-			
-			// assign the translation in local space to the transform component
-			
-			auto * transformComponent = node.components.find<TransformComponent>();
-			
-			if (transformComponent != nullptr)
-			{
-				transformComponent->position = localTransform.GetTranslation();
+				Mat4x4 localTransform = transformGizmo.gizmoToWorld;
 				
-				for (int i = 0; i < 3; ++i)
+				if (node.parentId != -1)
 				{
-					//logDebug("size[%d] = %.2f", i, localTransform.GetAxis(i).CalcSize());
-					localTransform.SetAxis(i, localTransform.GetAxis(i).CalcNormalized());
+					auto & parentNode = scene.getNode(node.parentId);
+					
+					auto * sceneNodeComponent_parent = parentNode.components.find<SceneNodeComponent>();
+					Assert(sceneNodeComponent_parent != nullptr);
+				
+					if (sceneNodeComponent_parent != nullptr)
+						localTransform = sceneNodeComponent_parent->objectToWorld.CalcInv() * localTransform;
 				}
 				
-				Quat q;
-				q.fromMatrix(localTransform);
+				// assign the translation in local space to the transform component
 				
-			#if ENABLE_QUAT_FIXUP
-				// todo : not entirely sure if this is correct. need a proper look at the maths and logic here
-				int max_axis = 0;
-				if (fabsf(transformComponent->angleAxis.axis[1]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
-					max_axis = 1;
-				if (fabsf(transformComponent->angleAxis.axis[2]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
-					max_axis = 2;
-				const bool neg_before = transformComponent->angleAxis.axis[max_axis] < 0.f;
-			#endif
-			
-				q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
-				
-			#if ENABLE_QUAT_FIXUP && false
-				const bool neg_after = transformComponent->angleAxis.axis[max_axis] < 0.f;
-				if (neg_before != neg_after)
+				if (transformComponent != nullptr)
 				{
-					transformComponent->angleAxis.axis = -transformComponent->angleAxis.axis;
-					transformComponent->angleAxis.angle = -transformComponent->angleAxis.angle;
+					transformComponent->position = localTransform.GetTranslation();
+					
+					for (int i = 0; i < 3; ++i)
+					{
+						//logDebug("size[%d] = %.2f", i, localTransform.GetAxis(i).CalcSize());
+						localTransform.SetAxis(i, localTransform.GetAxis(i).CalcNormalized());
+					}
+					
+					Quat q;
+					q.fromMatrix(localTransform);
+					
+				#if ENABLE_QUAT_FIXUP
+					// todo : not entirely sure if this is correct. need a proper look at the maths and logic here
+					int max_axis = 0;
+					if (fabsf(transformComponent->angleAxis.axis[1]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
+						max_axis = 1;
+					if (fabsf(transformComponent->angleAxis.axis[2]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
+						max_axis = 2;
+					const bool neg_before = transformComponent->angleAxis.axis[max_axis] < 0.f;
+				#endif
+				
+					q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
+					
+				#if ENABLE_QUAT_FIXUP && false
+					const bool neg_after = transformComponent->angleAxis.axis[max_axis] < 0.f;
+					if (neg_before != neg_after)
+					{
+						transformComponent->angleAxis.axis = -transformComponent->angleAxis.axis;
+						transformComponent->angleAxis.angle = -transformComponent->angleAxis.angle;
+					}
+				#endif
+				
+					transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
 				}
-			#endif
-			
-				transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
+				
+				// update transforms after editing a transform using the transform gizmo
+				// note : we could optimize this by only calculating transforms for the
+				//        sub-tree starting at the node being edited by the gizmo. however,
+				//        this isn't so trivial to do at the moment
+				g_transformComponentMgr.calculateTransforms(scene);
 			}
-			
-			// update transforms after editing a transform using the transform gizmo
-			// note : we could optimize this by only calculating transforms for the
-			//        sub-tree starting at the node being edited by the gizmo. however,
-			//        this isn't so trivial to do at the moment
-			g_transformComponentMgr.calculateTransforms(scene);
 		}
 	}
 #endif
@@ -2345,17 +2356,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	{
 		inputIsCaptured = true;
 		
-		deferredBegin();
-		{
-			for (auto nodeId : selection.selectedNodes)
-			{
-				if (nodeId == scene.rootNodeId)
-					continue;
-				
-				deferred.nodesToRemove.insert(nodeId);
-			}
-		}
-		deferredEnd(true);
+		performAction_remove();
 	}
 	
 	// update the camera
@@ -3000,7 +3001,12 @@ void SceneEditor::performAction_remove()
 	deferredBegin();
 	{
 		for (auto nodeId : selection.selectedNodes)
+		{
+			if (nodeId == scene.rootNodeId)
+				continue;
+				
 			deferred.nodesToRemove.insert(nodeId);
+		}
 	}
 	deferredEnd(true);
 }
@@ -3009,7 +3015,10 @@ void SceneEditor::performAction_remove(const int nodeId)
 {
 	deferredBegin();
 	{
-		deferred.nodesToRemove.insert(nodeId);
+		if (nodeId != scene.rootNodeId)
+		{
+			deferred.nodesToRemove.insert(nodeId);
+		}
 	}
 	deferredEnd(true);
 }
@@ -3146,6 +3155,9 @@ bool SceneEditor::performAction_duplicate()
 		{
 			for (auto nodeId : selection.selectedNodes)
 			{
+				if (nodeId == scene.rootNodeId)
+					continue;
+					
 				auto & node = scene.getNode(nodeId);
 				
 			#if true
@@ -3184,7 +3196,79 @@ bool SceneEditor::performAction_parent(const int childNodeId, const int newParen
 	return true;
 }
 
-void SceneEditor::drawNodeBoundingBox(const SceneNode & node) const
+void SceneEditor::drawSceneOpaque() const
+{
+	if (preview.drawScene)
+	{
+		g_modelComponentMgr.draw();
+		
+		g_gltfComponentMgr.drawOpaque();
+	}
+}
+
+void SceneEditor::drawSceneOpaque_ForwardShaded() const
+{
+	if (preview.drawScene)
+	{
+		// todo : draw GLTF models here ?
+	}
+}
+
+void SceneEditor::drawSceneTranslucent() const
+{
+	if (preview.drawScene)
+	{
+		g_gltfComponentMgr.drawTranslucent();
+	}
+}
+
+static void drawEditorGrid()
+{
+	gxPushMatrix();
+	{
+		gxScalef(10, 10, 10);
+		
+		setAlpha(255);
+		
+		setLumi(80);
+		drawGrid3dLine(10, 10, 0, 2, true);
+		
+		setLumi(40);
+		drawGrid3dLine(50, 50, 0, 2, true);
+	}
+	gxPopMatrix();
+}
+
+void SceneEditor::drawEditorGridOpaque() const
+{
+	if (visibility.drawGrid)
+	{
+		drawEditorGrid();
+	}
+}
+
+void SceneEditor::drawEditorGridTranslucent() const
+{
+/*
+	if (visibility.drawGrid)
+	{
+		pushLineSmooth(true);
+		drawEditorGrid();
+		popLineSmooth();
+	}
+*/
+}
+
+void SceneEditor::drawEditroGroundPlaneOpaque() const
+{
+	if (visibility.drawGroundPlane)
+	{
+		setLumi(200);
+		fillCube(Vec3(), Vec3(100, .1f, 100));
+	}
+}
+
+void SceneEditor::drawEditorNodeBoundingBox(const SceneNode & node) const
 {
 	const bool isHovered = node.id == hoverNodeId;
 	const bool isSelected = selection.selectedNodes.count(node.id) != 0;
@@ -3220,148 +3304,93 @@ void SceneEditor::drawNodeBoundingBox(const SceneNode & node) const
 	}
 }
 
-void SceneEditor::drawNodes() const
+void SceneEditor::drawEditorNodesOpaque() const
 {
 	// draw outline for hovered node
-	
+
 	if (hoverNodeId != -1)
 	{
 		gxPushMatrix();
 		{
 			auto & hoveredNode = scene.getNode(hoverNodeId);
 			
-			Vec3 position;
-			
 			auto * sceneNodeComp = hoveredNode.components.find<SceneNodeComponent>();
 			
 			if (sceneNodeComp != nullptr)
 			{
-				position = sceneNodeComp->objectToWorld.GetTranslation();
+				gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
 			}
+			
+			Vec3 min(false);
+			Vec3 max(false);
+			if (getBoundingBoxForNode(hoveredNode, min, max))
+			{
+				const Vec3 position = (min + max) / 2.f;
+				const Vec3 size = (max - min) / 2.f;
 
-			setColor(colorWhite);
-			lineCube(position, Vec3(.1f, .1f, .1f));
+				setColor(colorWhite);
+				lineCube(position, size);
+			}
 		}
 		gxPopMatrix();
 	}
-	
-	// draw node markers
-	
-	beginCubeBatch();
-	{
-		for (auto & node_itr : scene.nodes)
-		{
-			auto * node = node_itr.second;
-			
-		#if 0
-			gxPushMatrix();
-			{
-				auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
-			
-				if (sceneNodeComp != nullptr)
-				{
-					gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-				}
-				
-				const bool isSelected = selection.selectedNodes.count(node->id) != 0;
-				
-				setColor(isSelected ? Color(100, 100, 0) : Color(255, 100, 100));
-				fillCube(Vec3(), Vec3(.1f, .1f, .1f));
-			}
-			gxPopMatrix();
-		#else
-			Vec3 position;
-			
-			auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
-		
-			if (sceneNodeComp != nullptr)
-			{
-				position = sceneNodeComp->objectToWorld.GetTranslation();
-			}
-			
-			const bool isSelected = selection.selectedNodes.count(node->id) != 0;
-			
-			setColor(isSelected ? Color(100, 100, 0) : Color(255, 100, 100));
-			fillCube(position, Vec3(.1f, .1f, .1f));
-		#endif
-		}
-	}
-	endCubeBatch();
-	
-	// draw bounding boxes
-	
-	if (visibility.drawNodeBoundingBoxes)
-	{
-		for (auto & node_itr : scene.nodes)
-		{
-			gxPushMatrix();
-			{
-				auto * node = node_itr.second;
-				
-				auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
-			
-				if (sceneNodeComp != nullptr)
-				{
-					gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-				}
-				
-				drawNodeBoundingBox(*node);
-			}
-			gxPopMatrix();
-		}
-	}
 }
 
-void SceneEditor::drawSceneOpaque() const
+void SceneEditor::drawEditorNodesTranslucent() const
 {
-	if (visibility.drawGroundPlane)
-	{
-		setLumi(200);
-		fillCube(Vec3(), Vec3(100, .1f, 100));
-	}
-	
-	if (preview.drawScene)
-	{
-		g_modelComponentMgr.draw();
-		
-		g_gltfComponentMgr.draw();
-	}
-}
-
-void SceneEditor::drawSceneTranslucent() const
-{
-}
-
-void SceneEditor::drawEditorOpaque() const
-{
-}
-
-void SceneEditor::drawEditorTranslucent() const
-{
-	if (visibility.drawGrid)
-	{
-		pushLineSmooth(true);
-		gxPushMatrix();
-		{
-			gxScalef(100, 100, 100);
-			
-			setAlpha(255);
-			
-			setLumi(200);
-			drawGrid3dLine(100, 100, 0, 2, true);
-			
-			setLumi(50);
-			drawGrid3dLine(500, 500, 0, 2, true);
-		}
-		gxPopMatrix();
-		popLineSmooth();
-	}
-	
 	if (visibility.drawNodes)
 	{
 		pushBlend(BLEND_ADD);
 		{
-			drawNodes();
+		/*
+			// draw node markers
+			
+			beginCubeBatch();
+			{
+				for (auto & node_itr : scene.nodes)
+				{
+					auto * node = node_itr.second;
+					
+					Vec3 position;
+					
+					auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
+				
+					if (sceneNodeComp != nullptr)
+					{
+						position = sceneNodeComp->objectToWorld.GetTranslation();
+					}
+					
+					const bool isSelected = selection.selectedNodes.count(node->id) != 0;
+					
+					setColor(isSelected ? Color(100, 100, 0) : Color(255, 100, 100));
+					fillCube(position, Vec3(.1f, .1f, .1f));
+				}
+			}
+			endCubeBatch();
+		*/
+			
+			// draw bounding boxes
+			
+			if (visibility.drawNodeBoundingBoxes)
+			{
+				for (auto & node_itr : scene.nodes)
+				{
+					gxPushMatrix();
+					{
+						auto * node = node_itr.second;
+						
+						auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
+					
+						if (sceneNodeComp != nullptr)
+						{
+							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+						}
+						
+						drawEditorNodeBoundingBox(*node);
+					}
+					gxPopMatrix();
+				}
+			}
 		}
 		popBlend();
 	}
@@ -3370,33 +3399,130 @@ void SceneEditor::drawEditorTranslucent() const
 void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 {
 #if ENABLE_TRANSFORM_GIZMOS
-	transformGizmo.drawOpaque(depthObscuredPass);
+	if (depthObscuredPass)
+		pushDepthTest(true, DEPTH_GREATER, false);
+	{
+		transformGizmo.drawOpaque(depthObscuredPass);
+	}
+	if (depthObscuredPass)
+		popDepthTest();
 #endif
 }
+
+#include "components/cameraComponent.h"
+#include "components/lightComponent.h"
 
 void SceneEditor::drawEditorGizmosTranslucent() const
 {
 #if ENABLE_TRANSFORM_GIZMOS
 	transformGizmo.drawTranslucent();
 #endif
+
+	// draw component specific gizmos
+	
+	Mat4x4 viewMatrix;
+	gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+	const Vec3 viewOrigin = viewMatrix.CalcInv().GetTranslation();
+	
+	for (auto node_itr : scene.nodes)
+	{
+		auto * node = node_itr.second;
+		
+		gxPushMatrix();
+		{
+			auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
+			
+			const Vec3 pos = sceneNodeComp->objectToWorld.GetTranslation();
+			
+			gxTranslatef(pos[0], pos[1], pos[2]);
+			
+		// todo : rotate to look at camera
+		
+			GxTextureId simpleTextureId = 0;
+			
+			for (;;)
+			{
+				auto * cameraComp = node->components.find<CameraComponent>();
+				
+				if (cameraComp != nullptr)
+				{
+					simpleTextureId = getTexture("gizmo-camera.png");
+					break;
+				}
+				
+				auto * lightComp = node->components.find<LightComponent>();
+				
+				if (lightComp != nullptr)
+				{
+					simpleTextureId = getTexture("gizmo-light.png");
+					break;
+				}
+				
+				auto * transformComp = node->components.find<TransformComponent>();
+				
+				if (transformComp != nullptr)
+				{
+					break;
+				}
+				
+				break;
+			}
+			
+			if (simpleTextureId != 0)
+			{
+				pushCullMode(CULL_NONE, CULL_CCW);
+				{
+					gxSetTexture(simpleTextureId);
+					gxBegin(GX_QUADS);
+					{
+						const float kFadeBeginDistance = 1.f;
+						const float kFadeEndDistance = 4.f;
+						const float kSize = .5f;
+						
+						const float distanceToView = (pos - viewOrigin).CalcSize();
+						const float opacity = saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance));
+						
+						gxColor4f(1, 1, 1, opacity);
+						gxTexCoord2f(0.f, 0.f); gxVertex2f(-kSize, +kSize * 2.f);
+						gxTexCoord2f(1.f, 0.f); gxVertex2f(+kSize, +kSize * 2.f);
+						gxTexCoord2f(1.f, 1.f); gxVertex2f(+kSize, 0.f);
+						gxTexCoord2f(0.f, 1.f); gxVertex2f(-kSize, 0.f);
+					}
+					gxEnd();
+					gxSetTexture(0);
+				}
+				popCullMode();
+			}
+		}
+		gxPopMatrix();
+	}
 }
 
 void SceneEditor::drawEditorSelectedNodeLabels() const
 {
-	int viewportX;
-	int viewportY;
-	int viewportSx;
-	int viewportSy;
-	getEditorViewport(viewportX, viewportY, viewportSx, viewportSy);
-	
 	Mat4x4 projectionMatrix;
-	camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
-	projectionMatrix = Mat4x4(true)
-		.Translate(viewportX, viewportY, 0)
-		.Mul(projectionMatrix);
-
 	Mat4x4 viewMatrix;
-	camera.calculateViewMatrix(viewMatrix);
+		
+	if (framework.isStereoVr())
+	{
+		gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+	}
+	else
+	{
+		int viewportX;
+		int viewportY;
+		int viewportSx;
+		int viewportSy;
+		getEditorViewport(viewportX, viewportY, viewportSx, viewportSy);
+		
+		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+		projectionMatrix = Mat4x4(true)
+			.Translate(viewportX, viewportY, 0)
+			.Mul(projectionMatrix);
+
+		camera.calculateViewMatrix(viewMatrix);
+	}
 	
 	const Mat4x4 modelViewProjection = projectionMatrix * viewMatrix;
 	
@@ -3454,17 +3580,26 @@ void SceneEditor::drawView2d() const
 	drawEditorSelectedNodeLabels();
 }
 
-void SceneEditor::drawView3d() const
+void SceneEditor::drawView3dOpaque() const
+{
+	drawEditorGridOpaque();
+	drawEditroGroundPlaneOpaque();
+	drawEditorNodesOpaque();
+}
+
+void SceneEditor::drawView3dOpaque_ForwardShaded() const
 {
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	const Mat4x4 viewToWorld = worldToView.CalcInv();
 	
-// todo : draw gizmo here? we need to prevent lighting from interacting with it
-
+	drawEditorGizmosOpaque(true);
+	drawEditorGizmosOpaque(false);
+				
 // todo : draw node name labels here? we need to prevent them from obscuring the interactive ring. also would be nice if they appear in vr mode
 
-// todo : draw node details
+	// draw node details
+	
 	for (auto nodeId : selection.selectedNodes)
 	{
 		gxPushMatrix();
@@ -3476,11 +3611,12 @@ void SceneEditor::drawView3d() const
 			
 			gxTranslatef(translation[0], translation[1], translation[2]);
 			
-			// todo : rotate to face the camera
+			// rotate to face the camera
 			const Vec3 forwardVector = viewToWorld.GetAxis(2);
-			const float rotationY = -atan2f(forwardVector[0], forwardVector[2]);
+			const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
 			gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
 			
+			// flip Y axis to make sure text renders correctly
 			gxScalef(1, -1, 1);
 			
 			pushFontMode(FONT_SDF); // todo : font spec once
@@ -3517,7 +3653,16 @@ void SceneEditor::drawView3d() const
 		gxPopMatrix();
 	}
 
-	interactiveRing.draw(*this);
+	interactiveRing.drawOpaque(*this);
+}
+
+void SceneEditor::drawView3dTranslucent() const
+{
+	drawEditorGridTranslucent();
+	
+	drawEditorGizmosTranslucent();
+	
+	drawEditorNodesTranslucent();
 }
 
 bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath)
@@ -3563,7 +3708,9 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 					auto * node = node_itr.second;
 					
 					if (node->id != scene.rootNodeId)
+					{
 						deferred.nodesToRemove.insert(node->id);
+					}
 				}
 				
 				// insert nodes from the loaded scene, except for the root node
@@ -3982,7 +4129,7 @@ void SceneEditor::InteractiveRing::tickAnimation(
 	}
 }
 
-void SceneEditor::InteractiveRing::draw(const SceneEditor & sceneEditor) const
+void SceneEditor::InteractiveRing::drawOpaque(const SceneEditor & sceneEditor) const
 {
 	if (openAnim == 0.f)
 		return;
@@ -4176,7 +4323,7 @@ static const char * doImGuiFileDialog(const SceneEditor & sceneEditor, const cha
 		//         instead, it's the initial filename (if any). this causes files to be
 		//         unexpectedly overwritten
 		
-		#if 0
+		#if defined(DEBUG)
 			auto filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
 			auto filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
 			auto fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();

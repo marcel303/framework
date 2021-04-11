@@ -53,8 +53,11 @@ struct TransformGizmo
 	bool enableTranslation = true;
 	bool enableRotation = true;
 	
-	float arrow_radius = .08f;
+	float arrow_radius = .04f;
 	float arrow_length = 1.f;
+	float arrow_top_radius = arrow_radius * 1.4f;
+	float arrow_top_length = arrow_radius * 3.f;
+	float arrow_collision_radius = .08f;
 	
 	float pad_offset = .5f;
 	float pad_size = .3f;
@@ -84,6 +87,13 @@ struct TransformGizmo
 		int axis = 0;
 		float initialAngle = 0.f;
 	} dragRing;
+	
+	struct
+	{
+		Vec3 nearestRingPos;
+		Vec3 nearestRingPos_projected;
+		bool hasNearestRingPos = false;
+	} mutable debugging;
 	
 	void show(const Mat4x4 & transform);
 	void hide();

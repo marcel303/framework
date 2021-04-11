@@ -32,7 +32,8 @@ struct GltfComponent : Component<GltfComponent>
 	
 	void free();
 	
-	void draw(const Mat4x4 & objectToWorld) const;
+	void drawOpaque(const Mat4x4 & objectToWorld) const;
+	void drawTranslucent(const Mat4x4 & objectToWorld) const;
 };
 
 //
@@ -41,7 +42,8 @@ struct Scene;
 
 struct GltfComponentMgr : ComponentMgr<GltfComponent>
 {
-	void draw() const;
+	void drawOpaque() const;
+	void drawTranslucent() const;
 };
 
 extern GltfComponentMgr g_gltfComponentMgr;

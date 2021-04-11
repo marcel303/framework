@@ -307,22 +307,28 @@ struct SceneEditor
 	bool performAction_sceneImport(const char * path);
 	bool performAction_duplicate();
 	bool performAction_parent(const int childNodeId, const int newParentId);
-	
-	void drawNodeBoundingBox(const SceneNode & node) const;
-	void drawNodes() const;
-	
+
 	void drawSceneOpaque() const;
+	void drawSceneOpaque_ForwardShaded() const;
 	void drawSceneTranslucent() const;
 	
-	void drawEditorOpaque() const;
-	void drawEditorTranslucent() const;
+protected:
+	void drawEditorGridOpaque() const;
+	void drawEditorGridTranslucent() const;
+	void drawEditroGroundPlaneOpaque() const;
+	void drawEditorNodeBoundingBox(const SceneNode & node) const;
+	void drawEditorNodesOpaque() const;
+	void drawEditorNodesTranslucent() const;
 	void drawEditorGizmosOpaque(const bool depthObscuredPass) const;
 	void drawEditorGizmosTranslucent() const;
 	void drawEditorSelectedNodeLabels() const;
 	
+public:
 	void drawGui() const;
 	void drawView2d() const;
-	void drawView3d() const;
+	void drawView3dOpaque() const;
+	void drawView3dOpaque_ForwardShaded() const;
+	void drawView3dTranslucent() const;
 	
 	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath);
 	
@@ -408,7 +414,7 @@ struct SceneEditor
 			const Mat4x4 & viewMatrix,
 			const float dt);
 		
-		void draw(
+		void drawOpaque(
 			const SceneEditor & sceneEditor) const;
 		
 		void calculateTransform(Mat4x4 & out_transform) const;

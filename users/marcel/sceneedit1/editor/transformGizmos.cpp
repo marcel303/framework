@@ -155,7 +155,10 @@ bool TransformGizmo::tick(
 	}
 	else if (state == kState_Visible)
 	{
-		intersectionResult = intersect(pointer_origin, pointer_direction);
+		intersectionResult =
+			isInteractive
+			? intersect(pointer_origin, pointer_direction)
+			: IntersectionResult();
 		
 		if (intersectionResult.element == kElement_XAxis ||
 			intersectionResult.element == kElement_YAxis ||
@@ -368,13 +371,13 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 		// draw axis arrows
 		
 		setColorForArrow(0);
-		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length);
+		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
 		
 		setColorForArrow(1);
-		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length);
+		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
 		
 		setColorForArrow(2);
-		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length);
+		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
 		
 		// draw pads
 		
@@ -388,7 +391,7 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 			};
 			
 			const Color & pad_color = pad_colors[i];
-			const Color pad_color_highlight(255, 255, 40);
+			const Color pad_color_highlight(255, 255, 255);
 			
 			const int axis1 = (i + 0) % 3;
 			const int axis2 = (i + 1) % 3;
@@ -429,6 +432,15 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 		
 		setColorForRing(2);
 		drawRingLine(Vec3(), 2, ring_radius);
+		
+	#if defined(DEBUG)
+		if (debugging.hasNearestRingPos)
+		{
+			setColor(colorWhite);
+			fillCube(debugging.nearestRingPos, Vec3(.01f));
+			fillCube(debugging.nearestRingPos_projected, Vec3(.01f));
+		}
+	#endif
 	}
 	gxPopMatrix();
 	
@@ -447,7 +459,7 @@ void TransformGizmo::drawTranslucent() const
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
 	{
-		const int opacity = 60;
+		const int opacity = 191;
 		
 		// draw pads
 		
@@ -461,7 +473,7 @@ void TransformGizmo::drawTranslucent() const
 			};
 			
 			const Color & pad_color = pad_colors[i];
-			const Color pad_color_highlight(255, 255, 40, opacity);
+			const Color pad_color_highlight = pad_color;
 			
 			const int axis1 = (i + 0) % 3;
 			const int axis2 = (i + 1) % 3;
@@ -536,7 +548,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 				origin_gizmo[axis2],
 				direction_gizmo[axis1],
 				direction_gizmo[axis2],
-				0.f, 0.f, arrow_radius, t) && t < best_t)
+				0.f, 0.f, arrow_collision_radius, t) && t < best_t)
 			{
 				const Vec3 intersection_pos = origin_gizmo + direction_gizmo * t;
 				
@@ -545,7 +557,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 				
 				const float distance = intersection_pos * axis;
 				
-				if (distance >= 0.f && distance < arrow_length)
+				if (distance >= 0.f && distance < arrow_length + arrow_top_length)
 				{
 					best_t = t;
 					result.element = (Element)(kElement_XAxis + i);
@@ -606,6 +618,121 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 	{
 		// intersect the rings
 
+	#if 1
+		// works well when facing the ring head on. difficulty picking when viewing the ring at a grazing angle
+		
+		debugging.hasNearestRingPos = false;
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			const int axis1 = (i + 1) % 3;
+			const int axis2 = (i + 2) % 3;
+			
+			const float t_plane = - origin_gizmo[i] / direction_gizmo[i];
+			const Vec3 p_plane = origin_gizmo + direction_gizmo * t_plane;
+			const Vec3 nearestPoint = p_plane.CalcNormalized() * ring_radius;
+			
+			float sphere_t1, sphere_t2;
+			
+			if (intersectSphere(
+				origin_gizmo[0],
+				origin_gizmo[1],
+				origin_gizmo[2],
+				direction_gizmo[0],
+				direction_gizmo[1],
+				direction_gizmo[2],
+				nearestPoint[0],
+				nearestPoint[1],
+				nearestPoint[2],
+				ring_tubeRadius,
+				sphere_t1,
+				sphere_t2))
+			{
+				const float sphere_t = fminf(fmaxf(0.f, sphere_t1), sphere_t2);
+				
+				if (sphere_t2 >= 0.f && sphere_t < best_t)
+				{
+					best_t = sphere_t;
+					result.element = (Element)(kElement_XRing + i);
+					
+				#if defined(DEBUG)
+					debugging.hasNearestRingPos        = true;
+					debugging.nearestRingPos           = origin_gizmo + direction_gizmo * sphere_t;
+					debugging.nearestRingPos_projected = p_plane;//nearestPoint;
+				#endif
+				}
+			}
+		}
+	#elif 1
+		// works well both facing a ring head on and at a grazing angle, but misses the intersection when the initial
+		// circle intersection fails, which happens at the 'extremes' of the circle from a visual perspective
+		debugging.hasNearestRingPos = false;
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			const int axis1 = (i + 1) % 3;
+			const int axis2 = (i + 2) % 3;
+			
+			float t_circle[2];
+			
+			if (intersectCircle2(
+				origin_gizmo[axis1],
+				origin_gizmo[axis2],
+				direction_gizmo[axis1],
+				direction_gizmo[axis2],
+				0.f,
+				0.f,
+				ring_radius,
+				t_circle[0],
+				t_circle[1]))
+			{
+				Vec3 origin_gizmo_projected;
+				origin_gizmo_projected[axis1] = origin_gizmo[axis1];
+				origin_gizmo_projected[axis2] = origin_gizmo[axis2];
+				
+				Vec3 direction_gizmo_projected;
+				direction_gizmo_projected[axis1] = direction_gizmo[axis1];
+				direction_gizmo_projected[axis2] = direction_gizmo[axis2];
+				
+				for (int c = 0; c < 2; ++c)
+				{
+					const Vec3 intersectionPos_projected = origin_gizmo_projected + direction_gizmo_projected * t_circle[c];
+					
+					float sphere_t1, sphere_t2;
+					
+					if (intersectSphere(
+						origin_gizmo[0],
+						origin_gizmo[1],
+						origin_gizmo[2],
+						direction_gizmo[0],
+						direction_gizmo[1],
+						direction_gizmo[2],
+						intersectionPos_projected[0],
+						intersectionPos_projected[1],
+						intersectionPos_projected[2],
+						ring_tubeRadius,
+						sphere_t1,
+						sphere_t2))
+					{
+						const float sphere_t = fminf(fmaxf(0.f, sphere_t1), sphere_t2);
+						
+						if (sphere_t2 >= 0.f && sphere_t < best_t)
+						{
+							best_t = sphere_t;
+							result.element = (Element)(kElement_XRing + i);
+							
+						#if defined(DEBUG)
+							debugging.hasNearestRingPos        = true;
+							debugging.nearestRingPos           = origin_gizmo + direction_gizmo * sphere_t;
+							debugging.nearestRingPos_projected = intersectionPos_projected;
+						#endif
+						}
+					}
+				}
+			}
+		}
+	#else
+		// has a lot of issues at grazing angles
 		for (int i = 0; i < 3; ++i)
 		{
 			const float t = -origin_gizmo[i] / direction_gizmo[i];
@@ -623,6 +750,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 				}
 			}
 		}
+	#endif
 	}
 	
 	result.t = best_t;

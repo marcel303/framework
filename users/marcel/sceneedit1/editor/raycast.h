@@ -111,7 +111,6 @@ inline bool intersectBoundingBox3d_simd(
 
 //
 
-
 inline bool intersectCircle(
 	const float px, const float py,
 	const float dx, const float dy,
@@ -138,6 +137,71 @@ inline bool intersectCircle(
 			return false;
 		
 		t = t_temp;
+		
+		return true;
+	}
+}
+
+inline bool intersectCircle2(
+	const float px, const float py,
+	const float dx, const float dy,
+	const float cx, const float cy, const float cr,
+	float & t1,
+	float & t2)
+{
+	const float a = dx * dx + dy * dy;
+	const float b = 2.f * (dx * (px - cx) + dy * (py - cy));
+	
+	float c = cx * cx + cy * cy;
+	c += px * px + py * py;
+	c -= 2.f * (cx * px + cy * py);
+	c -= cr * cr;
+	
+	float det = b * b - 4.f * a * c;
+
+  	if (det < 0.f)
+		return false;
+	else
+	{
+		t1 = (- b - sqrtf(det)) / (2.f * a);
+		t2 = (- b + sqrtf(det)) / (2.f * a);
+		
+		return true;
+	}
+}
+
+//
+
+static bool intersectSphere(
+	const float px, const float py, const float pz,
+	const float dx, const float dy, const float dz,
+	const float sx, const float sy, const float sz, const float sr,
+	float & t1,
+	float & t2)
+{
+	const float a = dx * dx + dy * dy + dz * dz;
+	const float b = 2.f * (dx * (px - sx) + dy * (py - sy) + dz * (pz - sz));
+	
+	/*
+	float c = sx * sx + sy * sy + sz * sz;
+	c += px * px + py * py + pz * pz;
+	c -= 2.f * (sx * px + sy * py + dz * pz);
+	c -= sr * sr;
+	*/
+	float c =
+		(sx - px) * (sx - px) +
+		(sy - py) * (sy - py) +
+		(sz - pz) * (sz - pz) -
+		sr * sr;
+	
+	float det = b * b - 4.f * a * c;
+
+  	if (det < 0.f)
+		return false;
+	else
+	{
+		t1 = (- b - sqrtf(det)) / (2.f * a);
+		t2 = (- b + sqrtf(det)) / (2.f * a);
 		
 		return true;
 	}
