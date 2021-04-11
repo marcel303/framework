@@ -35,28 +35,33 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		// rotation
 		
 		const float rotationSpeed = 45.f;
-		const float movementSpeed = 1.f;
+		const float movementSpeed = -distance * .5f;
 		
 		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 		{
+			Mat4x4 worldMatrix;
+			calculateWorldMatrix(worldMatrix);
+			const Vec3 forwardVector = Vec3(worldMatrix.GetAxis(2)[0], 0.f, worldMatrix.GetAxis(2)[2]);
+			const Vec3 strafeVector = Vec3(worldMatrix.GetAxis(0)[0], 0.f, worldMatrix.GetAxis(0)[2]);
+			
 			if (keyboard.isDown(SDLK_UP))
 			{
-				origin[2] += movementSpeed * dt;
+				origin += forwardVector * movementSpeed * dt;
 				inputIsCaptured = true;
 			}
 			if (keyboard.isDown(SDLK_DOWN))
 			{
-				origin[2] -= movementSpeed * dt;
+				origin -= forwardVector * movementSpeed * dt;
 				inputIsCaptured = true;
 			}
 			if (keyboard.isDown(SDLK_LEFT))
 			{
-				origin[0] -= movementSpeed * dt;
+				origin -= strafeVector * movementSpeed * dt;
 				inputIsCaptured = true;
 			}
 			if (keyboard.isDown(SDLK_RIGHT))
 			{
-				origin[0] += movementSpeed * dt;
+				origin += strafeVector * movementSpeed * dt;
 				inputIsCaptured = true;
 			}
 		}
