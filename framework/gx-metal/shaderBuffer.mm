@@ -100,6 +100,9 @@ ShaderBuffer::ShaderBuffer()
 
 ShaderBuffer::~ShaderBuffer()
 {
+	Assert(m_bufferPool == nullptr);
+	Assert(m_bufferPoolElem == nullptr);
+	
 	free();
 }
 
