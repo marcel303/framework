@@ -90,6 +90,20 @@ namespace rOne
 		popDepthTest();
 	}
 	
+	static void renderOpaque_ForwardShadedPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
+	{
+		pushDepthTest(true, DEPTH_LESS, true);
+		pushBlend(BLEND_OPAQUE);
+		{
+			if (renderOptions.enableOpaquePass && renderFunctions.drawOpaque_ForwardShaded != nullptr)
+			{
+				renderFunctions.drawOpaque_ForwardShaded();
+			}
+		}
+		popBlend();
+		popDepthTest();
+	}
+	
 	static void renderBackgroundPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
 	{
 		// create a stencil mask for pixels in the background (depth = 1.0)
@@ -337,6 +351,7 @@ namespace rOne
 			pushRenderPass(composite[composite_idx], false, nullptr, false, "SSAO");
 			{
 				projectScreen2d();
+				
 				pushBlend(BLEND_MUL);
 				{
 					const Mat4x4 projectionToView = projectionMatrix.CalcInv();
@@ -401,6 +416,7 @@ namespace rOne
 			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Reflections (SSR)");
 			{
 				projectScreen2d();
+				
 				pushBlend(BLEND_OPAQUE);
 				{
 					const Mat4x4 viewToProjection = projectionMatrix;
@@ -481,6 +497,7 @@ namespace rOne
 			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Motion blur");
 			{
 				projectScreen2d();
+				
 				pushBlend(BLEND_OPAQUE);
 				{
 					Shader shader("renderOne/postprocess/screen-space-motion-blur");
@@ -780,6 +797,7 @@ namespace rOne
 			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Light scatter");
 			{
 				projectScreen2d();
+				
 				pushBlend(BLEND_OPAQUE);
 				{
 					Shader shader("renderOne/postprocess/light-scatter");
@@ -811,6 +829,7 @@ namespace rOne
 			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Tone mapping");
 			{
 				projectScreen2d();
+				
 				pushBlend(BLEND_OPAQUE);
 				{
 					Shader shader("renderOne/postprocess/tonemap");
@@ -923,7 +942,13 @@ namespace rOne
 	{
 		pushShaderOutputs(renderOptions.drawNormals ? "n" : "c");
 		{
-			renderOpaquePass(renderFunctions, renderOptions);
+			renderOpaquePass(
+				renderFunctions,
+				renderOptions);
+			
+			renderOpaque_ForwardShadedPass(
+				renderFunctions,
+				renderOptions);
 		}
 		popShaderOutputs();
 		
@@ -931,7 +956,9 @@ namespace rOne
 			renderFunctions,
 			renderOptions);
 		
-		renderTranslucentPass(renderFunctions, renderOptions);
+		renderTranslucentPass(
+			renderFunctions,
+			renderOptions);
 
 		return nullptr;
 	}
@@ -976,7 +1003,9 @@ namespace rOne
 			pushCullFlip();
 		#endif
 			
-			renderOpaquePass(renderFunctions, renderOptions);
+			renderOpaquePass(
+				renderFunctions,
+				renderOptions);
 			
 		#if ENABLE_OPENGL
 			popCullFlip();
@@ -984,50 +1013,6 @@ namespace rOne
 		}
 		popShaderOutputs();
 		popRenderPass();
-		
-		// create velocity buffer
-		
-		renderReconstructedVelocityBuffer(
-			renderOptions,
-			buffers,
-			viewportSx,
-			viewportSy,
-			eyeData);
-		
-		// apply tri-planar texture projection test
-		
-		if (false)
-		{
-			pushRenderPass(buffers.normals, false, nullptr, false, "Tri-planer test");
-			{
-				projectScreen2d();
-				
-				pushBlend(BLEND_ADD_OPAQUE);
-				{
-					const Mat4x4 projectionToView = projectionMatrix.CalcInv();
-					const Mat4x4 viewToWorld = modelViewMatrix.CalcInv();
-					const Mat4x4 worldToView = modelViewMatrix;
-					
-					Shader shader("renderOne/tri-planar-texture-projection");
-					setShader(shader);
-					{
-						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setTexture("planarTextureX", 3, getTexture("textures/refraction/droplets.png"), true, false);
-						shader.setTexture("planarTextureY", 4, getTexture("textures/refraction/droplets.png"), true, false);
-						shader.setTexture("planarTextureZ", 5, getTexture("textures/refraction/droplets.png"), true, false);
-						shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
-						shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
-						shader.setImmediateMatrix4x4("worldToView", worldToView.m_v);
-						shader.setImmediate("time", framework.time);
-						drawFullscreenQuad(viewportSx, viewportSy);
-					}
-					clearShader();
-				}
-				popBlend();
-			}
-			popRenderPass();
-		}
 
 		// accumulate lights
 		
@@ -1088,7 +1073,7 @@ namespace rOne
 		
 		// apply lighting
 		
-		pushRenderPass(composite[composite_idx], true, nullptr, false, "Light application");
+		pushRenderPass(composite[composite_idx], true, nullptr, false, "Light Application");
 		{
 			projectScreen2d();
 			
@@ -1101,9 +1086,9 @@ namespace rOne
 		}
 		popRenderPass();
 		
-		// draw background pass
+		// draw forward shaded opaque and background passes
 		
-		pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Background");
+		pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Forward Shaded & Background");
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
@@ -1116,6 +1101,10 @@ namespace rOne
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 		
+			renderOpaque_ForwardShadedPass(
+				renderFunctions,
+				renderOptions);
+		
 			renderBackgroundPass(
 				renderFunctions,
 				renderOptions);
@@ -1125,6 +1114,51 @@ namespace rOne
 		#endif
 		}
 		popRenderPass();
+		
+		// create velocity buffer
+		
+		renderReconstructedVelocityBuffer(
+			renderOptions,
+			buffers,
+			viewportSx,
+			viewportSy,
+			eyeData);
+		
+		// apply tri-planar texture projection test
+		
+	// todo : remove
+		if (false)
+		{
+			pushRenderPass(buffers.normals, false, nullptr, false, "Tri-planer Test");
+			{
+				projectScreen2d();
+				
+				pushBlend(BLEND_ADD_OPAQUE);
+				{
+					const Mat4x4 projectionToView = projectionMatrix.CalcInv();
+					const Mat4x4 viewToWorld = modelViewMatrix.CalcInv();
+					const Mat4x4 worldToView = modelViewMatrix;
+					
+					Shader shader("renderOne/tri-planar-texture-projection");
+					setShader(shader);
+					{
+						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+						shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+						shader.setTexture("planarTextureX", 3, getTexture("textures/refraction/droplets.png"), true, false);
+						shader.setTexture("planarTextureY", 4, getTexture("textures/refraction/droplets.png"), true, false);
+						shader.setTexture("planarTextureZ", 5, getTexture("textures/refraction/droplets.png"), true, false);
+						shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
+						shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
+						shader.setImmediateMatrix4x4("worldToView", worldToView.m_v);
+						shader.setImmediate("time", framework.time);
+						drawFullscreenQuad(viewportSx, viewportSy);
+					}
+					clearShader();
+				}
+				popBlend();
+			}
+			popRenderPass();
+		}
 		
 		// post-opaque, pre-translucent post-processing
 		
@@ -1152,7 +1186,9 @@ namespace rOne
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
-			renderTranslucentPass(renderFunctions, renderOptions);
+			renderTranslucentPass(
+				renderFunctions,
+				renderOptions);
 			
 		#if ENABLE_OPENGL
 			popCullFlip();
@@ -1211,7 +1247,13 @@ namespace rOne
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
-			renderOpaquePass(renderFunctions, renderOptions);
+			renderOpaquePass(
+				renderFunctions,
+				renderOptions);
+			
+			renderOpaque_ForwardShadedPass(
+				renderFunctions,
+				renderOptions);
 			
 		#if ENABLE_OPENGL
 			popCullFlip();
@@ -1290,7 +1332,9 @@ namespace rOne
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
-			renderTranslucentPass(renderFunctions, renderOptions);
+			renderTranslucentPass(
+				renderFunctions,
+				renderOptions);
 			
 		#if ENABLE_OPENGL
 			popCullFlip();
@@ -1621,7 +1665,10 @@ namespace rOne
 		const float timeStep,
 		const bool updateHistory)
 	{
-		buffers.alloc(viewportSx, viewportSy, renderOptions.linearColorSpace);
+		if (renderOptions.renderMode != kRenderMode_Flat)
+			buffers.alloc(viewportSx, viewportSy, renderOptions.linearColorSpace);
+		else
+			buffers.free();
 		
 		if (renderOptions.anaglyphic.enabled)
 			buffers2.alloc(viewportSx, viewportSy, renderOptions.linearColorSpace);

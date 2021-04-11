@@ -24,6 +24,7 @@ namespace rOne
 	struct RenderFunctions
 	{
 		RenderFunction drawOpaque;
+		RenderFunction drawOpaque_ForwardShaded;
 		RenderFunction drawBackground;
 		RenderFunction drawTranslucent;
 		RenderFunction drawLights;
