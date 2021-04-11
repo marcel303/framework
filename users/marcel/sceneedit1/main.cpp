@@ -83,7 +83,7 @@ done :
 
 */
 
-static const int VIEW_SX = 1200;
+static const int VIEW_SX = 1000;
 static const int VIEW_SY = 800;
 
 //
@@ -93,8 +93,10 @@ struct MyRenderOptions
 	enum Mode
 	{
 		kMode_Flat,
-		kMode_Lit,
-		kMode_LitWithShadows
+		kMode_DeferredShaded,
+		kMode_DeferredShadedWithShadows,
+		kMode_ForwardShaded,
+		kMode_ForwardShadedWithShadows
 	};
 	
 	ParameterMgr parameterMgr;
@@ -110,8 +112,10 @@ struct MyRenderOptions
 		mode = parameterMgr.addEnum("Mode", kMode_Flat,
 			{
 				{ "Flat", kMode_Flat },
-				{ "Lit", kMode_Lit },
-				{ "Lit + Shadows", kMode_LitWithShadows }
+				{ "Deferred Shaded", kMode_DeferredShaded },
+				{ "Deferred Shaded + Shadows", kMode_DeferredShadedWithShadows },
+				{ "Forward Shaded", kMode_ForwardShaded },
+				{ "Forward Shaded + Shadows", kMode_ForwardShadedWithShadows }
 			});
 		
 		drawWireframe = parameterMgr.addBool("Draw Wireframe", false);
@@ -204,7 +208,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
-#if FRAMEWORK_IS_NATIVE_VR || 1
+#if FRAMEWORK_IS_NATIVE_VR || 1 // todo : decide what to do here
 	framework.vrMode = true;
 	framework.enableVrMovement = true;
 #endif
@@ -214,6 +218,11 @@ int main(int argc, char * argv[])
 	framework.allowHighDpi = false;
 	
 	framework.windowIsResizable = true;
+	
+#if USE_GUI_WINDOW
+	framework.windowX = 450;
+	framework.windowY = 100;
+#endif
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
@@ -238,12 +247,15 @@ int main(int argc, char * argv[])
 	
 #if USE_GUI_WINDOW
 	Window * guiWindow = new Window("Gui", 400, 600, true);
+	guiWindow->setPosition(40, 100);
 #endif
 	
 	auto drawOpaque = [&]()
 		{
 			pushCullMode(CULL_BACK, CULL_CCW);
 			{
+				// draw scene
+				
 				if (myRenderOptions.drawWireframe->get())
 					pushWireframe(true);
 				{
@@ -252,20 +264,12 @@ int main(int argc, char * argv[])
 				if (myRenderOptions.drawWireframe->get())
 					popWireframe();
 				
-				editor.drawEditorOpaque();
+				// draw editor
 				
-				pushCullMode(CULL_BACK, CULL_CCW);
-				editor.drawEditorGizmosOpaque(false);
-				popCullMode();
-				
-				pushDepthTest(true, DEPTH_GREATER, false);
-				{
-					pushCullMode(CULL_BACK, CULL_CCW);
-					editor.drawEditorGizmosOpaque(true);
-					popCullMode();
-				}
-				popDepthTest();
+				editor.drawView3dOpaque();
 
+				// draw virtual desktop
+				
 				if (framework.vrMode)
 				{
 					framework.drawVirtualDesktop();
@@ -274,9 +278,17 @@ int main(int argc, char * argv[])
 			popCullMode();
 		};
 	
-	auto drawOpaqueUnlit = [&]()
+	auto drawOpaque_ForwardShaded = [&]()
 		{
-			editor.drawView3d();
+			pushCullMode(CULL_BACK, CULL_CCW);
+			{
+				// todo : add editor.drawSceneOpaque_ForwardShaded();
+				
+				editor.drawSceneOpaque_ForwardShaded();
+				
+				editor.drawView3dOpaque_ForwardShaded();
+			}
+			popCullMode();
 		};
 		
 	auto drawTranslucent = [&]()
@@ -285,8 +297,8 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_ALPHA);
 			{
 				editor.drawSceneTranslucent();
-				editor.drawEditorTranslucent();
-				editor.drawEditorGizmosTranslucent();
+				
+				editor.drawView3dTranslucent();
 			}
 			popBlend();
 			popCullMode();
@@ -298,6 +310,9 @@ int main(int argc, char * argv[])
 			
 			for (auto * light = g_lightComponentMgr.head; light != nullptr; light = light->next)
 			{
+				if (light->enabled == false)
+					continue;
+					
 				if (light->type == LightComponent::kLightType_Point)
 				{
 					// draw point light
@@ -345,17 +360,16 @@ int main(int argc, char * argv[])
 	
 	rOne::RenderFunctions renderFunctions;
 	renderFunctions.drawOpaque = drawOpaque;
-	renderFunctions.drawOpaqueUnlit = drawOpaqueUnlit;
+	renderFunctions.drawOpaque_ForwardShaded = drawOpaque_ForwardShaded;
 	renderFunctions.drawTranslucent = drawTranslucent;
 	renderFunctions.drawLights = drawLights;
 	
 	rOne::RenderOptions renderOptions;
-	renderOptions.deferredLighting.enableStencilVolumes = false;
-	renderOptions.bloom.enabled = true;
+	//renderOptions.bloom.enabled = true;
 	//renderOptions.motionBlur.enabled = true;
 	//renderOptions.depthSilhouette.enabled = true;
-	renderOptions.lightScatter.enabled = true;
-	renderOptions.linearColorSpace = true;
+	//renderOptions.lightScatter.enabled = true;
+	//renderOptions.linearColorSpace = true;
 	
 	for (;;)
 	{
@@ -565,6 +579,7 @@ int main(int argc, char * argv[])
 				type->componentMgr->tick(dt_scene);
 			}
 			
+		// todo : why do we calculate transforms again here ? if there is a reason, add a comment
 			g_transformComponentMgr.calculateTransforms(editor.scene);
 		}
 		
@@ -635,10 +650,14 @@ int main(int argc, char * argv[])
 					renderOptions.renderMode = rOne::kRenderMode_Flat;
 					break;
 					
-				case MyRenderOptions::kMode_Lit:
-				case MyRenderOptions::kMode_LitWithShadows:
-					//renderOptions.renderMode = rOne::kRenderMode_ForwardShaded; // todo : switch to forward shaded
+				case MyRenderOptions::kMode_DeferredShaded:
+				case MyRenderOptions::kMode_DeferredShadedWithShadows:
 					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+					break;
+				
+				case MyRenderOptions::kMode_ForwardShaded:
+				case MyRenderOptions::kMode_ForwardShadedWithShadows:
+					renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
 					break;
 				}
 				
@@ -646,7 +665,7 @@ int main(int argc, char * argv[])
 				
 				renderer.render(renderFunctions, renderOptions, framework.timeStep);
 				
-				static int n = 0;
+				static int n = 0; // todo : remove fps counter
 				++n;
 				static int f = 0;
 				if ((int)framework.time != f)
