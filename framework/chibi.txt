@@ -59,6 +59,8 @@ library gx-metal-poolhack
 	# implementation requires manually managing a pool due to how begin/endDraw and
 	# begin/endRenderPass segment the draw code, making use of @autoreleasepool not an option
 	
+	depend_library libgg
+
 	add_files gx-metal/poolhack/poolhack.mm
 	add_files gx-metal/poolhack/poolhack.h
 	

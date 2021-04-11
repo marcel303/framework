@@ -46,6 +46,8 @@ ShaderBuffer::ShaderBuffer()
 ShaderBuffer::~ShaderBuffer()
 {
 	fassert(m_bufferId == 0 && m_bufferSize == 0);
+
+	free();
 }
 
 void ShaderBuffer::alloc(const int numBytes)
