@@ -1,0 +1,59 @@
+ include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include renderOne/forward-lighting/light-params.txt
+include renderOne/forward-lighting/light-volume.txt
+include renderOne/light-attenuation-functions.txt
+include renderOne/shadow-mapping/shadow-mapping.txt
+
+include gltf/materials/pbr-specularGlossiness.txt
+
+#define kEnableShadowMapping 1
+
+uniform float outputLinearColorSpace;
+
+shader_in vec3 v_position_view;
+shader_in vec3 v_normal_view;
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord0;
+shader_in vec2 v_texcoord1;
+
+Lighting_SurfaceProperties s_surfaceProperties;
+
+include ecs-component/gltf/lighting.txt
+
+void main()
+{
+   vec3 normal_view = normalize(v_normal_view);
+
+   // -- prepare surface properties
+
+    s_surfaceProperties = prepareSurfaceProperties(
+        v_position_view,
+        normal_view,
+        v_color,
+        v_texcoord0,
+        v_texcoord1,
+        true);
+
+    // -- compute lighting
+
+    vec3 color = computeLighting();
+
+    // -- add emissive
+
+    color += gltfEmissive();
+
+    // -- convert linear to gamma space
+
+    if (outputLinearColorSpace == 0.0)
+    {
+        color = linearToSrgb(color);
+    }
+
+    //color += colorDither8ScreenSpace(v_position_view.xy * vec2(800, 600) * 0.5) * 1.0;
+
+    // -- store
+
+    shader_fragColor = vec4(color, s_surfaceProperties.opacity);
+    shader_fragNormal = vec4(normal_view, 0.0);
+}

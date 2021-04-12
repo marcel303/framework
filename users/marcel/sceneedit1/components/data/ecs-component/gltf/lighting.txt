@@ -1,0 +1,65 @@
+// expects s_surfaceProperties to exist
+
+vec3 s_color;
+
+void forEachLightId(int id)
+{
+    LightParams light = lookupLightParams(id);
+
+    // -- compute lighting
+
+	vec3 lightDir;
+	float lightAttenuation;
+
+	if (light.type == kLightType_Spot)
+	{
+		lightDir = light.direction;
+		lightAttenuation = computeAttenuationForSpotLight(v_position_view, light.position, light.direction, light.spotAngleAlpha, light.attenuationEnd);
+
+	#if kEnableShadowMapping
+		int shadowMapId = int(light.userData);
+
+		if (shadowMapId != -1)
+		{
+			lightAttenuation *= lookupShadow(shadowMapId, v_position_view).r;
+		}
+	#endif
+	}
+	else if (light.type == kLightType_Point)
+	{
+		vec3 lightToSurface = v_position_view - light.position;
+		lightDir = normalize(lightToSurface);
+		lightAttenuation = computeAttenuationForPointLight(v_position_view, light.position, light.attenuationEnd);
+	}
+	else if (light.type == kLightType_Directional)
+	{
+		lightDir = light.direction;
+		lightAttenuation = 1.0;
+
+	#if kEnableShadowMapping
+		int shadowMapId = int(light.userData);
+
+		if (shadowMapId != -1)
+		{
+			lightAttenuation *= lookupShadow(shadowMapId, v_position_view).r;
+		}
+	#endif
+	}
+
+	// todo : handle different light types : area box, sphere, rect, circle
+
+	Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
+
+	vec3 lightColor = light.color * (lightAttenuation * lightingResult.lightIncidence);
+
+	s_color += (lightingResult.specular + lightingResult.diffuse) * lightColor;
+}
+
+vec3 computeLighting()
+{
+	s_color = vec3(0.0);
+
+    forEachLightIdAt(v_position_view);
+
+	return s_color;
+}
