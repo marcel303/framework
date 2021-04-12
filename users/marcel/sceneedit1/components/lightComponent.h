@@ -3,7 +3,15 @@
 #include "component.h"
 #include "Vec3.h"
 
+class Mat4x4;
 class Surface;
+
+namespace rOne
+{
+	struct ForwardLightingHelper;
+	
+	class ShadowMapDrawer;
+}
 
 struct LightComponent : Component<LightComponent>
 {
@@ -22,16 +30,27 @@ struct LightComponent : Component<LightComponent>
 	float intensity = 1.f;
 	Vec3 color = Vec3(1, 1, 1);
 	Vec3 bottomColor = Vec3(0, 0, 0);
-	float innerRadius = 1.f;
-	float outerRadius = 10.f;
+	float farDistance = 10.f; // for point and spot light attenuation
+	float attenuationBegin = 0.f;  // for point and spot light attenuation
+	float spotAngle = 90.f;
+	bool castShadows = false;
 };
 
 struct LightComponentMgr : ComponentMgr<LightComponent>
 {
+	rOne::ForwardLightingHelper * forwardLightingHelper = nullptr;
+	
+	rOne::ShadowMapDrawer * shadowMapDrawer = nullptr;
+	
+	bool enableShadowMaps = false;
+	
+	virtual bool init() override;
+	virtual void shut() override;
+	
+	void beforeDraw(const Mat4x4 & worldToView);
 };
 
 extern LightComponentMgr g_lightComponentMgr;
-
 
 #if defined(DEFINE_COMPONENT_TYPES)
 
@@ -65,8 +84,12 @@ struct LightComponentType : ComponentType<LightComponent>
 			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
 		add("bottomColor", &LightComponent::bottomColor)
 			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
-		add("innerRadius", &LightComponent::innerRadius);
-		add("outerRadius", &LightComponent::outerRadius);
+		add("farDistance", &LightComponent::farDistance);
+		add("attenuationBegin", &LightComponent::attenuationBegin)
+			.limits(0.f, 1.f);
+		add("spotAngle", &LightComponent::spotAngle)
+			.limits(0.f, 170.f);
+		add("castShadows", &LightComponent::castShadows);
 	}
 };
 

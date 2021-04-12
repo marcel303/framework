@@ -1,5 +1,9 @@
 // expects s_surfaceProperties to exist
 
+#ifndef kEnableShadowMapping
+	#error expected kEnableShadowMapping to be defined
+#endif
+
 vec3 s_color;
 
 void forEachLightId(int id)

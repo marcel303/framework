@@ -1,0 +1,36 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+include gltf/materials/pbr-metallicRoughness.txt
+
+shader_in vec3 v_position_view;
+shader_in vec3 v_normal_view;
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord0;
+shader_in vec2 v_texcoord1;
+
+void main()
+{
+    vec3 normal_view = normalize(v_normal_view);
+
+    // -- prepare surface properties
+
+    Lighting_SurfaceProperties surfaceProperties = prepareSurfaceProperties(
+        v_position_view,
+        normal_view,
+        v_color,
+        v_texcoord0,
+        v_texcoord1,
+        true);
+
+     // -- write MRT outputs
+    
+    vec4 baseColor = gltfBaseColor();
+    vec3 emissive = gltfEmissive();
+
+    shader_fragColor = vec4(linearToSrgb(baseColor.rgb), baseColor.a);
+    shader_fragNormal = vec4(gltfNormal(v_position_view, normal_view), 0.0);
+    shader_fragEmissive = max3(emissive.x, emissive.y, emissive.z);
+    shader_fragSpecularColor = vec4(linearToSrgb(baseColor.rgb * surfaceProperties.metallic), 0.0);
+    shader_fragSpecularExponent = (1.0 - surfaceProperties.roughness) * 128.0;
+}

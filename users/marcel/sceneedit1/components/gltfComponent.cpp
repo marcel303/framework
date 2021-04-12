@@ -1,10 +1,14 @@
 #include "gltfCache.h"
 #include "gltfComponent.h"
 
+#include "lightComponent.h"
 #include "sceneNodeComponent.h"
 
 #include "gltf-draw.h"
 #include "gltf-loader.h"
+
+#include "forwardLighting.h"
+#include "shadowMapDrawer.h"
 
 #include "framework.h"
 
@@ -110,11 +114,63 @@ void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld, const Material
 
 //
 
+static Shader s_metallicRoughnessShader;
+static Shader s_specularGlossinessShader;
+
+static void setMaterialShaders(MaterialShaders & materialShaders, const bool forwardShaded, const bool outputLinearColorSpace, const Mat4x4 & worldToView)
+{
+	if (forwardShaded)
+	{
+		s_metallicRoughnessShader = Shader("ecs-component/gltf/forward-pbr-metallicRoughness");
+		s_specularGlossinessShader = Shader("ecs-component/gltf/forward-pbr-specularGlossiness");
+	}
+	else
+	{
+		s_metallicRoughnessShader = Shader("ecs-component/gltf/deferred-pbr-metallicRoughness");
+		s_specularGlossinessShader = Shader("ecs-component/gltf/deferred-pbr-specularGlossiness");
+	}
+	
+	materialShaders.metallicRoughnessShader = &s_metallicRoughnessShader;
+	materialShaders.specularGlossinessShader = &s_specularGlossinessShader;
+	
+	Shader * shaders[2] =
+		{
+			&s_metallicRoughnessShader,
+			&s_specularGlossinessShader
+		};
+	
+	for (int i = 0; i < 2; ++i)
+	{
+		setShader(*shaders[i]);
+		{
+			int nextTextureUnit = 0;
+			
+			if (forwardShaded)
+			{
+				g_lightComponentMgr.forwardLightingHelper->setShaderData(*shaders[i], nextTextureUnit);
+			}
+			
+			g_lightComponentMgr.shadowMapDrawer->setShaderData(*shaders[i], nextTextureUnit, worldToView);
+			
+			materialShaders.firstTextureUnit = nextTextureUnit;
+			
+			shaders[i]->setImmediate("outputLinearColorSpace", outputLinearColorSpace ? 1.f : 0.f);
+		}
+		clearShader();
+		
+		materialShaders.init();
+	}
+}
+
 void GltfComponentMgr::drawOpaque() const
 {
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	
 // todo : set shaders based on render mode
 	MaterialShaders materialShaders;
-	setDefaultMaterialShaders(materialShaders);
+	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	//setDefaultMaterialShaders(materialShaders);
 		
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
@@ -131,9 +187,13 @@ void GltfComponentMgr::drawOpaque() const
 
 void GltfComponentMgr::drawTranslucent() const
 {
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	
 // todo : set shaders based on render mode
 	MaterialShaders materialShaders;
-	setDefaultMaterialShaders(materialShaders);
+	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	//setDefaultMaterialShaders(materialShaders);
 	
 	for (auto * i = head; i != nullptr; i = i->next)
 	{

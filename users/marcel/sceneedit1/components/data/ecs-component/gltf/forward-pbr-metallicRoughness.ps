@@ -1,4 +1,4 @@
- include engine/ShaderPS.txt
+include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 include renderOne/forward-lighting/light-params.txt
 include renderOne/forward-lighting/light-volume.txt
@@ -23,9 +23,9 @@ include ecs-component/gltf/lighting.txt
 
 void main()
 {
-   vec3 normal_view = normalize(v_normal_view);
+    vec3 normal_view = normalize(v_normal_view);
 
-   // -- prepare surface properties
+    // -- prepare surface properties
 
     s_surfaceProperties = prepareSurfaceProperties(
         v_position_view,
@@ -49,8 +49,6 @@ void main()
     {
         color = linearToSrgb(color);
     }
-
-    //color += colorDither8ScreenSpace(v_position_view.xy * vec2(800, 600) * 0.5) * 1.0;
 
     // -- store
 

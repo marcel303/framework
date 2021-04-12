@@ -73,6 +73,8 @@
 
 #define ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO 0 // todo : requires unique names for each nodes to always exist (not just on auto assign during save)
 
+static const float kMinNodeRadius = .5f;
+
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
 static void openImGuiSaveDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
@@ -141,7 +143,7 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 // todo : generalize this function. query aabb interface on component type .. ?
 static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
 {
-	const float kMinExtents = .5f;
+	//const float kMinExtents = .5f;
 	
 	bool hasMinMax = false;
 	
@@ -179,6 +181,7 @@ static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max
 		}
 	}
 	
+#if false
 	if (hasMinMax)
 	{
 		min = min.Min(Vec3(-kMinExtents));
@@ -190,6 +193,7 @@ static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max
 		max = Vec3(+kMinExtents);
 		hasMinMax = true;
 	}
+#endif
 	
 	return hasMinMax;
 }
@@ -206,35 +210,61 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 		if (nodesToIgnore.count(node.id) != 0)
 			continue;
 		
-		Vec3 min(false);
-		Vec3 max(false);
-		if (!getBoundingBoxForNode(node, min, max))
-			continue;
-			
 		const auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
 		
-		Assert(sceneNodeComp != nullptr);
-		if (sceneNodeComp == nullptr)
-			continue;;
-			
-		const auto & objectToWorld = sceneNodeComp->objectToWorld;
-		const auto worldToObject = objectToWorld.CalcInv();
+		// intersect the accurate AABB for the node (if it has one)
 		
-		const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
-		const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
-		
-		float distance;
-		if (intersectBoundingBox3d(
-			&min[0],
-			&max[0],
-			rayOrigin_object[0],
-			rayOrigin_object[1],
-			rayOrigin_object[2],
-			1.f / rayDirection_object[0],
-			1.f / rayDirection_object[1],
-			1.f / rayDirection_object[2],
-			distance))
+		Vec3 min(false);
+		Vec3 max(false);
+		if (getBoundingBoxForNode(node, min, max))
 		{
+			const auto & objectToWorld = sceneNodeComp->objectToWorld;
+			const auto worldToObject = objectToWorld.CalcInv();
+			
+			const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
+			const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
+			
+			float distance;
+			if (intersectBoundingBox3d(
+				&min[0],
+				&max[0],
+				rayOrigin_object[0],
+				rayOrigin_object[1],
+				rayOrigin_object[2],
+				1.f / rayDirection_object[0],
+				1.f / rayDirection_object[1],
+				1.f / rayDirection_object[2],
+				distance))
+			{
+				if (distance < bestDistance)
+				{
+					bestNode = &node;
+					bestDistance = distance;
+				}
+			}
+		}
+		
+		// intersect a sphere in world-space, which ensures the node always has a minimum size representation within the world to click on
+		
+		const Vec3 position = sceneNodeComp->objectToWorld.GetTranslation();
+		float sphere_t1;
+		float sphere_t2;
+		if (intersectSphere(
+			rayOrigin[0],
+			rayOrigin[1],
+			rayOrigin[2],
+			rayDirection[0],
+			rayDirection[1],
+			rayDirection[2],
+			position[0],
+			position[1],
+			position[2],
+			kMinNodeRadius,
+			sphere_t1,
+			sphere_t2))
+		{
+			const float distance = fminf(fmaxf(0.f, sphere_t1), sphere_t2);
+			
 			if (distance < bestDistance)
 			{
 				bestNode = &node;
@@ -999,14 +1029,51 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	}
 
 // todo : add some add child node versions with content :
-// cube, cylinder, plane, quad, light (point, directional, spot, area)
-// audio emitter (with source), video
+// - cube
+// - cylinder
+// - plane
+// - quad
+// - light point
+// - light directional
+// - light spot
+// - light area box
+// - audio emitter (with source) (how is source referenced? resource pointer.. by name.. ??)
+// - video
 // todo : add vfx graph nodes for : video by name
 // todo : vfx graph component : addObject<VfxNodeScene> .. or something .. that gives access to the scene .. allow access to scene nodes by name .. useful for video node for instance, to start / stop playback of a specific video hosted by a node
 // todo : automatically (?) add vfx node types for all registered component types and their inputs
 	if (ImGui::MenuItem("Add child node"))
 	{
 		result = kNodeStructureEditingAction_NodeAddChild;
+	}
+	
+	if (ImGui::BeginMenu("Add child node.."))
+	{
+	// todo : scan files and auto-generate this menu
+		if (ImGui::BeginMenu("Light"))
+		{
+			if (ImGui::MenuItem("Point"))
+			{
+				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
+				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-point.txt");
+			}
+			
+			if (ImGui::MenuItem("Spot"))
+			{
+				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
+				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-spot.txt");
+			}
+			
+			if (ImGui::MenuItem("Directional"))
+			{
+				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
+				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-directional.txt");
+			}
+			
+			ImGui::EndMenu();
+		}
+		
+		ImGui::EndMenu();
 	}
 	
 	ImGui::Separator();
@@ -1454,6 +1521,15 @@ void SceneEditor::markNodeOpenUntilRoot(const int in_nodeId)
 
 int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 {
+	int rootNodeId;
+	if (addNodesFromScene(path, parentId, true, &rootNodeId))
+		return rootNodeId;
+	else
+		return -1;
+}
+
+bool SceneEditor::addNodesFromScene(const char * path, const int parentId, const bool keepRootNode, int * out_rootNodeId)
+{
 	Scene childScene;
 	childScene.nodeIdAllocator = &scene;
 	
@@ -1462,9 +1538,15 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 	childScene.createRootNode();
 	auto & rootNode = childScene.getRootNode();
 	
-	// 2.1 assign its parent id
-	
-	rootNode.parentId = parentId;
+	if (keepRootNode)
+	{
+		// 2.1 assign its parent id
+		
+		rootNode.parentId = parentId;
+		
+		if (out_rootNodeId != nullptr)
+			*out_rootNodeId = rootNode.id;
+	}
 	
 	// 2.2 assign its display name
 	
@@ -1482,7 +1564,7 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 	if (!parseSceneFromFile(*typeDB, path, childScene))
 	{
 		childScene.freeAllNodesAndComponents();
-		return -1;
+		return false;
 	}
 	
 	// 5.1. update file paths for the imported nodes
@@ -1510,7 +1592,7 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 	if (init_ok == false)
 	{
 		childScene.freeAllNodesAndComponents();
-		return -1;
+		return false;
 	}
 	else
 	{
@@ -1520,18 +1602,51 @@ int SceneEditor::addNodesFromScene(const char * path, const int parentId)
 		
 		deferredBegin();
 		{
-			for (auto node_itr : childScene.nodes)
+			if (keepRootNode)
 			{
-				deferred.nodesToAdd.push_back(node_itr.second);
+				for (auto node_itr : childScene.nodes)
+				{
+					deferred.nodesToAdd.push_back(node_itr.second);
+				}
+				
+				deferred.nodesToSelect.insert(childScene.rootNodeId);
 			}
-			
-			deferred.nodesToSelect.insert(childScene.rootNodeId);
+			else
+			{
+				for (auto node_itr : childScene.nodes)
+				{
+					auto * node = node_itr.second;
+					
+					if (node->id == childScene.rootNodeId)
+					{
+						// delete the node if it's the root node
+						
+						node->freeComponents();
+						
+						delete node;
+						node = nullptr;
+					}
+					else
+					{
+						// if not the root node, keep it and add it to the scene
+						
+						deferred.nodesToAdd.push_back(node);
+						
+						if (node->parentId == childScene.rootNodeId)
+						{
+							node->parentId = parentId;
+							
+							deferred.nodesToSelect.insert(node->id);
+						}
+					}
+				}
+			}
 			
 			childScene.nodes.clear();
 		}
 		deferredEnd(true);
 		
-		return childScene.rootNodeId;
+		return true;
 	}
 }
 
@@ -1814,6 +1929,11 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							
 						case kNodeStructureEditingAction_NodeAddChild:
 							performAction_addChild();
+							break;
+						
+						case kNodeStructureEditingAction_NodeAddChildFromTemplate:
+							performAction_sceneImport(action_nodeAddFromTemplate.path.c_str());
+							action_nodeAddFromTemplate = Action_NodeAddFromTemplate();
 							break;
 							
 						case kNodeStructureEditingAction_NodeSceneAttach:
@@ -2633,13 +2753,20 @@ static void backupSelectedNodes(const SceneEditor & sceneEditor, std::set<std::s
 		capturedSelectedNodes.insert(node.name);
 	}
 }
-static void restoreSelectedNodes(SceneEditor & sceneEditor, const std::set<std::string> & capturedSelectedNodes)
+static void restoreSelectedNodes(SceneEditor & sceneEditor, const std::set<std::string> & capturedSelectedNodes, const bool openNodes)
 {
 	for (auto & node_itr : sceneEditor.scene.nodes)
 	{
 		auto * node = node_itr.second;
 		if (!node->name.empty() && capturedSelectedNodes.count(node_itr.second->name) != 0)
+		{
 			sceneEditor.selection.selectedNodes.insert(node->id);
+			
+			if (openNodes)
+			{
+				sceneEditor.nodeUi.nodesToOpen_deferred.insert(node->id);
+			}
+		}
 	}
 }
 
@@ -2704,11 +2831,11 @@ void SceneEditor::performAction_undo()
 						tempScene.nodes.clear();
 					}
 				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
-					restoreSelectedNodes(*this, capturedSelectedNodes);
+					restoreSelectedNodes(*this, capturedSelectedNodes, true);
 				#endif
 				
 				#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
-					restoreSelectedNodes(*this, version.selectedNodes); // todo : also open nodes in the node structure UI ?
+					restoreSelectedNodes(*this, version.selectedNodes, true);
 				#endif
 					
 					undo.currentVersion = text;
@@ -2780,11 +2907,11 @@ void SceneEditor::performAction_redo()
 						tempScene.nodes.clear();
 					}
 				#if !ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
-					restoreSelectedNodes(*this, capturedSelectedNodes);
+					restoreSelectedNodes(*this, capturedSelectedNodes, true);
 				#endif
 				
 				#if ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO
-					restoreSelectedNodes(*this, version.selectedNodes);
+					restoreSelectedNodes(*this, version.selectedNodes, true);
 				#endif
 					
 					undo.currentVersion = text;
@@ -3162,7 +3289,7 @@ bool SceneEditor::performAction_sceneImport(const char * path)
 			deferredBegin();
 			{
 				for (auto nodeId : selection.selectedNodes)
-					success &= addNodesFromScene(path, nodeId) != -1;
+					success &= addNodesFromScene(path, nodeId, false, nullptr) != -1;
 			}
 			deferredEnd(success);
 		}
@@ -3181,7 +3308,7 @@ bool SceneEditor::performAction_sceneImport(const char * path)
 		deferredBegin();
 		{
 			for (auto nodeId : selection.selectedNodes)
-				success &= addNodesFromScene(path, nodeId) != -1;
+				success &= addNodesFromScene(path, nodeId, false, nullptr) != -1;
 		}
 		deferredEnd(success);
 	}
@@ -3254,7 +3381,7 @@ void SceneEditor::drawSceneOpaque_ForwardShaded() const
 {
 	if (preview.drawScene)
 	{
-		// todo : draw GLTF models here ?
+		// todo : draw GLTF models here ? add draw mode (deferred or forward shaded) to GLTF component mgr. when forward shaded, always draw forward. otherwise, let GLTF component do either depending on its draw mode
 	}
 }
 
@@ -3372,6 +3499,8 @@ void SceneEditor::drawEditorNodesOpaque() const
 				const Vec3 position = (min + max) / 2.f;
 				const Vec3 size = (max - min) / 2.f;
 
+			// todo : add special draw code to draw cube corners only using some nice colors. update all bounding box to use this (less intrusive) draw code
+			
 				setColor(colorWhite);
 				lineCube(position, size);
 			}
@@ -3464,10 +3593,20 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 
 	// draw component specific gizmos
 	
-	Mat4x4 viewMatrix;
-	gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
-	const Vec3 viewOrigin = viewMatrix.CalcInv().GetTranslation();
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	
+	const Mat4x4 viewToWorld = worldToView.CalcInv();
+	
+	const Vec3 viewOrigin = viewToWorld.GetTranslation();
+	
+	Mat4x4 viewOrientation = viewToWorld;
+	viewOrientation.SetTranslation(0, 0, 0);
+	
+	const bool doFade =
+		framework.isStereoVr() ||
+		camera.mode != Camera::kMode_Ortho;
+		
 	for (auto node_itr : scene.nodes)
 	{
 		auto * node = node_itr.second;
@@ -3476,11 +3615,15 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 		{
 			auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
 			
+			// draw at node location
+			
 			const Vec3 pos = sceneNodeComp->objectToWorld.GetTranslation();
 			
 			gxTranslatef(pos[0], pos[1], pos[2]);
 			
-		// todo : rotate to look at camera
+			// orient to look at camera
+			
+			gxMultMatrixf(viewOrientation.m_v);
 		
 			GxTextureId simpleTextureId = 0;
 			
@@ -3488,7 +3631,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 			{
 				auto * cameraComp = node->components.find<CameraComponent>();
 				
-				if (cameraComp != nullptr)
+				if (cameraComp != nullptr && cameraComp->enabled)
 				{
 					simpleTextureId = getTexture("gizmo-camera.png");
 					break;
@@ -3496,21 +3639,20 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 				
 				auto * lightComp = node->components.find<LightComponent>();
 				
-				if (lightComp != nullptr)
+				if (lightComp != nullptr && lightComp->enabled)
 				{
 					simpleTextureId = getTexture("gizmo-light.png");
 					break;
 				}
 				
-				auto * transformComp = node->components.find<TransformComponent>();
+				// todo : add texture for audio emitter component
 				
-				if (transformComp != nullptr)
-				{
-					break;
-				}
+				// todo : add texture for vfx graph component
 				
 				break;
 			}
+			
+			// draw a simple texture based gizmo when a texture is set
 			
 			if (simpleTextureId != 0)
 			{
@@ -3524,7 +3666,10 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						const float kSize = .5f;
 						
 						const float distanceToView = (pos - viewOrigin).CalcSize();
-						const float opacity = saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance));
+						const float opacity =
+							doFade
+							? saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance))
+							: 1.f;
 						
 						gxColor4f(1, 1, 1, opacity);
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-kSize, +kSize * 2.f);
@@ -3953,373 +4098,6 @@ std::string SceneEditor::makePathRelativeToDocumentPath(const char * path) const
 				
 		return Path::MakeRelative(Path::GetDirectory(documentInfo.path), absolutePath);
 	}
-}
-
-//
-
-#include "Calc.h"
-
-static const float kInnerRadius = .3f;
-static const float kFirstItemDistance = .75f;
-static const float kItemSpacing = .5f;
-
-static const float kRingOpenAnimTime = .2f;
-static const float kRingCloseAnimTime = .1f;
-static const float kSegmentAnimTime = .2f;
-static const float kItemAnimTime = .1f;
-
-static const Color kDefaultItemColor(200, 200, 200);
-static const Color kActiveSegmentItemColor(220, 220, 220);
-static const Color kHoverItemColor(255, 255, 255);
-
-static const Color kDefaultItemColor_Disabled(100, 100, 100);
-static const Color kActiveSegmentItemColor_Disabled(110, 110, 110);
-static const Color kHoverItemColor_Disabled(127, 127, 127);
-
-SceneEditor::InteractiveRing::InteractiveRing()
-{
-	segments =
-	{
-		{ {
-			{ "Copy", [](SceneEditor & sceneEditor) { sceneEditor.performAction_copy(true); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } },
-			{ "Copy Single", [](SceneEditor & sceneEditor) { sceneEditor.performAction_copy(false); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } }
-		} },
-		{ {
-			{ "Add", [](SceneEditor & sceneEditor) { sceneEditor.performAction_addChild(); }, [](const SceneEditor & sceneEditor) { return true; } },
-			{ "Add Sibling", [](SceneEditor & sceneEditor) { }, [](const SceneEditor & sceneEditor) { return true; } },
-			{ "Duplicate", [](SceneEditor & sceneEditor) { sceneEditor.performAction_duplicate(); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } },
-			{ "Attach Scene", [](SceneEditor & sceneEditor) { }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } } // todo : needs a path
-		} },
-		{ {
-			{ "Paste", [](SceneEditor & sceneEditor) { sceneEditor.performAction_paste(sceneEditor.scene.rootNodeId); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } },
-			{ "Paste Child", [](SceneEditor & sceneEditor) { sceneEditor.performAction_pasteChild(); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } },
-			{ "Paste Sibling", [](SceneEditor & sceneEditor) { sceneEditor.performAction_pasteSibling(); }, [](const SceneEditor & sceneEditor) { return sceneEditor.clipboardInfo.hasNode || sceneEditor.clipboardInfo.hasNodeTree; } }
-		} },
-		{ {
-			{ "Remove", [](SceneEditor & sceneEditor) { sceneEditor.performAction_remove(); }, [](const SceneEditor & sceneEditor) { return !sceneEditor.selection.selectedNodes.empty(); } }
-		} }
-	};
-}
-
-void SceneEditor::InteractiveRing::show(const Mat4x4 & in_transform)
-{
-	Assert(!captureElem.hasCapture);
-
-	transform = in_transform;
-	
-	captureElem.capture();
-}
-
-void SceneEditor::InteractiveRing::hide()
-{
-	captureElem.discard();
-}
-
-void SceneEditor::InteractiveRing::tick(
-	SceneEditor & sceneEditor,
-	Vec3Arg pointerOrigin_world,
-	Vec3Arg pointerDirection_world,
-	const Mat4x4 & viewMatrix,
-	const bool pointerIsActive,
-	bool & inputIsCaptured,
-	const float dt)
-{
-	tickInteraction(
-		sceneEditor,
-		pointerOrigin_world,
-		pointerDirection_world,
-		pointerIsActive,
-		inputIsCaptured);
-	
-	tickAnimation(
-		viewMatrix,
-		dt);
-}
-
-void SceneEditor::InteractiveRing::tickInteraction(
-	SceneEditor & sceneEditor,
-	Vec3Arg pointerOrigin_world,
-	Vec3Arg pointerDirection_world,
-	const bool pointerIsActive,
-	bool & inputIsCaptured)
-{
-	if (captureElem.hasCapture &&
-		pointerIsActive &&
-		captureElem.capture())
-	{
-		Assert(inputIsCaptured);
-		
-		if (openAnim == 1.f)
-		{
-			// determine the hover segment and hover item (if any)
-			
-			Mat4x4 objectToWorld;
-			calculateTransform(objectToWorld);
-			
-			const Mat4x4 worldToObject = objectToWorld.CalcInv();
-			
-			const Vec3 pointerOrigin_object = worldToObject.Mul4(pointerOrigin_world);
-			const Vec3 pointerDirection_object = worldToObject.Mul3(pointerDirection_world);
-			
-			hoverSegmentIndex = -1;
-			hoverItemIndex = -1;
-			
-			// determine intersection point
-			
-			if (pointerDirection_object[2] > 0.f)
-			{
-				const float t = - pointerOrigin_object[2] / pointerDirection_object[2];
-				
-				const Vec3 intersectionPoint = pointerOrigin_object + pointerDirection_object * t;
-				
-				// determine hover segment
-				
-				const float angle = atan2f(intersectionPoint[1], intersectionPoint[0]);
-				
-				debug.angle = angle;
-				
-				const float distance = hypotf(intersectionPoint[0], intersectionPoint[1]);
-				
-				if (distance > kInnerRadius)
-				{
-					const float anglePerSegment = Calc::m2PI / segments.size();
-					const float anglePerSegmentToDraw = Calc::m2PI / (segments.size() + 1);
-					
-					for (size_t i = 0; i < segments.size(); ++i)
-					{
-						const float segmentAngle = i * anglePerSegment;
-						
-						float angleDifference = angle - segmentAngle;
-						
-						while (angleDifference < Calc::mPI)
-							angleDifference += Calc::m2PI;
-						while (angleDifference > Calc::mPI)
-							angleDifference -= Calc::m2PI;
-						
-						if (angleDifference >= - anglePerSegmentToDraw / 2.f &&
-							angleDifference <= + anglePerSegmentToDraw / 2.f)
-						{
-							hoverSegmentIndex = i;
-							
-							hoverItemIndex = (int)roundf((distance - kFirstItemDistance) / kItemSpacing);
-							
-							if (hoverItemIndex < 0 || hoverItemIndex >= segments[i].items.size())
-							{
-								hoverItemIndex = -1;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	if (captureElem.hasCapture && !pointerIsActive)
-	{
-		// invoke action
-		
-		if (hoverSegmentIndex != -1 && hoverItemIndex != -1)
-		{
-			auto & segment = segments[hoverSegmentIndex];
-			
-			if (segment.items[hoverItemIndex].action != nullptr)
-			{
-				segment.items[hoverItemIndex].action(sceneEditor);
-			}
-		}
-	}
-}
-
-void SceneEditor::InteractiveRing::tickAnimation(
-	const Mat4x4 & viewMatrix,
-	const float dt)
-{
-	rotation = viewMatrix;
-	rotation.SetTranslation(Vec3());
-	
-	if (captureElem.hasCapture)
-	{
-		openAnim = fminf(1.f, openAnim + dt / kRingOpenAnimTime);
-	}
-	else
-	{
-		openAnim = fmaxf(0.f, openAnim - dt / kRingCloseAnimTime);
-	}
-	
-	for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
-	{
-		auto & segment = segments[segmentIndex];
-		
-		if (captureElem.hasCapture && segmentIndex == hoverSegmentIndex)
-		{
-			segment.hoverAnim = fminf(1.f, segment.hoverAnim + dt / kSegmentAnimTime);
-		}
-		else
-		{
-			segment.hoverAnim = fmaxf(0.f, segment.hoverAnim - dt / kSegmentAnimTime);
-		}
-		
-		for (size_t itemIndex = 0; itemIndex < segment.items.size(); ++itemIndex)
-		{
-			auto & item = segment.items[itemIndex];
-			
-			if (captureElem.hasCapture && segmentIndex == hoverSegmentIndex && hoverItemIndex == itemIndex)
-			{
-				item.hoverAnim = fminf(1.f, item.hoverAnim + dt / kItemAnimTime);
-			}
-			else
-			{
-				item.hoverAnim = fmaxf(0.f, item.hoverAnim - dt / kItemAnimTime);
-			}
-		}
-	}
-}
-
-void SceneEditor::InteractiveRing::drawOpaque(const SceneEditor & sceneEditor) const
-{
-	if (openAnim == 0.f)
-		return;
-		
-	Mat4x4 objectToWorld;
-	calculateTransform(objectToWorld);
-	
-	pushCullMode(CULL_NONE, CULL_CCW);
-	
-	gxPushMatrix();
-	{
-		gxMultMatrixf(objectToWorld.m_v);
-		
-		// todo : default framework font doesn't work with MSDF library. why? and fix and/or change default font
-		setFont("calibri.ttf");
-		pushFontMode(FONT_SDF);
-		
-		// draw background
-		
-		setColor(100, 100, 100);
-		fillCircle(0, 0, kFirstItemDistance / 4.f, 40);
-		
-		// draw segments
-	
-		const float anglePerSegment = Calc::m2PI / segments.size();
-		const float anglePerSegmentToDraw = Calc::m2PI / (segments.size() + 1);
-					
-		for (size_t segmentIndex = 0; segmentIndex < segments.size(); ++segmentIndex)
-		{
-			auto & segment = segments[segmentIndex];
-			
-			const float segmentAngle = segmentIndex * anglePerSegment;
-			
-			for (int itemIndex = segment.items.size() - 1; itemIndex >= 0; --itemIndex)
-			{
-				gxPushMatrix();
-				{
-					auto & item = segment.items[itemIndex];
-					
-					const bool itemIsEnabled =
-						item.isEnabled != nullptr
-						? item.isEnabled(sceneEditor)
-						: true;
-					
-					const float itemDistance = kFirstItemDistance + itemIndex * kItemSpacing;
-					
-					const float scale = lerp<float>(.9f, 1.f, segment.hoverAnim);
-					gxScalef(scale, scale, 1);
-					
-					const float angle1 = segmentAngle - anglePerSegmentToDraw / 2.f / 1.1f / itemDistance;
-					const float angle2 = segmentAngle + anglePerSegmentToDraw / 2.f / 1.1f / itemDistance;
-			
-					Color itemColor;
-					if (itemIsEnabled)
-					{
-						itemColor = kDefaultItemColor;
-						itemColor = itemColor.interp(kActiveSegmentItemColor, segment.hoverAnim);
-						itemColor = itemColor.interp(kHoverItemColor, item.hoverAnim);
-					}
-					else
-					{
-						itemColor = kDefaultItemColor_Disabled;
-						itemColor = itemColor.interp(kActiveSegmentItemColor_Disabled, segment.hoverAnim);
-						itemColor = itemColor.interp(kHoverItemColor_Disabled, item.hoverAnim);
-					}
-					
-					setColor(itemColor);
-					
-					gxBegin(GX_TRIANGLE_STRIP);
-					{
-						const int resolution = 20;
-						const float radius1 = itemDistance - kItemSpacing / 2.1f;
-						const float radius2 = itemDistance + kItemSpacing / 2.1f;
-						
-						for (int i = 0; i <= resolution; ++i)
-						{
-							const float angle = lerp<float>(angle1, angle2, i / float(resolution));
-							
-							gxVertex2f(cosf(angle) * radius1, sinf(angle) * radius1);
-							gxVertex2f(cosf(angle) * radius2, sinf(angle) * radius2);
-						}
-					}
-					gxEnd();
-					
-					gxPushMatrix();
-					{
-						const float textDistance = itemDistance;
-						
-						gxTranslatef(
-							cosf(segmentAngle) * textDistance,
-							sinf(segmentAngle) * textDistance,
-							-.01f);
-						
-						const float textAngle =
-							sinf(segmentAngle) < .01f
-							? segmentAngle * Calc::rad2deg + 90
-							: segmentAngle * Calc::rad2deg - 90;
-							
-						gxRotatef(textAngle, 0, 0, 1);
-						
-						pushBlend(BLEND_ALPHA); // todo : draw text using a batch. move blend scope surrounding batch
-						setColor(colorRed);
-						drawText(0, 0, .2f, 0, 0, "%s", item.text.c_str());
-						popBlend();
-					}
-					gxPopMatrix();
-				}
-				gxPopMatrix();
-			}
-		}
-		
-	#if defined(DEBUG) && false
-		gxPushMatrix();
-		{
-			gxTranslatef(0, 0, -.02f);
-			
-			setColor(colorRed);
-			drawLine(0, 0, cosf(debug.angle), sinf(debug.angle));
-			
-			pushBlend(BLEND_ALPHA);
-			{
-				setColor(colorBlue);
-				drawText(0, 1, .1f, 0, 0, "%.2f", debug.angle);
-			}
-			popBlend();
-		}
-		gxPopMatrix();
-	#endif
-		
-		popFontMode();
-	}
-	gxPopMatrix();
-	
-	popCullMode();
-}
-
-void SceneEditor::InteractiveRing::calculateTransform(Mat4x4 & out_transform) const
-{
-	out_transform =
-		Mat4x4(true)
-		.Mul(transform)
-		.Mul(rotation)
-		.Scale(openAnim, openAnim, 1)
-		.Scale(1, -1, 1);
 }
 
 //

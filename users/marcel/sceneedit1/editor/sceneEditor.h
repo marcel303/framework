@@ -1,6 +1,7 @@
 #pragma once
 
 // ecs-sceneEditor
+#include "editor/interactiveRing.h"
 #include "editor/transformGizmos.h"
 
 // ecs-scene
@@ -143,11 +144,17 @@ struct SceneEditor
 		kNodeStructureEditingAction_NodeDuplicate,
 		kNodeStructureEditingAction_NodeRemove,
 		kNodeStructureEditingAction_NodeAddChild,
+		kNodeStructureEditingAction_NodeAddChildFromTemplate,
 		kNodeStructureEditingAction_NodeSceneAttach,
 		kNodeStructureEditingAction_NodeSceneAttachUpdate,
 		kNodeStructureEditingAction_NodeSceneImport,
 		kNodeStructureEditingAction_NodeParent
 	};
+	
+	struct Action_NodeAddFromTemplate
+	{
+		std::string path;
+	} action_nodeAddFromTemplate;
 	
 	struct Action_NodeParent
 	{
@@ -280,6 +287,7 @@ struct SceneEditor
 	void markNodeOpenUntilRoot(const int in_nodeId);
 	
 	int addNodesFromScene(const char * path, const int parentId);
+	bool addNodesFromScene(const char * path, const int parentId, const bool keepRootNode, int * out_rootNodeId);
 	
 	int attachScene(const char * path, const int parentId);
 	int updateAttachedScene(const int rootNodeId);
@@ -344,85 +352,5 @@ public:
 	
 	std::string makePathRelativeToDocumentPath(const char * path) const;
 	
-// todo : move InteractiveRing to its own source file
-	struct InteractiveRing
-	{
-		struct SegmentItem
-		{
-			typedef std::function<void(SceneEditor & sceneEditor)> ActionHandler;
-			typedef std::function<bool(const SceneEditor & sceneEditor)> IsEnabledCallback;
-			
-			std::string text;
-			ActionHandler action;
-			IsEnabledCallback isEnabled;
-			float hoverAnim = 0.f;
-			
-			SegmentItem(const char * in_text, const ActionHandler & in_action, const IsEnabledCallback & in_isEnabled)
-				: text(in_text)
-				, action(in_action)
-				, isEnabled(in_isEnabled)
-			{
-			}
-		};
-		
-		struct Segment
-		{
-			std::vector<SegmentItem> items;
-			
-			// animation
-			
-			float hoverAnim = 0.f;
-			
-			Segment(const std::initializer_list<SegmentItem> & in_items)
-				: items(in_items)
-			{
-			}
-		};
-		
-		Mat4x4 transform;
-		Mat4x4 rotation;
-	
-		UiCaptureElem captureElem;
-		float openAnim = 0.f;
-		
-		std::vector<Segment> segments;
-		
-		int hoverSegmentIndex = -1;
-		int hoverItemIndex = -1;
-		
-		struct
-		{
-			float angle = 0.f;
-		} debug;
-		
-		InteractiveRing();
-		
-		void show(const Mat4x4 & transform);
-		void hide();
-		
-		void tick(
-			SceneEditor & sceneEditor,
-			Vec3Arg pointerOrigin_world,
-			Vec3Arg pointerDirection_world,
-			const Mat4x4 & viewMatrix,
-			const bool pointerIsActive,
-			bool & inputIsCaptured,
-			const float dt);
-			
-		void tickInteraction(
-			SceneEditor & sceneEditor,
-			Vec3Arg pointerOrigin_world,
-			Vec3Arg pointerDirection_world,
-			const bool pointerIsActive,
-			bool & inputIsCaptured);
-			
-		void tickAnimation(
-			const Mat4x4 & viewMatrix,
-			const float dt);
-		
-		void drawOpaque(
-			const SceneEditor & sceneEditor) const;
-		
-		void calculateTransform(Mat4x4 & out_transform) const;
-	} interactiveRing;
+	InteractiveRing interactiveRing;
 };

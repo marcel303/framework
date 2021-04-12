@@ -1,4 +1,5 @@
 // component types
+#include "components/gltfComponent.h"
 #include "components/lightComponent.h"
 #include "components/transformComponent.h"
 #include "scene/sceneNodeComponent.h"
@@ -282,8 +283,6 @@ int main(int argc, char * argv[])
 		{
 			pushCullMode(CULL_BACK, CULL_CCW);
 			{
-				// todo : add editor.drawSceneOpaque_ForwardShaded();
-				
 				editor.drawSceneOpaque_ForwardShaded();
 				
 				editor.drawView3dOpaque_ForwardShaded();
@@ -312,28 +311,10 @@ int main(int argc, char * argv[])
 			{
 				if (light->enabled == false)
 					continue;
-					
-				if (light->type == LightComponent::kLightType_Point)
-				{
-					// draw point light
-					
-					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
-					
-					Vec3 lightPosition_world;
-					
-					if (sceneNode != nullptr)
-					{
-						lightPosition_world = sceneNode->objectToWorld.GetTranslation();
-					}
-					
-					rOne::g_lightDrawer.drawDeferredPointLight(
-						lightPosition_world,
-						light->innerRadius,
-						light->outerRadius,
-						light->color,
-						light->intensity);
-				}
-				else if (light->type == LightComponent::kLightType_Directional)
+				
+				// note : the deferred light drawing functions will convert the light color to the linear color space for us
+				
+				if (light->type == LightComponent::kLightType_Directional)
 				{
 					// draw full screen directional light
 					
@@ -350,6 +331,50 @@ int main(int argc, char * argv[])
 						lightDir_world.CalcNormalized(),
 						light->color,
 						light->bottomColor,
+						light->intensity);
+				}
+				else if (light->type == LightComponent::kLightType_Point)
+				{
+					// draw point light
+					
+					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+					
+					Vec3 lightPosition_world;
+					
+					if (sceneNode != nullptr)
+					{
+						lightPosition_world = sceneNode->objectToWorld.GetTranslation();
+					}
+					
+					rOne::g_lightDrawer.drawDeferredPointLight(
+						lightPosition_world,
+						light->farDistance * light->attenuationBegin,
+						light->farDistance,
+						light->color,
+						light->intensity);
+				}
+				else if (light->type == LightComponent::kLightType_Spot)
+				{
+					// draw spot light
+					
+					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+					
+					Vec3 lightPosition_world;
+					Vec3 lightDirection_world(0, 0, 1);
+					
+					if (sceneNode != nullptr)
+					{
+						lightPosition_world = sceneNode->objectToWorld.GetTranslation();
+						lightDirection_world = sceneNode->objectToWorld.GetAxis(2).CalcNormalized();
+					}
+					
+					rOne::g_lightDrawer.drawDeferredSpotLight(
+						lightPosition_world,
+						lightDirection_world,
+						light->spotAngle / 180.f * float(M_PI),
+						light->farDistance * light->attenuationBegin,
+						light->farDistance,
+						light->color,
 						light->intensity);
 				}
 			}
@@ -642,22 +667,46 @@ int main(int argc, char * argv[])
 					}
 				}
 				
+				// prepare lights
+				
+				Mat4x4 worldToView;
+				gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+				g_lightComponentMgr.beforeDraw(worldToView);
+				
 				// render the scene
 				
+			// todo : perhaps add a SceneRenderComponentMgr which will render the scene for us (on request). forward lighting helper and shadow map drawer could live there
+			
 				switch (myRenderOptions.mode->get())
 				{
 				case MyRenderOptions::kMode_Flat:
 					renderOptions.renderMode = rOne::kRenderMode_Flat;
+					g_lightComponentMgr.enableShadowMaps = false;
+					g_gltfComponentMgr.enableForwardShading = true;
 					break;
 					
 				case MyRenderOptions::kMode_DeferredShaded:
+					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+					g_lightComponentMgr.enableShadowMaps = false;
+					g_gltfComponentMgr.enableForwardShading = false;
+					break;
+					
 				case MyRenderOptions::kMode_DeferredShadedWithShadows:
 					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+					g_lightComponentMgr.enableShadowMaps = true;
+					g_gltfComponentMgr.enableForwardShading = false;
 					break;
 				
 				case MyRenderOptions::kMode_ForwardShaded:
+					renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+					g_lightComponentMgr.enableShadowMaps = false;
+					g_gltfComponentMgr.enableForwardShading = true;
+					break;
+					
 				case MyRenderOptions::kMode_ForwardShadedWithShadows:
 					renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+					g_lightComponentMgr.enableShadowMaps = true;
+					g_gltfComponentMgr.enableForwardShading = true;
 					break;
 				}
 				

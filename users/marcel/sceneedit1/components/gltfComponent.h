@@ -42,6 +42,8 @@ struct Scene;
 
 struct GltfComponentMgr : ComponentMgr<GltfComponent>
 {
+	bool enableForwardShading = false;
+	
 	void drawOpaque() const;
 	void drawTranslucent() const;
 };
