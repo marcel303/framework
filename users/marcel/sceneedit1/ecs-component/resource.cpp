@@ -4,7 +4,9 @@
 
 //
 
-#include "helpers2.h"
+ResourceDatabase g_resourceDatabase;
+
+//
 
 ResourceBase * ResourcePtr::getImpl(const std::type_index & typeIndex)
 {

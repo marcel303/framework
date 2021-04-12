@@ -72,7 +72,7 @@ void GltfComponent::free()
 	cacheElem = nullptr;
 }
 
-void GltfComponent::drawOpaque(const Mat4x4 & objectToWorld) const
+void GltfComponent::drawOpaque(const Mat4x4 & objectToWorld, const MaterialShaders & materialShaders) const
 {
 	if (filename.empty())
 		return;
@@ -84,17 +84,13 @@ void GltfComponent::drawOpaque(const Mat4x4 & objectToWorld) const
 		gxMultMatrixf(objectToWorld.m_v);
 		gxRotatef(rotation.angle, rotation.axis[0], rotation.axis[1], rotation.axis[2]);
 		gxScalef(finalScale, finalScale, finalScale);
-		
-	// todo : make material shader configurable at the component mgr level
-		MaterialShaders materialShaders;
-		setDefaultMaterialShaders(materialShaders);
 		
 		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, true);
 	}
 	gxPopMatrix();
 }
 
-void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld) const
+void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld, const MaterialShaders & materialShaders) const
 {
 	if (filename.empty())
 		return;
@@ -106,10 +102,6 @@ void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld) const
 		gxMultMatrixf(objectToWorld.m_v);
 		gxRotatef(rotation.angle, rotation.axis[0], rotation.axis[1], rotation.axis[2]);
 		gxScalef(finalScale, finalScale, finalScale);
-		
-	// todo : make material shader configurable at the component mgr level
-		MaterialShaders materialShaders;
-		setDefaultMaterialShaders(materialShaders);
 		
 		drawScene(*cacheElem->m_scene, cacheElem->m_bufferCache, materialShaders, false);
 	}
@@ -120,6 +112,10 @@ void GltfComponent::drawTranslucent(const Mat4x4 & objectToWorld) const
 
 void GltfComponentMgr::drawOpaque() const
 {
+// todo : set shaders based on render mode
+	MaterialShaders materialShaders;
+	setDefaultMaterialShaders(materialShaders);
+		
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
 		if (i->enabled == false)
@@ -129,12 +125,16 @@ void GltfComponentMgr::drawOpaque() const
 		
 		Assert(sceneNodeComp != nullptr);
 		if (sceneNodeComp != nullptr)
-			i->drawOpaque(sceneNodeComp->objectToWorld);
+			i->drawOpaque(sceneNodeComp->objectToWorld, materialShaders);
 	}
 }
 
 void GltfComponentMgr::drawTranslucent() const
 {
+// todo : set shaders based on render mode
+	MaterialShaders materialShaders;
+	setDefaultMaterialShaders(materialShaders);
+	
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
 		if (i->enabled == false)
@@ -144,6 +144,6 @@ void GltfComponentMgr::drawTranslucent() const
 		
 		Assert(sceneNodeComp != nullptr);
 		if (sceneNodeComp != nullptr)
-			i->drawTranslucent(sceneNodeComp->objectToWorld);
+			i->drawTranslucent(sceneNodeComp->objectToWorld, materialShaders);
 	}
 }

@@ -58,10 +58,3 @@ void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
 	componentTypeDB.registerComponentType(new TransformComponentType());
 	//componentTypeDB.registerComponentType(new VfxgraphComponentType());
 }
-
-//
-
-#include "helpers.h"
-#include "resource.h"
-
-ResourceDatabase g_resourceDatabase;

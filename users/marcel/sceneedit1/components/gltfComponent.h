@@ -32,8 +32,8 @@ struct GltfComponent : Component<GltfComponent>
 	
 	void free();
 	
-	void drawOpaque(const Mat4x4 & objectToWorld) const;
-	void drawTranslucent(const Mat4x4 & objectToWorld) const;
+	void drawOpaque(const Mat4x4 & objectToWorld, const gltf::MaterialShaders & materialShaders) const;
+	void drawTranslucent(const Mat4x4 & objectToWorld, const gltf::MaterialShaders & materialShaders) const;
 };
 
 //

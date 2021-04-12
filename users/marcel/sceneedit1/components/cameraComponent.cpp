@@ -1,12 +1,11 @@
 #include "cameraComponent.h"
 #include "cameraResource.h"
-#include "helpers2.h"
 
 CameraComponentMgr g_cameraComponentMgr;
 
 void CameraComponent::tick(const float dt)
 {
-	auto cameraController = findResource<CameraController>(controller.c_str());
+	auto * cameraController = findResource<CameraController>(controller.c_str());
 	
 	if (cameraController != nullptr)
 	{

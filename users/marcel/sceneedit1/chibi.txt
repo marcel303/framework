@@ -5,26 +5,44 @@ library ecs-component
 	scan_files h   path ecs-component
 	header_path ecs-component expose
 
-library marcel-scene
+library ecs-scene
 	depend_library ecs-component
 	depend_library libreflection-textio
 	scan_files *.cpp path scene
 	scan_files *.h   path scene
 	header_path scene expose
 
-library marcel-sceneedit
+library ecs-components
 	depend_library ecs-component
 	depend_library ecs-parameter
-	depend_library ecs-parameterui
+	depend_library ecs-scene
+
+	scan_files *.cpp path components group components
+	scan_files *.h   path components group components
+	
+	header_path components expose
+	
+	resource_path components/data
+
+	# todo : separate out ecs-components-draw from ecs-component
+	#        draw would contain lighting, gltf and model components
 	depend_library framework
 	depend_library framework-gltf
+	depend_library renderOne
+
+library marcel-sceneedit
+	depend_library ecs-component
+	depend_library ecs-components
+	depend_library ecs-parameter
+	depend_library ecs-parameterui
+	depend_library ecs-scene
+	depend_library framework
 	depend_library imgui-framework
 	depend_library jsoncpp
 	depend_library libreflection
 	depend_library libreflection-bindtofile
 	depend_library libreflection-jsonio
 	depend_library libreflection-textio
-	depend_library marcel-scene
 	#depend_library vfxgraph
 	#depend_library vfxgraph-nodes
 	
@@ -40,8 +58,6 @@ library marcel-sceneedit
 	scan_files *.h
 	scan_files *.cpp path editor group editor
 	scan_files *.h   path editor group editor
-	scan_files *.cpp path components group components
-	scan_files *.h   path components group components
 	
 	header_path . expose
 	
