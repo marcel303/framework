@@ -12,6 +12,7 @@
 
 // ecs-component
 #include "componentType.h"
+#include "componentTypeDB.h"
 
 // framework
 #include "framework.h"
@@ -19,10 +20,6 @@
 
 // libreflection
 #include "reflection.h"
-
-extern GltfComponentMgr s_gltfComponentMgr;
-extern ModelComponentMgr s_modelComponentMgr;
-extern TransformComponentMgr s_transformComponentMgr;
 
 int main(int argc, char * argv[])
 {
@@ -40,7 +37,7 @@ int main(int argc, char * argv[])
 	
 	TypeDB typeDB;
 	registerBuiltinTypes(typeDB);
-	registerComponentTypes(typeDB);
+	registerComponentTypes(typeDB, g_componentTypeDB);
 	
 	// load the scene
 	
@@ -80,12 +77,12 @@ int main(int argc, char * argv[])
 
 		// tick all of the registered component managers
 		
-		for (auto * type : g_componentTypes)
+		for (auto * type : g_componentTypeDB.componentTypes)
 		{
 			type->componentMgr->tick(framework.timeStep);
 		}
 		
-		s_transformComponentMgr.calculateTransforms(scene);
+		g_transformComponentMgr.calculateTransforms(scene);
 		
 		camera.tick(framework.timeStep, true);
 
@@ -95,7 +92,7 @@ int main(int argc, char * argv[])
 		{
 			// draw model component type properties (for reference while editing)
 		
-			auto * componentType = findComponentType("ModelComponent");
+			auto * componentType = g_componentTypeDB.findComponentType("ModelComponent");
 		
 			if (componentType != nullptr)
 			{
@@ -115,9 +112,10 @@ int main(int argc, char * argv[])
 			{
 				// draw models
 				
-				s_modelComponentMgr.draw();
+				g_modelComponentMgr.draw();
 				
-				s_gltfComponentMgr.draw();
+				g_gltfComponentMgr.drawOpaque();
+				g_gltfComponentMgr.drawTranslucent();
 			}
 			popDepthTest();
 			camera.popViewMatrix();
