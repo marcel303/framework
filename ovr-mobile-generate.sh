@@ -40,4 +40,6 @@ cd "$root"
 mkdir -p chibi-build/gradle-files
 "$chibi_bin" -g . chibi-build/gradle-files -platform android.ovr-mobile $target_arg
 
-open -a Finder -R chibi-build/gradle-files/build.gradle
+if [ "$os" == "mac" ]; then
+	open -a Finder -R chibi-build/gradle-files/build.gradle
+fi
