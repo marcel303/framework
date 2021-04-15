@@ -19,12 +19,19 @@ void freeComponentSetId(int & id);
 
 // components
 
+enum ComponentEditorFlag
+{
+	kComponentEditorFlag_Folded = 0x01
+};
+
 struct ComponentBase
 {
 	ComponentSet * componentSet = nullptr;
 	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
 	bool enabled = true;
+
+	int editorFlags = 0; // ComponentEditorFlag
 	
 	virtual ~ComponentBase();
 	

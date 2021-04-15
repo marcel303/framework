@@ -1,5 +1,17 @@
 #include "componentType.h"
 
+ComponentTypeBase::ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr)
+	: StructuredType(in_typeName)
+	, componentMgr(in_componentMgr)
+{
+	add("enabled", &ComponentBase::enabled)
+		.addFlag(new ComponentMemberFlag_Hidden());
+	add("editorFlags", &ComponentBase::editorFlags)
+		.addFlag(new ComponentMemberFlag_Hidden());
+}
+
+//
+
 ComponentMemberAdder_Int::ComponentMemberAdder_Int(Member * in_member)
 	: member(in_member)
 {
