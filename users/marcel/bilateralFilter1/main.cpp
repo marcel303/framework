@@ -5,7 +5,9 @@
 
 #include "Benchmark.h"
 
+#include <assert.h>
 #include <math.h>
+#include <stdint.h>
 
 struct Mat
 {

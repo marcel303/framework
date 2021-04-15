@@ -1,3 +1,4 @@
+#include "componentTypeDB.h"
 #include "helpers2.h"
 #include "scene.h"
 #include "sceneIo.h"
@@ -15,7 +16,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	registerBuiltinTypes(g_typeDB);
-	registerComponentTypes(g_typeDB);
+	registerComponentTypes(g_typeDB, g_componentTypeDB);
 
 	// load scene description text file
 	

@@ -1,6 +1,7 @@
 #include "Log.h"
 
 #include "component.h"
+#include "componentTypeDB.h"
 
 #include "helpers.h"
 #include "template.h"
@@ -86,7 +87,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	registerBuiltinTypes(g_typeDB);
-	registerComponentTypes(g_typeDB);
+	registerComponentTypes(g_typeDB, g_componentTypeDB);
 	
 	LOG_INF("[running test-v1]");
 	test_v1();

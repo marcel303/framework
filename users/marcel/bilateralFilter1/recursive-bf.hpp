@@ -2,6 +2,7 @@
 #define INCLUDE_RBF
 #include <math.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 /* ======================================================================

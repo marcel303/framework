@@ -702,6 +702,9 @@ namespace ImGui
 			
 			for (auto * member = structured_type.members_head; member != nullptr; member = member->next)
 			{
+				if (member->hasFlag<ComponentMemberFlag_Hidden>())
+					continue;
+
 				ImGui::PushID(member->name);
 				{
 					if (member->isVector)

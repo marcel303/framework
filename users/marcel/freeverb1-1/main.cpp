@@ -172,13 +172,13 @@ struct ParameterRamp
 
 #include <functional>
 
-struct event
+struct UiEvent
 {
 	typedef std::function<void(float newValue)> action_t;
 	
 	action_t action;
 	
-	event(const action_t & in_action)
+	UiEvent(const action_t & in_action)
 		: action(in_action)
 	{
 	}
@@ -201,16 +201,16 @@ struct ReverbParameterProcessorParam
 		dampingOut,
 		feedbackOut;
 
-    event roomSize { [this](float newValue)    { roomSizeScaled = newValue / 100.0f; onUpdate(); } };
-    event damping  { [this](float newValue)
+    UiEvent roomSize { [this](float newValue)    { roomSizeScaled = newValue / 100.0f; onUpdate(); } };
+    UiEvent damping  { [this](float newValue)
 		{
 			dampingScaled  = newValue / 100.0f;
 			dampingScaled = powf(dampingScaled, BaseSampleRate / float(SAMPLE_RATE));
 			onUpdate();
 		} };
-    event wetLevel { [this](float newValue)    { wetLevelScaled = newValue / 100.0f; onUpdate(); } };
-    event dryLevel { [this](float newValue)    { dryLevelScaled = newValue / 100.0f; onUpdate(); } };
-    event width    { [this](float newValue)    { widthScaled    = newValue / 100.0f; onUpdate(); } };
+    UiEvent wetLevel { [this](float newValue)    { wetLevelScaled = newValue / 100.0f; onUpdate(); } };
+    UiEvent dryLevel { [this](float newValue)    { dryLevelScaled = newValue / 100.0f; onUpdate(); } };
+    UiEvent width    { [this](float newValue)    { widthScaled    = newValue / 100.0f; onUpdate(); } };
 
     float roomSizeScaled = 0.5f;
     float dampingScaled  = 0.5f;
@@ -292,7 +292,7 @@ struct ReverbChannel
 
 struct UiBinding
 {
-	event & event;
+	UiEvent & event;
 	std::string name;
 	float min;
 	float max;

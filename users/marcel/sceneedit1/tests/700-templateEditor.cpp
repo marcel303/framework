@@ -11,6 +11,7 @@
 
 // ecs-component
 #include "componentType.h"
+#include "componentTypeDB.h"
 
 // reflection-textio
 #include "lineReader.h"
@@ -44,7 +45,7 @@
 #define VIEW_SX 1200
 #define VIEW_SY 480
 
-static bool doComponentTypeMenu(std::string & out_typeName)
+static bool doComponentTypeMenu(const ComponentTypeDB & componentTypeDB, std::string & out_typeName)
 {
 	bool result = false;
 	
@@ -52,7 +53,7 @@ static bool doComponentTypeMenu(std::string & out_typeName)
 	
 	std::set<std::string> componentTypeNames;
 	
-	for (auto * componentType : g_componentTypes)
+	for (auto * componentType : componentTypeDB.componentTypes)
 		componentTypeNames.insert(componentType->typeName);
 	
 	for (auto & typeName : componentTypeNames)
@@ -68,14 +69,14 @@ static bool doComponentTypeMenu(std::string & out_typeName)
 	return result;
 }
 
-static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
+static void createFallbackTemplateForComponent(const TypeDB & typeDB, const ComponentTypeDB & componentTypeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
 {
 	template_component.typeName = componentTypeName;
 	template_component.id = componentId;
 	
 	int componentSetId = allocComponentSetId();
 	
-	auto * componentType = findComponentType(componentTypeName);
+	auto * componentType = componentTypeDB.findComponentType(componentTypeName);
 	auto * component = componentType->componentMgr->createComponent(componentSetId);
 	
 	for (auto * member = componentType->members_head; member != nullptr; member = member->next)
@@ -220,7 +221,7 @@ struct TemplateInstance
 		return nullptr;
 	}
 	
-	bool init(const TypeDB & typeDB, Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
+	bool init(const TypeDB & typeDB, const ComponentTypeDB & componentTypeDB, Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
 		name = t.name;
 		base = t.base;
@@ -258,7 +259,7 @@ struct TemplateInstance
 				component.isOverride = true;
 			}
 			
-			ComponentTypeBase * componentType = findComponentType(componentTypeWithId.typeName.c_str());
+			ComponentTypeBase * componentType = componentTypeDB.findComponentType(componentTypeWithId.typeName.c_str());
 			
 			if (componentType == nullptr)
 			{
@@ -284,7 +285,7 @@ struct TemplateInstance
 		Assert(componentSetId == kComponentSetIdInvalid);
 	}
 	
-	bool addComponentByTypeName(const TypeDB & typeDB, const char * typeName, const bool isOverride, const bool isFallback)
+	bool addComponentByTypeName(const TypeDB & typeDB, const ComponentTypeDB & componentTypeDB, const char * typeName, const bool isOverride, const bool isFallback)
 	{
 		// add component instance
 		
@@ -296,13 +297,13 @@ struct TemplateInstance
 	
 		component.isOverride = isOverride;
 	
-		ComponentTypeBase * componentType = findComponentType(typeName);
+		ComponentTypeBase * componentType = componentTypeDB.findComponentType(typeName);
 	
 		TemplateComponent template_component;
 		
 		if (isFallback)
 		{
-			createFallbackTemplateForComponent(typeDB, typeName, "", template_component);
+			createFallbackTemplateForComponent(typeDB, componentTypeDB, typeName, "", template_component);
 		}
 		
 		if (componentType == nullptr)
@@ -409,8 +410,10 @@ int main(int argc, char * argv[])
 	
 	auto & typeDB = g_typeDB;
 	
+	auto & componentTypeDB = g_componentTypeDB;
+	
 	registerBuiltinTypes(typeDB);
-	registerComponentTypes(typeDB);
+	registerComponentTypes(typeDB, componentTypeDB);
 	
 	// load all of the template overlays from file
 
@@ -482,6 +485,7 @@ int main(int argc, char * argv[])
 			
 			createFallbackTemplateForComponent(
 				typeDB,
+				componentTypeDB,
 				componentTypeWithId.typeName.c_str(),
 				componentTypeWithId.id.c_str(),
 				template_component);
@@ -512,7 +516,7 @@ int main(int argc, char * argv[])
 		{
 			auto & template_instance = *template_instance_itr++;
 			
-			if (!template_instance.init(typeDB, t, allComponentTypesWithId))
+			if (!template_instance.init(typeDB, componentTypeDB, t, allComponentTypesWithId))
 			{
 				LOG_ERR("failed to initialize (fallback) template instance");
 				return -1;
@@ -534,7 +538,7 @@ int main(int argc, char * argv[])
 			
 			auto & template_instance = *template_instance_itr++;
 			
-			if (!template_instance.init(typeDB, t, componentTypesWithId))
+			if (!template_instance.init(typeDB, componentTypeDB, t, componentTypesWithId))
 			{
 				LOG_ERR("failed to initialize template instance");
 				return -1;
@@ -603,7 +607,7 @@ int main(int argc, char * argv[])
 								{
 									std::string typeName;
 									
-									if (doComponentTypeMenu(typeName))
+									if (doComponentTypeMenu(componentTypeDB, typeName))
 									{
 										// code below will break if selectedTemplateIndex is zero
 										Assert(selectedTemplateIndex != 0);
@@ -612,7 +616,7 @@ int main(int argc, char * argv[])
 										{
 											auto & template_instance = template_instances[i];
 											
-											if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), i != selectedTemplateIndex, false))
+											if (!template_instance.addComponentByTypeName(typeDB, componentTypeDB, typeName.c_str(), i != selectedTemplateIndex, false))
 											{
 												LOG_ERR("failed to add component to template instance");
 											}
@@ -622,7 +626,7 @@ int main(int argc, char * argv[])
 										
 										auto & template_instance = template_instances[0];
 										
-										if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), true, true))
+										if (!template_instance.addComponentByTypeName(typeDB, componentTypeDB, typeName.c_str(), true, true))
 										{
 											LOG_ERR("failed to add component to template instance");
 										}

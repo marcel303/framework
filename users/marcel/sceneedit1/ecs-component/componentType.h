@@ -21,12 +21,11 @@ struct ComponentTypeBase : StructuredType
 	
 	ComponentMgrBase * componentMgr = nullptr;
 	
-	ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr)
-		: StructuredType(in_typeName)
-		, componentMgr(in_componentMgr)
-	{
-		add("enabled", &ComponentBase::enabled);
-	}
+	ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr);
+};
+
+struct ComponentMemberFlag_Hidden : MemberFlag<ComponentMemberFlag_Hidden>
+{
 };
 
 struct ComponentMemberFlag_IntLimits : MemberFlag<ComponentMemberFlag_IntLimits>

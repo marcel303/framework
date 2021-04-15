@@ -92,9 +92,15 @@ inline bool modShift()
 
 inline bool keyCommand()
 {
+#if defined(MACOS) || defined(IPHONEOS)
 	return
 		keyboard.isDown(SDLK_LGUI) ||
 		keyboard.isDown(SDLK_RGUI);
+#else
+	return
+		keyboard.isDown(SDLK_LCTRL) ||
+		keyboard.isDown(SDLK_RCTRL);
+#endif
 }
 
 //
@@ -681,43 +687,74 @@ void SceneEditor::editNode(const int nodeId)
 					Assert(componentType != nullptr);
 					if (componentType != nullptr)
 					{
-						ImGui::LabelText("", "%s", componentType->typeName);
-						ImGui::Indent();
-						
-						bool isSet = true;
-						void * changedMemberObject = nullptr;
-						
-						ImGui::Reflection_Callbacks callbacks;
-						callbacks.makePathRelative = [this](std::string & path)
-							{
-								if (!documentInfo.path.empty())
-								{
-									path = Path::MakeRelative(Path::GetDirectory(documentInfo.path), path);
-								}
-							};
-						callbacks.propertyWillChange = [this]()
-							{
-								undoCaptureBegin(false);
-							};
-						callbacks.propertyDidChange = [this]()
-							{
-								undoCaptureEnd();
-							};
-						
-						if (ImGui::Reflection_StructuredType(
-							*typeDB,
-							*componentType,
-							component,
-							isSet,
-							nullptr,
-							&changedMemberObject,
-							&callbacks))
+						bool enabled = component->enabled;
+						if (ImGui::Checkbox("", &enabled))
 						{
-							// signal the component one of its properties has changed
-							component->propertyChanged(changedMemberObject);
+							undoCaptureBegin();
+							{
+								component->enabled = enabled;
+							}
+							undoCaptureEnd();
 						}
-						
-						ImGui::Unindent();
+						ImGui::SameLine();
+
+						const bool wasOpen = (component->editorFlags & kComponentEditorFlag_Folded) == 0;
+
+						const bool isOpen = ImGui::TreeNodeEx(&node,
+							(ImGuiTreeNodeFlags_OpenOnArrow * 0) |
+							(ImGuiTreeNodeFlags_DefaultOpen * wasOpen) |
+							(ImGuiTreeNodeFlags_FramePadding * 0),
+							"%s", componentType->typeName);
+
+						if (isOpen != wasOpen)
+						{
+							undoCaptureBegin();
+							{
+								if (isOpen)
+									component->editorFlags &= ~kComponentEditorFlag_Folded;
+								else
+									component->editorFlags |= kComponentEditorFlag_Folded;
+							}
+							undoCaptureEnd();
+						}
+
+						if (isOpen)
+						{
+							bool isSet = true;
+							void * changedMemberObject = nullptr;
+							
+							ImGui::Reflection_Callbacks callbacks;
+							callbacks.makePathRelative = [this](std::string & path)
+								{
+									if (!documentInfo.path.empty())
+									{
+										path = Path::MakeRelative(Path::GetDirectory(documentInfo.path), path);
+									}
+								};
+							callbacks.propertyWillChange = [this]()
+								{
+									undoCaptureBegin(false);
+								};
+							callbacks.propertyDidChange = [this]()
+								{
+									undoCaptureEnd();
+								};
+							
+							if (ImGui::Reflection_StructuredType(
+								*typeDB,
+								*componentType,
+								component,
+								isSet,
+								nullptr,
+								&changedMemberObject,
+								&callbacks))
+							{
+								// signal the component one of its properties has changed
+								component->propertyChanged(changedMemberObject);
+							}
+
+							ImGui::TreePop();
+						}
 					}
 				}
 				ImGui::EndGroup();
