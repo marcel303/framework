@@ -3,6 +3,10 @@
 #include "raycast.h"
 #include "transformGizmos.h"
 
+static const float kMinArrowVisibility = .01f; // cos of angle (rad) at which the arrows will start to disappear
+static const float kMinPadVisibility = .12f; // cos of angle (rad) at which the pads will start to disappear
+static const float kMinRingVisibility = .06f; // cos of angle (rad) at which the arrows will start to disappear
+
 void TransformGizmo::show(const Mat4x4 & transform)
 {
 	if (state == kState_Hidden)
@@ -46,13 +50,19 @@ bool TransformGizmo::tick(
 	Vec3Arg pointer_direction,
 	const bool pointer_isActive,
 	const bool pointer_becameActive,
-	bool & inputIsCaptured)
+	bool & inputIsCaptured,
+	Vec3Arg viewOrigin_world,
+	Vec3Arg viewDirection_world)
 {
 	isInteractive = isActive() || (inputIsCaptured == false);
 	
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
 	rayOriginInGizmoSpace = worldToGizmo.Mul4(pointer_origin);
+	
+	updatePadPositions(rayOriginInGizmoSpace);
+	
+	updateElementVisibility(viewOrigin_world, viewDirection_world);
 	
 	if (state == kState_Hidden)
 	{
@@ -370,19 +380,22 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 	{
 		// draw axis arrows
 		
-		setColorForArrow(0);
-		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
-		
-		setColorForArrow(1);
-		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
-		
-		setColorForArrow(2);
-		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
+		for (int i = 0; i < 3; ++i)
+		{
+			if (elementVisibility.arrow[i] < kMinArrowVisibility)
+				continue;
+				
+			setColorForArrow(i);
+			drawAxisArrow(Vec3(), i, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
+		}
 		
 		// draw pads
 		
 		for (int i = 0; i < 3; ++i)
 		{
+			if (elementVisibility.pad[i] < kMinPadVisibility)
+				continue;;
+				
 			const Color pad_colors[3] =
 			{
 				Color(255, 40, 40),
@@ -400,15 +413,8 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 			Vec3 position;
 			Vec3 size;
 			
-			position[axis1] = pad_offset;
-			position[axis2] = 0.f;
-			position[axis3] = pad_offset;
-			
-			if (rayOriginInGizmoSpace[axis1] < 0.f)
-				position[axis1] = -position[axis1];
-			if (rayOriginInGizmoSpace[axis3] < 0.f)
-				position[axis3] = -position[axis3];
-			
+			position = padPosition[i];
+		
 			size[axis1] = pad_size;
 			size[axis2] = pad_thickness;
 			size[axis3] = pad_size;
@@ -424,14 +430,14 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 				size);
 		}
 		
-		setColorForRing(0);
-		drawRingLine(Vec3(), 0, ring_radius);
-		
-		setColorForRing(1);
-		drawRingLine(Vec3(), 1, ring_radius);
-		
-		setColorForRing(2);
-		drawRingLine(Vec3(), 2, ring_radius);
+		for (int i = 0; i < 3; ++i)
+		{
+			if (elementVisibility.ring[i] < kMinRingVisibility)
+				continue;
+				
+			setColorForRing(i);
+			drawRingLine(Vec3(), i, ring_radius);
+		}
 		
 	#if defined(DEBUG)
 		if (debugging.hasNearestRingPos)
@@ -459,12 +465,16 @@ void TransformGizmo::drawTranslucent() const
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
 	{
-		const int opacity = 191;
+		const int base_opacity = 191;
 		
 		// draw pads
 		
 		for (int i = 0; i < 3; ++i)
 		{
+		// todo : float colors
+			const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
+			const int opacity = fadeValue * base_opacity;
+			
 			const Color pad_colors[3] =
 			{
 				Color(255, 40, 40, opacity),
@@ -521,6 +531,62 @@ void TransformGizmo::drawTranslucent() const
 		popColorPost();
 }
 
+void TransformGizmo::updatePadPositions(Vec3Arg rayOriginInGizmoSpace)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		const int axis1 = (i + 0) % 3;
+		const int axis2 = (i + 1) % 3;
+		const int axis3 = (i + 2) % 3;
+		
+		Vec3 & position = padPosition[i];
+		
+		position[axis1] = pad_offset;
+		position[axis2] = 0.f;
+		position[axis3] = pad_offset;
+		
+		if (rayOriginInGizmoSpace[axis1] < 0.f)
+			position[axis1] = -position[axis1];
+		if (rayOriginInGizmoSpace[axis3] < 0.f)
+			position[axis3] = -position[axis3];
+	}
+}
+
+void TransformGizmo::updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg viewDirection_world)
+{
+	const Vec3 axis[3] =
+		{
+			gizmoToWorld.GetAxis(0).CalcNormalized(),
+			gizmoToWorld.GetAxis(1).CalcNormalized(),
+			gizmoToWorld.GetAxis(2).CalcNormalized()
+		};
+		
+	const Vec3 viewToGizmo_world = (gizmoToWorld.GetTranslation() - viewOrigin_world).CalcNormalized();
+	
+	// update arrow visibility
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		elementVisibility.arrow[i] = 1.f - fabsf(viewToGizmo_world * axis[i]);
+	}
+	
+	// update pad visibility
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		const int normalAxis = (i + 1) % 3;
+		
+		elementVisibility.pad[i] = fabsf(viewToGizmo_world * axis[normalAxis]);
+	}
+	
+	// update ring visibility
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		elementVisibility.ring[i] = fabsf(viewToGizmo_world * axis[i]);
+	}
+}
+
 TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
 {
 	IntersectionResult result;
@@ -540,6 +606,9 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 		
 		for (int i = 0; i < 3; ++i)
 		{
+			if (elementVisibility.arrow[i] < kMinArrowVisibility)
+				continue;
+				
 			const int axis1 = (i + 1) % 3;
 			const int axis2 = (i + 2) % 3;
 			
@@ -575,6 +644,9 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 				kElement_YXPad,
 				kElement_ZYPad
 			};
+			
+			if (elementVisibility.pad[i] < kMinPadVisibility)
+				continue;;
 
 			const int axis1 = (i + 0) % 3;
 			const int axis2 = (i + 1) % 3;
@@ -583,14 +655,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 			Vec3 position;
 			Vec3 size;
 			
-			position[axis1] = pad_offset;
-			position[axis2] = 0.f;
-			position[axis3] = pad_offset;
-			
-			if (rayOriginInGizmoSpace[axis1] < 0.f)
-				position[axis1] = -position[axis1];
-			if (rayOriginInGizmoSpace[axis3] < 0.f)
-				position[axis3] = -position[axis3];
+			position = padPosition[i];
 			
 			size[axis1] = pad_size;
 			size[axis2] = pad_thickness;
@@ -625,6 +690,9 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 		
 		for (int i = 0; i < 3; ++i)
 		{
+			if (elementVisibility.ring[i] < kMinRingVisibility)
+				continue;
+				
 			const int axis1 = (i + 1) % 3;
 			const int axis2 = (i + 2) % 3;
 			

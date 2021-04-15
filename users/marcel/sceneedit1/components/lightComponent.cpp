@@ -42,6 +42,9 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 	
 	for (auto * lightComp = head; lightComp != nullptr; lightComp = lightComp->next)
 	{
+		if (lightComp->enabled == false)
+			continue;
+			
 		auto * sceneNodeComp = lightComp->componentSet->find<SceneNodeComponent>();
 		
 		const auto & objectToWorld = sceneNodeComp->objectToWorld;

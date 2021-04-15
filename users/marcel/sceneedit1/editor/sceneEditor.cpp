@@ -143,8 +143,6 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 // todo : generalize this function. query aabb interface on component type .. ?
 static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
 {
-	//const float kMinExtents = .5f;
-	
 	bool hasMinMax = false;
 	
 	const auto * modelComponent = node.components.find<ModelComponent>();
@@ -180,20 +178,6 @@ static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max
 			hasMinMax = true;
 		}
 	}
-	
-#if false
-	if (hasMinMax)
-	{
-		min = min.Min(Vec3(-kMinExtents));
-		max = max.Max(Vec3(+kMinExtents));
-	}
-	else
-	{
-		min = Vec3(-kMinExtents);
-		max = Vec3(+kMinExtents);
-		hasMinMax = true;
-	}
-#endif
 	
 	return hasMinMax;
 }
@@ -2303,7 +2287,9 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 					pointerDirection_world,
 					pointerIsActive && hasPointer,
 					pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
-					inputIsCaptured))
+					inputIsCaptured,
+					viewToWorld.GetTranslation(),
+					viewToWorld.GetAxis(2).CalcNormalized()))
 			{
 				// transform the global transform into local space
 				

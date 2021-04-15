@@ -38,6 +38,13 @@ struct TransformGizmo
 		float t = 0.f;
 	};
 	
+	struct ElementVisibility
+	{
+		float arrow[3] = { };
+		float pad[3] = { };
+		float ring[3] = { };
+	};
+	
 	State state = kState_Hidden;
 	
 	UiCaptureElem uiCaptureElem;
@@ -46,7 +53,11 @@ struct TransformGizmo
 	
 	Vec3 rayOriginInGizmoSpace; // used for determining on which side to draw the pads
 	
+	Vec3 padPosition[3];
+	
 	IntersectionResult intersectionResult;
+	
+	ElementVisibility elementVisibility;
 	
 	bool isInteractive = true;
 	
@@ -111,11 +122,16 @@ struct TransformGizmo
 		Vec3Arg pointer_direction,
 		const bool pointer_isActive,
 		const bool pointer_becameActive,
-		bool & inputIsCaptured);
+		bool & inputIsCaptured,
+		Vec3Arg viewOrigin_world,
+		Vec3Arg viewDirection_world);
 	void drawOpaque(const bool depthObscuredPass) const;
 	void drawTranslucent() const;
 
 private:
+	void updatePadPositions(Vec3Arg rayOriginInGizmoSpace);
+	void updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg viewDirection_world);
+	
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;
 	float calculateRingAngle(Vec3Arg position_world, const int axis) const;
 	
