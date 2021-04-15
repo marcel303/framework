@@ -1,0 +1,21 @@
+entity 1
+	scene-node
+		enabled
+			true
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		name
+			Directional Light
+	transform
+	light
+		type
+			directional
+
+scene
+	nodes
+		2
