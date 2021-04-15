@@ -371,13 +371,13 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 		// draw axis arrows
 		
 		setColorForArrow(0);
-		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
+		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length, rayOriginInGizmoSpace[0] < 0.f);
 		
 		setColorForArrow(1);
-		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
+		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length, rayOriginInGizmoSpace[1] < 0.f);
 		
 		setColorForArrow(2);
-		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length);
+		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length, rayOriginInGizmoSpace[2] < 0.f);
 		
 		// draw pads
 		
@@ -553,7 +553,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 				const Vec3 intersection_pos = origin_gizmo + direction_gizmo * t;
 				
 				Vec3 axis;
-				axis[i] = 1.f;
+				axis[i] = rayOriginInGizmoSpace[i] < 0.f ? -1.f : +1.f;
 				
 				const float distance = intersection_pos * axis;
 				

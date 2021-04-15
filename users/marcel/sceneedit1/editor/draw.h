@@ -7,7 +7,8 @@ void drawCylinder(
 	const int axis,
 	const float radius1,
 	const float radius2,
-	const float length);
+	const float length,
+	const bool mirrored);
 
 void drawAxisArrow(
 	const Vec3 & position,
@@ -15,4 +16,5 @@ void drawAxisArrow(
 	const float radius,
 	const float length,
 	const float top_radius,
-	const float top_length);
+	const float top_length,
+	const bool mirrored);
