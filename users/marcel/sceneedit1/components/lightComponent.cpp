@@ -153,6 +153,8 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 			
 				g_gltfComponentMgr.drawOpaque();
 				
+				g_gltfComponentMgr.drawOpaque_ForwardShaded();
+				
 				g_modelComponentMgr.draw();
 			};
 		

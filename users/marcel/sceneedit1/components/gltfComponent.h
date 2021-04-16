@@ -46,6 +46,7 @@ struct GltfComponentMgr : ComponentMgr<GltfComponent>
 	bool enableForwardShading = false;
 	
 	void drawOpaque() const;
+	void drawOpaque_ForwardShaded() const;
 	void drawTranslucent() const;
 };
 

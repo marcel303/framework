@@ -23,7 +23,7 @@ GltfComponent::~GltfComponent()
 
 bool GltfComponent::init()
 {
-	cacheElem = &g_gltfCache.findOrCreate(filename.c_str());
+	cacheElem = &gltfCache().findOrCreate(filename.c_str());
 
 	// compute scaled AABB
 	
@@ -52,7 +52,7 @@ void GltfComponent::propertyChanged(void * address)
 		
 		// update cache elem
 		
-		cacheElem = &g_gltfCache.findOrCreate(filename.c_str());
+		cacheElem = &gltfCache().findOrCreate(filename.c_str());
 	}
 	
 	if (address == &filename || address == &scale || address == &centimetersToMeters)
@@ -175,6 +175,35 @@ static void setMaterialShaders(MaterialShaders & materialShaders, const bool for
 
 void GltfComponentMgr::drawOpaque() const
 {
+	if (enableForwardShading)
+		return;
+		
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	
+// todo : set shaders based on render mode
+	MaterialShaders materialShaders;
+	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	//setDefaultMaterialShaders(materialShaders);
+		
+	for (auto * i = head; i != nullptr; i = i->next)
+	{
+		if (i->enabled == false)
+			continue;
+			
+		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
+		
+		Assert(sceneNodeComp != nullptr);
+		if (sceneNodeComp != nullptr)
+			i->drawOpaque(sceneNodeComp->objectToWorld, materialShaders);
+	}
+}
+
+void GltfComponentMgr::drawOpaque_ForwardShaded() const
+{
+	if (!enableForwardShading)
+		return;
+		
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	

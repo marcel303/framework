@@ -3394,7 +3394,7 @@ void SceneEditor::drawSceneOpaque_ForwardShaded() const
 {
 	if (preview.drawScene)
 	{
-		// todo : draw GLTF models here ? add draw mode (deferred or forward shaded) to GLTF component mgr. when forward shaded, always draw forward. otherwise, let GLTF component do either depending on its draw mode
+		g_gltfComponentMgr.drawOpaque_ForwardShaded();
 	}
 }
 
