@@ -899,7 +899,6 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 	
 	// create root node, and make sure it has a transform component
 	childScene.createRootNode();
-	auto & rootNode = childScene.getRootNode();
 	
 	if (!pasteSceneNodeTreeFromLines(*typeDB, line_reader, childScene))
 	{
@@ -941,7 +940,7 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 				{
 					// re-parent the node if it is the root node
 					
-					if (node->id == rootNode.id)
+					if (node->id == childScene.rootNodeId)
 					{
 						node->parentId = parentId;
 						deferred.nodesToSelect.insert(node->id);
@@ -953,7 +952,7 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 				{
 					// skip this node if its the root node
 					
-					if (node->id == rootNode.id)
+					if (node->id == childScene.rootNodeId)
 					{
 						node->freeComponents();
 						
@@ -965,7 +964,7 @@ bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_r
 					
 					// re-parent the node if it was parented to the root node
 					
-					if (node->parentId == rootNode.id)
+					if (node->parentId == childScene.rootNodeId)
 					{
 						node->parentId = parentId;
 						deferred.nodesToSelect.insert(node->id);
