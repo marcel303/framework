@@ -28,44 +28,25 @@
 #include "framework.h"
 #include "framework-camera.h"
 
+static const float mouseSensitivity = .2f;
+
 void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 {
 	if (inputIsCaptured == false)
 	{
+		const bool shiftMod = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+	#if defined(MACOS) || defined(IPHONEOS)
+		const bool commandKey = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+	#else
+		const bool commandKey = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+	#endif
+		
 		// rotation
 		
 		const float rotationSpeed = 45.f;
 		const float movementSpeed = -distance * .5f;
 		
-		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
-		{
-			Mat4x4 worldMatrix;
-			calculateWorldMatrix(worldMatrix);
-			const Vec3 forwardVector = Vec3(worldMatrix.GetAxis(2)[0], 0.f, worldMatrix.GetAxis(2)[2]);
-			const Vec3 strafeVector = Vec3(worldMatrix.GetAxis(0)[0], 0.f, worldMatrix.GetAxis(0)[2]);
-			
-			if (keyboard.isDown(SDLK_UP))
-			{
-				origin += forwardVector * movementSpeed * dt;
-				inputIsCaptured = true;
-			}
-			if (keyboard.isDown(SDLK_DOWN))
-			{
-				origin -= forwardVector * movementSpeed * dt;
-				inputIsCaptured = true;
-			}
-			if (keyboard.isDown(SDLK_LEFT))
-			{
-				origin -= strafeVector * movementSpeed * dt;
-				inputIsCaptured = true;
-			}
-			if (keyboard.isDown(SDLK_RIGHT))
-			{
-				origin += strafeVector * movementSpeed * dt;
-				inputIsCaptured = true;
-			}
-		}
-		else
+		if (!shiftMod)
 		{
 			if (keyboard.isDown(SDLK_UP))
 			{
@@ -89,6 +70,12 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 			}
 		}
 		
+		if (mouse.isDown(BUTTON_LEFT) && !shiftMod)
+		{
+			azimuth -= mouse.dx * mouseSensitivity;
+			elevation -= mouse.dy * mouseSensitivity;
+		}
+		
 		if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX)
 		{
 			elevation += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y) * rotationSpeed * dt;
@@ -108,6 +95,8 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 			inputIsCaptured = true;
 		}
 		
+		distance *= powf(1.5f, -mouse.scrollY / 20.f);
+		
 		if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX)
 		{
 			if (gamepad[gamepadIndex].isDown(GAMEPAD_L2))
@@ -117,6 +106,35 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		}
 		
 		// origin
+		
+		Mat4x4 worldMatrix;
+		calculateWorldMatrix(worldMatrix);
+		const Vec3 forwardVector = Vec3(worldMatrix.GetAxis(2)[0], 0.f, worldMatrix.GetAxis(2)[2]);
+		const Vec3 strafeVector = Vec3(worldMatrix.GetAxis(0)[0], 0.f, worldMatrix.GetAxis(0)[2]);
+		
+		if (shiftMod)
+		{
+			if (keyboard.isDown(SDLK_UP))
+			{
+				origin += forwardVector * movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_DOWN))
+			{
+				origin -= forwardVector * movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_LEFT))
+			{
+				origin -= strafeVector * movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_RIGHT))
+			{
+				origin += strafeVector * movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+		}
 		
 		if (keyboard.isDown(SDLK_a))
 		{
@@ -129,9 +147,15 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 			inputIsCaptured = true;
 		}
 		
+		if (mouse.isDown(BUTTON_LEFT) && shiftMod)
+		{
+			origin += strafeVector * mouse.dx * mouseSensitivity * .2f;
+			origin -= forwardVector * mouse.dy * mouseSensitivity * .2f;
+		}
+		
 		// transform reset
 		
-		if (keyboard.wentDown(SDLK_o) && keyboard.isDown(SDLK_LGUI))
+		if (keyboard.wentDown(SDLK_o) && commandKey)
 		{
 			*this = Orbit();
 			inputIsCaptured = true;
@@ -180,6 +204,13 @@ void Camera::Ortho::tick(const float dt, bool & inputIsCaptured)
 {
 	if (inputIsCaptured == false)
 	{
+		const bool shiftMod = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+	#if defined(MACOS) || defined(IPHONEOS)
+		const bool commandKey = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+	#else
+		const bool commandKey = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+	#endif
+		
 		// side
 		
 		if (keyboard.isDown(SDLK_f))
@@ -216,6 +247,8 @@ void Camera::Ortho::tick(const float dt, bool & inputIsCaptured)
 			inputIsCaptured = true;
 		}
 		
+		scale *= powf(1.5f, -mouse.scrollY / 40.f);
+		
 		// position movement
 	
 		Mat4x4 cameraToWorld;
@@ -246,9 +279,15 @@ void Camera::Ortho::tick(const float dt, bool & inputIsCaptured)
 		
 		position += direction * speed * scale * dt;
 		
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			position -= cameraToWorld.GetAxis(0) * mouse.dx * mouseSensitivity * .01f * scale;
+			position += cameraToWorld.GetAxis(1) * mouse.dy * mouseSensitivity * .01f * scale;
+		}
+		
 		// transform reset
 		
-		if (keyboard.wentDown(SDLK_o) && keyboard.isDown(SDLK_LGUI))
+		if (keyboard.wentDown(SDLK_o) && commandKey)
 		{
 			position.SetZero();
 			inputIsCaptured = true;
@@ -323,6 +362,8 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	
 	if (inputIsCaptured == false)
 	{
+		const bool shiftMod = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
+		
 		// keyboard
 		
 		if (keyboard.isDown(SDLK_DOWN) || keyboard.isDown(SDLK_s))
@@ -334,7 +375,7 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		if (keyboard.isDown(SDLK_RIGHT) || keyboard.isDown(SDLK_d))
 			strafeSpeed += 1.f;
 		
-		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+		if (shiftMod)
 			desiredHeight *= 1.f - duckAmount;
 		
 		if (keyboard.isDown(SDLK_LEFTBRACKET))
