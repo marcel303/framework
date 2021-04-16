@@ -22,6 +22,8 @@ public:
 	void load(const char * filename);
 };
 
+// todo : register resource cache with framework. let framework clear it on shutdown
+
 class GltfCache
 {
 public:

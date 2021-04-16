@@ -33,6 +33,9 @@
 // ui
 #include "editor/ui-capture.h"
 
+// framework-gltf
+#include "framework-gltf.h" // todo : remove
+
 // framework
 #include "framework.h"
 #include "gx_render.h"
@@ -41,8 +44,6 @@
 #include "Path.h"
 #include "TextIO.h"
 #include "Timer.h"
-
-#include "components/gltfCache.h" // todo : remove
 
 #if defined(DEBUG)
 	#define ENABLE_PERFORMANCE_TEST     1
