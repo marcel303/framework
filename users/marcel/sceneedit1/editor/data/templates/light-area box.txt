@@ -1,0 +1,17 @@
+entity 1
+	scene-node
+		name
+			root
+
+entity 2
+	scene-node
+		name
+			Area Box Light
+	transform
+	light
+		type
+			areaBox
+
+scene
+	nodes
+		2
