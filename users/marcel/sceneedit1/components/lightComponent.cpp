@@ -54,94 +54,114 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 		switch (lightComp->type)
 		{
 		case LightComponent::kLightType_Directional:
-			forwardLightingHelper->addDirectionalLight(
-				objectToWorld.GetAxis(2).CalcNormalized(),
-				lightComp->color,
-				lightComp->intensity,
-				enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
-			if (enableShadowMaps && lightComp->castShadows)
 			{
-				// todo : light comp needs shadow map near/far distances and extents
-				shadowMapDrawer->addDirectionalLight(
-					nextShadowMapId,
-					objectToWorld,
-					lightComp->farDistance / 100.f,
-					lightComp->farDistance,
-					10.f);
-				nextShadowMapId++;
+				forwardLightingHelper->addDirectionalLight(
+					objectToWorld.GetAxis(2).CalcNormalized(),
+					lightComp->color,
+					lightComp->intensity,
+					enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
+					
+				if (enableShadowMaps && lightComp->castShadows)
+				{
+					// todo : light comp needs shadow map near/far distances and extents
+					shadowMapDrawer->addDirectionalLight(
+						nextShadowMapId,
+						objectToWorld,
+						lightComp->farDistance / 100.f,
+						lightComp->farDistance,
+						10.f);
+					nextShadowMapId++;
+				}
 			}
 			break;
 		
 		case LightComponent::kLightType_Point:
-			forwardLightingHelper->addPointLight(
-				objectToWorld.GetTranslation(),
-				lightComp->farDistance * lightComp->attenuationBegin,
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity);
+			{
+				forwardLightingHelper->addPointLight(
+					objectToWorld.GetTranslation(),
+					lightComp->farDistance * lightComp->attenuationBegin,
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity);
+			}
 			break;
 		
 		case LightComponent::kLightType_Spot:
-			forwardLightingHelper->addSpotLight(
-				objectToWorld.GetTranslation(),
-				objectToWorld.GetAxis(2).CalcNormalized(),
-				lightComp->spotAngle / 180.f * float(M_PI),
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity,
-				enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
-			if (enableShadowMaps && lightComp->castShadows)
 			{
-				// todo : light comp needs shadow map near/far distances
-				shadowMapDrawer->addSpotLight(
-					nextShadowMapId,
-					objectToWorld,
+				forwardLightingHelper->addSpotLight(
+					objectToWorld.GetTranslation(),
+					objectToWorld.GetAxis(2).CalcNormalized(),
 					lightComp->spotAngle / 180.f * float(M_PI),
-					lightComp->farDistance / 100.f,
-					lightComp->farDistance);
-				nextShadowMapId++;
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity,
+					enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
+					
+				if (enableShadowMaps && lightComp->castShadows)
+				{
+					// todo : light comp needs shadow map near/far distances
+					shadowMapDrawer->addSpotLight(
+						nextShadowMapId,
+						objectToWorld,
+						lightComp->spotAngle / 180.f * float(M_PI),
+						lightComp->farDistance / 100.f,
+						lightComp->farDistance);
+					nextShadowMapId++;
+				}
 			}
 			break;
 			
 		case LightComponent::kLightType_AreaBox:
-			forwardLightingHelper->addAreaBoxLight(
-				objectToWorld,
-				lightComp->farDistance * lightComp->attenuationBegin,
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity);
+			{
+				forwardLightingHelper->addAreaBoxLight(
+					objectToWorld,
+					lightComp->farDistance * lightComp->attenuationBegin,
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity);
+			}
 			break;
 			
 		case LightComponent::kLightType_AreaSphere:
-			forwardLightingHelper->addAreaSphereLight(
-				objectToWorld,
-				lightComp->farDistance * lightComp->attenuationBegin,
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity);
+			{
+				forwardLightingHelper->addAreaSphereLight(
+					objectToWorld,
+					lightComp->farDistance * lightComp->attenuationBegin,
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity);
+			}
 			break;
 			
 		case LightComponent::kLightType_AreaRect:
-			forwardLightingHelper->addAreaRectLight(
-				objectToWorld,
-				lightComp->farDistance * lightComp->attenuationBegin,
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity);
+			{
+				forwardLightingHelper->addAreaRectLight(
+					objectToWorld,
+					lightComp->farDistance * lightComp->attenuationBegin,
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity);
+			}
 			break;
 			
 		case LightComponent::kLightType_AreaCircle:
-			forwardLightingHelper->addAreaCircleLight(
-				objectToWorld,
-				lightComp->farDistance * lightComp->attenuationBegin,
-				lightComp->farDistance,
-				lightComp->color,
-				lightComp->intensity);
+			{
+				forwardLightingHelper->addAreaCircleLight(
+					objectToWorld,
+					lightComp->farDistance * lightComp->attenuationBegin,
+					lightComp->farDistance,
+					lightComp->color,
+					lightComp->intensity);
+			}
 			break;
 		}
 	}
 	
-	forwardLightingHelper->prepareShaderData(7, 20.f, true, worldToView);
+	forwardLightingHelper->prepareShaderData(
+		7,
+		100.f,
+		true,
+		worldToView);
 	
 	if (enableShadowMaps)
 	{
