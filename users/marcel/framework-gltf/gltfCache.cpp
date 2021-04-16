@@ -10,7 +10,18 @@
 
 //
 
-GltfCache g_gltfCache;
+GltfCache & gltfCache()
+{
+	// note : access to the cache is through a function
+	//        to ensure the constructuor for the cache
+	//        is run after Framework's constructor,
+	//        which in turn guarantees it's safe to
+	//        register the cache with Framework
+	
+	static GltfCache cache;
+	
+	return cache;
+}
 
 //
 

@@ -41,4 +41,4 @@ public:
 	GltfCacheElem & findOrCreate(const char * name);
 };
 
-extern GltfCache g_gltfCache;
+GltfCache & gltfCache();
