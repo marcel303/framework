@@ -1,5 +1,7 @@
 #pragma once
 
+#include "framework-caches.h"
+
 #include <map>
 #include <string>
 
@@ -22,9 +24,7 @@ public:
 	void load(const char * filename);
 };
 
-// todo : register resource cache with framework. let framework clear it on shutdown
-
-class GltfCache
+class GltfCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -32,9 +32,12 @@ public:
 	
 	Map m_map;
 	
+	GltfCache();
 	~GltfCache();
-	void clear();
-	void reload();
+	
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	GltfCacheElem & findOrCreate(const char * name);
 };
 

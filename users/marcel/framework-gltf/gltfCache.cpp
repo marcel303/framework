@@ -63,6 +63,11 @@ void GltfCacheElem::load(const char * filename)
 
 //
 
+GltfCache::GltfCache()
+{
+	framework.registerResourceCache(this);
+}
+
 GltfCache::~GltfCache()
 {
 	Assert(m_map.empty());
@@ -83,6 +88,18 @@ void GltfCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
+	}
+}
+
+void GltfCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
 	}
 }
 
