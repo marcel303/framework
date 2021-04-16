@@ -180,6 +180,19 @@ struct SceneEditor
 		bool showAnonymousComponents = false;
 	} parameterUi;
 	
+	struct TemplateUi
+	{
+		struct TemplateElem
+		{
+			std::string name;
+			std::string path;
+			
+			std::vector<TemplateElem> children;
+		};
+		
+		TemplateElem rootTemplateElem;
+	} templateUi;
+	
 	struct UndoVersion
 	{
 		std::string sceneText;
@@ -353,4 +366,7 @@ public:
 	std::string makePathRelativeToDocumentPath(const char * path) const;
 	
 	InteractiveRing interactiveRing;
+	
+protected:
+	void initTemplateUi();
 };

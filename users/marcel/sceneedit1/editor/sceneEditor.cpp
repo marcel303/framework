@@ -123,6 +123,10 @@ void SceneEditor::init(TypeDB * in_typeDB)
 
 	guiContext.init();
 	
+	initTemplateUi();
+	
+	//
+	
 	undoReset();
 }
 
@@ -1070,29 +1074,32 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	
 	if (ImGui::BeginMenu("Add child node.."))
 	{
-	// todo : scan files and auto-generate this menu
-		if (ImGui::BeginMenu("Light"))
+		std::function<void(const TemplateUi::TemplateElem & elem)> doElem;
+		
+		doElem = [&](const TemplateUi::TemplateElem & elem)
 		{
-			if (ImGui::MenuItem("Point"))
+			for (auto & childElem : elem.children)
 			{
-				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
-				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-point.txt");
+				if (childElem.path.empty())
+				{
+					if (ImGui::BeginMenu(childElem.name.c_str()))
+					{
+						doElem(childElem);
+						ImGui::EndMenu();
+					}
+				}
+				else
+				{
+					if (ImGui::MenuItem(childElem.name.c_str()))
+					{
+						result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
+						action_nodeAddFromTemplate.path = framework.resolveResourcePath(childElem.path.c_str());
+					}
+				}
 			}
-			
-			if (ImGui::MenuItem("Spot"))
-			{
-				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
-				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-spot.txt");
-			}
-			
-			if (ImGui::MenuItem("Directional"))
-			{
-				result = kNodeStructureEditingAction_NodeAddChildFromTemplate;
-				action_nodeAddFromTemplate.path = framework.resolveResourcePath("templates/light-directional.txt");
-			}
-			
-			ImGui::EndMenu();
-		}
+		};
+		
+		doElem(templateUi.rootTemplateElem);
 		
 		ImGui::EndMenu();
 	}
@@ -4125,6 +4132,109 @@ std::string SceneEditor::makePathRelativeToDocumentPath(const char * path) const
 	}
 }
 
+void SceneEditor::initTemplateUi()
+{
+	// generate a structured tree of templates, based on template paths
+	
+	templateUi = TemplateUi();
+	
+	// 1. determine the editor data path and derive the templates path from this
+	
+	const auto editorDataPath = Path::GetDirectory(framework.resolveResourcePath("gizmo-light.png"));
+	
+	const auto templatesPath = editorDataPath + "/templates";
+	
+	// 2. scan files inside the templates path and make the paths relative to the editor data path
+	
+	auto files = listFiles(templatesPath.c_str(), false);
+	
+	for (auto & file : files)
+	{
+		file = Path::MakeRelative(editorDataPath, file);
+	}
+	
+	// sort the files by name so the structured tree we'll generated will be sorted as well
+	
+	std::sort(files.begin(), files.end());
+	
+	// 3. generate the tree
+	
+	for (auto & file : files)
+	{
+		Assert(Path::GetExtension(file, true) == "txt");
+		
+		if (Path::GetExtension(file, true) != "txt")
+			continue;
+		
+		// strip the directory from the path to get the filename
+		
+		const char * begin = file.c_str();
+		
+		begin = strchr(begin, '/');
+		
+		Assert(begin != nullptr);
+		if (begin == nullptr)
+			continue;
+			
+		begin++;
+		
+		TemplateUi::TemplateElem * currentElem = &templateUi.rootTemplateElem;
+		
+		for (;;)
+		{
+			// template filenames look like 'light-point.txt'
+			// 'light' would be the name of the sub-tree. 'point' the name of the template elem
+			
+			// is this a sub-tree or is a leaf node?
+			
+			const char * end = strchr(begin, '-');
+			
+			if (end != nullptr)
+			{
+				// sub-tree case: find or create sub-tree within the current template elem and traverse
+				
+				const size_t name_length = end - begin;
+				char * name = (char*)alloca((end - begin + 1) * sizeof(char));
+				memcpy(name, begin, name_length * sizeof(char));
+				name[name_length] = 0;
+				
+				begin = end + 1;
+				
+				TemplateUi::TemplateElem * childElem = nullptr;
+				
+				for (auto & child : currentElem->children)
+				{
+					if (child.name == name)
+						childElem = &child;
+				}
+				
+				if (childElem == nullptr)
+				{
+					currentElem->children.resize(currentElem->children.size() + 1);
+					currentElem = &currentElem->children.back();
+					currentElem->name = name;
+				}
+				else
+					currentElem = childElem;
+			}
+			else
+			{
+				// leaf case
+				
+				auto name = Path::StripExtension(begin);
+				
+				currentElem->children.resize(currentElem->children.size() + 1);
+				currentElem = &currentElem->children.back();
+				
+				currentElem->name = name;
+				currentElem->path = file;
+				
+				break;
+			}
+		}
+	}
+}
+			
 //
 
 #if SCENEEDIT_USE_IMGUIFILEDIALOG

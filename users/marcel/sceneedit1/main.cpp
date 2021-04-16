@@ -33,9 +33,6 @@
 // ui
 #include "editor/ui-capture.h"
 
-// framework-gltf
-#include "framework-gltf.h" // todo : remove
-
 // framework
 #include "framework.h"
 #include "gx_render.h"
@@ -767,8 +764,6 @@ int main(int argc, char * argv[])
 	g_componentTypeDB.shutComponentMgrs();
 	
 	Font("calibri.ttf").saveCache();
-	
-	g_gltfCache.clear(); // todo : move to framework?
 	
 	framework.shutdown();
 
