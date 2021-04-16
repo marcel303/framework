@@ -1050,13 +1050,13 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	}
 
 // todo : add some add child node versions with content :
-// - cube
-// - cylinder
-// - plane
-// - quad
-// - light point
-// - light directional
-// - light spot
+// + mesh : cube
+// - mesh : cylinder
+// - mesh : plane
+// - mesh : quad
+// + light point
+// + light directional
+// + light spot
 // - light area box
 // - audio emitter (with source) (how is source referenced? resource pointer.. by name.. ??)
 // - video
@@ -3737,6 +3737,8 @@ void SceneEditor::drawEditorSelectedNodeLabels() const
 	}
 	
 	const Mat4x4 modelViewProjection = projectionMatrix * viewMatrix;
+	
+	setFont("calibri.ttf");
 	
 	for (auto nodeId : selection.selectedNodes)
 	{
