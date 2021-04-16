@@ -536,6 +536,8 @@ public:
 	
 	std::vector<std::string> resourcePaths;
 	
+	std::vector<class ResourceCacheBase*> resourceCaches;
+	
 	std::vector<SDL_Event> events;       // all events captured during the last process() call
 	std::vector<SDL_Event> windowEvents; // events for the current window captured during the last process() call
 	

@@ -52,7 +52,7 @@ static void handleFileChange(const std::string & filename)
 	
 	const std::string extension = Path::GetExtension(filename, true);
 
-	for (auto * resourceCache : g_resourceCaches)
+	for (auto * resourceCache : framework.resourceCaches)
 	{
 		resourceCache->handleFileChange(filename, extension);
 	}

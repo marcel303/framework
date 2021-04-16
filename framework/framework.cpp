@@ -765,17 +765,9 @@ bool Framework::shutdown()
 	
 	// free resources
 	
-	g_textureCache.clear();
-	g_texture3dCache.clear();
-	g_shaderCache.clear();
-	g_animCache.clear();
-	g_spriterCache.clear();
-	g_modelCache.clear();
-	g_soundCache.clear();
-	g_fontCache.clear();
-#if ENABLE_MSDF_FONTS
-	g_fontCacheMSDF.clear();
-#endif
+	for (auto * resourceCache : resourceCaches)
+		resourceCache->clear();
+
 	g_glyphCache.clear();
 	
 #if USE_FREETYPE
@@ -2628,7 +2620,7 @@ const char * Framework::resolveResourcePath(const char * path) const
 
 void Framework::registerResourceCache(class ResourceCacheBase * resourceCache)
 {
-	g_resourceCaches.push_back(resourceCache);
+	resourceCaches.push_back(resourceCache);
 }
 
 void Framework::blinkTaskbarIcon(int count)

@@ -1191,5 +1191,3 @@ extern MsdfFontCache g_fontCacheMSDF;
 extern GlyphCache g_glyphCache;
 
 extern std::vector<ShaderOutput> g_shaderOutputs;
-
-extern std::vector<ResourceCacheBase*> g_resourceCaches;

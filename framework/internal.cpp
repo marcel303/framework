@@ -73,8 +73,6 @@ GlyphCache g_glyphCache;
 
 std::vector<ShaderOutput> g_shaderOutputs;
 
-std::vector<ResourceCacheBase*> g_resourceCaches;
-
 // -----
 
 void checkErrorGL_internal(const char * function, int line)
