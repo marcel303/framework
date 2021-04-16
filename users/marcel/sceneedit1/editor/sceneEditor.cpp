@@ -1055,9 +1055,9 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 
 // todo : add some add child node versions with content :
 // + mesh : cube
-// - mesh : cylinder
+// + mesh : cylinder
 // - mesh : plane
-// - mesh : quad
+// + mesh : quad
 // + light point
 // + light directional
 // + light spot

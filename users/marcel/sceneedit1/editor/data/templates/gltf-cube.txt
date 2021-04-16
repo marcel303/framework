@@ -6,7 +6,7 @@ entity 1
 entity 2
 	scene-node
 		name
-			Node 1
+			Cube
 	transform
 	gltf
 		filename

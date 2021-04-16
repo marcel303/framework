@@ -1,11 +1,7 @@
 entity 1
 	scene-node
-		enabled
-			true
 		name
 			root
-		attachedFromScene
-			
 
 entity 2
 	scene-node
