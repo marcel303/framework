@@ -481,6 +481,8 @@ public:
 	bool registerChibiResourcePaths(const char * text);
 	const char * resolveResourcePath(const char * path) const;
 	
+	void registerResourceCache(class ResourceCacheBase * resourceCache);
+	
 	void blinkTaskbarIcon(int count);
 
 	bool tickVirtualDesktop(const Mat4x4 & pointerTransform, const bool pointerTransformIsValid, const int buttonMask, const bool isHand);

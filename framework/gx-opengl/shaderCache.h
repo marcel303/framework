@@ -89,7 +89,7 @@ public:
 	bool hasIncludedFile(const char * filename) const;
 };
 
-class ShaderCache
+class ShaderCache : public ResourceCacheBase
 {
 public:
 	class Key
@@ -112,9 +112,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
-	void handleSourceChanged(const char * name);
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
@@ -142,16 +142,16 @@ public:
 	bool hasIncludedFile(const char * filename) const;
 };
 
-class ComputeShaderCache
+class ComputeShaderCache : public ResourceCacheBase
 {
 public:
 	typedef std::map<std::string, ComputeShaderCacheElem> Map;
 
 	Map m_map;
 
-	void clear();
-	void reload();
-	void handleSourceChanged(const char * name);
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 };
 

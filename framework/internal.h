@@ -46,6 +46,7 @@
 #include <map>
 #include <string>
 #include "framework.h"
+#include "framework-caches.h"
 #include "framework-camera.h"
 #include "internal_filereader.h"
 
@@ -657,7 +658,7 @@ public:
 	void reload();
 };
 
-class TextureCache
+class TextureCache : public ResourceCacheBase
 {
 public:
 	class Key
@@ -685,8 +686,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped);
 };
 
@@ -704,27 +706,17 @@ public:
 	void reload();
 };
 
-class Texture3dCache
+class Texture3dCache : public ResourceCacheBase
 {
 public:
-	class Key
-	{
-	public:
-		std::string name;
-		
-		inline bool operator<(const Key & other) const
-		{
-			if (name != other.name)
-				return name < other.name;
-			return false;
-		}
-	};
+	typedef std::string Key;
 	typedef std::map<Key, Texture3dCacheElem> Map;
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	Texture3dCacheElem & findOrCreate(const char * name);
 };
 
@@ -785,7 +777,7 @@ public:
 	int getVersion() const;
 };
 
-class AnimCache
+class AnimCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -793,8 +785,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	AnimCacheElem & findOrCreate(const char * name);
 };
 
@@ -815,7 +808,7 @@ public:
 	void load(const char * filename);
 };
 
-class SpriterCache
+class SpriterCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -823,8 +816,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	SpriterCacheElem & findOrCreate(const char * name);
 };
 
@@ -840,7 +834,7 @@ public:
 	void load(const char * filename);
 };
 
-class SoundCache
+class SoundCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -848,8 +842,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	SoundCacheElem & findOrCreate(const char * name);
 };
 
@@ -872,7 +867,7 @@ public:
 	void load(const char * filename);
 };
 
-class FontCache
+class FontCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -880,8 +875,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	FontCacheElem & findOrCreate(const char * name);
 };
 
@@ -1013,7 +1009,7 @@ public:
 	void load(const char * filename);
 };
 
-class MsdfFontCache
+class MsdfFontCache : public ResourceCacheBase
 {
 public:
 	typedef std::string Key;
@@ -1021,8 +1017,9 @@ public:
 	
 	Map m_map;
 	
-	void clear();
-	void reload();
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	MsdfFontCacheElem & findOrCreate(const char * name);
 };
 
@@ -1194,3 +1191,5 @@ extern MsdfFontCache g_fontCacheMSDF;
 extern GlyphCache g_glyphCache;
 
 extern std::vector<ShaderOutput> g_shaderOutputs;
+
+extern std::vector<ResourceCacheBase*> g_resourceCaches;

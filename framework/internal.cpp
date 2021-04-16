@@ -73,6 +73,8 @@ GlyphCache g_glyphCache;
 
 std::vector<ShaderOutput> g_shaderOutputs;
 
+std::vector<ResourceCacheBase*> g_resourceCaches;
+
 // -----
 
 void checkErrorGL_internal(const char * function, int line)
@@ -547,6 +549,17 @@ void TextureCache::reload()
 	}
 }
 
+void TextureCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	for (auto & i : m_map)
+	{
+		auto & elem = i.second;
+		
+		if (elem.name == filename)
+			elem.reload();
+	}
+}
+
 TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped)
 {
 	Key key;
@@ -671,10 +684,22 @@ void Texture3dCache::reload()
 	}
 }
 
+void Texture3dCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.reload();
+	}
+}
+
 Texture3dCacheElem & Texture3dCache::findOrCreate(const char * name)
 {
 	Key key;
-	key.name = name;
+	key = name;
 	
 	Map::iterator i = m_map.find(key);
 	
@@ -1005,6 +1030,18 @@ void AnimCache::reload()
 	}
 }
 
+void AnimCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
+	}
+}
+
 AnimCacheElem & AnimCache::findOrCreate(const char * name)
 {
 	Key key = name;
@@ -1075,6 +1112,18 @@ void SpriterCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
+	}
+}
+
+void SpriterCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
 	}
 }
 
@@ -1172,6 +1221,18 @@ void SoundCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
+	}
+}
+
+void SoundCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
 	}
 }
 
@@ -1310,6 +1371,18 @@ void FontCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
+	}
+}
+
+void FontCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
 	}
 }
 
@@ -2143,6 +2216,19 @@ void MsdfFontCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.load(i->first.c_str());
+	}
+}
+
+void MsdfFontCache::handleFileChange(const std::string & filename, const std::string & extension)
+{
+	auto i = m_map.find(filename);
+	
+	if (i != m_map.end())
+	{
+		auto & elem = i->second;
+		
+		elem.load(i->first.c_str());
+	
 	}
 }
 

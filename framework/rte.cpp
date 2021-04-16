@@ -46,53 +46,15 @@ RTE strategies:
 
 */
 
-static void handleFileChange(const char * filename)
+static void handleFileChange(const std::string & filename)
 {
-	logDebug("RTE: file '%s' has changed. checking dependencies", filename);
+	logDebug("RTE: file '%s' has changed. checking dependencies", filename.c_str());
 	
 	const std::string extension = Path::GetExtension(filename, true);
 
-	if (extension == "vs" || extension == "txt")
+	for (auto * resourceCache : g_resourceCaches)
 	{
-		g_shaderCache.handleSourceChanged(filename);
-	}
-	else if (extension == "ps" || extension == "txt")
-	{
-		g_shaderCache.handleSourceChanged(filename);
-	}
-#if ENABLE_COMPUTE_SHADER
-	else if (extension == "cs" || extension == "txt")
-	{
-		for (auto & i : g_computeShaderCache.m_map)
-		{
-			ComputeShaderCacheElem & elem = i.second;
-
-			if (elem.name == filename)
-				elem.reload();
-		}
-	}
-#endif
-	else if (extension == "inc")
-	{
-		clearCaches(CACHE_SHADER);
-	}
-	else if (extension == "png" || extension == "jpg")
-	{
-		for (auto & i : g_textureCache.m_map)
-		{
-			auto & elem = i.second;
-			
-			if (elem.name == filename)
-				elem.reload();
-		}
-		
-		for (auto & i : g_texture3dCache.m_map)
-		{
-			auto & elem = i.second;
-			
-			if (elem.name == filename)
-				elem.reload();
-		}
+		resourceCache->handleFileChange(filename, extension);
 	}
 	
 	// call real time editing callback

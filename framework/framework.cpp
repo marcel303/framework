@@ -217,6 +217,18 @@ Framework::Framework()
 	m_sprites = 0;
 	m_models = 0;
 	m_windows = 0;
+	
+	//
+	
+	registerResourceCache(&g_textureCache);
+	registerResourceCache(&g_texture3dCache);
+	registerResourceCache(&g_animCache);
+	registerResourceCache(&g_spriterCache);
+	registerResourceCache(&g_soundCache);
+	registerResourceCache(&g_fontCache);
+#if ENABLE_MSDF_FONTS
+	registerResourceCache(&g_fontCacheMSDF);
+#endif
 }
 
 Framework::~Framework()
@@ -2462,7 +2474,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 	// refresh shaders which are using this source
 	
-	g_shaderCache.handleSourceChanged(name);
+	g_shaderCache.handleFileChange(name, "txt"); // todo : remove extension
 }
 
 void Framework::unregisterShaderSource(const char * name)
@@ -2612,6 +2624,11 @@ const char * Framework::resolveResourcePath(const char * path) const
 	}
 	
 	return path;
+}
+
+void Framework::registerResourceCache(class ResourceCacheBase * resourceCache)
+{
+	g_resourceCaches.push_back(resourceCache);
 }
 
 void Framework::blinkTaskbarIcon(int count)

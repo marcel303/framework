@@ -539,13 +539,21 @@ void ShaderCache::reload()
 	}
 }
 
-void ShaderCache::handleSourceChanged(const char * name)
+void ShaderCache::handleFileChange(const std::string & filename, const std::string & extension)
 {
+	if (extension != "ps" &&
+		extension != "vs" &&
+		extension != "txt" &&
+		extension != "inc")
+	{
+		return;
+	}
+	
 	for (auto & shaderCacheItr : m_map)
 	{
 		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
 		
-		if (name == cacheElem->vs || name == cacheElem->ps || cacheElem->hasIncludedFile(name))
+		if (filename == cacheElem->vs || filename == cacheElem->ps || cacheElem->hasIncludedFile(filename.c_str()))
 		{
 			cacheElem->reload();
 			

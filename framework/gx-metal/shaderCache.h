@@ -191,9 +191,10 @@ public:
 
 #endif
 
+#include "framework-caches.h"
 #include <map>
 
-class ShaderCache
+class ShaderCache : public ResourceCacheBase
 {
 	class Key
 	{
@@ -216,9 +217,9 @@ class ShaderCache
 	Map m_map;
 	
 public:
-	void clear();
-	void reload();
-	void handleSourceChanged(const char * name);
+	virtual void clear() override;
+	virtual void reload() override;
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
