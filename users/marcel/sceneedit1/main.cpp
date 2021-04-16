@@ -595,12 +595,16 @@ int main(int argc, char * argv[])
 		
 		if (editor.preview.tickScene)
 		{
-			const float dt_scene = dt * editor.preview.tickMultiplier;
-			
-			for (auto * type : g_componentTypeDB.componentTypes)
+			editor.undoCaptureBegin(false); // may or may not be pristine. as something may currently be in the process of being edited
 			{
-				type->componentMgr->tick(dt_scene);
+				const float dt_scene = dt * editor.preview.tickMultiplier;
+				
+				for (auto * type : g_componentTypeDB.componentTypes)
+				{
+					type->componentMgr->tick(dt_scene);
+				}
 			}
+			editor.undoCaptureFastForward();
 			
 		// todo : why do we calculate transforms again here ? if there is a reason, add a comment
 			g_transformComponentMgr.calculateTransforms(editor.scene);

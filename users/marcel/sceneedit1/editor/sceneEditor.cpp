@@ -1037,14 +1037,7 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	}
 
 // todo : add some add child node versions with content :
-// + mesh : cube
-// + mesh : cylinder
 // - mesh : plane
-// + mesh : quad
-// + light point
-// + light directional
-// + light spot
-// - light area box
 // - audio emitter (with source) (how is source referenced? resource pointer.. by name.. ??)
 // - video
 // todo : add vfx graph nodes for : video by name
@@ -3321,7 +3314,7 @@ bool SceneEditor::performAction_sceneImport(const char * path)
 		deferredBegin();
 		{
 			for (auto nodeId : selection.selectedNodes)
-				success &= addNodesFromScene(path, nodeId, false, nullptr) != -1;
+				success &= addNodesFromScene(path, nodeId, false, nullptr);
 		}
 		deferredEnd(success);
 	}
@@ -3624,51 +3617,203 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 	{
 		auto * node = node_itr.second;
 		
-		gxPushMatrix();
-		{
-			auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
-			
-			// draw at node location
-			
-			const Vec3 pos = sceneNodeComp->objectToWorld.GetTranslation();
-			
-			gxTranslatef(pos[0], pos[1], pos[2]);
-			
-			// orient to look at camera
-			
-			gxMultMatrixf(viewOrientation.m_v);
+		auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
 		
-			GxTextureId simpleTextureId = 0;
+		const bool isSelected = selection.selectedNodes.count(node->id) != 0;
+		
+		// draw at node location
+		
+		const Vec3 position = sceneNodeComp->objectToWorld.GetTranslation();
+		
+		GxTextureId simpleTextureId = 0;
+		
+		for (;;)
+		{
+			auto * cameraComp = node->components.find<CameraComponent>();
 			
-			for (;;)
+			if (cameraComp != nullptr && cameraComp->enabled)
 			{
-				auto * cameraComp = node->components.find<CameraComponent>();
-				
-				if (cameraComp != nullptr && cameraComp->enabled)
-				{
-					simpleTextureId = getTexture("gizmo-camera.png");
-					break;
-				}
-				
-				auto * lightComp = node->components.find<LightComponent>();
-				
-				if (lightComp != nullptr && lightComp->enabled)
-				{
-					simpleTextureId = getTexture("gizmo-light.png");
-					break;
-				}
-				
-				// todo : add texture for audio emitter component
-				
-				// todo : add texture for vfx graph component
-				
+				simpleTextureId = getTexture("gizmo-camera.png");
 				break;
 			}
 			
-			// draw a simple texture based gizmo when a texture is set
+			auto * lightComp = node->components.find<LightComponent>();
 			
-			if (simpleTextureId != 0)
+			if (lightComp != nullptr && lightComp->enabled)
 			{
+				simpleTextureId = getTexture("gizmo-light.png");
+				
+				const Color kOutlineColor(127, 127, 255);
+				const Color kDirectionColor(255, 255, 127);
+				
+				switch (lightComp->type)
+				{
+				case LightComponent::kLightType_Directional:
+					{
+						// draw direction lines
+						
+						const float kSpacing = .2f;
+						const float kLength = 1.f;
+						
+						const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized() * kLength;
+						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * kSpacing;
+						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * kSpacing;
+						
+						for (int i = -1; i <= +1; ++i)
+						{
+							for (int j = -1; j <= +1; ++j)
+							{
+								const Vec3 origin =
+									position +
+									tangent   * i +
+									bitangent * j;
+								
+								const Vec3 target = origin + forward;
+								
+								setColor(kDirectionColor);
+								drawLine3d(origin, target);
+							}
+						}
+					}
+					break;
+				case LightComponent::kLightType_Point:
+					// todo : draw sphere
+					break;
+				case LightComponent::kLightType_Spot:
+					{
+						// draw light cone outline
+						
+						const float alpha = tanf(lightComp->spotAngle / 2.f / 180.f * float(M_PI));
+						
+						const Vec3 origin(0.f);
+						
+						const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized();
+						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
+						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * alpha;
+						
+						const int kNumSegments = 7;
+						Vec3 * points = (Vec3*)alloca(kNumSegments * sizeof(Vec3));
+						
+						for (int i = 0; i < kNumSegments; ++i)
+						{
+							const float angle = i / float(kNumSegments) * Calc::m2PI;
+							const float c = cosf(angle);
+							const float s = sinf(angle);
+							
+							points[i] = position + (forward + tangent * c + bitangent * s) * lightComp->farDistance;
+						}
+						
+						setColor(kOutlineColor);
+						gxBegin(GX_LINES);
+						{
+							for (int i = 0; i < kNumSegments; ++i)
+							{
+								const int index1 = i;
+								const int index2 = i + 1 == kNumSegments ? 0 : i + 1;
+								
+								// cone side
+								gxVertex3fv(&origin[0]);
+								gxVertex3fv(&points[index1][0]);
+								
+								// cone base
+								gxVertex3fv(&points[index1][0]);
+								gxVertex3fv(&points[index2][0]);
+							}
+						}
+						gxEnd();
+					}
+					break;
+				
+				case LightComponent::kLightType_AreaBox:
+					if (isSelected)
+					{
+						gxPushMatrix();
+						{
+							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+							
+							setColor(kOutlineColor);
+							lineCube(Vec3(), Vec3(1.f));
+						}
+						gxPopMatrix();
+					}
+					break;
+					
+				case LightComponent::kLightType_AreaSphere:
+					if (isSelected)
+					{
+						gxPushMatrix();
+						{
+							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+							
+							setColor(kOutlineColor);
+							drawCircle(0, 0, 1.f, 40);
+							
+							gxRotatef(90, 1, 0, 0);
+							
+							setColor(kOutlineColor);
+							drawCircle(0, 0, 1.f, 40);
+							
+							gxRotatef(90, 0, 1, 0);
+							
+							setColor(kOutlineColor);
+							drawCircle(0, 0, 1.f, 40);
+						}
+						gxPopMatrix();
+					}
+					break;
+					
+				case LightComponent::kLightType_AreaCircle:
+					if (isSelected)
+					{
+						gxPushMatrix();
+						{
+							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+							
+							setColor(kOutlineColor);
+							drawCircle(0, 0, 1.f, 40);
+						}
+						gxPopMatrix();
+					}
+					break;
+					
+				case LightComponent::kLightType_AreaRect:
+					if (isSelected)
+					{
+						gxPushMatrix();
+						{
+							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+							
+							setColor(kOutlineColor);
+							drawRectLine(-1, -1, +1, +1);
+						}
+						gxPopMatrix();
+					}
+					break;
+				}
+				break;
+			}
+			
+			// todo : add texture for audio emitter component
+			
+			// todo : add texture for vfx graph component
+			
+			break;
+		}
+		
+		// draw a simple texture based gizmo when a texture is set
+		
+		if (simpleTextureId != 0)
+		{
+			gxPushMatrix();
+			{
+				// translate to node location
+				
+				gxTranslatef(position[0], position[1], position[2]);
+				
+				// orient to look at camera
+				
+				gxMultMatrixf(viewOrientation.m_v);
+				
 				pushCullMode(CULL_NONE, CULL_CCW);
 				{
 					gxSetTexture(simpleTextureId);
@@ -3678,7 +3823,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						const float kFadeEndDistance = 4.f;
 						const float kSize = .5f;
 						
-						const float distanceToView = (pos - viewOrigin).CalcSize();
+						const float distanceToView = (position - viewOrigin).CalcSize();
 						const float opacity =
 							doFade
 							? saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance))
@@ -3695,8 +3840,8 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 				}
 				popCullMode();
 			}
+			gxPopMatrix();
 		}
-		gxPopMatrix();
 	}
 }
 
