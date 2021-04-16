@@ -1,0 +1,17 @@
+entity 1
+	scene-node
+		name
+			root
+
+entity 2
+	scene-node
+		name
+			Square
+	transform
+	gltf
+		filename
+			models/square.gltf
+
+scene
+	nodes
+		2

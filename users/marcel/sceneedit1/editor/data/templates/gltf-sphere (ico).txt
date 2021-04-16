@@ -1,0 +1,17 @@
+entity 1
+	scene-node
+		name
+			root
+
+entity 2
+	scene-node
+		name
+			Ico Sphere
+	transform
+	gltf
+		filename
+			models/sphere (ico).gltf
+
+scene
+	nodes
+		2

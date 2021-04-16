@@ -1,0 +1,17 @@
+entity 1
+	scene-node
+		name
+			root
+
+entity 2
+	scene-node
+		name
+			Cone
+	transform
+	gltf
+		filename
+			models/cone.gltf
+
+scene
+	nodes
+		2

@@ -1,0 +1,17 @@
+entity 1
+	scene-node
+		name
+			root
+
+entity 2
+	scene-node
+		name
+			Uv Sphere
+	transform
+	gltf
+		filename
+			models/sphere (uv).gltf
+
+scene
+	nodes
+		2
