@@ -10,6 +10,8 @@ struct ComponentBase;
 struct ComponentMgrBase;
 struct ComponentSet;
 
+class Vec3;
+
 // component set ids
 
 const int kComponentSetIdInvalid = -1;
@@ -41,6 +43,7 @@ struct ComponentBase
 	virtual std::type_index typeIndex() const = 0;
 	
 	virtual void propertyChanged(void * address) { };
+	virtual bool getBoundingBox(Vec3 & min, Vec3 & max) const { return false; }
 	
 	template <typename T>
 	bool isType() const

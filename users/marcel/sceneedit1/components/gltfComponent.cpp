@@ -71,6 +71,17 @@ void GltfComponent::propertyChanged(void * address)
 	}
 }
 
+bool GltfComponent::getBoundingBox(Vec3 & min, Vec3 & max) const
+{
+	if (aabbIsValid)
+	{
+		min = aabbMin;
+		max = aabbMax;
+	}
+	
+	return aabbIsValid;
+}
+
 void GltfComponent::free()
 {
 	cacheElem = nullptr;

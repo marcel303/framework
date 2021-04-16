@@ -53,6 +53,17 @@ void ModelComponent::propertyChanged(void * address)
 	}
 }
 
+bool ModelComponent::getBoundingBox(Vec3 & min, Vec3 & max) const
+{
+	if (hasModelAabb)
+	{
+		min = aabbMin;
+		max = aabbMax;
+	}
+	
+	return hasModelAabb;
+}
+
 void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 {
 	if (filename.empty())

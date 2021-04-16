@@ -150,42 +150,26 @@ void SceneEditor::getEditorViewport(int & x, int & y, int & sx, int & sy) const
 	sy = preview.viewportSy == -1 ? viewportSy : preview.viewportSy;
 }
 
-// todo : generalize this function. query aabb interface on component type .. ?
 static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max)
 {
 	bool hasMinMax = false;
 	
-	const auto * modelComponent = node.components.find<ModelComponent>();
-	
-	if (modelComponent != nullptr && modelComponent->hasModelAabb)
+	for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 	{
 		if (hasMinMax)
 		{
-			min = min.Min(modelComponent->aabbMin);
-			max = max.Max(modelComponent->aabbMax);
+			Vec3 compMin(false);
+			Vec3 compMax(false);
+			
+			if (component->getBoundingBox(compMin, compMax))
+			{
+				min = min.Min(compMin);
+				max = max.Max(compMax);
+			}
 		}
 		else
 		{
-			min = modelComponent->aabbMin;
-			max = modelComponent->aabbMax;
-			hasMinMax = true;
-		}
-	}
-	
-	const auto * gltfComponent = node.components.find<GltfComponent>();
-	
-	if (gltfComponent != nullptr && gltfComponent->aabbIsValid)
-	{
-		if (hasMinMax)
-		{
-			min = min.Min(gltfComponent->aabbMin);
-			max = max.Max(gltfComponent->aabbMax);
-		}
-		else
-		{
-			min = gltfComponent->aabbMin;
-			max = gltfComponent->aabbMax;
-			hasMinMax = true;
+			hasMinMax = component->getBoundingBox(min, max);
 		}
 	}
 	

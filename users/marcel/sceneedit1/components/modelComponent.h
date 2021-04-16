@@ -31,6 +31,7 @@ struct ModelComponent : Component<ModelComponent>
 	virtual void tick(const float dt) override final;
 	
 	virtual void propertyChanged(void * address) override final;
+	virtual bool getBoundingBox(Vec3 & min, Vec3 & max) const override final;
 	
 	void draw(const Mat4x4 & objectToWorld) const;
 };
