@@ -138,6 +138,16 @@ void drawLine3d(int axis)
 	gxEnd();
 }
 
+void drawLine3d(Vec3Arg from, Vec3Arg to)
+{
+	gxBegin(GX_LINES);
+	{
+		gxTexCoord2f(0, 0); gxVertex3fv(&from[0]);
+		gxTexCoord2f(1, 1); gxVertex3fv(&to[0]);
+	}
+	gxEnd();
+}
+
 void drawRect3d(int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;

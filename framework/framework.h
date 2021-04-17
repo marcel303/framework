@@ -1703,6 +1703,7 @@ void drawTextArea(float x, float y, float sx, float size, const char * format, .
 void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
 
 void drawLine3d(int axis = 0);
+void drawLine3d(Vec3Arg from, Vec3Arg to);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
