@@ -222,6 +222,10 @@ Framework::Framework()
 	
 	registerResourceCache(&g_textureCache);
 	registerResourceCache(&g_texture3dCache);
+	registerResourceCache(&g_shaderCache);
+#if ENABLE_COMPUTE_SHADER
+	registerResourceCache(&g_computeShaderCache);
+#endif
 	registerResourceCache(&g_animCache);
 	registerResourceCache(&g_spriterCache);
 	registerResourceCache(&g_soundCache);
@@ -1063,8 +1067,42 @@ static const XMap * getXMap(const char * deviceName)
 
 #endif
 
+static void finishStereoVrFrame()
+{
+	// for stereo vr, when we're not in vr mode, framework is responsible for drawing the stereo images
+	
+	Assert(framework.vrMode == false);
+	
+	for (int eyeIndex = 0; eyeIndex < framework.getEyeCount(); ++eyeIndex)
+	{
+		framework.beginEye(eyeIndex, colorBlack);
+		{
+			gxPushMatrix();
+			gxTranslatef(0, 0, 0);
+			{
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
+				{
+					framework.drawVirtualDesktop();
+				}
+				popBlend();
+				popDepthTest();
+			}
+			gxPopMatrix();
+		}
+		framework.endEye();
+	}
+	
+	framework.present();
+}
+
 void Framework::process()
 {
+	if (isStereoVr() && vrMode == false)
+	{
+		finishStereoVrFrame();
+	}
+	
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();
@@ -1449,7 +1487,6 @@ void Framework::process()
 	// begin time step for the next frame
 	
 #if FRAMEWORK_USE_SDL
-#if 1
 	// high accuracy time steps using SDL_GetPerformanceCounter/SDL_GetPerformanceFrequency
 	const uint64_t tickCount = SDL_GetPerformanceCounter();
 	if (m_lastTick == -1)
@@ -1460,50 +1497,9 @@ void Framework::process()
 	timeStep = delta / (double)SDL_GetPerformanceFrequency();
 	
 	time += timeStep;
-#else
-	// lower precision time steps using SDL_GetTicks. leaving this code here as the performance
-	// counter version is still in testing
-	const uint32_t tickCount = SDL_GetTicks();
-	if (m_lastTick == -1)
-		m_lastTick = tickCount;
-	const uint32_t delta = tickCount - m_lastTick;
-	m_lastTick = tickCount;
-
-	timeStep = delta / 1000.f;
-
-	time += timeStep;
-#endif
 #elif FRAMEWORK_USE_OVR_MOBILE
-	if (vrMode == false)
-	{
-		// Render the eye images.
-		for (int eyeIndex = 0; eyeIndex < getEyeCount(); ++eyeIndex)
-		{
-			beginEye(eyeIndex, colorBlack);
-			{
-				gxPushMatrix();
-				gxTranslatef(0, 0, 0);
-				{
-					pushDepthTest(true, DEPTH_LESS);
-					pushBlend(BLEND_OPAQUE);
-					{
-						drawVirtualDesktop();
-						for (auto * window = m_windows; window != nullptr; window = window->m_next)
-							if (window->isHidden() == false && window->hasFocus())
-								window->draw3dCursor();
-					}
-					popBlend();
-					popDepthTest();
-				}
-				gxPopMatrix();
-			}
-			endEye();
-		}
-		
-		present();
-	}
-	
 	// process events and begin the next frame
+	
 	frameworkOvr.process();
 
 	timeStep = float(frameworkOvr.TimeStep);
@@ -2201,7 +2197,7 @@ void Framework::drawVirtualDesktop()
 			{
 				window->draw3d();
 
-				if (window->hasFocus())
+				if (window->isHidden() == false && window->hasFocus())
 					window->draw3dCursor();
 			}
 		}
