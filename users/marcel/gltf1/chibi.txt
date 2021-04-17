@@ -1,5 +1,12 @@
 app marcel-gltf1
 	depend_library framework
 	depend_library framework-gltf
+	depend_library zippyDownload
 	add_files main.cpp
 	resource_path data
+
+library zippyDownload
+	depend_library libwebrequest-downloadcache
+	depend_library miniz
+	add_files zippyDownload.cpp zippyDownload.h
+	header_path . expose

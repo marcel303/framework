@@ -78,6 +78,10 @@ struct AnimatedCamera3d
 
 #endif
 
+#include "zippyDownload.h"
+
+#define MEDIA_BASE_URL "https://centuryofthecat.nl/shared_media/framework/framework-gltf/"
+
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
@@ -91,18 +95,24 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
-	//const char * path = "scenes/van_gogh_room/scene.gltf";
-	const char * path = "scenes/littlest_tokyo/scene.gltf";
-	//const char * path = "scenes/ftm/scene.gltf";
-	//const char * path = "scenes/nara_the_desert_dancer/scene.gltf";
-	//const char * path = "scenes/drone/scene.gltf";
-	//const char * path = "scenes/buster_drone/scene.gltf";
-	//const char * path = "scenes/halloween_little_witch/scene.gltf";
-	//const char * path = "scenes/kalestra_the_sorceress/scene.gltf";
-
+	//const char * name = "van_gogh_room";
+	const char * name = "littlest_tokyo";
+	//const char * name = "ftm";
+	//const char * name = "nara_the_desert_dancer";
+	//const char * name = "drone";
+	//const char * name = "buster_drone";
+	//const char * name = "halloween_little_witch";
+	//const char * name = "kalestra_the_sorceress";
+	
+	auto url = std::string(MEDIA_BASE_URL) + name + ".zip";
+	
+	zippyDownload(url.c_str(), "scenes");
+	
+	auto path = std::string("scenes/") + name + "/scene.gltf";
+	
 	gltf::Scene scene;
 	
-	if (!gltf::loadScene(path, scene))
+	if (!gltf::loadScene(path.c_str(), scene))
 	{
 		logError("failed to load GLTF file");
 	}
@@ -122,7 +132,7 @@ int main(int argc, char * argv[])
 	
 	camera.position = Vec3(0, 0, -2);
 	
-	bool centimeters = false;
+	bool centimeters = true;
 	bool useAlphaToCoverage = false;
 	
 	for (;;)
