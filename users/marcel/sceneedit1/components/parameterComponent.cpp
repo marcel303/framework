@@ -1,8 +1,25 @@
-#include "Log.h"
 #include "parameterComponent.h"
+
+#include "reflection.h"
+
+#include "Log.h"
 #include "Parse.h"
 
 ParameterComponentMgr g_parameterComponentMgr;
+
+//
+
+void ParameterDefinition::reflect(TypeDB & typeDB)
+{
+	typeDB.addStructured<ParameterDefinition>("parameter")
+		.add("type", &ParameterDefinition::type)
+		.add("name", &ParameterDefinition::name)
+		.add("defaultValue", &ParameterDefinition::defaultValue)
+		.add("min", &ParameterDefinition::min)
+		.add("max", &ParameterDefinition::max);
+}
+
+//
 
 void ParameterComponent::add(ParameterBase * parameter)
 {

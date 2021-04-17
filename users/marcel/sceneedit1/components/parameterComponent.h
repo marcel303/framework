@@ -6,6 +6,10 @@
 
 //
 
+struct TypeDB;
+
+//
+
 struct ParameterDefinition
 {
 	std::string type;
@@ -13,6 +17,8 @@ struct ParameterDefinition
 	std::string defaultValue;
 	std::string min;
 	std::string max;
+	
+	static void reflect(TypeDB & typeDB);
 };
 
 struct ParameterComponent : Component<ParameterComponent>

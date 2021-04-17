@@ -29,21 +29,17 @@ void registerBuiltinTypes(TypeDB & typeDB)
 	typeDB.addPlain<Vec3>("vec3", kDataType_Float3);
 	typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
 	typeDB.addPlain<std::string>("string", kDataType_String);
-	typeDB.addStructured<AngleAxis>("AngleAxis")
-		.add("angle", &AngleAxis::angle)
-			.addFlag(new ComponentMemberFlag_EditorType_AngleDegrees)
-		.add("axis", &AngleAxis::axis)
-			.addFlag(new ComponentMemberFlag_EditorType_OrientationVector);
+	
+// todo : move AngleAxis to ecs-component?
+	AngleAxis::reflect(typeDB);
 	
 	//
 	
+// todo : why is transform component added here?
 	typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
-	typeDB.addStructured<ParameterDefinition>("parameter")
-		.add("type", &ParameterDefinition::type)
-		.add("name", &ParameterDefinition::name)
-		.add("defaultValue", &ParameterDefinition::defaultValue)
-		.add("min", &ParameterDefinition::min)
-		.add("max", &ParameterDefinition::max);
+	
+// todo : move ParameterDefinition reflection to ParameterComponentType?
+	ParameterDefinition::reflect(typeDB);
 }
 
 void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)

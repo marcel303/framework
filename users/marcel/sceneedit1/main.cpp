@@ -164,7 +164,7 @@ struct ResourcePtrTestComponentType : ComponentType<ResourcePtrTestComponent>
 
 static bool testResourcePointers(const TypeDB & typeDB)
 {
-	registerBuiltinTypes();
+	registerBuiltinTypes(typeDB);
 	registerComponentTypes();
 	
 	ResourcePtrTestComponentMgr resourcePtrTestComponentMgr;
