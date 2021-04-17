@@ -73,10 +73,10 @@
 
 #define ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO 0 // todo : requires unique names for each nodes to always exist (not just on auto assign during save)
 
-static const float kMinNodeRadius = .5f;
+static const float kMinNodeRadius = .25f;
 
 static bool createsCycle(const Scene & scene, const int nodeId, const int newParentId);
-static bool oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds);
+static int oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds);
 
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
@@ -224,32 +224,34 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 				}
 			}
 		}
-		
-		// intersect a sphere in world-space, which ensures the node always has a minimum size representation within the world to click on
-		
-		const Vec3 position = sceneNodeComp->objectToWorld.GetTranslation();
-		float sphere_t1;
-		float sphere_t2;
-		if (intersectSphere(
-			rayOrigin[0],
-			rayOrigin[1],
-			rayOrigin[2],
-			rayDirection[0],
-			rayDirection[1],
-			rayDirection[2],
-			position[0],
-			position[1],
-			position[2],
-			kMinNodeRadius,
-			sphere_t1,
-			sphere_t2))
+		else
 		{
-			const float distance = fminf(fmaxf(0.f, sphere_t1), sphere_t2);
+			// intersect a sphere in world-space, which ensures the node always has a minimum size representation within the world to click on
 			
-			if (distance < bestDistance)
+			const Vec3 position = sceneNodeComp->objectToWorld.GetTranslation();
+			float sphere_t1;
+			float sphere_t2;
+			if (intersectSphere(
+				rayOrigin[0],
+				rayOrigin[1],
+				rayOrigin[2],
+				rayDirection[0],
+				rayDirection[1],
+				rayDirection[2],
+				position[0],
+				position[1],
+				position[2],
+				kMinNodeRadius,
+				sphere_t1,
+				sphere_t2))
 			{
-				bestNode = &node;
-				bestDistance = distance;
+				const float distance = fminf(fmaxf(0.f, sphere_t1), sphere_t2);
+				
+				if (distance < bestDistance)
+				{
+					bestNode = &node;
+					bestDistance = distance;
+				}
 			}
 		}
 	}
@@ -495,10 +497,10 @@ void SceneEditor::selectNodesToSelect(const bool append)
 		for (auto nodeId : deferred.nodesToSelect)
 		{
 			selection.selectedNodes.insert(nodeId);
-			nodeUi.nodeToGiveFocus = nodeId;
+			nodeUi.nodeToGiveFocus = nodeId; // fixme : this doesn't guarantee correct order when there are multiple selected nodes. should be set by individual actions to ensure correct behavior
 			
 			auto & node = scene.getNode(nodeId);
-			markNodeOpenUntilRoot(node.parentId);
+			markNodeOpenUntilRoot(node.id);
 		}
 		
 		deferred.nodesToSelect.clear();
@@ -1351,10 +1353,27 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 		
 		if (isClicked)
 		{
-			// note : we preserve the selection when additive mode (shift) is used or when the context menu is summoned
-			if (!ImGui::GetIO().KeyShift && !ImGui::IsItemClicked(1))
-				selection = Selection();
-			selection.selectedNodes.insert(node.id);
+			if (ImGui::GetIO().KeyShift)
+			{
+				if (selection.selectedNodes.count(nodeId) == 0)
+					selection.selectedNodes.insert(node.id);
+				else
+					selection.selectedNodes.erase(node.id);
+			}
+			else
+			{
+				if (ImGui::IsItemClicked(1))
+				{
+					if (selection.selectedNodes.count(nodeId) == 0)
+						selection = Selection();
+				}
+				else
+				{
+					selection = Selection();
+				}
+				
+				selection.selectedNodes.insert(node.id);
+			}
 		}
 		
 		if (ImGui::BeginDragDropTarget())
@@ -4414,7 +4433,7 @@ static bool createsCycle(const Scene & scene, const int childNodeId, const int n
 	return generatesCycle;
 }
 
-static bool oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds)
+static int oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds)
 {
 	std::map<int, int> ancestorVisitationCounts;
 	
@@ -4443,7 +4462,7 @@ static bool oldestCommonAncestor(const Scene & scene, const std::set<int> & node
 	for (auto & ancestorVisitationCount : ancestorVisitationCounts)
 	{
 		if (ancestorVisitationCount.second != nodeIds.size())
-			continue;;
+			continue;
 		
 		const int ancestorId = ancestorVisitationCount.first;
 		
