@@ -115,6 +115,7 @@ namespace rOne
 		
 		Light light;
 		light.type = lightType;
+		light.position = transform.GetTranslation();
 		light.transform = transform;
 		light.attenuationBegin = attenuationBegin;
 		light.attenuationEnd = attenuationEnd;
@@ -303,6 +304,7 @@ namespace rOne
 					lightToView_packed(1, 3) = scaleY;
 					lightToView_packed(2, 3) = scaleZ;
 					
+				// todo : isn't translation a duplicate of lights[i].position that we packed earlier?
 					// pack translation
 					lightToView_packed.SetTranslation(lightToView.GetTranslation());
 					
