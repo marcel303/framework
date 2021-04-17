@@ -57,8 +57,7 @@ int main(int argc, char * argv[])
 	camera.position.Set(0, 2, -2);
 	
 	gltf::Scene scene;
-	//gltf::loadScene("smooth-cube.gltf", scene);
-	gltf::loadScene("space-ship.gltf", scene);
+	gltf::loadScene("smooth-cube.gltf", scene);
 	
 	gltf::BufferCache bufferCache;
 	bufferCache.init(scene);
@@ -95,6 +94,8 @@ int main(int argc, char * argv[])
 	
 	Vec3 emissive;
 	
+	int shape = 0;
+	
 	for (;;)
 	{
 		framework.process();
@@ -109,6 +110,9 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_SPACE))
 			emissive.Set(1.f, .4f, .1f);
 		
+		if (mouse.wentDown(BUTTON_RIGHT))
+			shape = (shape + 1) % 3;
+			
 		const Mat4x4 worldToView = camera.getViewMatrix();
 		
 		auto drawOpaqueBase = [&](const bool isShadowPass)
@@ -148,10 +152,11 @@ int main(int argc, char * argv[])
 				drawOptions.enableMaterialSetup = false;
 				drawOptions.enableShaderSetting = false;
 				drawOptions.activeScene = -1;
-				drawOptions.defaultMaterial.doubleSided = true;
+				drawOptions.defaultMaterial.doubleSided = false;
 				
 				params.setMetallicRoughness(shader, 1.f, (1.f + sinf(framework.time * 2.f)) / 2.f);
 				params.setEmissive(shader, Color(emissive[0], emissive[1], emissive[2]));
+				
 				//gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
 				
 				for (int x = -10; x <= +10; ++x)
@@ -170,14 +175,24 @@ int main(int argc, char * argv[])
 							movement[abs(x + z) % 3] = cosf(framework.time + x + z) * .2f;
 							gxTranslatef(movement[0], movement[1], movement[2]);
 							gxRotatef(framework.time * 40.f, (x/3)%2, 0, (z/3)%2);
-
-							setColor(colorWhite);
-							//fillCube(Vec3(), Vec3(.3f));
-							//fillCylinder(Vec3(), .12f, .4f, 20, 0.f, true);
 							
-							gxScalef(.4f, .4f, .4f);
-							gxScalef(.3f, .3f, .3f);
-							gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
+							if (shape == 0)
+							{
+								gxScalef(.4f, .4f, .4f);
+								gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
+							}
+							
+							if (shape == 1)
+							{
+								setColor(colorWhite);
+								fillCube(Vec3(), Vec3(.3f));
+							}
+							
+							if (shape == 2)
+							{
+								setColor(colorWhite);
+								fillCylinder(Vec3(), .12f, .4f, 20, 0.f, true);
+							}
 						}
 						gxPopMatrix();
 					}
@@ -258,7 +273,7 @@ int main(int argc, char * argv[])
 				shadowMapDrawer.getShadowMapId(i));
 		}
 		
-		//helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);
+		helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);
 	#endif
 	
 	#if 0
