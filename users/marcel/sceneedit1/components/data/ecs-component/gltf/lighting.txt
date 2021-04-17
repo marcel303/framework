@@ -49,8 +49,25 @@ void forEachLightId(int id)
 		}
 	#endif
 	}
+	else if (
+		light.type == kLightType_AreaBox ||
+		light.type == kLightType_AreaSphere ||
+		light.type == kLightType_AreaRect ||
+		light.type == kLightType_AreaCircle)
+	{
+		AreaLightTransform areaLightTransform = lookupAreaLightTransform(id);
+	// todo : nearestPointToAreaLight should be named nearestPointOnAreaLightSurface(..)
+		vec3 nearestLightPosition = nearestPointToAreaLight(light.type, areaLightTransform, v_position_view);
 
-	// todo : handle different light types : area box, sphere, rect, circle
+		vec3 lightToSurface = v_position_view - light.position; // todo : this lightDir calculation causes lights to disappear when their midpoint moves behind a surface (causing N dot L <= 0.0). think of a better way to calculate lightDir, that also handles point-on-surface cases
+		//vec3 lightToSurface = v_position_view - nearestLightPosition; // length becomes zero whenever the nearest point lies on the surface being shaded..
+		lightDir = normalize(lightToSurface);
+
+		lightAttenuation = computeAttenuationForPointLight(
+			v_position_view,
+			nearestLightPosition,
+			light.attenuationEnd);
+	}
 
 	Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
 

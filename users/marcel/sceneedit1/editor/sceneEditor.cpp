@@ -3715,8 +3715,6 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						
 						const float alpha = tanf(lightComp->spotAngle / 2.f / 180.f * float(M_PI));
 						
-						const Vec3 origin(0.f);
-						
 						const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized();
 						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
 						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * alpha;
@@ -3742,7 +3740,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 								const int index2 = i + 1 == kNumSegments ? 0 : i + 1;
 								
 								// cone side
-								gxVertex3fv(&origin[0]);
+								gxVertex3fv(&position[0]);
 								gxVertex3fv(&points[index1][0]);
 								
 								// cone base
