@@ -34,23 +34,107 @@ void LightComponentMgr::shut()
 
 void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 {
-	forwardLightingHelper->reset();
+	// -- prepare shadow maps
 	
 	shadowMapDrawer->reset();
 	
-	int nextShadowMapId = 0;
+	if (enableShadowMaps)
+	{
+		int nextLightId = -1;
+		
+		for (auto * lightComp = head; lightComp != nullptr; lightComp = lightComp->next)
+		{
+			if (lightComp->enabled == false)
+				continue;
+			
+			nextLightId++;
+			
+			if (lightComp->castShadows == false)
+				continue;
+			
+			auto * sceneNodeComp = lightComp->componentSet->find<SceneNodeComponent>();
+		
+			const auto & objectToWorld = sceneNodeComp->objectToWorld;
+			
+			switch (lightComp->type)
+			{
+			case LightComponent::kLightType_Directional:
+				{
+					// todo : light comp needs shadow map near/far distances and extents
+					shadowMapDrawer->addDirectionalLight(
+						nextLightId,
+						objectToWorld,
+						lightComp->farDistance / 100.f,
+						lightComp->farDistance,
+						10.f);
+				}
+				break;
+				
+			case LightComponent::kLightType_Point:
+				break;
+			
+			case LightComponent::kLightType_Spot:
+				{
+					// todo : light comp needs shadow map near/far distances
+					shadowMapDrawer->addSpotLight(
+						nextLightId,
+						objectToWorld,
+						lightComp->spotAngle / 180.f * float(M_PI),
+						lightComp->farDistance / 100.f,
+						lightComp->farDistance);
+				}
+				break;
+				
+			case LightComponent::kLightType_AreaBox:
+			case LightComponent::kLightType_AreaSphere:
+			case LightComponent::kLightType_AreaRect:
+			case LightComponent::kLightType_AreaCircle:
+				break;
+			}
+		}
+		
+	// todo : component mgrs should register for opaque, forward and translucent draw somewhere ? currently the calls to draw stuff are all over the place
+	
+		shadowMapDrawer->drawOpaque = []()
+			{
+			// todo : component mgrs should know this is a shadow map pass, so they can optimize drawing, and not draw geometry not tagged as shadow casting
+			
+				g_gltfComponentMgr.drawOpaque();
+				
+				g_gltfComponentMgr.drawOpaque_ForwardShaded();
+				
+				g_modelComponentMgr.draw();
+			};
+		
+		shadowMapDrawer->drawTranslucent = []()
+			{
+				g_gltfComponentMgr.drawTranslucent();
+			};
+		
+		shadowMapDrawer->enableColorShadows = false;
+		
+		shadowMapDrawer->drawShadowMaps(worldToView);
+	}
+	
+	// -- perpare forward lighting
+	
+	forwardLightingHelper->reset();
+	
+	int nextLightId = -1;
 	
 	for (auto * lightComp = head; lightComp != nullptr; lightComp = lightComp->next)
 	{
 		if (lightComp->enabled == false)
 			continue;
 			
+		nextLightId++;
+		
 		auto * sceneNodeComp = lightComp->componentSet->find<SceneNodeComponent>();
 		
 		const auto & objectToWorld = sceneNodeComp->objectToWorld;
 		
 		// note : the forward lighting helper will convert colors to linear color space for us
-	
+		
 		switch (lightComp->type)
 		{
 		case LightComponent::kLightType_Directional:
@@ -59,19 +143,7 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 					objectToWorld.GetAxis(2).CalcNormalized(),
 					lightComp->color,
 					lightComp->intensity,
-					enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
-					
-				if (enableShadowMaps && lightComp->castShadows)
-				{
-					// todo : light comp needs shadow map near/far distances and extents
-					shadowMapDrawer->addDirectionalLight(
-						nextShadowMapId,
-						objectToWorld,
-						lightComp->farDistance / 100.f,
-						lightComp->farDistance,
-						10.f);
-					nextShadowMapId++;
-				}
+					shadowMapDrawer->getShadowMapId(nextLightId));
 			}
 			break;
 		
@@ -95,19 +167,7 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 					lightComp->farDistance,
 					lightComp->color,
 					lightComp->intensity,
-					enableShadowMaps && lightComp->castShadows ? nextShadowMapId : -1);
-					
-				if (enableShadowMaps && lightComp->castShadows)
-				{
-					// todo : light comp needs shadow map near/far distances
-					shadowMapDrawer->addSpotLight(
-						nextShadowMapId,
-						objectToWorld,
-						lightComp->spotAngle / 180.f * float(M_PI),
-						lightComp->farDistance / 100.f,
-						lightComp->farDistance);
-					nextShadowMapId++;
-				}
+					shadowMapDrawer->getShadowMapId(nextLightId));
 			}
 			break;
 			
@@ -162,29 +222,4 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 		100.f,
 		true,
 		worldToView);
-	
-	if (enableShadowMaps)
-	{
-	// todo : component mgrs should register for opaque, forward and translucent draw somewhere ? currently the calls to draw stuff are all over the place
-	
-		shadowMapDrawer->drawOpaque = []()
-			{
-			// todo : component mgrs should know this is a shadow map pass, so they can optimize drawing, and not draw geometry not tagged as shadow casting
-			
-				g_gltfComponentMgr.drawOpaque();
-				
-				g_gltfComponentMgr.drawOpaque_ForwardShaded();
-				
-				g_modelComponentMgr.draw();
-			};
-		
-		shadowMapDrawer->drawTranslucent = []()
-			{
-				g_gltfComponentMgr.drawTranslucent();
-			};
-		
-		shadowMapDrawer->enableColorShadows = false;
-		
-		shadowMapDrawer->drawShadowMaps(worldToView);
-	}
 }
