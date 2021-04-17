@@ -148,7 +148,8 @@ struct SceneEditor
 		kNodeStructureEditingAction_NodeSceneAttach,
 		kNodeStructureEditingAction_NodeSceneAttachUpdate,
 		kNodeStructureEditingAction_NodeSceneImport,
-		kNodeStructureEditingAction_NodeParent
+		kNodeStructureEditingAction_NodeParent,
+		kNodeStructureEditingAction_NodeGroup
 	};
 	
 	struct Action_NodeAddFromTemplate
@@ -326,7 +327,7 @@ struct SceneEditor
 	bool performAction_pasteSibling();
 	bool performAction_paste(const int parentNodeId);
 	bool performAction_addChild();
-	bool performAction_addChild(const int parentNodeId);
+	bool performAction_addChild(const int parentNodeId, int * out_childNodeId);
 	void performAction_remove();
 	void performAction_remove(const int nodeId);
 	bool performAction_sceneAttach(const char * path, std::vector<int> * out_rootNodeIds);
@@ -334,6 +335,7 @@ struct SceneEditor
 	bool performAction_sceneImport(const char * path);
 	bool performAction_duplicate();
 	bool performAction_parent(const int childNodeId, const int newParentId);
+	bool performAction_group();
 
 	void drawSceneOpaque() const;
 	void drawSceneOpaque_ForwardShaded() const;

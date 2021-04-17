@@ -75,6 +75,9 @@
 
 static const float kMinNodeRadius = .5f;
 
+static bool createsCycle(const Scene & scene, const int nodeId, const int newParentId);
+static bool oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds);
+
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 static void openImGuiOpenDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
 static void openImGuiSaveDialog(const char * key, const char * caption, const char * filter, const char * initialPath);
@@ -1080,6 +1083,11 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		ImGui::EndMenu();
 	}
 	
+	if (ImGui::MenuItem("Group", nullptr, false, selection.selectedNodes.empty() == false))
+	{
+		result = kNodeStructureEditingAction_NodeGroup;
+	}
+	
 	ImGui::Separator();
 	
 	if (ImGui::MenuItem("Import nodes from scene"))
@@ -1357,23 +1365,7 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 			{
 				const int childNodeId = *(int*)payload->Data;
 				
-				// the new parent should not as one of its ancesters have the child node
-				// otherwise, a graph cycle will occur. check if there would be a cycle
-				// and discard the drag and drop operation if so
-				
-				bool generatesCycle = false;
-				int nextNodeId = node.id;
-				
-				for (;;)
-				{
-					auto & nextNode = scene.getNode(nextNodeId);
-					if (nextNode.parentId == -1)
-						break;
-					generatesCycle |= nextNode.parentId == childNodeId;
-					nextNodeId = nextNode.parentId;
-				}
-				
-				if (generatesCycle == false)
+				if (createsCycle(scene, childNodeId, node.id) == false)
 				{
 					result = kNodeStructureEditingAction_NodeParent;
 					action_nodeParent.childNodeId = childNodeId;
@@ -1972,6 +1964,10 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 								action_nodeParent.childNodeId,
 								action_nodeParent.newParentNodeId);
 							action_nodeParent = Action_NodeParent();
+							break;
+							
+						case kNodeStructureEditingAction_NodeGroup:
+							performAction_group();
 							break;
 						}
 						
@@ -3128,7 +3124,7 @@ bool SceneEditor::performAction_addChild()
 	{
 		for (auto nodeId : selection.selectedNodes)
 		{
-			success &= performAction_addChild(nodeId);
+			success &= performAction_addChild(nodeId, nullptr);
 		}
 	}
 	deferredEnd(success);
@@ -3136,7 +3132,7 @@ bool SceneEditor::performAction_addChild()
 	return success;
 }
 
-bool SceneEditor::performAction_addChild(const int parentNodeId)
+bool SceneEditor::performAction_addChild(const int parentNodeId, int * out_childNodeId)
 {
 	bool success = true;
 	
@@ -3168,6 +3164,9 @@ bool SceneEditor::performAction_addChild(const int parentNodeId)
 			deferred.nodesToSelect.insert(childNode->id);
 		}
 		deferredEnd(success);
+		
+		if (out_childNodeId != nullptr)
+			*out_childNodeId = childNode->id;
 	}
 	
 	return success;
@@ -3371,6 +3370,37 @@ bool SceneEditor::performAction_parent(const int childNodeId, const int newParen
 	deferredEnd(true);
 	
 	return true;
+}
+
+bool SceneEditor::performAction_group()
+{
+	bool success = true;
+	
+	const int commonAncestorId = oldestCommonAncestor(scene, selection.selectedNodes);
+	
+	if (commonAncestorId != -1)
+	{
+		deferredBegin();
+		{
+			// create a new parent node. add it to the oldest common ancestor
+		
+			int newParentId;
+			success &= performAction_addChild(commonAncestorId, &newParentId);
+			
+			if (success)
+			{
+				// re-parent the nodes to the new parent node
+		
+				for (auto childNodeId : selection.selectedNodes)
+				{
+					deferred.nodesToParent.insert({ childNodeId, newParentId });
+				}
+			}
+		}
+		deferredEnd(success);
+	}
+	
+	return success;
 }
 
 void SceneEditor::drawSceneOpaque() const
@@ -4362,7 +4392,89 @@ void SceneEditor::initTemplateUi()
 		}
 	}
 }
+
+//
+
+static bool createsCycle(const Scene & scene, const int childNodeId, const int newParentId)
+{
+	// the new parent should not as one of its ancesters have the child node
+	// otherwise, a graph cycle will occur. check if there would be a cycle
+	// and discard the drag and drop operation if so
+	
+	bool generatesCycle = false;
+	int nextNodeId = newParentId;
+	
+	for (;;)
+	{
+		auto & nextNode = scene.getNode(nextNodeId);
+		if (nextNode.parentId == -1)
+			break;
+		generatesCycle |= nextNode.parentId == childNodeId;
+		nextNodeId = nextNode.parentId;
+	}
+	
+	return generatesCycle;
+}
+
+static bool oldestCommonAncestor(const Scene & scene, const std::set<int> & nodeIds)
+{
+	std::map<int, int> ancestorVisitationCounts;
+	
+	for (auto nodeId : nodeIds)
+	{
+		auto & node = scene.getNode(nodeId);
+		
+		int nextAncestorId = node.parentId;
+		
+		for (;;)
+		{
+			if (nextAncestorId == -1)
+				break;
+				
+			ancestorVisitationCounts[nextAncestorId]++;
 			
+			auto & ancestorNode = scene.getNode(nextAncestorId);
+			
+			nextAncestorId = ancestorNode.parentId;
+		}
+	}
+	
+	int oldestAncestorId = -1;
+	int oldestAncestorGeneration;
+	
+	for (auto & ancestorVisitationCount : ancestorVisitationCounts)
+	{
+		if (ancestorVisitationCount.second != nodeIds.size())
+			continue;;
+		
+		const int ancestorId = ancestorVisitationCount.first;
+		
+		int generation = 0;
+		
+		int nextAncestorId = ancestorId;
+		
+		for (;;)
+		{
+			auto & ancestorNode = scene.getNode(nextAncestorId);
+			
+			if (ancestorNode.parentId == -1)
+				break;
+			
+			generation++;
+			
+			nextAncestorId = ancestorNode.parentId;
+		}
+		
+		if (oldestAncestorId == -1 || generation > oldestAncestorGeneration)
+		{
+			oldestAncestorId = ancestorId;
+			oldestAncestorGeneration = generation;
+		}
+	}
+	
+	return oldestAncestorId;
+}
+
 //
 
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
