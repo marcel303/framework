@@ -77,6 +77,11 @@ struct ParameterComponentType : ComponentType<ParameterComponent>
 		add("prefix", &ParameterComponent::prefix);
 		add("parameters", &ParameterComponent::parameterDefinitions);
 	}
+	
+	virtual void reflect(TypeDB & typeDB) override final
+	{
+		ParameterDefinition::reflect(typeDB);
+	}
 };
 
 #endif

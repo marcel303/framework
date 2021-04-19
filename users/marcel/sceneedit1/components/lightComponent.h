@@ -56,25 +56,12 @@ extern LightComponentMgr g_lightComponentMgr;
 
 #include "componentType.h"
 
-extern TypeDB g_typeDB; // todo : remove
-
 struct LightComponentType : ComponentType<LightComponent>
 {
 	LightComponentType()
 		: ComponentType("LightComponent", &g_lightComponentMgr)
 	{
 		tickPriority = kComponentPriority_Light;
-		
-	// todo : need to resolve how to add enumeration types. and remove g_typeDB when resolved
-	
-		g_typeDB.addEnum<LightComponent::LightType>("LightComponent::LightType")
-			.add("directional", LightComponent::kLightType_Directional)
-			.add("point", LightComponent::kLightType_Point)
-			.add("spot", LightComponent::kLightType_Spot)
-			.add("areaBox", LightComponent::kLightType_AreaBox)
-			.add("areaSphere", LightComponent::kLightType_AreaSphere)
-			.add("areaRect", LightComponent::kLightType_AreaRect)
-			.add("areaCircle", LightComponent::kLightType_AreaCircle);
 		
 		add("type", &LightComponent::type);
 		add("intensity", &LightComponent::intensity)
@@ -90,6 +77,18 @@ struct LightComponentType : ComponentType<LightComponent>
 		add("spotAngle", &LightComponent::spotAngle)
 			.limits(0.f, 170.f);
 		add("castShadows", &LightComponent::castShadows);
+	}
+	
+	virtual void reflect(TypeDB & typeDB) override final
+	{
+		typeDB.addEnum<LightComponent::LightType>("LightComponent::LightType")
+			.add("directional", LightComponent::kLightType_Directional)
+			.add("point", LightComponent::kLightType_Point)
+			.add("spot", LightComponent::kLightType_Spot)
+			.add("areaBox", LightComponent::kLightType_AreaBox)
+			.add("areaSphere", LightComponent::kLightType_AreaSphere)
+			.add("areaRect", LightComponent::kLightType_AreaRect)
+			.add("areaCircle", LightComponent::kLightType_AreaCircle);
 	}
 };
 

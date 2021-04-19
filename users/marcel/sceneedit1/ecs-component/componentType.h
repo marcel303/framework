@@ -22,6 +22,8 @@ struct ComponentTypeBase : StructuredType
 	ComponentMgrBase * componentMgr = nullptr;
 	
 	ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr);
+	
+	virtual void reflect(TypeDB & typeDB) { }
 };
 
 struct ComponentMemberFlag_Hidden : MemberFlag<ComponentMemberFlag_Hidden>
