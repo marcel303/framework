@@ -16,10 +16,6 @@
 
 //
 
-TypeDB g_typeDB;
-
-//
-
 void registerBuiltinTypes(TypeDB & typeDB)
 {
 	typeDB.addPlain<bool>("bool", kDataType_Bool);
@@ -37,9 +33,6 @@ void registerBuiltinTypes(TypeDB & typeDB)
 	
 // todo : why is transform component added here?
 	typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
-	
-// todo : move ParameterDefinition reflection to ParameterComponentType?
-	ParameterDefinition::reflect(typeDB);
 }
 
 void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
@@ -53,4 +46,9 @@ void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
 	componentTypeDB.registerComponentType(new SceneNodeComponentType());
 	componentTypeDB.registerComponentType(new TransformComponentType());
 	//componentTypeDB.registerComponentType(new VfxgraphComponentType());
+	
+	for (auto * componentType : componentTypeDB.componentTypes)
+	{
+		componentType->reflect(typeDB);
+	}
 }

@@ -1,14 +1,7 @@
 #pragma once
 
-#include "reflection.h"
-
-//
-
 struct ComponentTypeDB;
-
-//
-
-extern TypeDB g_typeDB;
+struct TypeDB;
 
 //
 

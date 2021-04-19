@@ -24,7 +24,7 @@
 #include "reflection-textio.h"
 
 // sceneedit
-#include "helpers2.h" // g_typeDB
+#include "helpers2.h" // registerBuiltinTypes, registerComponentTypes
 
 // renderOne
 #include "lightDrawer.h"
@@ -226,7 +226,7 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
-	auto & typeDB = g_typeDB;
+	TypeDB typeDB;
 
 	registerBuiltinTypes(typeDB);
 	registerComponentTypes(typeDB, g_componentTypeDB);
