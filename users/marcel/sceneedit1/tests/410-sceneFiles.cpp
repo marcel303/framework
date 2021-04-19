@@ -3,20 +3,25 @@
 #include "scene.h"
 #include "sceneIo.h"
 
-#include "lineReader.h"
+#include "framework.h" // setupPaths
 
+// libreflection
+#include "lineReader.h"
+#include "reflection.h" // TypeDB
+
+// libgg
 #include "Log.h"
 #include "Path.h"
 #include "TextIO.h"
-
-#include "framework.h" // setupPaths
 
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
-	registerBuiltinTypes(g_typeDB);
-	registerComponentTypes(g_typeDB, g_componentTypeDB);
+	TypeDB typeDB;
+	
+	registerBuiltinTypes(typeDB);
+	registerComponentTypes(typeDB, g_componentTypeDB);
 
 	// load scene description text file
 	
@@ -39,7 +44,7 @@ int main(int argc, char * argv[])
 	
 	LineReader line_reader(lines, 0, 0);
 	
-	if (!parseSceneFromLines(g_typeDB, line_reader, basePath.c_str(), scene))
+	if (!parseSceneFromLines(typeDB, line_reader, basePath.c_str(), scene))
 	{
 		LOG_ERR("failed to parse scene from lines");
 		return -1;

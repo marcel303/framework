@@ -256,18 +256,35 @@ int main(int argc, char * argv[])
 			{
 				// draw scene
 				
-				if (myRenderOptions.drawWireframe->get())
-					pushWireframe(true);
+				pushWireframe(myRenderOptions.drawWireframe->get());
 				{
 					editor.drawSceneOpaque();
 				}
-				if (myRenderOptions.drawWireframe->get())
-					popWireframe();
+				popWireframe();
 				
 				// draw editor
 				
 				editor.drawView3dOpaque();
-
+			}
+			popCullMode();
+		};
+	
+	auto drawOpaque_ForwardShaded = [&]()
+		{
+			pushCullMode(CULL_BACK, CULL_CCW);
+			{
+				// draw scene
+				
+				pushWireframe(myRenderOptions.drawWireframe->get());
+				{
+					editor.drawSceneOpaque_ForwardShaded();
+				}
+				popWireframe();
+				
+				// draw editor
+				
+				editor.drawView3dOpaque_ForwardShaded();
+				
 				// draw virtual desktop
 				
 				if (framework.vrMode)
@@ -277,24 +294,21 @@ int main(int argc, char * argv[])
 			}
 			popCullMode();
 		};
-	
-	auto drawOpaque_ForwardShaded = [&]()
-		{
-			pushCullMode(CULL_BACK, CULL_CCW);
-			{
-				editor.drawSceneOpaque_ForwardShaded();
-				
-				editor.drawView3dOpaque_ForwardShaded();
-			}
-			popCullMode();
-		};
 		
 	auto drawTranslucent = [&]()
 		{
 			pushCullMode(CULL_BACK, CULL_CCW);
 			pushBlend(BLEND_ALPHA);
 			{
-				editor.drawSceneTranslucent();
+				// draw scene
+				
+				pushWireframe(myRenderOptions.drawWireframe->get());
+				{
+					editor.drawSceneTranslucent();
+				}
+				popWireframe();
+				
+				// draw editor
 				
 				editor.drawView3dTranslucent();
 			}

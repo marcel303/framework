@@ -28,11 +28,6 @@ void registerBuiltinTypes(TypeDB & typeDB)
 	
 // todo : move AngleAxis to ecs-component?
 	AngleAxis::reflect(typeDB);
-	
-	//
-	
-// todo : why is transform component added here?
-	typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
 }
 
 void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
