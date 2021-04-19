@@ -911,11 +911,15 @@ void setBlend(BLEND_MODE blendMode)
 
 void setLineSmooth(bool enabled)
 {
+	globals.lineSmoothEnabled = enabled;
+	
 	//fassert(false);
 }
 
 void setWireframe(bool enabled)
 {
+	globals.wireframeEnabled = enabled;
+	
 	[s_activeRenderPass->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
 }
 
@@ -1095,6 +1099,9 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 
 void setDepthBias(float depthBias, float slopeScale)
 {
+	globals.depthBias = depthBias;
+	globals.depthBiasSlopeScale = slopeScale;
+	
 	[s_activeRenderPass->encoder setDepthBias:depthBias slopeScale:slopeScale clamp:0.f];
 }
 

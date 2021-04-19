@@ -121,6 +121,8 @@ void setBlend(BLEND_MODE blendMode)
 
 void setLineSmooth(bool enabled)
 {
+	globals.lineSmoothEnabled = enabled;
+	
 #if ENABLE_DESKTOP_OPENGL
 	if (enabled)
 	{
@@ -140,6 +142,8 @@ void setLineSmooth(bool enabled)
 
 void setWireframe(bool enabled)
 {
+	globals.wireframeEnabled = enabled;
+	
 #if ENABLE_DESKTOP_OPENGL
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
 	checkErrorGL();
@@ -229,6 +233,9 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 
 void setDepthBias(float depthBias, float slopeScale)
 {
+	globals.depthBias = depthBias;
+	globals.depthBiasSlopeScale = slopeScale;
+	
 	if (depthBias == 0.f && slopeScale == 0.f)
 	{
 		glDisable(GL_POLYGON_OFFSET_FILL);

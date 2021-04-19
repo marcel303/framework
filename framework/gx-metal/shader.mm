@@ -553,7 +553,9 @@ void ShaderCache::handleFileChange(const std::string & filename, const std::stri
 	{
 		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
 		
-		if (filename == cacheElem->vs || filename == cacheElem->ps || cacheElem->hasIncludedFile(filename.c_str()))
+		if (filename == cacheElem->vs ||
+			filename == cacheElem->ps ||
+			cacheElem->hasIncludedFile(filename.c_str()))
 		{
 			cacheElem->reload();
 			
