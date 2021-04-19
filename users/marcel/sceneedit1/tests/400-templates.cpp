@@ -11,6 +11,9 @@
 
 #include "framework.h" // setupPaths
 
+// librelection
+#include "reflection.h" // TypeDB
+
 static void dump_template(const Template & t)
 {
 	for (auto & component : t.components)
@@ -36,7 +39,7 @@ static void dump_template(const Template & t)
 	}
 }
 
-static void test_v1()
+static void test_v1(const TypeDB & typeDB)
 {
 	Template t;
 	
@@ -52,7 +55,7 @@ static void test_v1()
 		LOG_ERR("failed to overlay template");
 	
 	ComponentSet componentSet;
-	if (!instantiateComponentsFromTemplate(g_typeDB, t, componentSet))
+	if (!instantiateComponentsFromTemplate(typeDB, t, componentSet))
 		LOG_ERR("failed to instantiate components from template");
 	freeComponentsInComponentSet(componentSet);
 	
@@ -61,7 +64,7 @@ static void test_v1()
 	dump_template(t);
 }
 
-static void test_v2()
+static void test_v2(const TypeDB & typeDB)
 {
 	Template t;
 	
@@ -75,7 +78,7 @@ static void test_v2()
 	}
 	
 	ComponentSet componentSet;
-	if (!instantiateComponentsFromTemplate(g_typeDB, t, componentSet))
+	if (!instantiateComponentsFromTemplate(typeDB, t, componentSet))
 		LOG_ERR("failed to instantiate components from template");
 	freeComponentsInComponentSet(componentSet);
 	
@@ -86,15 +89,17 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	registerBuiltinTypes(g_typeDB);
-	registerComponentTypes(g_typeDB, g_componentTypeDB);
+	TypeDB typeDB;
+	
+	registerBuiltinTypes(typeDB);
+	registerComponentTypes(typeDB, g_componentTypeDB);
 	
 	LOG_INF("[running test-v1]");
-	test_v1();
+	test_v1(typeDB);
 	LOG_INF("[done]");
 	
 	LOG_INF("[running test-v2]");
-	test_v2();
+	test_v2(typeDB);
 	LOG_INF("[done]");
 	
 	return 0;

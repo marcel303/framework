@@ -19,7 +19,7 @@
 #include "framework-camera.h"
 
 // libreflection
-#include "reflection.h"
+#include "reflection.h" // TypeDB
 
 int main(int argc, char * argv[])
 {
@@ -38,6 +38,8 @@ int main(int argc, char * argv[])
 	TypeDB typeDB;
 	registerBuiltinTypes(typeDB);
 	registerComponentTypes(typeDB, g_componentTypeDB);
+	
+	g_componentTypeDB.initComponentMgrs();
 	
 	// load the scene
 	

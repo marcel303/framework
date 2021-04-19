@@ -15,7 +15,8 @@ struct TransformGizmo
 		kState_Visible,
 		kState_DragArrow,
 		kState_DragPad,
-		kState_DragRing
+		kState_DragRing,
+		kState_DragScale
 	};
 	
 	enum Element
@@ -29,7 +30,10 @@ struct TransformGizmo
 		kElement_ZYPad,
 		kElement_XRing,
 		kElement_YRing,
-		kElement_ZRing
+		kElement_ZRing,
+		kElement_XScale,
+		kElement_YScale,
+		kElement_ZScale
 	};
 	
 	enum DrawPass
@@ -62,6 +66,8 @@ struct TransformGizmo
 	
 	Vec3 padPosition[3];
 	
+	Vec3 scalePosition[3];
+	
 	IntersectionResult intersectionResult;
 	
 	ElementVisibility elementVisibility;
@@ -70,6 +76,7 @@ struct TransformGizmo
 	
 	bool enableTranslation = true;
 	bool enableRotation = true;
+	bool enableScaling = true;
 	
 	float arrow_radius = .04f;
 	float arrow_length = 1.f;
@@ -83,6 +90,9 @@ struct TransformGizmo
 	
 	float ring_radius = 1.8f;
 	float ring_tubeRadius = .1f;
+	
+	float scale_offset = 1.25f;
+	float scale_size = .05f;
 	
 	std::function<void()> editingWillBegin;
 	std::function<void()> editingDidEnd;
@@ -105,6 +115,11 @@ struct TransformGizmo
 		int axis = 0;
 		float initialAngle = 0.f;
 	} dragRing;
+	
+	struct DragScale
+	{
+	
+	} dragScale;
 	
 	struct
 	{
@@ -136,6 +151,7 @@ struct TransformGizmo
 
 private:
 	void updatePadPositions(Vec3Arg rayOriginInGizmoSpace);
+	void updateScalePositions(Vec3Arg rayOriginInGizmoSpace);
 	void updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg viewDirection_world);
 	
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;

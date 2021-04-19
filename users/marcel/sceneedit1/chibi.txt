@@ -96,6 +96,7 @@ app marcel-sceneedit-800-realtimeEditing
 	depend_library framework
 	depend_library framework-gltf
 	add_files tests/800-realtimeEditing.cpp
+	add_files helpers2.cpp helpers2.h
 	header_path .
 	resource_path data
 

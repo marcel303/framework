@@ -408,8 +408,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	auto & typeDB = g_typeDB;
-	
+	TypeDB typeDB;
 	auto & componentTypeDB = g_componentTypeDB;
 	
 	registerBuiltinTypes(typeDB);

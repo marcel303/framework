@@ -61,6 +61,7 @@ bool TransformGizmo::tick(
 	rayOriginInGizmoSpace = worldToGizmo.Mul4(pointer_origin);
 	
 	updatePadPositions(rayOriginInGizmoSpace);
+	updateScalePositions(rayOriginInGizmoSpace);
 	
 	updateElementVisibility(viewOrigin_world, viewDirection_world);
 	
@@ -163,6 +164,21 @@ bool TransformGizmo::tick(
 				editingDidEnd();
 		}
 	}
+	else if (state == kState_DragScale)
+	{
+		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
+		Verify(uiCaptureElem.capture());
+		
+		// todo : calculate new scale
+		
+		if (!pointer_isActive)
+		{
+			state = kState_Visible;
+			
+			if (editingDidEnd != nullptr)
+				editingDidEnd();
+		}
+	}
 	else if (state == kState_Visible)
 	{
 		intersectionResult =
@@ -255,6 +271,24 @@ bool TransformGizmo::tick(
 					editingWillBegin();
 			}
 		}
+		
+		if (intersectionResult.element == kElement_XScale ||
+			intersectionResult.element == kElement_YScale ||
+			intersectionResult.element == kElement_ZScale)
+		{
+			if (pointer_becameActive && inputIsCaptured == false)
+			{
+				Verify(uiCaptureElem.capture());
+				inputIsCaptured = true;
+				
+				state = kState_DragScale;
+				
+				dragScale = DragScale();
+				
+				if (editingWillBegin != nullptr)
+					editingWillBegin();
+			}
+		}
 	}
 	
 	Assert(
@@ -265,7 +299,8 @@ bool TransformGizmo::tick(
 	return
 		state == kState_DragRing ||
 		state == kState_DragArrow ||
-		state == kState_DragPad;
+		state == kState_DragPad ||
+		state == kState_DragScale;
 }
 
 static void drawRingLine(const Vec3 & position, const int axis, const float radius)
@@ -463,6 +498,8 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 			}
 		}
 		
+		// draw rings
+		
 		for (int i = 0; i < 3; ++i)
 		{
 			if (elementVisibility.ring[i] < kMinRingVisibility)
@@ -481,6 +518,33 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 					setColorForRing(i, false);
 					drawRingFill(Vec3(), i, ring_radius, ring_tubeRadius);
 				}
+			}
+		}
+		
+		// draw scales
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
+			{
+				// determine position and size
+			
+				const int axis1 = (i + 0) % 3;
+				const int axis2 = (i + 1) % 3;
+				const int axis3 = (i + 2) % 3;
+				
+				Vec3 position;
+				Vec3 size;
+				
+				position = scalePosition[i];
+				size = Vec3(scale_size);
+			
+				setColor(colorWhite);
+				
+				if (intersectionResult.element == kElement_XScale + i)
+					fillCube(position, size);
+				else
+					lineCube(position, size);
 			}
 		}
 		
@@ -525,6 +589,26 @@ void TransformGizmo::updatePadPositions(Vec3Arg rayOriginInGizmoSpace)
 			position[axis3] = -position[axis3];
 	}
 }
+
+void TransformGizmo::updateScalePositions(Vec3Arg rayOriginInGizmoSpace)
+{
+	for (int i = 0; i < 3; ++i)
+	{
+		const int axis1 = (i + 0) % 3;
+		const int axis2 = (i + 1) % 3;
+		const int axis3 = (i + 2) % 3;
+		
+		Vec3 & position = scalePosition[i];
+		
+		position[axis1] = scale_offset;
+		position[axis2] = 0.f;
+		position[axis3] = 0.f;
+		
+		if (rayOriginInGizmoSpace[axis1] < 0.f)
+			position[axis1] = -position[axis1];
+	}
+}
+
 
 void TransformGizmo::updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg viewDirection_world)
 {
@@ -793,6 +877,36 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 			}
 		}
 	#endif
+	}
+	
+	if (enableScaling)
+	{
+		// intersect the scales
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			Vec3 position;
+			Vec3 size;
+			
+			position = scalePosition[i];
+			size = Vec3(scale_size);
+			
+			const Vec3 min = position - size;
+			const Vec3 max = position + size;
+			if (intersectBoundingBox3d(
+				&min[0],
+				&max[0],
+				origin_gizmo[0],
+				origin_gizmo[1],
+				origin_gizmo[2],
+				1.f / direction_gizmo[0],
+				1.f / direction_gizmo[1],
+				1.f / direction_gizmo[2], t) && t < best_t)
+			{
+				best_t = t;
+				result.element = (Element)(kElement_XScale + i);
+			}
+		}
 	}
 	
 	result.t = best_t;

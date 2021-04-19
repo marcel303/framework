@@ -521,6 +521,7 @@ namespace ImGui
 				if (isFilePath)
 				{
 					ImGui::PushID(member.name);
+					ImGui::BeginGroup();
 					{
 						char buffer[1024];
 						strcpy_s(buffer, sizeof(buffer), value.c_str());
@@ -607,6 +608,7 @@ namespace ImGui
 						}
 					#endif
 					}
+					ImGui::EndGroup();
 					ImGui::PopID();
 				}
 				else
