@@ -442,7 +442,7 @@ static void downloadMediaFiles()
 			int y = 200 + 20;
 			for (auto & e : downloadCache.downloadQueue.activeElems)
 			{
-				drawText(400, 200 + 20, 14, 0, 0, "Downloading %s/%dkb..", e.first.c_str(), e.second.getProgress());
+				drawText(400, 200 + 20, 14, 0, 0, "Downloading %s/%dkb..", e.first.c_str(), e.second.getProgress() / 1024);
 				y += 18;
 			}
 		}
