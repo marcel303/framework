@@ -718,6 +718,7 @@ namespace ImGui
 						if (vector_type != nullptr)
 						{
 							size_t insert_index = (size_t)-1;
+							size_t remove_index = (size_t)-1;
 							int new_size = vector_size;
 							bool do_resize = false;
 							
@@ -743,6 +744,11 @@ namespace ImGui
 									{
 										auto * vector_object = member_interface->vector_access(object, i);
 										
+										ImGui::Columns(2);
+										ImGui::SetColumnWidth(0, 30.f);
+										ImGui::Text("%d", i + 0);
+										ImGui::NextColumn();
+										
 										result |= ReflectionMember_traverse(
 											typeDB,
 											*vector_type,
@@ -753,16 +759,22 @@ namespace ImGui
 											changedMemberObject,
 											callbacks);
 										
-										if (ImGui::BeginPopupContextItem("Vector"))
+										ImGui::Columns(1);
+										
+										if (ImGui::BeginPopupContextItem("VectorItem"))
 										{
 											if (i > 0 && ImGui::MenuItem("Move up"))
 											{
 												member_interface->vector_swap(object, i, i - 1);
+												
+												valueDidChange(callbacks);
 											}
 											
 											if (i + 1 < vector_size && ImGui::MenuItem("Move down"))
 											{
 												member_interface->vector_swap(object, i, i + 1);
+												
+												valueDidChange(callbacks);
 											}
 											
 											if (ImGui::MenuItem("Insert before"))
@@ -773,6 +785,11 @@ namespace ImGui
 											if (ImGui::MenuItem("Insert after"))
 											{
 												insert_index = i + 1;
+											}
+											
+											if (ImGui::MenuItem("Remove"))
+											{
+												remove_index = i;
 											}
 											
 											do_resize = ImGui::InputInt("Resize", &new_size);
@@ -793,11 +810,27 @@ namespace ImGui
 								{
 									member_interface->vector_swap(object, i, i - 1);
 								}
+								
+								valueDidChange(callbacks);
+							}
+							
+							if (remove_index != (size_t)-1)
+							{
+								for (size_t i = remove_index; i + 1 < vector_size; ++i)
+								{
+									member_interface->vector_swap(object, i, i + 1);
+								}
+								
+								member_interface->vector_resize(object, vector_size - 1);
+								
+								valueDidChange(callbacks);
 							}
 							
 							if (do_resize)
 							{
 								member_interface->vector_resize(object, new_size);
+								
+								valueDidChange(callbacks);
 							}
 						}
 					}
@@ -825,6 +858,19 @@ namespace ImGui
 								default_member_object,
 								changedMemberObject,
 								callbacks);
+								
+							/*
+						// todo : add the ability to set component properties to their default value
+							if (ImGui::BeginPopupContextItem("Scalar"))
+							{
+								if (ImGui::MenuItem("Set to default"))
+								{
+									// copy default object value
+								}
+								
+								ImGui::EndPopup();
+							}
+							*/
 						}
 					}
 				}
