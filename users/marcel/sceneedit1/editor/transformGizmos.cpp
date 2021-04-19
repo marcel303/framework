@@ -367,13 +367,19 @@ static void drawRingFill(const Vec3 & position, const int axis, const float radi
 	gxPopMatrix();
 }
 
-void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
+void TransformGizmo::draw(const DrawPass drawPass) const
 {
 	if (state == kState_Hidden)
 		return;
 	
-	if (!isInteractive || depthObscuredPass)
+	if (!isInteractive)
 		pushColorPost(POST_RGB_TO_LUMI);
+	
+	if (drawPass == kDrawPass_DepthObscured)
+	{
+		pushDepthTest(true, DEPTH_GREATER, false);
+		pushColorPost(POST_RGB_TO_LUMI);
+	}
 	
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
@@ -384,9 +390,12 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 		{
 			if (elementVisibility.arrow[i] < kMinArrowVisibility)
 				continue;
-				
-			setColorForArrow(i);
-			drawAxisArrow(Vec3(), i, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length, rayOriginInGizmoSpace[i] < 0.f);
+			
+			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Opaque)
+			{
+				setColorForArrow(i);
+				drawAxisArrow(Vec3(), i, arrow_radius, arrow_length, arrow_top_radius, arrow_top_length, rayOriginInGizmoSpace[i] < 0.f);
+			}
 		}
 		
 		// draw pads
@@ -396,15 +405,7 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 			if (elementVisibility.pad[i] < kMinPadVisibility)
 				continue;;
 				
-			const Color pad_colors[3] =
-			{
-				Color(255, 40, 40),
-				Color(40, 255, 40),
-				Color(40, 40, 255)
-			};
-			
-			const Color & pad_color = pad_colors[i];
-			const Color pad_color_highlight(255, 255, 255);
+			// determine position and size
 			
 			const int axis1 = (i + 0) % 3;
 			const int axis2 = (i + 1) % 3;
@@ -419,28 +420,72 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 			size[axis2] = pad_thickness;
 			size[axis3] = pad_size;
 			
+			// determine color
+			
+			const Color pad_colors[3] =
+			{
+				Color(255, 40, 40),
+				Color(40, 255, 40),
+				Color(40, 40, 255)
+			};
+			
+			const Color & pad_color = pad_colors[i];
+			const Color pad_color_highlight(255, 255, 255);
+			
 			const Color color =
 				intersectionResult.element == (kElement_XZPad + i)
 					? pad_color_highlight
 					: pad_color;
 			
-			setColor(color);
-			lineCube(
-				position,
-				size);
+			// draw outline
+			
+			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
+			{
+				setColor(color);
+				lineCube(
+					position,
+					size);
+			}
+			
+			// draw fill
+			
+			if (drawPass == kDrawPass_Translucent)
+			{
+				const int base_opacity = 191;
+				const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
+				const int opacity = fadeValue * base_opacity;
+			
+				setColor(color);
+				setAlpha(opacity);
+				fillCube(
+					position,
+					size);
+			}
 		}
 		
 		for (int i = 0; i < 3; ++i)
 		{
 			if (elementVisibility.ring[i] < kMinRingVisibility)
 				continue;
-				
-			setColorForRing(i);
-			drawRingLine(Vec3(), i, ring_radius);
+			
+			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
+			{
+				setColorForRing(i, true);
+				drawRingLine(Vec3(), i, ring_radius);
+			}
+			
+			if (drawPass == kDrawPass_Translucent)
+			{
+				if (intersectionResult.element == kElement_XRing + i)
+				{
+					setColorForRing(i, false);
+					drawRingFill(Vec3(), i, ring_radius, ring_tubeRadius);
+				}
+			}
 		}
 		
-	#if defined(DEBUG)
-		if (debugging.hasNearestRingPos)
+	#if defined(DEBUG) && false
+		if (debugging.hasNearestRingPos && drawPass == kDrawPass_Opaque)
 		{
 			setColor(colorWhite);
 			fillCube(debugging.nearestRingPos, Vec3(.01f));
@@ -450,82 +495,11 @@ void TransformGizmo::drawOpaque(const bool depthObscuredPass) const
 	}
 	gxPopMatrix();
 	
-	if (!isInteractive || depthObscuredPass)
-		popColorPost();
-}
-
-void TransformGizmo::drawTranslucent() const
-{
-	if (state == kState_Hidden)
-		return;
-	
-	if (!isInteractive)
-		pushColorPost(POST_RGB_TO_LUMI);
-	
-	gxPushMatrix();
-	gxMultMatrixf(gizmoToWorld.m_v);
+	if (drawPass == kDrawPass_DepthObscured)
 	{
-		const int base_opacity = 191;
-		
-		// draw pads
-		
-		for (int i = 0; i < 3; ++i)
-		{
-		// todo : float colors
-			const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
-			const int opacity = fadeValue * base_opacity;
-			
-			const Color pad_colors[3] =
-			{
-				Color(255, 40, 40, opacity),
-				Color(40, 255, 40, opacity),
-				Color(40, 40, 255, opacity)
-			};
-			
-			const Color & pad_color = pad_colors[i];
-			const Color pad_color_highlight = pad_color;
-			
-			const int axis1 = (i + 0) % 3;
-			const int axis2 = (i + 1) % 3;
-			const int axis3 = (i + 2) % 3;
-			
-			Vec3 position;
-			Vec3 size;
-			
-			position[axis1] = pad_offset;
-			position[axis2] = 0.f;
-			position[axis3] = pad_offset;
-			
-			if (rayOriginInGizmoSpace[axis1] < 0.f)
-				position[axis1] = -position[axis1];
-			if (rayOriginInGizmoSpace[axis3] < 0.f)
-				position[axis3] = -position[axis3];
-			
-			size[axis1] = pad_size;
-			size[axis2] = pad_thickness;
-			size[axis3] = pad_size;
-			
-			const Color color =
-				intersectionResult.element == (kElement_XZPad + i)
-					? pad_color_highlight
-					: pad_color;
-			
-			setColor(color);
-			fillCube(
-				position,
-				size);
-		}
-		
-		for (int i = 0; i < 3; ++i)
-		{
-			if (intersectionResult.element == kElement_XRing + i)
-			{
-				setColorForRing(i);
-				drawRingFill(Vec3(), i, ring_radius, ring_tubeRadius);
-			}
-		}
+		popDepthTest();
+		popColorPost();
 	}
-	gxPopMatrix();
 	
 	if (!isInteractive)
 		popColorPost();
@@ -849,20 +823,38 @@ void TransformGizmo::setColorForArrow(const int axis) const
 	if (state == kState_DragArrow && dragArrow.axis == axis)
 		setColor(colorWhite);
 	else if (intersectionResult.element == kElement_XAxis + axis)
-		setColor(colorYellow);
+		setColor(colorWhite);
 	else
 		setColor(colors[axis]);
 }
 
-void TransformGizmo::setColorForRing(const int axis) const
+void TransformGizmo::setColorForRing(const int axis, const bool isLine) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
-	if (state == kState_DragRing && dragRing.axis == axis)
-		setColor(colorYellow);
-	/*else if (intersectionResult.element == kElement_XRing + axis)
-		setColor(colorYellow);*/
+	if (isLine)
+	{
+		if (state == kState_DragRing && dragRing.axis == axis)
+			setColor(colorWhite);
+		else if (intersectionResult.element == kElement_XRing + axis)
+			setColor(colorWhite);
+		else
+			setColor(colors[axis]);
+			
+		if (intersectionResult.element == kElement_XRing + axis)
+			setAlpha(255);
+		else
+			setAlpha(100);
+	}
 	else
-		setColor(colors[axis]);
-	setAlpha(100);
+	{
+		if (state == kState_DragRing && dragRing.axis == axis)
+			setColor(colorWhite);
+		else if (intersectionResult.element == kElement_XRing + axis)
+			setColor(colors[axis]);
+		else
+			setColor(colors[axis]);
+			
+		setAlpha(100);
+	}
 }

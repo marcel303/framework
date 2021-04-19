@@ -32,6 +32,13 @@ struct TransformGizmo
 		kElement_ZRing
 	};
 	
+	enum DrawPass
+	{
+		kDrawPass_DepthObscured,
+		kDrawPass_Opaque,
+		kDrawPass_Translucent
+	};
+	
 	struct IntersectionResult
 	{
 		Element element = kElement_None;
@@ -125,8 +132,7 @@ struct TransformGizmo
 		bool & inputIsCaptured,
 		Vec3Arg viewOrigin_world,
 		Vec3Arg viewDirection_world);
-	void drawOpaque(const bool depthObscuredPass) const;
-	void drawTranslucent() const;
+	void draw(const DrawPass drawPass) const;
 
 private:
 	void updatePadPositions(Vec3Arg rayOriginInGizmoSpace);
@@ -136,5 +142,5 @@ private:
 	float calculateRingAngle(Vec3Arg position_world, const int axis) const;
 	
 	void setColorForArrow(const int axis) const;
-	void setColorForRing(const int axis) const;
+	void setColorForRing(const int axis, const bool isLine) const;
 };

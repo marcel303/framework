@@ -3627,13 +3627,10 @@ void SceneEditor::drawEditorNodesTranslucent() const
 void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 {
 #if ENABLE_TRANSFORM_GIZMOS
-	if (depthObscuredPass)
-		pushDepthTest(true, DEPTH_GREATER, false);
-	{
-		transformGizmo.drawOpaque(depthObscuredPass);
-	}
-	if (depthObscuredPass)
-		popDepthTest();
+	transformGizmo.draw(
+		depthObscuredPass
+		? TransformGizmo::kDrawPass_DepthObscured
+		: TransformGizmo::kDrawPass_Opaque);
 #endif
 }
 
@@ -3643,7 +3640,7 @@ void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 void SceneEditor::drawEditorGizmosTranslucent() const
 {
 #if ENABLE_TRANSFORM_GIZMOS
-	transformGizmo.drawTranslucent();
+	transformGizmo.draw(TransformGizmo::kDrawPass_Translucent);
 #endif
 
 	// draw component specific gizmos
