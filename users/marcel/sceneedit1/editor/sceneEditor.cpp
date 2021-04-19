@@ -3489,6 +3489,57 @@ void SceneEditor::drawEditroGroundPlaneOpaque() const
 	}
 }
 
+// todo : move to draw.cpp
+static void drawSelectionBox(const Mat4x4 & objectToWorld, Vec3Arg min, Vec3Arg max, const Color & color)
+{
+	setColor(color);
+	pushDepthBias(-2.f, -2.f);
+	pushDepthTest(true, DEPTH_LEQUAL, false);
+	gxBegin(GX_LINES);
+	{
+		const float length = .2f;
+		
+		const Vec3 direction_x = objectToWorld.Mul3(Vec3(length, 0, 0));
+		const Vec3 direction_y = objectToWorld.Mul3(Vec3(0, length, 0));
+		const Vec3 direction_z = objectToWorld.Mul3(Vec3(0, 0, length));
+		
+		const Vec3 points[2] = { min, max };
+		
+		for (int x = 0; x < 2; ++x)
+		{
+			for (int y = 0; y < 2; ++y)
+			{
+				for (int z = 0; z < 2; ++z)
+				{
+					const Vec3 point1 = objectToWorld * Vec3(points[x][0], points[y][1], points[z][2]);
+					const Vec3 point2_x = point1 + (x == 0 ? direction_x : -direction_x);
+					const Vec3 point2_y = point1 + (y == 0 ? direction_y : -direction_y);
+					const Vec3 point2_z = point1 + (z == 0 ? direction_z : -direction_z);
+					
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_x[0]);
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_y[0]);
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_z[0]);
+				}
+			}
+		}
+	}
+	gxEnd();
+	popDepthTest();
+	popDepthBias();
+}
+	
+void SceneEditor::drawEditorNodeSelectionBox(const SceneNode & node) const
+{
+	Vec3 min(false);
+	Vec3 max(false);
+	if (getBoundingBoxForNode(node, min, max))
+	{
+		auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+		
+		drawSelectionBox(sceneNodeComp->objectToWorld, min, max, colorWhite);
+	}
+}
+
 void SceneEditor::drawEditorNodeBoundingBox(const SceneNode & node) const
 {
 	const bool isHovered = node.id == hoverNodeId;
@@ -3498,65 +3549,42 @@ void SceneEditor::drawEditorNodeBoundingBox(const SceneNode & node) const
 	Vec3 max(false);
 	if (getBoundingBoxForNode(node, min, max))
 	{
-		const Vec3 position = (min + max) / 2.f;
-		const Vec3 size = (max - min) / 2.f;
+		auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
 		
 		if (isSelected)
 		{
-			setColor(255, 255, 0, 255);
-			lineCube(position, size);
+			drawSelectionBox(sceneNodeComp->objectToWorld, min, max, Color(127, 127, 255, 127));
 		}
 		else if (isHovered)
 		{
-			setColor(255, 255, 255, 127);
-			lineCube(position, size);
+			drawSelectionBox(sceneNodeComp->objectToWorld, min, max, Color(255, 255, 255, 127));
 		}
 		else
 		{
-			setColor(127, 127, 255, 127);
-			lineCube(position, size);
+			//drawSelectionBox(sceneNodeComp->objectToWorld, min, max, Color(127, 127, 255, 127));
 		}
 		
+	#if false
 		if (isSelected || isHovered)
 		{
-			setColor(isSelected ? 255 : isHovered ? 127 : 60, 0, 0, 40);
-			fillCube(position, size);
+			gxPushMatrix();
+			{
+				gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
+				
+				const Vec3 position = (min + max) / 2.f;
+				const Vec3 size = (max - min) / 2.f;
+			
+				setColor(isSelected ? 255 : isHovered ? 127 : 60, 0, 0, 40);
+				fillCube(position, size);
+			}
+			gxPopMatrix();
 		}
+	#endif
 	}
 }
 
 void SceneEditor::drawEditorNodesOpaque() const
 {
-	// draw outline for hovered node
-
-	if (hoverNodeId != -1)
-	{
-		gxPushMatrix();
-		{
-			auto & hoveredNode = scene.getNode(hoverNodeId);
-			
-			auto * sceneNodeComp = hoveredNode.components.find<SceneNodeComponent>();
-			
-			if (sceneNodeComp != nullptr)
-			{
-				gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-			}
-			
-			Vec3 min(false);
-			Vec3 max(false);
-			if (getBoundingBoxForNode(hoveredNode, min, max))
-			{
-				const Vec3 position = (min + max) / 2.f;
-				const Vec3 size = (max - min) / 2.f;
-
-			// todo : add special draw code to draw cube corners only using some nice colors. update all bounding box to use this (less intrusive) draw code
-			
-				setColor(colorWhite);
-				lineCube(position, size);
-			}
-		}
-		gxPopMatrix();
-	}
 }
 
 void SceneEditor::drawEditorNodesTranslucent() const
@@ -3564,57 +3592,21 @@ void SceneEditor::drawEditorNodesTranslucent() const
 	if (visibility.drawNodes)
 	{
 		pushBlend(BLEND_ADD);
+		pushLineSmooth(true);
 		{
-		/*
-			// draw node markers
-			
-			beginCubeBatch();
-			{
-				for (auto & node_itr : scene.nodes)
-				{
-					auto * node = node_itr.second;
-					
-					Vec3 position;
-					
-					auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
-				
-					if (sceneNodeComp != nullptr)
-					{
-						position = sceneNodeComp->objectToWorld.GetTranslation();
-					}
-					
-					const bool isSelected = selection.selectedNodes.count(node->id) != 0;
-					
-					setColor(isSelected ? Color(100, 100, 0) : Color(255, 100, 100));
-					fillCube(position, Vec3(.1f, .1f, .1f));
-				}
-			}
-			endCubeBatch();
-		*/
-			
 			// draw bounding boxes
 			
 			if (visibility.drawNodeBoundingBoxes)
 			{
 				for (auto & node_itr : scene.nodes)
 				{
-					gxPushMatrix();
-					{
-						auto * node = node_itr.second;
-						
-						auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
+					auto * node = node_itr.second;
 					
-						if (sceneNodeComp != nullptr)
-						{
-							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-						}
-						
-						drawEditorNodeBoundingBox(*node);
-					}
-					gxPopMatrix();
+					drawEditorNodeBoundingBox(*node);
 				}
 			}
 		}
+		popLineSmooth();
 		popBlend();
 	}
 }

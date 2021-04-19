@@ -344,7 +344,8 @@ struct SceneEditor
 protected:
 	void drawEditorGridOpaque() const;
 	void drawEditorGridTranslucent() const;
-	void drawEditroGroundPlaneOpaque() const;
+	void drawEditorGroundPlaneOpaque() const;
+	void drawEditorNodeSelectionBox(const SceneNode & node) const;
 	void drawEditorNodeBoundingBox(const SceneNode & node) const;
 	void drawEditorNodesOpaque() const;
 	void drawEditorNodesTranslucent() const;
