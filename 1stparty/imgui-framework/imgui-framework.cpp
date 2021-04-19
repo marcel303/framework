@@ -249,6 +249,10 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			kinetic_scroll = Vec2(0.f, mouse.scrollY * -.1f);
 		io.MouseWheel = kinetic_scroll[1];
 	#endif
+		if (fabsf(kinetic_scroll[0]) < .01f)
+			kinetic_scroll[0] = 0.f;
+		if (fabsf(kinetic_scroll[1]) < .01f)
+			kinetic_scroll[1] = 0.f;
 	#endif
 
 	#if DO_TOUCH_SCROLL
