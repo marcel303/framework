@@ -91,6 +91,8 @@ void main()
 {
 	vec3 color = texture(colorTexture, texcoord).rgb;
 
+	color = max(vec3(0.0), color);
+
 	color *= exposure;
 
 #if 1
