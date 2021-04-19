@@ -670,112 +670,107 @@ void SceneEditor::editNode(const int nodeId)
 			
 			ImGui::PushID(component);
 			{
-				// note : we group component properties here, so the node context menu can be opened by
-				// right clicking anywhere inside this group
+				const auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
 				
-				ImGui::BeginGroup();
+				Assert(componentType != nullptr);
+				if (componentType != nullptr)
 				{
-					const auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+					bool enabled = component->enabled;
+					if (ImGui::Checkbox("", &enabled))
+					{
+						undoCaptureBegin();
+						{
+							component->enabled = enabled;
+						}
+						undoCaptureEnd();
+					}
+					ImGui::SameLine();
+
+					const bool wasOpen = (component->editorFlags & kComponentEditorFlag_Folded) == 0;
+
+					const bool isOpen = ImGui::TreeNodeEx(&node,
+						(ImGuiTreeNodeFlags_OpenOnArrow * 0) |
+						(ImGuiTreeNodeFlags_DefaultOpen * wasOpen) |
+						(ImGuiTreeNodeFlags_FramePadding * 0),
+						"%s", componentType->typeName);
+
+					// see if we should open the node context menu
 					
-					Assert(componentType != nullptr);
-					if (componentType != nullptr)
+					ComponentContextMenuResult componentResult = kComponentContextMenuResult_None;
+					
+					if (ImGui::BeginPopupContextItem("ComponentMenu"))
 					{
-						bool enabled = component->enabled;
-						if (ImGui::Checkbox("", &enabled))
+						componentResult = doComponentContextMenu(node, component);
+
+						ImGui::EndPopup();
+					}
+				
+					if (isOpen != wasOpen)
+					{
+						undoCaptureBegin();
 						{
-							undoCaptureBegin();
-							{
-								component->enabled = enabled;
-							}
-							undoCaptureEnd();
+							if (isOpen)
+								component->editorFlags &= ~kComponentEditorFlag_Folded;
+							else
+								component->editorFlags |= kComponentEditorFlag_Folded;
 						}
-						ImGui::SameLine();
+						undoCaptureEnd();
+					}
 
-						const bool wasOpen = (component->editorFlags & kComponentEditorFlag_Folded) == 0;
-
-						const bool isOpen = ImGui::TreeNodeEx(&node,
-							(ImGuiTreeNodeFlags_OpenOnArrow * 0) |
-							(ImGuiTreeNodeFlags_DefaultOpen * wasOpen) |
-							(ImGuiTreeNodeFlags_FramePadding * 0),
-							"%s", componentType->typeName);
-
-						if (isOpen != wasOpen)
+					if (isOpen)
+					{
+						ImGui::Reflection_Callbacks callbacks;
+						callbacks.makePathRelative = [this](std::string & path)
+							{
+								if (!documentInfo.path.empty())
+								{
+									path = Path::MakeRelative(Path::GetDirectory(documentInfo.path), path);
+								}
+							};
+						callbacks.propertyWillChange = [this]()
+							{
+								undoCaptureBegin(false);
+							};
+						callbacks.propertyDidChange = [this]()
+							{
+								undoCaptureEnd();
+							};
+						
+						// todo : would be nice to pass the default object along..
+						
+						bool isSet = true;
+						void * changedMemberObject = nullptr;
+						
+						if (ImGui::Reflection_StructuredType(
+							*typeDB,
+							*componentType,
+							component,
+							isSet,
+							nullptr,
+							&changedMemberObject,
+							&callbacks))
 						{
-							undoCaptureBegin();
-							{
-								if (isOpen)
-									component->editorFlags &= ~kComponentEditorFlag_Folded;
-								else
-									component->editorFlags |= kComponentEditorFlag_Folded;
-							}
-							undoCaptureEnd();
+							// signal the component one of its properties has changed
+							component->propertyChanged(changedMemberObject);
 						}
 
+						ImGui::TreePop();
+					}
+					
+					if (componentResult == kComponentContextMenuResult_ComponentShouldBeRemoved)
+					{
+						undoCaptureBegin();
+						{
+							freeComponentInComponentSet(node.components, component);
+						}
+						undoCaptureEnd();
+						
 						if (isOpen)
-						{
-							bool isSet = true;
-							void * changedMemberObject = nullptr;
-							
-							ImGui::Reflection_Callbacks callbacks;
-							callbacks.makePathRelative = [this](std::string & path)
-								{
-									if (!documentInfo.path.empty())
-									{
-										path = Path::MakeRelative(Path::GetDirectory(documentInfo.path), path);
-									}
-								};
-							callbacks.propertyWillChange = [this]()
-								{
-									undoCaptureBegin(false);
-								};
-							callbacks.propertyDidChange = [this]()
-								{
-									undoCaptureEnd();
-								};
-							
-							if (ImGui::Reflection_StructuredType(
-								*typeDB,
-								*componentType,
-								component,
-								isSet,
-								nullptr,
-								&changedMemberObject,
-								&callbacks))
-							{
-								// signal the component one of its properties has changed
-								component->propertyChanged(changedMemberObject);
-							}
-
 							ImGui::TreePop();
-						}
+						
+						continue;
 					}
 				}
-				ImGui::EndGroup();
-			
-			#if 1 // todo : fix issue with this menu obscuring child menus. array add/insert etc don't work anymore :-(
-				// see if we should open the node context menu
-				
-				NodeContextMenuResult result = kNodeContextMenuResult_None;
-			
-				//const bool canOpen = !ImGui::IsPopupOpen(nullptr) || ImGui::IsPopupOpen("NodeMenu");
-				const bool canOpen = true; // fixme : this override any popup context menu that was opened inside the component property editors
-				
-				if (canOpen && ImGui::BeginPopupContextItem("NodeMenu"))
-				{
-					result = doNodeContextMenu(node, component);
-
-					ImGui::EndPopup();
-				}
-			
-				if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
-				{
-					undoCaptureBegin();
-					{
-						freeComponentInComponentSet(node.components, component);
-					}
-					undoCaptureEnd();
-				}
-			#endif
 			}
 			ImGui::PopID();
 		}
@@ -786,9 +781,9 @@ void SceneEditor::editNode(const int nodeId)
 			
 			ImGui::Text("(no components");
 			
-			if (ImGui::BeginPopupContextItem("NodeMenu"))
+			if (ImGui::BeginPopupContextItem("ComponentMenu"))
 			{
-				doNodeContextMenu(node, nullptr);
+				doComponentContextMenu(node, nullptr);
 
 				ImGui::EndPopup();
 			}
@@ -1139,11 +1134,11 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	return result;
 }
 
-SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & node, ComponentBase * selectedComponent)
+SceneEditor::ComponentContextMenuResult SceneEditor::doComponentContextMenu(SceneNode & node, ComponentBase * selectedComponent)
 {
-	//logDebug("context window for %d", node.id);
+	//logDebug("component context menu for node %d", node.id);
 	
-	NodeContextMenuResult result = kNodeContextMenuResult_None;
+	ComponentContextMenuResult result = kComponentContextMenuResult_None;
 	
 	if (selectedComponent != nullptr)
 	{
@@ -1250,7 +1245,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 	{
 		if (ImGui::MenuItem("Remove component"))
 		{
-			result = kNodeContextMenuResult_ComponentShouldBeRemoved;
+			result = kComponentContextMenuResult_ComponentShouldBeRemoved;
 		}
 	}
 
@@ -1275,7 +1270,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 				
 				if (ImGui::MenuItem(text))
 				{
-					result = kNodeContextMenuResult_ComponentAdded;
+					result = kComponentContextMenuResult_ComponentAdded;
 					
 					undoCaptureBegin();
 					{

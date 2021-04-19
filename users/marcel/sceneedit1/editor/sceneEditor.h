@@ -285,14 +285,14 @@ struct SceneEditor
 	
 	NodeStructureEditingAction doNodeStructureContextMenu(SceneNode & node);
 	
-	enum NodeContextMenuResult
+	enum ComponentContextMenuResult
 	{
-		kNodeContextMenuResult_None,
-		kNodeContextMenuResult_ComponentShouldBeRemoved,
-		kNodeContextMenuResult_ComponentAdded
+		kComponentContextMenuResult_None,
+		kComponentContextMenuResult_ComponentShouldBeRemoved,
+		kComponentContextMenuResult_ComponentAdded
 	};
 	
-	NodeContextMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * selectedComponent);
+	ComponentContextMenuResult doComponentContextMenu(SceneNode & node, ComponentBase * selectedComponent);
 	
 	NodeStructureEditingAction editNodeStructure_traverse(const int nodeId);
 	
