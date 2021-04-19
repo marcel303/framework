@@ -124,7 +124,7 @@ bool parseTemplateFromLines(
 				{
 					const char * value_line;
 					
-					while ((value_line = lineReader.get_next_line(false)))
+					while ((value_line = lineReader.get_next_line(false, false)))
 					{
 						// note : we don't check if value_line[0] == '\t' here, as we are simply extracting line, not parsing them (yet)
 						
