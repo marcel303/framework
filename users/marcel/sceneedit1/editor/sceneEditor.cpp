@@ -3464,23 +3464,19 @@ void SceneEditor::drawEditorGridOpaque() const
 {
 	if (visibility.drawGrid)
 	{
-		drawEditorGrid();
+		//drawEditorGrid();
 	}
 }
 
 void SceneEditor::drawEditorGridTranslucent() const
 {
-/*
 	if (visibility.drawGrid)
 	{
-		pushLineSmooth(true);
 		drawEditorGrid();
-		popLineSmooth();
 	}
-*/
 }
 
-void SceneEditor::drawEditroGroundPlaneOpaque() const
+void SceneEditor::drawEditorGroundPlaneOpaque() const
 {
 	if (visibility.drawGroundPlane)
 	{
@@ -3493,8 +3489,6 @@ void SceneEditor::drawEditroGroundPlaneOpaque() const
 static void drawSelectionBox(const Mat4x4 & objectToWorld, Vec3Arg min, Vec3Arg max, const Color & color)
 {
 	setColor(color);
-	pushDepthBias(-2.f, -2.f);
-	pushDepthTest(true, DEPTH_LEQUAL, false);
 	gxBegin(GX_LINES);
 	{
 		const float length = .2f;
@@ -3524,8 +3518,6 @@ static void drawSelectionBox(const Mat4x4 & objectToWorld, Vec3Arg min, Vec3Arg 
 		}
 	}
 	gxEnd();
-	popDepthTest();
-	popDepthBias();
 }
 	
 void SceneEditor::drawEditorNodeSelectionBox(const SceneNode & node) const
@@ -3549,6 +3541,10 @@ void SceneEditor::drawEditorNodeBoundingBox(const SceneNode & node) const
 	Vec3 max(false);
 	if (getBoundingBoxForNode(node, min, max))
 	{
+		const float extrusion = .01f;
+		min = min - Vec3(extrusion);
+		max = max + Vec3(extrusion);
+		
 		auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
 		
 		if (isSelected)
@@ -3591,23 +3587,17 @@ void SceneEditor::drawEditorNodesTranslucent() const
 {
 	if (visibility.drawNodes)
 	{
-		pushBlend(BLEND_ADD);
-		pushLineSmooth(true);
+		// draw bounding boxes
+		
+		if (visibility.drawNodeBoundingBoxes)
 		{
-			// draw bounding boxes
-			
-			if (visibility.drawNodeBoundingBoxes)
+			for (auto & node_itr : scene.nodes)
 			{
-				for (auto & node_itr : scene.nodes)
-				{
-					auto * node = node_itr.second;
-					
-					drawEditorNodeBoundingBox(*node);
-				}
+				auto * node = node_itr.second;
+				
+				drawEditorNodeBoundingBox(*node);
 			}
 		}
-		popLineSmooth();
-		popBlend();
 	}
 }
 
@@ -3963,7 +3953,7 @@ void SceneEditor::drawView2d() const
 void SceneEditor::drawView3dOpaque() const
 {
 	drawEditorGridOpaque();
-	drawEditroGroundPlaneOpaque();
+	drawEditorGroundPlaneOpaque();
 	drawEditorNodesOpaque();
 }
 
@@ -4040,11 +4030,15 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 
 void SceneEditor::drawView3dTranslucent() const
 {
-	drawEditorGridTranslucent();
-	
-	drawEditorGizmosTranslucent();
-	
-	drawEditorNodesTranslucent();
+	pushLineSmooth(true);
+	{
+		drawEditorGridTranslucent();
+		
+		drawEditorGizmosTranslucent();
+		
+		drawEditorNodesTranslucent();
+	}
+	popLineSmooth();
 }
 
 bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath)
