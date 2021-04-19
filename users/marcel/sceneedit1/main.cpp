@@ -214,7 +214,8 @@ int main(int argc, char * argv[])
 
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
-	framework.allowHighDpi = false;
+	framework.allowHighDpi = true;
+	framework.msaaLevel = 4;
 	
 	framework.windowIsResizable = true;
 	
@@ -394,8 +395,19 @@ int main(int argc, char * argv[])
 	//renderOptions.lightScatter.enabled = true;
 	//renderOptions.linearColorSpace = true;
 	
+#if USE_GUI_WINDOW
+	int framesSinceIdleForGuiWindow = 0;
+#endif
+	int framesSinceIdleForView3dWindow = 0;
+	
 	for (;;)
 	{
+		framework.waitForEvents =
+		#if USE_GUI_WINDOW
+			framesSinceIdleForGuiWindow >= 3 &&
+		#endif
+			framesSinceIdleForView3dWindow >= 3;
+			
 		framework.process();
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
@@ -410,6 +422,15 @@ int main(int argc, char * argv[])
 		
 		uiCaptureBeginFrame(inputIsCaptured);
 		
+	#if USE_GUI_WINDOW && WINDOW_IS_3D
+		if (vrPointer[1].isDown(VrButton_GripTrigger))
+		{
+			const Mat4x4 transform = vrPointer[1].getTransform(framework.vrOrigin);
+			
+			guiWindow->setTransform(transform);
+		}
+	#endif
+	
 		if (framework.vrMode)
 		{
 			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
@@ -427,6 +448,11 @@ int main(int argc, char * argv[])
 		}
 		
 	#if USE_GUI_WINDOW
+		bool redrawGui = false;
+	#endif
+		bool redrawView3d = false;
+		
+	#if USE_GUI_WINDOW
 		pushWindow(*guiWindow);
 	#endif
 		{
@@ -437,6 +463,9 @@ int main(int argc, char * argv[])
 			
 			editor.tickGui(dt, inputIsCaptured);
 			
+			if (!mouse.isIdle() || !keyboard.isIdle())
+				redrawView3d = true;
+				
 		// todo : active gui context.. ?
 			if (ImGui::BeginMainMenuBar())
 			{
@@ -551,6 +580,25 @@ int main(int argc, char * argv[])
 				
 				ImGui::EndMainMenuBar();
 			}
+			
+		#if USE_GUI_WINDOW
+			framesSinceIdleForGuiWindow++;
+			if (!mouse.isIdle() || !keyboard.isIdle() || !editor.guiContext.isIdle())
+				framesSinceIdleForGuiWindow = 0;
+			
+			if (framesSinceIdleForGuiWindow < 3)
+			{
+				framework.beginDraw(0, 0, 0, 0);
+				{
+					editor.drawGui();
+				}
+				framework.endDraw();
+			}
+			else
+			{
+				editor.guiContext.skipDraw();
+			}
+		#endif
 		}
 	#if USE_GUI_WINDOW
 		popWindow();
@@ -589,6 +637,9 @@ int main(int argc, char * argv[])
 		
 		editor.tickView(dt, inputIsCaptured);
 	
+		if (!mouse.isIdle() || !keyboard.isIdle())
+			redrawView3d = true;
+			
 		//
 		
 		g_transformComponentMgr.calculateTransforms(editor.scene);
@@ -608,151 +659,145 @@ int main(int argc, char * argv[])
 			
 		// todo : why do we calculate transforms again here ? if there is a reason, add a comment
 			g_transformComponentMgr.calculateTransforms(editor.scene);
-		}
-		
-		//
-		
-	#if USE_GUI_WINDOW
-	#if WINDOW_IS_3D
-		if (vrPointer[1].isDown(VrButton_GripTrigger))
-		{
-			guiWindow->setTransform(
-				vrPointer[1].getTransform(framework.vrOrigin));
-		}
-	#endif
-
-		pushWindow(*guiWindow);
-		{
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				editor.drawGui();
-			}
-			framework.endDraw();
-		}
-		popWindow();
-	#endif
-		
-		//
-		
-		for (int i = 0; i < framework.getEyeCount(); ++i)
-		{
-			framework.beginEye(i, colorBlack);
-			{
-				if (!framework.isStereoVr())
-				{
-					// set projection and view matrices based on editor camera
-					
-					if (framework.vrMode)
-					{
-						// reset the view matrix
-						Mat4x4 identity(true);
-						gxSetMatrixf(GX_MODELVIEW, identity.m_v);
-					}
-					
-					editor.camera.pushProjectionMatrix();
-					editor.camera.pushViewMatrix();
-					
-					{
-						// hack to apply viewport origin
-						
-						Mat4x4 projectionMatrix;
-						gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-						int viewSx;
-						int viewSy;
-						framework.getCurrentViewportSize(viewSx, viewSy);
-						projectionMatrix = Mat4x4(true)
-							.Translate(
-								editor.preview.viewportX / float(viewSx),
-								editor.preview.viewportY / float(viewSy), 0)
-							.Mul(projectionMatrix);
-						gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-					}
-				}
-				
-				// prepare lights
-				
-				Mat4x4 worldToView;
-				gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
-				g_lightComponentMgr.beforeDraw(worldToView);
-				
-				// render the scene
-				
-			// todo : perhaps add a SceneRenderComponentMgr which will render the scene for us (on request). forward lighting helper and shadow map drawer could live there
 			
-				switch (myRenderOptions.mode->get())
+			redrawView3d = true;
+		}
+		
+		//
+		
+		if (framework.isStereoVr())
+		{
+			redrawView3d = true;
+		}
+		
+		//
+		
+		framesSinceIdleForView3dWindow++;
+		if (redrawView3d)
+			framesSinceIdleForView3dWindow = 0;
+			
+		if (framesSinceIdleForView3dWindow < 3)
+		{
+			for (int i = 0; i < framework.getEyeCount(); ++i)
+			{
+				framework.beginEye(i, Color(80, 80, 80, 255));
 				{
-				case MyRenderOptions::kMode_Flat:
-					renderOptions.renderMode = rOne::kRenderMode_Flat;
-					g_lightComponentMgr.enableShadowMaps = false;
-					g_gltfComponentMgr.enableForwardShading = true;
-					break;
+					if (!framework.isStereoVr())
+					{
+						// set projection and view matrices based on editor camera
+						
+						if (framework.vrMode)
+						{
+							// reset the view matrix
+							Mat4x4 identity(true);
+							gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+						}
+						
+						editor.camera.pushProjectionMatrix();
+						editor.camera.pushViewMatrix();
+						
+						{
+							// hack to apply viewport origin
+							
+							Mat4x4 projectionMatrix;
+							gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+							int viewSx;
+							int viewSy;
+							framework.getCurrentViewportSize(viewSx, viewSy);
+							projectionMatrix = Mat4x4(true)
+								.Translate(
+									editor.preview.viewportX / float(viewSx),
+									editor.preview.viewportY / float(viewSy), 0)
+								.Mul(projectionMatrix);
+							gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+						}
+					}
 					
-				case MyRenderOptions::kMode_DeferredShaded:
-					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
-					g_lightComponentMgr.enableShadowMaps = false;
-					g_gltfComponentMgr.enableForwardShading = false;
-					break;
+					// prepare lights
 					
-				case MyRenderOptions::kMode_DeferredShadedWithShadows:
-					renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
-					g_lightComponentMgr.enableShadowMaps = true;
-					g_gltfComponentMgr.enableForwardShading = false;
-					break;
-				
-				case MyRenderOptions::kMode_ForwardShaded:
-					renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
-					g_lightComponentMgr.enableShadowMaps = false;
-					g_gltfComponentMgr.enableForwardShading = true;
-					break;
+					Mat4x4 worldToView;
+					gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+					g_lightComponentMgr.beforeDraw(worldToView);
 					
-				case MyRenderOptions::kMode_ForwardShadedWithShadows:
-					renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
-					g_lightComponentMgr.enableShadowMaps = true;
-					g_gltfComponentMgr.enableForwardShading = true;
-					break;
-				}
-				
-				renderOptions.drawNormals = myRenderOptions.drawNormals->get();
-				
-				renderer.render(renderFunctions, renderOptions, framework.timeStep);
-				
-				static int n = 0; // todo : remove fps counter
-				++n;
-				static int f = 0;
-				if ((int)framework.time != f)
-				{
-					logInfo("fps: %d", n / framework.getEyeCount());
-					n = 0;
-					f = (int)framework.time;
-				}
-				
-				if (!framework.isStereoVr())
-				{
-					// restore projection and view matrices
+					// render the scene
 					
-					editor.camera.popViewMatrix();
-					editor.camera.popProjectionMatrix();
-				}
+				// todo : perhaps add a SceneRenderComponentMgr which will render the scene for us (on request). forward lighting helper and shadow map drawer could live there
 				
-				if (!framework.isStereoVr())
-				{
-					// draw 2D gui
+					switch (myRenderOptions.mode->get())
+					{
+					case MyRenderOptions::kMode_Flat:
+						renderOptions.renderMode = rOne::kRenderMode_Flat;
+						g_lightComponentMgr.enableShadowMaps = false;
+						g_gltfComponentMgr.enableForwardShading = true;
+						break;
+						
+					case MyRenderOptions::kMode_DeferredShaded:
+						renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+						g_lightComponentMgr.enableShadowMaps = false;
+						g_gltfComponentMgr.enableForwardShading = false;
+						break;
+						
+					case MyRenderOptions::kMode_DeferredShadedWithShadows:
+						renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+						g_lightComponentMgr.enableShadowMaps = true;
+						g_gltfComponentMgr.enableForwardShading = false;
+						break;
 					
-					projectScreen2d();
+					case MyRenderOptions::kMode_ForwardShaded:
+						renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+						g_lightComponentMgr.enableShadowMaps = false;
+						g_gltfComponentMgr.enableForwardShading = true;
+						break;
+						
+					case MyRenderOptions::kMode_ForwardShadedWithShadows:
+						renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+						g_lightComponentMgr.enableShadowMaps = true;
+						g_gltfComponentMgr.enableForwardShading = true;
+						break;
+					}
+					
+					renderOptions.drawNormals = myRenderOptions.drawNormals->get();
+					
+					renderer.render(renderFunctions, renderOptions, framework.timeStep);
+					
+					if (!framework.isStereoVr())
+					{
+						// restore projection and view matrices
+						
+						editor.camera.popViewMatrix();
+						editor.camera.popProjectionMatrix();
+					}
+					
+					if (!framework.isStereoVr())
+					{
+						// draw 2D gui
+						
+						projectScreen2d();
 
-					editor.drawView2d();
-				}
+						editor.drawView2d();
+					}
 
-			#if !USE_GUI_WINDOW
-				editor.drawGui();
-			#endif
+				#if !USE_GUI_WINDOW
+					editor.drawGui();
+				#endif
+				}
+				framework.endEye();
 			}
-			framework.endEye();
 		}
 
 		if (framework.vrMode)
 		{
 			framework.present();
+		}
+		
+		static int n = 0; // todo : remove fps counter
+		++n;
+		static int f = 0;
+		if ((int)framework.time != f)
+		{
+			logInfo("fps: %d", n / framework.getEyeCount());
+			n = 0;
+			f = (int)framework.time;
 		}
 	}
 	
