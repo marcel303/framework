@@ -172,9 +172,7 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		memset(io.KeysDown, 0, sizeof(io.KeysDown));
 		
 	#if DO_KINETIC_SCROLL
-	#if DO_TOUCH_SCROLL
 		num_touches = 0;
-	#endif
 		kinetic_scroll.SetZero();
 	#endif
 	}
@@ -184,89 +182,95 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
 		
 	#if DO_KINETIC_SCROLL
-	#if DO_TOUCH_SCROLL
-		Vec2 new_kinetic_scroll;
-		for (auto & e : framework.events)
+	#if FRAMEWORK_USE_SDL
+		const bool hasTouchDevice = SDL_GetNumTouchDevices() > 0;
+	#else
+		const bool hasTouchDevice = false;
+	#endif
+		
+		if (num_touches != 2)
 		{
-			if (framework.windowIsActive == false)
-			{
-				kinetic_scroll.SetZero();
-				kinetic_scroll_smoothed[0] = 0.0;
-				kinetic_scroll_smoothed[1] = 0.0;
-				
-				num_touches = 0;
-			}
-			else if (e.type == SDL_FINGERDOWN)
-			{
-				kinetic_scroll.SetZero();
-				kinetic_scroll_smoothed[0] = 0.0;
-				kinetic_scroll_smoothed[1] = 0.0;
-				
-				num_touches++;
-			}
-			else if (e.type == SDL_FINGERUP)
-			{
-				num_touches--;
-				
-				if (num_touches < 0)
-					num_touches = 0;
-				
-				if (num_touches == 1)
-				{
-					if (fabs(kinetic_scroll_smoothed[0]) < 1.2f)
-						kinetic_scroll_smoothed[0] = 0.0;
-					if (fabs(kinetic_scroll_smoothed[1]) < 1.2f)
-						kinetic_scroll_smoothed[1] = 0.0;
-					
-					kinetic_scroll = Vec2(kinetic_scroll_smoothed[0], kinetic_scroll_smoothed[1]);
-					
-					kinetic_scroll_smoothed[0] = 0.0;
-					kinetic_scroll_smoothed[1] = 0.0;
-				}
-			}
-			else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f/* && e.tfinger.firstMove == false*/)
-			{
-				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f) / dt;
-			}
+			kinetic_scroll *= powf(hasTouchDevice ? .1f : .01f, dt);
+			
+			if (fabsf(kinetic_scroll[0]) < .01f)
+				kinetic_scroll[0] = 0.f;
+			if (fabsf(kinetic_scroll[1]) < .01f)
+				kinetic_scroll[1] = 0.f;
 		}
 		
-		const double retain = pow(0.6, dt * 100.0);
-		const double attain = 1.0 - retain;
-		kinetic_scroll_smoothed[0] = kinetic_scroll_smoothed[0] * retain + new_kinetic_scroll[0] * attain;
-		kinetic_scroll_smoothed[1] = kinetic_scroll_smoothed[1] * retain + new_kinetic_scroll[1] * attain;
-		
-		if (num_touches == 2)
-			kinetic_scroll = new_kinetic_scroll;
+	#if FRAMEWORK_USE_SDL
+		if (hasTouchDevice)
+		{
+			Vec2 new_kinetic_scroll;
+			
+			for (auto & e : framework.events)
+			{
+				if (framework.windowIsActive == false)
+				{
+					kinetic_scroll.SetZero();
+					kinetic_scroll_smoothed[0] = 0.0;
+					kinetic_scroll_smoothed[1] = 0.0;
+					
+					num_touches = 0;
+				}
+				else if (e.type == SDL_FINGERDOWN)
+				{
+					kinetic_scroll.SetZero();
+					kinetic_scroll_smoothed[0] = 0.0;
+					kinetic_scroll_smoothed[1] = 0.0;
+					
+					num_touches++;
+				}
+				else if (e.type == SDL_FINGERUP)
+				{
+					num_touches--;
+					
+					if (num_touches < 0)
+						num_touches = 0;
+					
+					if (num_touches == 1)
+					{
+						if (fabs(kinetic_scroll_smoothed[0]) < 1.2f)
+							kinetic_scroll_smoothed[0] = 0.0;
+						if (fabs(kinetic_scroll_smoothed[1]) < 1.2f)
+							kinetic_scroll_smoothed[1] = 0.0;
+						
+						kinetic_scroll = Vec2(kinetic_scroll_smoothed[0], kinetic_scroll_smoothed[1]);
+						
+						kinetic_scroll_smoothed[0] = 0.0;
+						kinetic_scroll_smoothed[1] = 0.0;
+					}
+				}
+				else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f/* && e.tfinger.firstMove == false*/)
+				{
+					new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f) / dt;
+				}
+			}
+			
+			const double retain = pow(0.6, dt * 100.0);
+			const double attain = 1.0 - retain;
+			
+			kinetic_scroll_smoothed[0] = kinetic_scroll_smoothed[0] * retain + new_kinetic_scroll[0] * attain;
+			kinetic_scroll_smoothed[1] = kinetic_scroll_smoothed[1] * retain + new_kinetic_scroll[1] * attain;
+			
+			if (num_touches == 2)
+				kinetic_scroll = new_kinetic_scroll;
+		}
 		else
-			kinetic_scroll *= powf(.1f, dt);
+	#endif
+		{
+			kinetic_scroll += Vec2(0.f, mouse.scrollY * -10.f);
+			
+			for (auto & pointer : vrPointer)
+				if (pointer.isPrimary)
+					kinetic_scroll += Vec2(0.f, pointer.getAnalog(VrAnalog_Y));
+		}
 		
 		io.MouseWheelH = kinetic_scroll[0] * dt;
 		io.MouseWheel = kinetic_scroll[1] * dt;
 	#else
-		if (mouse.scrollY == 0)
-			kinetic_scroll *= powf(.1f, dt);
-		else
-			kinetic_scroll = Vec2(0.f, mouse.scrollY * -.1f);
-		io.MouseWheel = kinetic_scroll[1];
+		io.MouseWheel = mouse.scrollY;
 	#endif
-		if (fabsf(kinetic_scroll[0]) < .01f)
-			kinetic_scroll[0] = 0.f;
-		if (fabsf(kinetic_scroll[1]) < .01f)
-			kinetic_scroll[1] = 0.f;
-	#endif
-
-	#if DO_TOUCH_SCROLL
-		if (SDL_GetNumTouchDevices() == 0)
-	#endif
-		{
-		#if DO_KINETIC_SCROLL
-			if (mouse.scrollY != 0)
-				kinetic_scroll += Vec2(0.f, mouse.scrollY * -10.f);
-			kinetic_scroll *= powf(.01f, dt);
-		#else
-			io.MouseWheel = mouse.scrollY;
-		#endif
-		}
 
 		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
@@ -396,6 +400,17 @@ void FrameworkImGuiContext::updateFontTexture()
 	io.Fonts->TexID = (void*)(uintptr_t)font_texture.id;
 	
 	popImGuiContext();
+}
+
+bool FrameworkImGuiContext::isIdle() const
+{
+	if (!mouse.isIdle() || !keyboard.isIdle())
+		return false;
+	
+	if (kinetic_scroll != Vec2(0.f))
+		return false;
+	
+	return true;
 }
 
 void FrameworkImGuiContext::setFrameworkStyleColors()

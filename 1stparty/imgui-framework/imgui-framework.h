@@ -30,13 +30,7 @@
 #include "framework.h"
 #include "imgui.h"
 
-#if FRAMEWORK_USE_SDL
-	#define DO_KINETIC_SCROLL 1
-	#define DO_TOUCH_SCROLL 1
-#else
-	#define DO_KINETIC_SCROLL 1
-	#define DO_TOUCH_SCROLL 0
-#endif
+#define DO_KINETIC_SCROLL 1
 
 struct FrameworkImGuiContext
 {
@@ -53,9 +47,7 @@ struct FrameworkImGuiContext
 	mutable ImGuiContext * previous_context = nullptr;
 	
 #if DO_KINETIC_SCROLL
-#if DO_TOUCH_SCROLL
 	int num_touches = 0;
-#endif
 	Vec2 kinetic_scroll;
 	double kinetic_scroll_smoothed[2] = { };
 #endif
@@ -75,6 +67,8 @@ struct FrameworkImGuiContext
 	void popImGuiContext() const;
 	void updateMouseCursor();
 	void updateFontTexture();
+	
+	bool isIdle() const;
 	
 	void setFrameworkStyleColors();
 
