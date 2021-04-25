@@ -30,8 +30,6 @@
 
 #define ENABLE_TRANSFORM_GIZMOS 1
 
-#define ENABLE_QUAT_FIXUP 1
-
 //
 
 struct AngleAxis;
@@ -83,9 +81,12 @@ struct SceneEditor
 	struct
 	{
 		bool drawGrid = true;
+		float gridOpacity = .5f;
 		bool drawGroundPlane = false;
 		bool drawNodes = true;
 		bool drawNodeBoundingBoxes = true;
+		bool drawComponentDetails = false;
+		bool drawAxesHelper = false;
 	} visibility;
 	
 	struct
@@ -149,7 +150,8 @@ struct SceneEditor
 		kNodeStructureEditingAction_NodeSceneAttachUpdate,
 		kNodeStructureEditingAction_NodeSceneImport,
 		kNodeStructureEditingAction_NodeParent,
-		kNodeStructureEditingAction_NodeGroup
+		kNodeStructureEditingAction_NodeGroup,
+		kNodeStructureEditingAction_NodeFocus
 	};
 	
 	struct Action_NodeAddFromTemplate
@@ -162,6 +164,11 @@ struct SceneEditor
 		int childNodeId = -1;
 		int newParentNodeId = -1;
 	} action_nodeParent;
+	
+	struct Action_NodeFocus
+	{
+		int nodeId = -1;
+	} action_nodeFocus;
 	
 	struct NodeUi
 	{
@@ -336,6 +343,7 @@ struct SceneEditor
 	bool performAction_duplicate();
 	bool performAction_parent(const int childNodeId, const int newParentId);
 	bool performAction_group();
+	void performAction_focus(const int nodeId);
 
 	void drawSceneOpaque() const;
 	void drawSceneOpaque_ForwardShaded() const;

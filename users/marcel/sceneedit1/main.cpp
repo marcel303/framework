@@ -430,6 +430,9 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		if (framework.waitForEvents)
+			framework.timeStep = 0.f;
+			
 		const float dt = framework.timeStep;
 		
 		bool inputIsCaptured = false;
@@ -473,6 +476,8 @@ int main(int argc, char * argv[])
 		#if USE_GUI_WINDOW
 			// note : we track the input capture separately when using a separate window for the gui
 			bool inputIsCaptured = false;
+			
+			inputIsCaptured |= guiWindow->hasFocus() == false;
 		#endif
 			
 			editor.tickGui(dt, inputIsCaptured);
@@ -480,6 +485,10 @@ int main(int argc, char * argv[])
 			if (!mouse.isIdle() || !keyboard.isIdle())
 				redrawView3d = true;
 				
+		#if !USE_GUI_WINDOW
+			redrawView3d |= !editor.guiContext.isIdle();
+		#endif
+		
 		// todo : active gui context.. ?
 			if (ImGui::BeginMainMenuBar())
 			{
@@ -643,8 +652,13 @@ int main(int argc, char * argv[])
 			framework.getCurrentViewportSize(
 				editor.preview.viewportSx,
 				editor.preview.viewportSy);
-			editor.preview.viewportX = SceneEditor::kMainWindowWidth;
-			editor.preview.viewportSx -= SceneEditor::kMainWindowWidth;
+			editor.preview.viewportX = 0;
+			editor.preview.viewportY = 0;
+			if (editor.showUi)
+			{
+				editor.preview.viewportX = SceneEditor::kMainWindowWidth;
+				editor.preview.viewportSx -= SceneEditor::kMainWindowWidth;
+			}
 		}
 		
 		// tick editor viewport
@@ -694,7 +708,7 @@ int main(int argc, char * argv[])
 		{
 			for (int i = 0; i < framework.getEyeCount(); ++i)
 			{
-				framework.beginEye(i, Color(80, 80, 80, 255));
+				framework.beginEye(i, colorBlack);
 				{
 					if (!framework.isStereoVr())
 					{
@@ -797,6 +811,12 @@ int main(int argc, char * argv[])
 				}
 				framework.endEye();
 			}
+		}
+		else
+		{
+		#if !USE_GUI_WINDOW
+			editor.guiContext.skipDraw();
+		#endif
 		}
 
 		if (framework.vrMode)

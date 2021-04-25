@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "raycast.h"
 #include "transformGizmos.h"
+#include <math.h>
 
 static const float kMinArrowVisibility = .01f; // cos of angle (rad) at which the arrows will start to disappear
 static const float kMinPadVisibility = .12f; // cos of angle (rad) at which the pads will start to disappear
@@ -52,7 +53,8 @@ bool TransformGizmo::tick(
 	const bool pointer_becameActive,
 	bool & inputIsCaptured,
 	Vec3Arg viewOrigin_world,
-	Vec3Arg viewDirection_world)
+	Vec3Arg viewDirection_world,
+	const float dt)
 {
 	isInteractive = isActive() || (inputIsCaptured == false);
 	
@@ -83,9 +85,10 @@ bool TransformGizmo::tick(
 		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
 		
 		const Vec3 delta = position_gizmo - dragArrow.initialPosition;
+		const Vec3 deltaThisTick = delta * (1.f - powf(arrow_smoothingAmount, dt * 10.f));
 		
 		Vec3 drag;
-		drag[dragArrow.axis] = delta[dragArrow.axis];
+		drag[dragArrow.axis] = deltaThisTick[dragArrow.axis];
 		
 		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 		
@@ -111,8 +114,9 @@ bool TransformGizmo::tick(
 		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
 		
 		const Vec3 delta = position_gizmo - dragPad.initialPosition;
+		const Vec3 deltaThisTick = delta * (1.f - powf(pad_smoothingAmount, dt * 10.f));
 		
-		Vec3 drag = delta;
+		Vec3 drag = deltaThisTick;
 		drag[dragPad.projection_axis] = 0.f;
 		
 		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
@@ -141,20 +145,42 @@ bool TransformGizmo::tick(
 		
 		const Vec3 position_world = pointer_origin + pointer_direction * t;
 		
-		const float angle_a = calculateRingAngle(position_world, dragRing.axis);
+		const float angle_a = calculateRingAngle(position_world, dragRing.axis, gizmoToWorld);
 		const float angle = t < 0.f ? angle_a + float(M_PI) : angle_a;
 		
 		// determine how much rotation occurred and rotate to match
 		
-	#if 0 // todo : make smoothing amount a parameter
-		const float delta = (dragRing.initialAngle - angle) * .1f;
-	#else
-		const float delta = dragRing.initialAngle - angle;
-	#endif
+		float delta = dragRing.initialAngle - angle;
+		while (delta < float(M_PI))
+			delta += float(2.0 * M_PI);
+		while (delta > float(M_PI))
+			delta -= float(2.0 * M_PI);
+			
+		const float deltaThisTick = lerp<float>(delta, 0.f, powf(ring_smoothingAmount, dt * 10.f));
 		
-		if (dragRing.axis == 0) gizmoToWorld = gizmoToWorld.RotateX(delta);
-		if (dragRing.axis == 1) gizmoToWorld = gizmoToWorld.RotateY(delta);
-		if (dragRing.axis == 2) gizmoToWorld = gizmoToWorld.RotateZ(delta);
+		// but first.. decompose matrix into translation, rotation and scale
+		// .. this is needed to ensure we rotate the rotation matrix only,
+		// .. ensuring the correct order of operations
+		
+		const Vec3 translation = gizmoToWorld.GetTranslation();
+		Mat4x4 rotation(true);
+		rotation.SetAxis(0, gizmoToWorld.GetAxis(0).CalcNormalized());
+		rotation.SetAxis(1, gizmoToWorld.GetAxis(1).CalcNormalized());
+		rotation.SetAxis(2, gizmoToWorld.GetAxis(2).CalcNormalized());
+		const Vec3 scale(
+			gizmoToWorld.GetAxis(0).CalcSize(),
+			gizmoToWorld.GetAxis(1).CalcSize(),
+			gizmoToWorld.GetAxis(2).CalcSize());
+		
+		// rotate the rotation matrix
+		
+		if (dragRing.axis == 0) rotation = rotation.RotateX(deltaThisTick);
+		if (dragRing.axis == 1) rotation = rotation.RotateY(deltaThisTick);
+		if (dragRing.axis == 2) rotation = rotation.RotateZ(deltaThisTick);
+		
+		// and compose the TRS (translation, rotation and scale) matrix again
+		
+		gizmoToWorld = Mat4x4(true).Translate(translation).Mul(rotation).Scale(scale);
 		
 		if (!pointer_isActive)
 		{
@@ -169,7 +195,24 @@ bool TransformGizmo::tick(
 		Assert(inputIsCaptured && uiCaptureElem.hasCapture);
 		Verify(uiCaptureElem.capture());
 		
-		// todo : calculate new scale
+		const int axis = dragScale.axis;
+		
+		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
+		const int projection_axis1 = (axis + 1) % 3;
+		const int projection_axis2 = (axis + 2) % 3;
+		const float t1 = - origin_gizmo[projection_axis1] / direction_gizmo[projection_axis1];
+		const float t2 = - origin_gizmo[projection_axis2] / direction_gizmo[projection_axis2];
+		const float t = fminf(t1, t2);
+		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+		const float scale = position_gizmo[axis] / dragScale.initialDistance;
+		const float scaleThisTick = lerp<float>(scale, 1.f, powf(scale_smoothingAmount, dt * 10.f));
+		
+		//logDebug("scale: %.2f", scale);
+		
+		gizmoToWorld.SetAxis(
+			dragScale.axis,
+			gizmoToWorld.GetAxis(dragScale.axis) * scaleThisTick);
 		
 		if (!pointer_isActive)
 		{
@@ -265,7 +308,7 @@ bool TransformGizmo::tick(
 				dragRing = DragRing();
 				dragRing.axis = intersectionResult.element - kElement_XRing;
 				const Vec3 position_world = pointer_origin + pointer_direction * intersectionResult.t;
-				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis);
+				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis, gizmoToWorld);
 				
 				if (editingWillBegin != nullptr)
 					editingWillBegin();
@@ -283,7 +326,21 @@ bool TransformGizmo::tick(
 				
 				state = kState_DragScale;
 				
+				const int axis = intersectionResult.element - kElement_XScale;
+				
+				const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+				const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
+				const int projection_axis1 = (axis + 1) % 3;
+				const int projection_axis2 = (axis + 2) % 3;
+				const float t1 = - origin_gizmo[projection_axis1] / direction_gizmo[projection_axis1];
+				const float t2 = - origin_gizmo[projection_axis2] / direction_gizmo[projection_axis2];
+				const float t = fminf(t1, t2);
+				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+				const float initialDistance = position_gizmo[axis];
+				
 				dragScale = DragScale();
+				dragScale.axis = axis;
+				dragScale.initialDistance = initialDistance;
 				
 				if (editingWillBegin != nullptr)
 					editingWillBegin();
@@ -538,9 +595,27 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 				
 				position = scalePosition[i];
 				size = Vec3(scale_size);
-			
-				setColor(colorWhite);
+					
+				// determine color
 				
+				const Color scale_colors[3] =
+				{
+					Color(255, 40, 40),
+					Color(40, 255, 40),
+					Color(40, 40, 255)
+				};
+				
+				const Color & scale_color = scale_colors[i];
+				const Color scale_color_highlight(255, 255, 255);
+				
+				const Color color =
+					intersectionResult.element == (kElement_XScale + i)
+						? scale_color_highlight
+						: scale_color;
+			
+				// draw
+				
+				setColor(color);
 				if (intersectionResult.element == kElement_XScale + i)
 					fillCube(position, size);
 				else
@@ -914,15 +989,11 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 	return result;
 }
 
-float TransformGizmo::calculateRingAngle(Vec3Arg position_world, const int axis) const
+float TransformGizmo::calculateRingAngle(Vec3Arg position_world, const int axis, const Mat4x4 gizmoToWorld)
 {
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
-	Vec3 position_gizmo = worldToGizmo * position_world;
-	
-	// we need to undo any scaling, to get 'reproducible' angles
-	for (int i = 0; i < 3; ++i)
-		position_gizmo[i] /= worldToGizmo.GetAxis(i).CalcSize();
+	const Vec3 position_gizmo = worldToGizmo * position_world;
 	
 	const int axis2 = (axis + 1) % 3;
 	const int axis3 = (axis + 2) % 3;

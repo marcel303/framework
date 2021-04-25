@@ -1104,31 +1104,10 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	
 	ImGui::Separator();
 	
-	if (ImGui::MenuItem("Focus camera"))
+	if (ImGui::MenuItem("Focus camera", nullptr, false, selection.selectedNodes.size() == 1))
 	{
-		switch (camera.mode)
-		{
-		case Camera::kMode_Orbit:
-			camera.orbit.origin = sceneNodeComponent->objectToWorld.GetTranslation();
-			break;
-		case Camera::kMode_Ortho:
-			camera.ortho.position = sceneNodeComponent->objectToWorld.GetTranslation();
-			break;
-		case Camera::kMode_FirstPerson:
-			{
-				Mat4x4 cameraTransform;
-				camera.firstPerson.calculateWorldMatrix(cameraTransform);
-				
-				const Vec3 delta = sceneNodeComponent->objectToWorld.GetTranslation() - cameraTransform.GetTranslation();
-				
-				const float radToDeg = 180.f / float(M_PI);
-				
-				camera.firstPerson.yaw = -atan2f(delta[0], delta[2]) * radToDeg;
-				camera.firstPerson.pitch = atan2f(delta[1], hypotf(delta[0], delta[2])) * radToDeg;
-				camera.firstPerson.roll = 0.f;
-			}
-			break;
-		}
+		result = kNodeStructureEditingAction_NodeFocus;
+		action_nodeFocus.nodeId = node.id;
 	}
 	
 	return result;
@@ -1344,7 +1323,7 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 			(ImGuiTreeNodeFlags_FramePadding * 0 |
 			(ImGuiTreeNodeFlags_NavLeftJumpsBackHere * 1)), "%s", name);
 		
-		const bool isClicked = ImGui::IsItemClicked(0) || ImGui::IsItemClicked(1);
+		const bool isClicked = (ImGui::IsItemClicked(0) || ImGui::IsItemClicked(1));
 		
 		if (isClicked)
 		{
@@ -1369,6 +1348,12 @@ SceneEditor::NodeStructureEditingAction SceneEditor::editNodeStructure_traverse(
 				
 				selection.selectedNodes.insert(node.id);
 			}
+		}
+		
+		if (ImGui::IsItemClicked(0) && ImGui::IsMouseDoubleClicked(0))
+		{
+			result = kNodeStructureEditingAction_NodeFocus;
+			action_nodeFocus.nodeId = node.id;
 		}
 		
 		if (ImGui::BeginDragDropTarget())
@@ -1839,9 +1824,12 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					ImGui::Indent();
 					{
 						ImGui::Checkbox("Draw grid", &visibility.drawGrid);
+						ImGui::SliderFloat("Grid opacity", &visibility.gridOpacity, 0.f, 1.f);
 						ImGui::Checkbox("Draw ground plane", &visibility.drawGroundPlane);
 						ImGui::Checkbox("Draw nodes", &visibility.drawNodes);
 						ImGui::Checkbox("Draw node bounding boxes", &visibility.drawNodeBoundingBoxes);
+						ImGui::Checkbox("Draw component details", &visibility.drawComponentDetails);
+						ImGui::Checkbox("Draw axes helper", &visibility.drawAxesHelper);
 					}
 					ImGui::Unindent();
 				}
@@ -1982,6 +1970,13 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 							
 						case kNodeStructureEditingAction_NodeGroup:
 							performAction_group();
+							break;
+							
+						case kNodeStructureEditingAction_NodeFocus:
+							{
+								performAction_focus(action_nodeFocus.nodeId);
+								action_nodeFocus = Action_NodeFocus();
+							}
 							break;
 						}
 						
@@ -2319,7 +2314,8 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 					pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
 					inputIsCaptured,
 					viewToWorld.GetTranslation(),
-					viewToWorld.GetAxis(2).CalcNormalized()))
+					viewToWorld.GetAxis(2).CalcNormalized(),
+					dt))
 			{
 				// transform the global transform into local space
 				
@@ -2344,33 +2340,20 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 					
 					for (int i = 0; i < 3; ++i)
 					{
+					// fixme : CalcSize() discard sign
+						transformComponent->scale[i] = localTransform.GetAxis(i).CalcSize();
+					}
+					
+					for (int i = 0; i < 3; ++i)
+					{
 						//logDebug("size[%d] = %.2f", i, localTransform.GetAxis(i).CalcSize());
 						localTransform.SetAxis(i, localTransform.GetAxis(i).CalcNormalized());
 					}
 					
 					Quat q;
 					q.fromMatrix(localTransform);
-					
-				#if ENABLE_QUAT_FIXUP
-					// todo : not entirely sure if this is correct. need a proper look at the maths and logic here
-					int max_axis = 0;
-					if (fabsf(transformComponent->angleAxis.axis[1]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
-						max_axis = 1;
-					if (fabsf(transformComponent->angleAxis.axis[2]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
-						max_axis = 2;
-					const bool neg_before = transformComponent->angleAxis.axis[max_axis] < 0.f;
-				#endif
 				
 					q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
-					
-				#if ENABLE_QUAT_FIXUP && false
-					const bool neg_after = transformComponent->angleAxis.axis[max_axis] < 0.f;
-					if (neg_before != neg_after)
-					{
-						transformComponent->angleAxis.axis = -transformComponent->angleAxis.axis;
-						transformComponent->angleAxis.angle = -transformComponent->angleAxis.angle;
-					}
-				#endif
 				
 					transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
 				}
@@ -2395,13 +2378,13 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		
 		const float distance =
 			framework.isStereoVr()
-			? 2.f
+			? 4.f
 			: 5.f;
 			
 		const Mat4x4 transform =
 			Mat4x4(true)
-			.Translate(viewToWorld.GetTranslation())
-			.Translate(viewToWorld.GetAxis(2) * distance);
+			.Translate(viewToWorld.GetAxis(2) * distance)
+			.Mul(viewToWorld);
 		
 		interactiveRing.show(transform);
 	}
@@ -2422,8 +2405,15 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			inputIsCaptured == false && hasPointer
 			? raycast(pointerOrigin_world, pointerDirection_world, selection.selectedNodes)
 			: nullptr;
-		
+			
+		const int oldHoverNodeId = hoverNodeId;
+
 		hoverNodeId = hoverNode ? hoverNode->id : -1;
+
+		if (hoverNodeId != oldHoverNodeId)
+		{
+			vrPointer[0].wantsToVibrate = true;
+		}
 	}
 	
 	// 4. update mouse cursor
@@ -3417,6 +3407,45 @@ bool SceneEditor::performAction_group()
 	return success;
 }
 
+void SceneEditor::performAction_focus(const int nodeId)
+{
+	auto & node = scene.getNode(nodeId);
+								
+	auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
+	
+	switch (camera.mode)
+	{
+	case Camera::kMode_Orbit:
+		camera.orbit.origin = sceneNodeComponent->objectToWorld.GetTranslation();
+		break;
+	case Camera::kMode_Ortho:
+		camera.ortho.position = sceneNodeComponent->objectToWorld.GetTranslation();
+		break;
+	case Camera::kMode_FirstPerson:
+		{
+			Mat4x4 cameraTransform;
+			camera.firstPerson.calculateWorldMatrix(cameraTransform);
+			
+			const Vec3 delta = sceneNodeComponent->objectToWorld.GetTranslation() - cameraTransform.GetTranslation();
+			
+			const float radToDeg = 180.f / float(M_PI);
+			
+			camera.firstPerson.yaw = -atan2f(delta[0], delta[2]) * radToDeg;
+			camera.firstPerson.pitch = atan2f(delta[1], hypotf(delta[0], delta[2])) * radToDeg;
+			camera.firstPerson.roll = 0.f;
+		}
+		break;
+	case Camera::kMode_FirstPersonQuat:
+		{
+			Mat4x4 lookatMatrix;
+			lookatMatrix.MakeLookat(camera.firstPersonQuat.position, sceneNodeComponent->objectToWorld.GetTranslation(), Vec3(0, 1, 0));
+			
+			camera.firstPersonQuat.orientation.fromMatrix(lookatMatrix);
+		}
+		break;
+	}
+}
+
 void SceneEditor::drawSceneOpaque() const
 {
 	if (preview.drawScene)
@@ -3443,19 +3472,41 @@ void SceneEditor::drawSceneTranslucent() const
 	}
 }
 
-static void drawEditorGrid()
+static void drawEditorGrid(const float opacity)
 {
 	gxPushMatrix();
 	{
+	// todo : for orbit camera, the origin should be the orbit anchor
+	// todo : for ortho mode, distance fade should be disabled
+	// todo : for perspective modes : movement should snap to grid
+		// position the grid at (0, 0) from the XZ position of the camera
+		Mat4x4 worldToView;
+		gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+		const Mat4x4 viewToWorld = worldToView.CalcInv();
+		const Vec3 viewOrigin = viewToWorld.GetTranslation();
+		const Vec3 offset =
+			Vec3(
+				roundf(viewOrigin[0] / 2.f) * 2.f,
+				0.f,
+				roundf(viewOrigin[2] / 2.f) * 2.f);
+		gxTranslatef(offset[0], offset[1], offset[2]);
+		
 		gxScalef(10, 10, 10);
 		
-		setAlpha(255);
-		
-		setLumi(80);
-		drawGrid3dLine(10, 10, 0, 2, true);
-		
-		setLumi(40);
-		drawGrid3dLine(50, 50, 0, 2, true);
+		Shader shader("grid/distance-fade");
+		setShader(shader);
+		shader.setImmediate("maxDistance", 10.f);
+		shader.setImmediate("outputLinearColorSpace", 0.f);
+		{
+			setColor(colorWhite);
+			
+			setAlphaf(opacity);
+			drawGrid3dLine(10, 10, 0, 2, true);
+			
+			setAlphaf(opacity * .8f);
+			drawGrid3dLine(50, 50, 0, 2, true);
+		}
+		clearShader();
 	}
 	gxPopMatrix();
 }
@@ -3464,7 +3515,7 @@ void SceneEditor::drawEditorGridOpaque() const
 {
 	if (visibility.drawGrid)
 	{
-		//drawEditorGrid();
+		//drawEditorGrid(visibility.gridOpacity);
 	}
 }
 
@@ -3472,7 +3523,7 @@ void SceneEditor::drawEditorGridTranslucent() const
 {
 	if (visibility.drawGrid)
 	{
-		drawEditorGrid();
+		drawEditorGrid(visibility.gridOpacity);
 	}
 }
 
@@ -3559,23 +3610,6 @@ void SceneEditor::drawEditorNodeBoundingBox(const SceneNode & node) const
 		{
 			//drawSelectionBox(sceneNodeComp->objectToWorld, min, max, Color(127, 127, 255, 127));
 		}
-		
-	#if false
-		if (isSelected || isHovered)
-		{
-			gxPushMatrix();
-			{
-				gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-				
-				const Vec3 position = (min + max) / 2.f;
-				const Vec3 size = (max - min) / 2.f;
-			
-				setColor(isSelected ? 255 : isHovered ? 127 : 60, 0, 0, 40);
-				fillCube(position, size);
-			}
-			gxPopMatrix();
-		}
-	#endif
 	}
 }
 
@@ -3682,66 +3716,143 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * kSpacing;
 						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * kSpacing;
 						
-						for (int i = -1; i <= +1; ++i)
+						const int count = 7;
+						const float radius = 1.4f;
+						
+						for (int i = 0; i < count; ++i)
 						{
-							for (int j = -1; j <= +1; ++j)
-							{
-								const Vec3 origin =
-									position +
-									tangent   * i +
-									bitangent * j;
+							const float angle = i / float(count) * Calc::m2PI;
+							const float u = cosf(angle) * radius;
+							const float v = sinf(angle) * radius;
+							
+							const Vec3 origin =
+								position +
+								tangent   * u +
+								bitangent * v;
 								
-								const Vec3 target = origin + forward;
-								
-								setColor(kDirectionColor);
-								drawLine3d(origin, target);
-							}
+							const Vec3 target = origin + forward;
+							
+							setColor(kDirectionColor);
+							drawLine3d(origin, target);
 						}
 					}
 					break;
 				case LightComponent::kLightType_Point:
-					// todo : draw sphere
+					if (isSelected)
+					{
+						gxPushMatrix();
+						{
+							gxTranslatef(position[0], position[1], position[2]);
+							
+							// draw sphere
+							
+							setColor(kOutlineColor);
+							gxBegin(GX_LINES);
+							{
+								const int resolution = 10;
+								
+								float x[resolution + 1];
+								float z[resolution + 1];
+								
+								float y[resolution + 1];
+								float r[resolution + 1];
+								
+								for (int u = 0; u <= resolution; ++u)
+								{
+									const float azimuth = u * Calc::m2PI / float(resolution);
+									
+									x[u] = cosf(azimuth);
+									z[u] = sinf(azimuth);
+								}
+								
+								const float radius = lightComp->farDistance;
+								const float radiusSq = radius * radius;
+								
+								for (int v = 0; v <= resolution; ++v)
+								{
+									const float elevation = v * Calc::mPI / float(resolution);
+									
+									y[v] = cosf(elevation) * radius;
+									r[v] = sinf(elevation) * radius;
+								}
+								
+								for (int u = 0; u < resolution; ++u)
+								{
+									for (int v = 0; v < resolution; ++v)
+									{
+										const float x1 = x[u];
+										const float x2 = x[u + 1];
+										const float z1 = z[u];
+										const float z2 = z[u + 1];
+										
+										const float y1 = y[v];
+										const float y2 = y[v + 1];
+										
+										const float r1 = r[v];
+										const float r2 = r[v + 1];
+										
+										gxVertex3f(x1 * r1, y1, z1 * r1);
+										gxVertex3f(x1 * r2, y2, z1 * r2);
+										
+										gxVertex3f(x1 * r1, y1, z1 * r1);
+										gxVertex3f(x2 * r1, y1, z2 * r1);
+									}
+								}
+							}
+							gxEnd();
+						}
+						gxPopMatrix();
+					}
 					break;
 				case LightComponent::kLightType_Spot:
+					if (isSelected)
 					{
-						// draw light cone outline
-						
-						const float alpha = tanf(lightComp->spotAngle / 2.f / 180.f * float(M_PI));
-						
-						const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized();
-						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
-						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * alpha;
-						
-						const int kNumSegments = 7;
-						Vec3 * points = (Vec3*)alloca(kNumSegments * sizeof(Vec3));
-						
-						for (int i = 0; i < kNumSegments; ++i)
+						gxPushMatrix();
 						{
-							const float angle = i / float(kNumSegments) * Calc::m2PI;
-							const float c = cosf(angle);
-							const float s = sinf(angle);
+							gxTranslatef(position[0], position[1], position[2]);
 							
-							points[i] = position + (forward + tangent * c + bitangent * s) * lightComp->farDistance;
-						}
-						
-						setColor(kOutlineColor);
-						gxBegin(GX_LINES);
-						{
+							// draw light cone outline
+							
+							const float alpha = tanf(lightComp->spotAngle / 2.f / 180.f * float(M_PI));
+							
+							const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized();
+							const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
+							const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * alpha;
+							
+							const int kNumSegments = 7;
+							Vec3 * points = (Vec3*)alloca(kNumSegments * sizeof(Vec3));
+							
 							for (int i = 0; i < kNumSegments; ++i)
 							{
-								const int index1 = i;
-								const int index2 = i + 1 == kNumSegments ? 0 : i + 1;
+								const float angle = i / float(kNumSegments) * Calc::m2PI;
+								const float c = cosf(angle);
+								const float s = sinf(angle);
 								
-								// cone side
-								gxVertex3fv(&position[0]);
-								gxVertex3fv(&points[index1][0]);
-								
-								// cone base
-								gxVertex3fv(&points[index1][0]);
-								gxVertex3fv(&points[index2][0]);
+								points[i] = (forward + tangent * c + bitangent * s) * lightComp->farDistance;
 							}
+							
+							const Vec3 origin;
+							
+							setColor(kOutlineColor);
+							gxBegin(GX_LINES);
+							{
+								for (int i = 0; i < kNumSegments; ++i)
+								{
+									const int index1 = i;
+									const int index2 = i + 1 == kNumSegments ? 0 : i + 1;
+									
+									// cone side
+									gxVertex3fv(&origin[0]);
+									gxVertex3fv(&points[index1][0]);
+									
+									// cone base
+									gxVertex3fv(&points[index1][0]);
+									gxVertex3fv(&points[index2][0]);
+								}
+							}
+							gxEnd();
 						}
-						gxEnd();
+						gxPopMatrix();
 					}
 					break;
 				
@@ -3832,25 +3943,52 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 				gxTranslatef(position[0], position[1], position[2]);
 				
 				// orient to look at camera
-				
-				gxMultMatrixf(viewOrientation.m_v);
+
+				if (framework.isStereoVr())
+				{
+					// actually adopting the orientation of the head looks weird in VR
+					// perhaps just removing 'roll' from the head orientation would fix this
+					// too.. but for now just rotating around the Y axis
+					const Vec3 forwardVector = viewToWorld.GetAxis(2);
+					const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
+					gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
+				}
+				else
+				{
+					gxMultMatrixf(viewOrientation.m_v);
+				}
 				
 				pushCullMode(CULL_NONE, CULL_CCW);
 				{
+					// calculate fade opacity based on view distance
+					
+					const float kFadeBeginDistance = 1.f;
+					const float kFadeEndDistance = 4.f;
+					const float kSize = .5f;
+					
+					const float distanceToView = (position - viewOrigin).CalcSize();
+					const float opacity =
+						doFade
+						? saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance))
+						: 1.f;
+					
+					// add a highlight for the hovered and selected nodes
+					
+					const bool highlight = node->id == hoverNodeId;// || selection.selectedNodes.count(node->id) != 0;
+					
+					if (highlight)
+					{
+						pushColorMode(COLOR_ADD);
+						setColorf(.2f, .2f, .2f, opacity);
+					}
+					else
+					{
+						setColorf(1, 1, 1, opacity);
+					}
+					
 					gxSetTexture(simpleTextureId);
 					gxBegin(GX_QUADS);
 					{
-						const float kFadeBeginDistance = 1.f;
-						const float kFadeEndDistance = 4.f;
-						const float kSize = .5f;
-						
-						const float distanceToView = (position - viewOrigin).CalcSize();
-						const float opacity =
-							doFade
-							? saturate<float>((distanceToView - kFadeBeginDistance) / (kFadeEndDistance - kFadeBeginDistance))
-							: 1.f;
-						
-						gxColor4f(1, 1, 1, opacity);
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-kSize, +kSize * 2.f);
 						gxTexCoord2f(1.f, 0.f); gxVertex2f(+kSize, +kSize * 2.f);
 						gxTexCoord2f(1.f, 1.f); gxVertex2f(+kSize, 0.f);
@@ -3858,6 +3996,11 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 					}
 					gxEnd();
 					gxSetTexture(0);
+					
+					if (highlight)
+					{
+						popColorMode();
+					}
 				}
 				popCullMode();
 			}
@@ -3965,67 +4108,75 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 	
 	drawEditorGizmosOpaque(true);
 	drawEditorGizmosOpaque(false);
-				
-// todo : draw node name labels here? we need to prevent them from obscuring the interactive ring. also would be nice if they appear in vr mode
 
-#if false // todo : make this into a nice card that we can inspect in VR when we want to
-	// draw node details
-	
-	for (auto nodeId : selection.selectedNodes)
+	if (visibility.drawComponentDetails)
 	{
-		gxPushMatrix();
+	// todo : make this into a nice card that we can inspect in VR when we want to
+
+		// draw node details
+
+		for (auto nodeId : selection.selectedNodes)
 		{
-			auto & node = scene.getNode(nodeId);
-			
-			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
-			auto translation = sceneNodeComp->objectToWorld.GetTranslation();
-			
-			gxTranslatef(translation[0], translation[1], translation[2]);
-			
-			// rotate to face the camera
-			const Vec3 forwardVector = viewToWorld.GetAxis(2);
-			const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
-			gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
-			
-			// flip Y axis to make sure text renders correctly
-			gxScalef(1, -1, 1);
-			
-			pushFontMode(FONT_SDF); // todo : font spec once
-			setFont("calibri.ttf");
-			
-			const float kFontSize = .2f;
-			
-			float y = 0.f;
-			
-			pushBlend(BLEND_ALPHA); // todo : opaque font rendering support. enforce alpha = 100% or 0% but no in-between values. but what about depth write? discard pixels?
-			beginTextBatch();
+			gxPushMatrix();
 			{
-				for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+				auto & node = scene.getNode(nodeId);
+
+				auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+				auto translation = sceneNodeComp->objectToWorld.GetTranslation();
+
+				gxTranslatef(translation[0], translation[1], translation[2]);
+
+				// rotate to face the camera
+				const Vec3 forwardVector = viewToWorld.GetAxis(2);
+				const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
+				gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
+
+				// flip Y axis to make sure text renders correctly
+				gxScalef(1, -1, 1);
+
+				pushFontMode(FONT_SDF); // todo : font spec once
+				setFont("calibri.ttf");
+
+				const float kFontSize = .2f;
+
+				float y = 0.f;
+
+				pushBlend(BLEND_ALPHA); // todo : opaque font rendering support. enforce alpha = 100% or 0% but no in-between values. but what about depth write? discard pixels?
+				beginTextBatch();
 				{
-					auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
-					
-					setColor(100, 100, 200);
-					drawText(0, y, kFontSize, 0, 0, "%s", componentType->typeName);
-					y += kFontSize;
-					
-					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+					for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 					{
-						setColor(200, 100, 100);
-						drawText(kFontSize, y, kFontSize, 0, 0, "%s", member->name);
+						auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+
+						setColor(100, 100, 200);
+						drawText(0, y, kFontSize, 0, 0, "%s", componentType->typeName);
 						y += kFontSize;
+
+						for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+						{
+							setColor(200, 100, 100);
+							drawText(kFontSize, y, kFontSize, 0, 0, "%s", member->name);
+							y += kFontSize;
+						}
 					}
 				}
-			}
-			endTextBatch();
-			popBlend();
-			
-			popFontMode();
-		}
-		gxPopMatrix();
-	}
-#endif
+				endTextBatch();
+				popBlend();
 
-	interactiveRing.drawOpaque(*this);
+				popFontMode();
+			}
+			gxPopMatrix();
+		}
+	}
+	
+	if (visibility.drawAxesHelper)
+	{
+		// draw axes helper
+		
+		setColor(colorRed);   drawAxisArrow(Vec3(), 0, .02f, 1.f, .03f, .06f, false);
+		setColor(colorGreen); drawAxisArrow(Vec3(), 1, .02f, 1.f, .03f, .06f, false);
+		setColor(colorBlue);  drawAxisArrow(Vec3(), 2, .02f, 1.f, .03f, .06f, false);
+	}
 }
 
 void SceneEditor::drawView3dTranslucent() const
@@ -4037,6 +4188,14 @@ void SceneEditor::drawView3dTranslucent() const
 		drawEditorGizmosTranslucent();
 		
 		drawEditorNodesTranslucent();
+		
+		// always on top things
+		
+		pushDepthTest(false, DEPTH_LESS);
+		{
+			interactiveRing.draw(*this);
+		}
+		popDepthTest();
 	}
 	popLineSmooth();
 }
@@ -4294,8 +4453,11 @@ void SceneEditor::initTemplateUi()
 	// 1. determine the editor data path and derive the templates path from this
 	
 	const auto editorDataPath = Path::GetDirectory(framework.resolveResourcePath("gizmo-light.png"));
-	
-	const auto templatesPath = editorDataPath + "/templates";
+
+	const auto templatesPath =
+		editorDataPath.empty()
+		? "templates"
+		: editorDataPath + "/templates";
 	
 	// 2. scan files inside the templates path and make the paths relative to the editor data path
 	

@@ -170,6 +170,34 @@ inline bool intersectCircle2(
 	}
 }
 
+inline bool intersectCircle3d_2(
+	const float px, const float py, const float pz,
+	const float dx, const float dy, const float dz,
+	const float cx, const float cy, const float cz, const float cr,
+	float & t1,
+	float & t2)
+{
+	const float a = dx * dx + dy * dy + dz * dz;
+	const float b = 2.f * (dx * (px - cx) + dy * (py - cy) + dz * (pz - cz));
+	
+	float c = cx * cx + cy * cy + cz * cz;
+	c += px * px + py * py + pz * pz;
+	c -= 2.f * (cx * px + cy * py + cz * pz);
+	c -= cr * cr;
+	
+	float det = b * b - 4.f * a * c;
+
+  	if (det < 0.f)
+		return false;
+	else
+	{
+		t1 = (- b - sqrtf(det)) / (2.f * a);
+		t2 = (- b + sqrtf(det)) / (2.f * a);
+		
+		return true;
+	}
+}
+
 //
 
 static bool intersectSphere(

@@ -83,16 +83,20 @@ struct TransformGizmo
 	float arrow_top_radius = arrow_radius * 1.4f;
 	float arrow_top_length = arrow_radius * 3.f;
 	float arrow_collision_radius = .08f;
+	float arrow_smoothingAmount = .3f;
 	
 	float pad_offset = .5f;
 	float pad_size = .3f;
 	float pad_thickness = .02f;
+	float pad_smoothingAmount = .3f;
 	
 	float ring_radius = 1.8f;
 	float ring_tubeRadius = .1f;
+	float ring_smoothingAmount = .3f;
 	
 	float scale_offset = 1.25f;
 	float scale_size = .05f;
+	float scale_smoothingAmount = .3f;
 	
 	std::function<void()> editingWillBegin;
 	std::function<void()> editingDidEnd;
@@ -118,7 +122,8 @@ struct TransformGizmo
 	
 	struct DragScale
 	{
-	
+		int axis = 0;
+		float initialDistance = 0.f;
 	} dragScale;
 	
 	struct
@@ -146,7 +151,8 @@ struct TransformGizmo
 		const bool pointer_becameActive,
 		bool & inputIsCaptured,
 		Vec3Arg viewOrigin_world,
-		Vec3Arg viewDirection_world);
+		Vec3Arg viewDirection_world,
+		const float dt);
 	void draw(const DrawPass drawPass) const;
 
 private:
@@ -155,7 +161,7 @@ private:
 	void updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg viewDirection_world);
 	
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;
-	float calculateRingAngle(Vec3Arg position_world, const int axis) const;
+	static float calculateRingAngle(Vec3Arg position_world, const int axis, const Mat4x4 gizmoToWorld);
 	
 	void setColorForArrow(const int axis) const;
 	void setColorForRing(const int axis, const bool isLine) const;

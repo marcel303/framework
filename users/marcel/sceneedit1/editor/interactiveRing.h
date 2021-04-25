@@ -85,7 +85,7 @@ struct InteractiveRing
 		const Mat4x4 & viewMatrix,
 		const float dt);
 	
-	void drawOpaque(
+	void draw(
 		const SceneEditor & sceneEditor) const;
 	
 	void calculateTransform(Mat4x4 & out_transform) const;

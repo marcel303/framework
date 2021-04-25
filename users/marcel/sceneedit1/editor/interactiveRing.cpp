@@ -185,7 +185,7 @@ void InteractiveRing::tickAnimation(
 {
 	rotation = viewMatrix;
 	rotation.SetTranslation(Vec3());
-	
+
 	if (captureElem.hasCapture)
 	{
 		openAnim = fminf(1.f, openAnim + dt / kRingOpenAnimTime);
@@ -224,7 +224,7 @@ void InteractiveRing::tickAnimation(
 	}
 }
 
-void InteractiveRing::drawOpaque(const SceneEditor & sceneEditor) const
+void InteractiveRing::draw(const SceneEditor & sceneEditor) const
 {
 	if (openAnim == 0.f)
 		return;
@@ -363,10 +363,25 @@ void InteractiveRing::drawOpaque(const SceneEditor & sceneEditor) const
 
 void InteractiveRing::calculateTransform(Mat4x4 & out_transform) const
 {
-	out_transform =
-		Mat4x4(true)
-		.Mul(transform)
-		.Mul(rotation)
-		.Scale(openAnim, openAnim, 1)
-		.Scale(1, -1, 1);
+	if (framework.isStereoVr())
+	{
+		// in stereo VR mode the initial transform is used for the entire duration of the interaction
+
+		out_transform =
+			Mat4x4(true)
+			.Mul(transform)
+			.Scale(openAnim, openAnim, 1)
+			.Scale(1, -1, 1);
+	}
+	else
+	{
+		// in regular mode the transform is being updated with the orientation the current view
+
+		out_transform =
+			Mat4x4(true)
+			.Translate(transform.GetTranslation())
+			.Mul(rotation)
+			.Scale(openAnim, openAnim, 1)
+			.Scale(1, -1, 1);
+	}
 }
