@@ -51,6 +51,10 @@ void main()
         color = linearToSrgb(color);
     }
 
+    // -- apply dither. this is a large improvement in quality in vr
+
+    color += colorDither8ScreenSpace(gl_FragCoord.xy);
+
     // -- store
 
     shader_fragColor = vec4(color, s_surfaceProperties.opacity);
