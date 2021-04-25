@@ -21,6 +21,11 @@ Quat::Quat(float x, float y, float z, float w)
 {
 }
 
+Quat::Quat(float angle, const Vec3 & axis)
+{
+	fromAngleAxis(angle, axis);
+}
+
 Quat::Quat(const Vec3 & axis, float angle)
 {
 	fromAxisAngle(axis, angle);

@@ -19,11 +19,11 @@ namespace Calc
 	extern RNG::MersenneTwister g_RandomHQ; // High-quality random
 	extern RNG::XorShift g_RandomHS; // High-speed random
 	
-	const static float mPI = (float)M_PI;
-	const static float m2PI = (float)(M_PI * 2.0);
-	const static float m4PI = (float)(M_PI * 4.0);
-	const static float mPI2 = (float)(M_PI / 2.0);
-	const static float mPI4 = (float)(M_PI / 4.0);
+	const static float mPI = (float)M_PI;          ///< pi
+	const static float m2PI = (float)(M_PI * 2.0); ///< pi * 2
+	const static float m4PI = (float)(M_PI * 4.0); ///< pi * 4
+	const static float mPI2 = (float)(M_PI / 2.0); ///< pi / 2
+	const static float mPI4 = (float)(M_PI / 4.0); ///< pi / 4
 	
 	void Initialize();
 	

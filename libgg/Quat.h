@@ -11,6 +11,7 @@ public:
 	Quat();
 	Quat(const Quat & quat);
 	Quat(float x, float y, float z, float w);
+	Quat(float angle, const Vec3 & axis);
 	Quat(const Vec3 & axis, float angle);
 
 	float calcSize() const;
