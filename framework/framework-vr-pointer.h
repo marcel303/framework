@@ -12,11 +12,23 @@ enum VrButton
 	VrButton_COUNT
 };
 
+enum VrAnalog
+{
+	VrAnalog_X,
+	VrAnalog_Y,
+	VrAnalog_COUNT
+};
+
 class VrPointerBase
 {
 protected:
 	bool m_isDown[VrButton_COUNT] = { };
 	bool m_hasChanged[VrButton_COUNT] = { };
+	
+	bool m_isTouched[VrButton_COUNT] = { };
+	float m_pressure[VrButton_COUNT] = { };
+	
+	float m_analog[VrAnalog_COUNT] = { };
 	
 	Mat4x4 transform = Mat4x4(true);
 	
@@ -47,6 +59,21 @@ public:
 	bool isUp(const VrButton index) const
 	{
 		return !m_isDown[index];
+	}
+	
+	bool isTouched(const VrButton index) const
+	{
+		return m_isTouched[index];
+	}
+	
+	float getPressure(const VrButton index) const
+	{
+		return m_pressure[index];
+	}
+	
+	float getAnalog(const VrAnalog analog) const
+	{
+		return m_analog[analog];
 	}
 };
 

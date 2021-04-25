@@ -74,6 +74,8 @@ void VrPointer::updateInputState()
 					tracking.Status = 0;
 				}
 				
+				// capture transform
+				
 				if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
 				{
 					ovrMatrix4f ovr_transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
@@ -89,12 +91,14 @@ void VrPointer::updateInputState()
 					hasTransform = false;
 				}
 
+				// capture buttons
+				
 				const int buttonMasks[VrButton_COUNT] =
 					{
 						ovrButton_Trigger,
 						ovrButton_GripTrigger,
-						0,
-						0
+						ovrButton_A,
+						ovrButton_B
 					};
 
 				for (int i = 0; i < VrButton_COUNT; ++i)
@@ -114,6 +118,36 @@ void VrPointer::updateInputState()
 						m_hasChanged[i] = true;
 					}
 				}
+				
+				// capture button touches
+				
+				for (int i = 0; i < VrButton_COUNT; ++i)
+				{
+					if (buttonMasks[i] == 0)
+						continue;
+					
+					if (state.Touches & buttonMasks[i])
+						m_isTouched[i] = true;
+					else
+						m_isTouched[i] = false;
+				}
+				
+				// capture button pressure values
+				
+				for (int i = 0; i < VrButton_COUNT; ++i)
+				{
+					if (i == VrButton_Trigger)
+						m_pressure[i] = state.IndexTrigger;
+					else if (i == VrButton_GripTrigger)
+						m_pressure[i] = state.GripTrigger;
+					else
+						m_pressure[i] = m_isDown[i] ? 1.f : i;
+				}
+				
+				// capture analog values
+				
+				m_analog[VrAnalog_X] = state.Joystick.x;
+				m_analog[VrAnalog_Y] = state.Joystick.y;
 			}
 		}
 	}
