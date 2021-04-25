@@ -241,8 +241,18 @@ void FrameworkOvr::beginEye(const int eyeIndex, const Color & clearColor)
 	ovrFramebuffer * frameBuffer = &FrameBuffer[eyeIndex];
 	ovrFramebuffer_SetCurrent(frameBuffer);
 
-	gxSetMatrixf(GX_PROJECTION, ProjectionMatrices[eyeIndex].m_v);
-	gxSetMatrixf(GX_MODELVIEW, ViewMatrices[eyeIndex].m_v);
+	const Mat4x4 projectionMatrix =
+		ProjectionMatrices[eyeIndex]
+		.Scale(1, 1, -1); // convert z-axis direction back into what the porjection matrix expects
+		
+	const Mat4x4 viewMatrix =
+		Mat4x4(true)
+		.Scale(1, 1, -1 ) // convert from right to left handed
+		.Mul(ViewMatrices[eyeIndex])
+		.Scale(1, 1, -1); // convert from right to left handed
+		
+	gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+	gxSetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
 	updateCullFlip();
 
 	glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
