@@ -1005,7 +1005,7 @@ GxTextureId copyTexture(const GxTextureId texture)
 	return newTexture;
 #else
 	return 0;
-	assert(false); // todo : how to copy textures using GLES3?
+	fassert(false); // todo : how to copy textures using GLES3?
 #endif
 }
 

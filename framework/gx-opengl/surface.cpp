@@ -137,7 +137,7 @@ void blitBackBufferToSurface(Surface * surface)
 #if FRAMEWORK_USE_SDL
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 #else
-	assert(false); // todo : what's the appropriate size ?
+	fassert(false); // todo : what's the appropriate size ?
 #endif
 	
 	// capture current OpenGL states before we change them
