@@ -18,6 +18,7 @@ struct DownloadQueue
 		size_t numBytes = 0;
 
 		int getProgress() const;
+		int getExpectedSize() const;
 	};
 	
 	std::map<std::string, Elem> queuedElems;

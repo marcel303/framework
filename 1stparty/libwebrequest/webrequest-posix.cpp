@@ -74,6 +74,7 @@ struct WebRequest_Posix : WebRequest
 	
 	int sock = -1;
 	int progress = 0;
+	int length = -1;
 	
 	bool canceled = false;
 	bool done = false;
@@ -547,6 +548,14 @@ struct WebRequest_Posix : WebRequest
 									LogError("missing Content-Length header");
 									ok = false;
 								}
+								else
+								{
+									mutex.lock();
+									{
+										length = contentLength;
+									}
+									mutex.unlock();
+								}
 							}
 							
 							if (ok == false)
@@ -645,6 +654,19 @@ struct WebRequest_Posix : WebRequest
 		mutex.lock();
 		{
 			result = progress;
+		}
+		mutex.unlock();
+		
+		return result;
+	}
+
+	virtual int getExpectedSize() override
+	{
+		int result;
+		
+		mutex.lock();
+		{
+			result = length;
 		}
 		mutex.unlock();
 		

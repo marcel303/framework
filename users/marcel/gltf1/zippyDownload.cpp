@@ -82,7 +82,7 @@ static void zippyDownload(const std::vector<std::string> & urls, const char * ta
 			{
 				drawText(viewSx/2, viewSy*1/3 + 20, 14, 0, 0, "Downloading %s/%dkb..", e.first.c_str(), e.second.getProgress() / 1024);
 				y += 18;
-				doProgressBar(viewSx/2, viewSy*1/3 + 20 + 18, 100, 10, e.second.getProgress(), e.second.getExpectedDuration(), 1.f);
+				doProgressBar(viewSx/2, viewSy*1/3 + 20 + 18, 100, 10, e.second.getProgress(), e.second.getExpectedSize(), 1.f);
 				y += 14;
 			}
 		}

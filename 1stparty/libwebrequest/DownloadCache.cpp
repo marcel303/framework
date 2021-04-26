@@ -13,6 +13,14 @@ int DownloadQueue::Elem::getProgress() const
 		return webRequest->getProgress();
 }
 
+int DownloadQueue::Elem::getExpectedSize() const
+{
+	if (webRequest == nullptr)
+		return -1;
+	else
+		return webRequest->getExpectedSize();
+}
+
 void DownloadQueue::add(const char * url, const char * filename)
 {
 	Assert(queuedElems.count(filename) == 0);

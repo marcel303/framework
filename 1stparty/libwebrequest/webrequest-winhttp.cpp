@@ -164,6 +164,8 @@ bool Worker::initImpl(const char * url)
 		return false;
 	}
 
+// todo : fetch content-length header value and store it in expectedNumBytes
+
 	for (;;)
 	{
 		DWORD numBytesAvailable = 0;
@@ -234,6 +236,7 @@ struct WebRequest_WinHttp : WebRequest
 	std::atomic<bool> failure;
 	std::atomic<bool> done;
 	std::atomic<int64_t> numBytesReceived;
+	std::atomic<int64_t> expectedNumBytes;
 
 	std::vector<uint8_t> contents;
 
@@ -245,6 +248,7 @@ struct WebRequest_WinHttp : WebRequest
 		, failure(false)
 		, done(false)
 		, numBytesReceived(0)
+		, expectedNumBytes(-1)
 		, thread(nullptr)
 	{
 		worker.updateHandler = [&](const bool done, const bool failure, void * bytes, const int numBytes, const float progress)
@@ -301,6 +305,11 @@ struct WebRequest_WinHttp : WebRequest
 	virtual int getProgress() override
 	{
 		return numBytesReceived;
+	}
+
+	virtual int getExpectedSize() override
+	{
+		return expectedNumBytes;
 	}
 
 	virtual bool isDone() override

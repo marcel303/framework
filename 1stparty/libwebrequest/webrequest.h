@@ -8,6 +8,7 @@ struct WebRequest
 	virtual ~WebRequest() { }
 	
     virtual int getProgress() = 0;
+    virtual int getExpectedSize() = 0;
     virtual bool isDone() = 0;
     virtual bool isSuccess() = 0;
     virtual bool getResultAsData(uint8_t *& bytes, size_t & numBytes) = 0;

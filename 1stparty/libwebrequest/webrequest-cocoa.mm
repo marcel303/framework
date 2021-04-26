@@ -79,9 +79,17 @@ struct WebRequestCocoa : WebRequest
 		}
 	}
 
-	int getProgress() override
+	virtual int getProgress() override
 	{
 		return task.countOfBytesReceived;
+	}
+	
+	virtual int getExpectedSize() override
+	{
+		if (task.countOfBytesExpectedToReceive < 0)
+			return -1;
+		else
+			return task.countOfBytesExpectedToReceive;
 	}
 
     virtual bool isDone() override
