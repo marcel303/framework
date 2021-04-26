@@ -113,7 +113,7 @@ void main()
 		basePosition -= normalize(p4 - p3) * borderSize;
 		basePosition += normalize(p3 - p2) * borderSize;
 	}
-	else if (index == 3)
+	else // if (index == 3) // commented to avoid compiler warning about basePosition possibly being left uninitialized
 	{
 		basePosition = p4;
 		

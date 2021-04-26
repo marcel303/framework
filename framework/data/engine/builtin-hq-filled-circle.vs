@@ -48,7 +48,7 @@ void main()
 	{
 		offset = vec2(+1.0, +1.0);
 	}
-	else if (index == 3)
+	else // if (index == 3) // commented to avoid compiler warning about basePosition possibly being left uninitialized
 	{
 		offset = vec2(-1.0, +1.0);
 	}

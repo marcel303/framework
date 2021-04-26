@@ -54,7 +54,7 @@ void main()
 		strokeOffset = vec2(+1.0, +1.0);
 		strokeSize = strokeSize2;
 	}
-	else if (index == 3)
+	else // if (index == 3) // commented to avoid compiler warning about basePosition possibly being left uninitialized
 	{
 		basePosition = p1;
 		strokeOffset = vec2(-1.0, +1.0);
