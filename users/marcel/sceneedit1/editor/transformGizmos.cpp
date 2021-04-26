@@ -203,7 +203,7 @@ bool TransformGizmo::tick(
 		const int projection_axis2 = (axis + 2) % 3;
 		const float t1 = - origin_gizmo[projection_axis1] / direction_gizmo[projection_axis1];
 		const float t2 = - origin_gizmo[projection_axis2] / direction_gizmo[projection_axis2];
-		const float t = fminf(t1, t2);
+		const float t = fmaxf(t1, t2);
 		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 		const float scale = position_gizmo[axis] / dragScale.initialDistance;
 		const float scaleThisTick = lerp<float>(scale, 1.f, powf(scale_smoothingAmount, dt * 10.f));
@@ -334,7 +334,7 @@ bool TransformGizmo::tick(
 				const int projection_axis2 = (axis + 2) % 3;
 				const float t1 = - origin_gizmo[projection_axis1] / direction_gizmo[projection_axis1];
 				const float t2 = - origin_gizmo[projection_axis2] / direction_gizmo[projection_axis2];
-				const float t = fminf(t1, t2);
+				const float t = fmaxf(t1, t2);
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				const float initialDistance = position_gizmo[axis];
 				
@@ -529,11 +529,16 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 					? pad_color_highlight
 					: pad_color;
 			
+			const int base_opacity = 191;
+			const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
+			const int opacity = fadeValue * base_opacity;
+			
 			// draw outline
 			
 			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
 			{
 				setColor(color);
+				setAlpha(opacity);
 				lineCube(
 					position,
 					size);
@@ -543,10 +548,6 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 			
 			if (drawPass == kDrawPass_Translucent)
 			{
-				const int base_opacity = 191;
-				const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
-				const int opacity = fadeValue * base_opacity;
-			
 				setColor(color);
 				setAlpha(opacity);
 				fillCube(

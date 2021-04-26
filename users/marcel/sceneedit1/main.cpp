@@ -403,16 +403,23 @@ int main(int argc, char * argv[])
 	renderFunctions.drawLights = drawLights;
 	
 	rOne::RenderOptions renderOptions;
-	//renderOptions.bloom.enabled = true;
-	//renderOptions.motionBlur.enabled = true;
-	//renderOptions.depthSilhouette.enabled = true;
-	//renderOptions.lightScatter.enabled = true;
-	//renderOptions.linearColorSpace = true;
+	if (framework.isStereoVr() == false)
+	{
+		renderOptions.bloom.enabled = true;
+		renderOptions.motionBlur.enabled = true;
+		renderOptions.depthSilhouette.enabled = true;
+		renderOptions.lightScatter.enabled = true;
+		renderOptions.linearColorSpace = true;
+	}
 	
 #if USE_GUI_WINDOW
 	int framesSinceIdleForGuiWindow = 0;
 #endif
 	int framesSinceIdleForView3dWindow = 0;
+	
+#if USE_GUI_WINDOW && WINDOW_IS_3D
+	Mat4x4 guiWindowTransform(true);
+#endif
 	
 	for (;;)
 	{
@@ -442,10 +449,13 @@ int main(int argc, char * argv[])
 	#if USE_GUI_WINDOW && WINDOW_IS_3D
 		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
-			const Mat4x4 transform = vrPointer[1].getTransform(framework.vrOrigin);
-			
-			guiWindow->setTransform(transform);
+			guiWindowTransform = vrPointer[1].getTransform(Vec3());
 		}
+		
+		guiWindow->setTransform(
+			Mat4x4(true)
+			.Translate(framework.vrOrigin)
+			.Mul(guiWindowTransform));
 	#endif
 	
 		if (framework.vrMode)

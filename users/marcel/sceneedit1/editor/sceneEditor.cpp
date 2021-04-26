@@ -2199,19 +2199,25 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	if (framework.isStereoVr())
 	{
-		if (vrPointer[0].hasTransform)
+		for (auto & pointer : vrPointer)
 		{
-			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
-			pointerOrigin_world = transform.GetTranslation();
-			pointerDirection_world = transform.GetAxis(2);
-			hasPointer = true;
+			if (pointer.isPrimary)
+			{
+				if (pointer.hasTransform)
+				{
+					const Mat4x4 pointerTransform_world = pointer.getTransform(framework.vrOrigin);
+					pointerOrigin_world = pointerTransform_world.GetTranslation();
+					pointerDirection_world = pointerTransform_world.GetAxis(2);
+					hasPointer = true;
+				}
+				
+				pointerIsActive = pointer.isDown(VrButton_Trigger);
+				pointerBecameActive = pointer.wentDown(VrButton_Trigger);
+				
+				secondaryIsActive = pointer.isDown(VrButton_GripTrigger);
+				secondaryBecameActive = pointer.wentDown(VrButton_GripTrigger);
+			}
 		}
-		
-		pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
-		pointerBecameActive = vrPointer[0].wentDown(VrButton_Trigger);
-		
-		secondaryIsActive = vrPointer[0].isDown(VrButton_GripTrigger);
-		secondaryBecameActive = vrPointer[0].wentDown(VrButton_GripTrigger);
 	}
 	else
 	{
@@ -2376,17 +2382,28 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	{
 		inputIsCaptured = true;
 		
-		const float distance =
-			framework.isStereoVr()
-			? 4.f
-			: 5.f;
+		if (framework.isStereoVr())
+		{
+			const float distance = 4.f;
 			
-		const Mat4x4 transform =
-			Mat4x4(true)
-			.Translate(viewToWorld.GetAxis(2) * distance)
-			.Mul(viewToWorld);
+			const Vec3 position = pointerOrigin_world + pointerDirection_world * distance;
+			const Vec3 direction = position - viewToWorld.GetTranslation();
+			
+			const Mat4x4 transform = Mat4x4(true).Lookat(position, position + direction, Vec3(0, 1, 0));
 		
-		interactiveRing.show(transform);
+			interactiveRing.show(transform);
+		}
+		else
+		{
+			const float distance = 5.f;
+				
+			const Mat4x4 transform =
+				Mat4x4(true)
+				.Translate(viewToWorld.GetAxis(2) * distance)
+				.Mul(viewToWorld);
+			
+			interactiveRing.show(transform);
+		}
 	}
 	
 	interactiveRing.tick(
@@ -3987,6 +4004,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 					}
 					
 					gxSetTexture(simpleTextureId);
+					gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
 					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-kSize, +kSize * 2.f);
@@ -3995,6 +4013,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						gxTexCoord2f(0.f, 1.f); gxVertex2f(-kSize, 0.f);
 					}
 					gxEnd();
+					gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 					gxSetTexture(0);
 					
 					if (highlight)
