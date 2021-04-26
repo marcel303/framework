@@ -260,17 +260,25 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 	#endif
 		{
 			kinetic_scroll += Vec2(0.f, mouse.scrollY * -10.f);
-			
-			for (auto & pointer : vrPointer)
-				if (pointer.isPrimary)
-					kinetic_scroll += Vec2(0.f, pointer.getAnalog(VrAnalog_Y));
 		}
 		
 		io.MouseWheelH = kinetic_scroll[0] * dt;
-		io.MouseWheel = kinetic_scroll[1] * dt;
+		io.MouseWheel  = kinetic_scroll[1] * dt;
 	#else
-		io.MouseWheel = mouse.scrollY;
+		io.MouseWheelH = 0;
+		io.MouseWheel  = mouse.scrollY;
 	#endif
+	
+		for (auto & pointer : vrPointer)
+		{
+			if (pointer.isPrimary)
+			{
+				const float speed = 10.f;
+				
+				io.MouseWheelH += pointer.getAnalog(VrAnalog_X) * speed * dt;
+				io.MouseWheel  += pointer.getAnalog(VrAnalog_Y) * speed * dt;
+			}
+		}
 
 		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
