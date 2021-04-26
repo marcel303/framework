@@ -93,14 +93,14 @@ void VrPointer::updateInputState()
 
 				// capture buttons
 				
-				const int buttonMasks[VrButton_COUNT] =
+				const ovrButton buttonMasks[VrButton_COUNT] =
 					{
 						ovrButton_Trigger,
 						ovrButton_GripTrigger,
-						ovrButton_A,
-						ovrButton_B
+						side == VrSide_Left ? ovrButton_X : ovrButton_A,
+						side == VrSide_Left ? ovrButton_Y : ovrButton_B
 					};
-
+					
 				for (int i = 0; i < VrButton_COUNT; ++i)
 				{
 					if (buttonMasks[i] == 0)
@@ -118,15 +118,23 @@ void VrPointer::updateInputState()
 						m_hasChanged[i] = true;
 					}
 				}
-				
+
+				const ovrTouch touchMasks[VrButton_COUNT] =
+					{
+						ovrTouch_IndexTrigger,
+						(ovrTouch)0,
+						side == VrSide_Left ? ovrTouch_X : ovrTouch_A,
+						side == VrSide_Left ? ovrTouch_Y : ovrTouch_B
+					};
+
 				// capture button touches
 				
 				for (int i = 0; i < VrButton_COUNT; ++i)
 				{
-					if (buttonMasks[i] == 0)
+					if (touchMasks[i] == 0)
 						continue;
 					
-					if (state.Touches & buttonMasks[i])
+					if (state.Touches & touchMasks[i])
 						m_isTouched[i] = true;
 					else
 						m_isTouched[i] = false;
@@ -141,7 +149,7 @@ void VrPointer::updateInputState()
 					else if (i == VrButton_GripTrigger)
 						m_pressure[i] = state.GripTrigger;
 					else
-						m_pressure[i] = m_isDown[i] ? 1.f : i;
+						m_pressure[i] = m_isDown[i] ? 1.f : 0.f;
 				}
 				
 				// capture analog values
