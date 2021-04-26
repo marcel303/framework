@@ -54,6 +54,7 @@ struct TransformGizmo
 		float arrow[3] = { };
 		float pad[3] = { };
 		float ring[3] = { };
+		float scale[3] = { };
 	};
 	
 	State state = kState_Hidden;

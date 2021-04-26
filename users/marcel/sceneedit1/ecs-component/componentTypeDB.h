@@ -7,7 +7,7 @@
 
 struct ComponentTypeBase;
 
-//
+// component type DB
 
 struct ComponentTypeDB
 {
@@ -28,3 +28,30 @@ struct ComponentTypeDB
 };
 
 extern ComponentTypeDB g_componentTypeDB;
+
+// component type registration list
+
+struct ComponentTypeRegistrationBase
+{
+	ComponentTypeRegistrationBase * next = nullptr;
+	
+	virtual ComponentTypeBase * createComponentType() = 0;
+};
+
+extern ComponentTypeRegistrationBase * g_componentTypeRegistrationList;
+
+#define ComponentTypeRegistration(type) \
+	struct ComponentTypeRegistration_ ## type : ComponentTypeRegistrationBase \
+	{ \
+		ComponentTypeRegistration_ ## type() \
+		{ \
+			next = g_componentTypeRegistrationList; \
+			g_componentTypeRegistrationList = this; \
+		} \
+		virtual ComponentTypeBase * createComponentType() override final \
+		{ \
+			return new type(); \
+		} \
+	}; \
+	extern ComponentTypeRegistration_ ## type g_ComponentTypeRegistration_ ## type; \
+	ComponentTypeRegistration_ ## type g_ComponentTypeRegistration_ ## type;

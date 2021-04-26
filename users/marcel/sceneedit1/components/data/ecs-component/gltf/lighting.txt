@@ -68,6 +68,11 @@ void forEachLightId(int id)
 			nearestLightPosition,
 			light.attenuationEnd);
 	}
+	else
+	{
+		lightDir = vec3(1.0, 0.0, 0.0);
+		lightAttenuation = 0.0;
+	}
 
 	Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
 

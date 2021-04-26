@@ -4,16 +4,17 @@ include engine/ShaderUtil.txt
 shader_in vec3 v_position_object;
 shader_in vec4 v_color;
 
-uniform float maxDistance;
+uniform float scale;
+uniform vec3 offset;
 uniform float outputLinearColorSpace;
 
 void main()
 {
 	// -- calculate opacity based on view distance
 
-	float distance = length(v_position_object.xz);
+	float distance = length((v_position_object + offset).xz);
 
-	float opacity = v_color.a * saturate(1.0 - distance / 1.0);
+	float opacity = v_color.a * max(0.0, 1.0 - distance / scale);
 
 	// -- calculate color
 
@@ -21,7 +22,7 @@ void main()
 
 	// -- apply dither. this is a large improvement in quality in vr
 
-    color.rgb += colorDither8ScreenSpace(gl_FragCoord.xy);
+    color += colorDither8ScreenSpace(gl_FragCoord.xy);
 
 	// -- apply color space conversion
 
@@ -31,9 +32,6 @@ void main()
     }
 
     // -- store
-
-	//opacity = 0.0;
-	//color.r = 1.0;
 
     shader_fragColor = vec4(color, opacity);
 }

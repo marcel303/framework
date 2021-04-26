@@ -81,7 +81,7 @@ struct SceneEditor
 	struct
 	{
 		bool drawGrid = true;
-		float gridOpacity = .5f;
+		float gridOpacity = .1f;
 		bool drawGroundPlane = false;
 		bool drawNodes = true;
 		bool drawNodeBoundingBoxes = true;

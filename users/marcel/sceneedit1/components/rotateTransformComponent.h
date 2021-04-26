@@ -24,6 +24,8 @@ struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
 	RotateTransformComponentType()
 		: ComponentType("RotateTransformComponent", &g_rotateTransformComponentMgr)
 	{
+		tickPriority = kComponentPriority_Transform - 1;
+		
 		add("speed", &RotateTransformComponent::speed);
 	}
 };

@@ -120,6 +120,8 @@ vec3 nearestPointToAreaLight(
 		nearestPosition = nearestPointOnRect(position_light);
 	else if (areaLightType == kLightType_AreaCircle)
 		nearestPosition = nearestPointOnCircle(position_light);
+	else
+		nearestPosition = vec3(0.0);
 
 	// transform nearest position in light-space into view-space
 

@@ -1,17 +1,19 @@
-#if 0
-
 #include "parameterComponent.h"
+#include "helpers.h" // g_resourceDatabase
+
+// vfxgraph
 #include "vfxGraph.h"
 #include "vfxGraphManager.h"
 #include "vfxgraphComponent.h"
 
-#include "helpers.h" // g_resourceDatabase
+// framework
+#include "framework.h"
 
 VfxgraphComponentMgr g_vfxgraphComponentMgr;
 
 VfxgraphComponent::~VfxgraphComponent()
 {
-	s_vfxgraphComponentMgr.vfxGraphMgr->free(instance);
+	g_vfxgraphComponentMgr.vfxGraphMgr->free(instance);
 	
 	g_resourceDatabase.remove(&textureResource);
 }
@@ -22,7 +24,7 @@ void VfxgraphComponent::tick(const float dt)
 	{
 		// todo : width and height. take inspiration from vfx graph's vfx graph node
 		
-		instance->vfxGraph->tick(640, 480, dt);
+		instance->vfxGraph->tick(surfaceWidth, surfaceHeight, dt);
 		
 		textureResource.texture = instance->vfxGraph->traverseDraw();
 	}
@@ -30,7 +32,8 @@ void VfxgraphComponent::tick(const float dt)
 
 bool VfxgraphComponent::init()
 {
-	g_resourceDatabase.addComponentResource(id, "texture", &textureResource);
+// fixme : this assumes scene node ids are global; which they are not. resource DB should be a member of scene ?
+	//g_resourceDatabase.addComponentResource(componentSet->id, "texture", &textureResource);
 	
 	if (path.empty())
 	{
@@ -38,12 +41,20 @@ bool VfxgraphComponent::init()
 	}
 	else
 	{
-		instance = s_vfxgraphComponentMgr.vfxGraphMgr->createInstance(path.c_str(), 640, 480);
+		instance = g_vfxgraphComponentMgr.vfxGraphMgr->createInstance(
+			path.c_str(),
+			surfaceWidth,
+			surfaceHeight);
 		
 		if (instance == nullptr)
 		{
 			return false;
 		}
+	}
+	
+	if (surfaceWidth > 0 && surfaceHeight > 0)
+	{
+		surface = new Surface(surfaceWidth, surfaceHeight, false);
 	}
 	
 	auto * paramComp = componentSet->find<ParameterComponent>();
@@ -63,9 +74,19 @@ void VfxgraphComponent::propertyChanged(void * address)
 {
 	if (address == &path)
 	{
-		s_vfxgraphComponentMgr.vfxGraphMgr->free(instance);
+		g_vfxgraphComponentMgr.vfxGraphMgr->free(instance);
 		
-		instance = s_vfxgraphComponentMgr.vfxGraphMgr->createInstance(path.c_str(), 640, 480);
+		instance = g_vfxgraphComponentMgr.vfxGraphMgr->createInstance(path.c_str(), 640, 480);
+	}
+	else if (address == &surfaceWidth || address == &surfaceHeight)
+	{
+		delete surface;
+		surface = nullptr;
+		
+		if (surfaceWidth > 0 && surfaceHeight > 0)
+		{
+			surface = new Surface(surfaceWidth, surfaceHeight, false);
+		}
 	}
 }
 
@@ -81,5 +102,3 @@ VfxgraphComponentMgr::~VfxgraphComponentMgr()
 	delete vfxGraphMgr;
 	vfxGraphMgr = nullptr;
 }
-
-#endif

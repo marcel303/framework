@@ -46,9 +46,9 @@ void ResourceDatabase::add(const char * name, ResourceBase * resource)
 	head = e;
 }
 
-void ResourceDatabase::addComponentResource(const char * componentId, const char * resourceName, ResourceBase * resource)
+void ResourceDatabase::addComponentResource(const int componentId, const char * resourceName, ResourceBase * resource)
 {
-	std::string fullName = std::string(componentId) + "." + resourceName;
+	std::string fullName = String::ToString(componentId) + "." + resourceName;
 	
 	add(fullName.c_str(), resource);
 }

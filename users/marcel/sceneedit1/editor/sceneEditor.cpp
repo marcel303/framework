@@ -1037,7 +1037,6 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	}
 
 // todo : add some add child node versions with content :
-// - mesh : plane
 // - audio emitter (with source) (how is source referenced? resource pointer.. by name.. ??)
 // - video
 // todo : add vfx graph nodes for : video by name
@@ -1230,6 +1229,10 @@ SceneEditor::ComponentContextMenuResult SceneEditor::doComponentContextMenu(Scen
 
 	if (ImGui::BeginMenu("Add component.."))
 	{
+		// collect available component types
+		
+		std::vector<ComponentTypeBase*> availableComponentTypes;
+		
 		for (auto * componentType : g_componentTypeDB.componentTypes)
 		{
 			// check if the node already has a component of this type
@@ -1244,24 +1247,43 @@ SceneEditor::ComponentContextMenuResult SceneEditor::doComponentContextMenu(Scen
 			
 			if (hasComponent == false)
 			{
-				char text[256];
-				sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
-				
-				if (ImGui::MenuItem(text))
+				availableComponentTypes.push_back(componentType);
+			}
+		}
+			
+		// sort component types by type name
+		
+		std::sort(availableComponentTypes.begin(), availableComponentTypes.end(),
+			[](const ComponentTypeBase * first, const ComponentTypeBase * second) -> bool
 				{
-					result = kComponentContextMenuResult_ComponentAdded;
+					return strcmp(first->typeName, second->typeName) < 0;
+				});
+				
+		// show the menu items
+		
+		for (auto * componentType : availableComponentTypes)
+		{
+			char text[256];
+			sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
+			
+			if (ImGui::MenuItem(text))
+			{
+				result = kComponentContextMenuResult_ComponentAdded;
+				
+				undoCaptureBegin();
+				{
+					auto * component = componentType->componentMgr->createComponent(node.components.id);
 					
-					undoCaptureBegin();
+					node.components.add(component);
+					
+					if (component->init() == false)
 					{
-						auto * component = componentType->componentMgr->createComponent(node.components.id);
+						node.components.remove(component);
 						
-						if (component->init())
-							node.components.add(component);
-						else
-							componentType->componentMgr->destroyComponent(node.components.id);
+						componentType->componentMgr->destroyComponent(node.components.id);
 					}
-					undoCaptureEnd();
 				}
+				undoCaptureEnd();
 			}
 		}
 		
@@ -3489,39 +3511,72 @@ void SceneEditor::drawSceneTranslucent() const
 	}
 }
 
-static void drawEditorGrid(const float opacity)
+static void drawEditorGrid(const Camera & camera, const float opacity)
 {
 	gxPushMatrix();
 	{
-	// todo : for orbit camera, the origin should be the orbit anchor
-	// todo : for ortho mode, distance fade should be disabled
-	// todo : for perspective modes : movement should snap to grid
-		// position the grid at (0, 0) from the XZ position of the camera
-		Mat4x4 worldToView;
-		gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
-		const Mat4x4 viewToWorld = worldToView.CalcInv();
-		const Vec3 viewOrigin = viewToWorld.GetTranslation();
-		const Vec3 offset =
-			Vec3(
-				roundf(viewOrigin[0] / 2.f) * 2.f,
-				0.f,
-				roundf(viewOrigin[2] / 2.f) * 2.f);
+		const int kBaseResolution = 20;
+		const float kScale = 20.f;
+		
+		// determine grid origin. we'll need this for translating the grid, and to apply the distance fade effect
+		
+		Vec3 origin;
+		
+		if (framework.isStereoVr())
+		{
+			Mat4x4 worldToView;
+			gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+			const Mat4x4 viewToWorld = worldToView.CalcInv();
+			const Vec3 viewOrigin = viewToWorld.GetTranslation();
+		}
+		else
+		{
+			switch (camera.mode)
+			{
+			case Camera::kMode_Orbit:
+				origin = camera.orbit.origin;
+				break;
+			case Camera::kMode_Ortho:
+				origin = camera.ortho.position;
+				break;
+			case Camera::kMode_FirstPerson:
+				origin = camera.firstPerson.position;
+				break;
+			}
+		}
+		
+		// position the grid at (0, 0) from the XZ position of the origin
+		
+		// note : we need to do some snapping here to make sure the grid
+		//        doesn't appear to move. instead we snap to the grid to
+		//        make it appear the grid is infinite
+		
+		const float snapInterval = (kScale * 2 / kBaseResolution);
+		
+		const Vec3 offset(
+			roundf(origin[0] / snapInterval) * snapInterval,
+			0.f,
+			roundf(origin[2] / snapInterval) * snapInterval);
+				
 		gxTranslatef(offset[0], offset[1], offset[2]);
 		
-		gxScalef(10, 10, 10);
+		// note : we pass the 'relative' offset to shader, so it can better determine fade value
+		
+		const Vec3 relativeOffset = offset - origin;
 		
 		Shader shader("grid/distance-fade");
 		setShader(shader);
-		shader.setImmediate("maxDistance", 10.f);
+		shader.setImmediate("scale", kScale);
+		shader.setImmediate("offset", relativeOffset[0], relativeOffset[1], relativeOffset[2]);
 		shader.setImmediate("outputLinearColorSpace", 0.f);
 		{
 			setColor(colorWhite);
 			
 			setAlphaf(opacity);
-			drawGrid3dLine(10, 10, 0, 2, true);
+			drawGrid3dLine(kBaseResolution, kBaseResolution, 0, 2, true);
 			
 			setAlphaf(opacity * .8f);
-			drawGrid3dLine(50, 50, 0, 2, true);
+			drawGrid3dLine(kBaseResolution * 5, kBaseResolution * 5, 0, 2, true);
 		}
 		clearShader();
 	}
@@ -3540,7 +3595,7 @@ void SceneEditor::drawEditorGridTranslucent() const
 {
 	if (visibility.drawGrid)
 	{
-		drawEditorGrid(visibility.gridOpacity);
+		drawEditorGrid(camera, visibility.gridOpacity);
 	}
 }
 
@@ -4125,7 +4180,12 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	const Mat4x4 viewToWorld = worldToView.CalcInv();
 	
-	drawEditorGizmosOpaque(true);
+	pushDepthTest(true, DEPTH_GREATER, false);
+	{
+		drawEditorGizmosOpaque(true);
+	}
+	popDepthTest();
+	
 	drawEditorGizmosOpaque(false);
 
 	if (visibility.drawComponentDetails)

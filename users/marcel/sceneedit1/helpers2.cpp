@@ -1,20 +1,18 @@
+#include "componentType.h"
 #include "componentTypeDB.h"
 #include "helpers.h"
 #include "helpers2.h"
 #include "reflection.h"
 
-#define DEFINE_COMPONENT_TYPES
-#include "components/cameraComponent.h"
-#include "components/gltfComponent.h"
-#include "components/lightComponent.h"
-#include "components/modelComponent.h"
-#include "components/parameterComponent.h"
-#include "components/rotateTransformComponent.h"
-#include "components/transformComponent.h"
-//#include "components/vfxgraphComponent.h"
-#include "scene/sceneNodeComponent.h"
+#include "components/AngleAxis.h"
 
-//
+// libgg
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Vec4.h"
+
+// libstdcpp
+#include <string>
 
 void registerBuiltinTypes(TypeDB & typeDB)
 {
@@ -32,15 +30,12 @@ void registerBuiltinTypes(TypeDB & typeDB)
 
 void registerComponentTypes(TypeDB & typeDB, ComponentTypeDB & componentTypeDB)
 {
-	componentTypeDB.registerComponentType(new CameraComponentType());
-	componentTypeDB.registerComponentType(new GltfComponentType());
-	componentTypeDB.registerComponentType(new LightComponentType());
-	componentTypeDB.registerComponentType(new ModelComponentType());
-	componentTypeDB.registerComponentType(new ParameterComponentType());
-	componentTypeDB.registerComponentType(new RotateTransformComponentType());
-	componentTypeDB.registerComponentType(new SceneNodeComponentType());
-	componentTypeDB.registerComponentType(new TransformComponentType());
-	//componentTypeDB.registerComponentType(new VfxgraphComponentType());
+	for (auto * registration = g_componentTypeRegistrationList; registration != nullptr; registration = registration->next)
+	{
+		componentTypeDB.registerComponentType(registration->createComponentType());
+	}
+	
+	// perform reflection
 	
 	for (auto * componentType : componentTypeDB.componentTypes)
 	{

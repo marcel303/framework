@@ -325,10 +325,8 @@ void InteractiveRing::draw(const SceneEditor & sceneEditor) const
 							
 						gxRotatef(textAngle, 0, 0, 1);
 						
-						pushBlend(BLEND_ALPHA); // todo : draw text using a batch. move blend scope surrounding batch
 						setColor(colorRed);
 						drawText(0, 0, .2f, 0, 0, "%s", item.text.c_str());
-						popBlend();
 					}
 					gxPopMatrix();
 				}

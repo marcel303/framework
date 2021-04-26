@@ -5,8 +5,9 @@
 #include <math.h>
 
 static const float kMinArrowVisibility = .01f; // cos of angle (rad) at which the arrows will start to disappear
-static const float kMinPadVisibility = .12f; // cos of angle (rad) at which the pads will start to disappear
-static const float kMinRingVisibility = .06f; // cos of angle (rad) at which the arrows will start to disappear
+static const float kMinPadVisibility = .12f;   // cos of angle (rad) at which the pads   will start to disappear
+static const float kMinRingVisibility = .06f;  // cos of angle (rad) at which the arrows will start to disappear
+static const float kMinScaleVisibility = .01f; // cos of angle (rad) at which the scales will start to disappear
 
 void TransformGizmo::show(const Mat4x4 & transform)
 {
@@ -469,7 +470,7 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 	
 	if (drawPass == kDrawPass_DepthObscured)
 	{
-		pushDepthTest(true, DEPTH_GREATER, false);
+		pushBlend(BLEND_ALPHA);
 		pushColorPost(POST_RGB_TO_LUMI);
 	}
 	
@@ -529,16 +530,16 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 					? pad_color_highlight
 					: pad_color;
 			
-			const int base_opacity = 191;
+			const float base_opacity = 191 / 255.f;
 			const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
-			const int opacity = fadeValue * base_opacity;
+			const float opacity = fadeValue * base_opacity;
 			
 			// draw outline
 			
 			if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
 			{
 				setColor(color);
-				setAlpha(opacity);
+				setAlphaf(opacity);
 				lineCube(
 					position,
 					size);
@@ -549,7 +550,7 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 			if (drawPass == kDrawPass_Translucent)
 			{
 				setColor(color);
-				setAlpha(opacity);
+				setAlphaf(opacity);
 				fillCube(
 					position,
 					size);
@@ -614,13 +615,31 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 						? scale_color_highlight
 						: scale_color;
 			
-				// draw
+				const float base_opacity = 191/255.f;
+				const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.scale[i] - kMinScaleVisibility) / (1.f - kMinScaleVisibility))), .5f);
+				const float opacity = fadeValue * base_opacity;
 				
-				setColor(color);
-				if (intersectionResult.element == kElement_XScale + i)
-					fillCube(position, size);
-				else
-					lineCube(position, size);
+				// draw outline
+				
+				if (drawPass == kDrawPass_DepthObscured || drawPass == kDrawPass_Translucent)
+				{
+					setColor(color);
+					setAlphaf(opacity);
+					lineCube(
+						position,
+						size);
+				}
+				
+				// draw fill
+				
+				if (drawPass == kDrawPass_Translucent)
+				{
+					setColor(color);
+					setAlphaf(opacity);
+					fillCube(
+						position,
+						size);
+				}
 			}
 		}
 		
@@ -637,8 +656,8 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 	
 	if (drawPass == kDrawPass_DepthObscured)
 	{
-		popDepthTest();
 		popColorPost();
+		popBlend();
 	}
 	
 	if (!isInteractive)
@@ -718,6 +737,13 @@ void TransformGizmo::updateElementVisibility(Vec3Arg viewOrigin_world, Vec3Arg v
 	for (int i = 0; i < 3; ++i)
 	{
 		elementVisibility.ring[i] = fabsf(viewToGizmo_world * axis[i]);
+	}
+	
+	// update scale visibility
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		elementVisibility.scale[i] = 1.f - fabsf(viewToGizmo_world * axis[i]);
 	}
 }
 
@@ -961,6 +987,9 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 		
 		for (int i = 0; i < 3; ++i)
 		{
+			if (elementVisibility.scale[i] < kMinScaleVisibility)
+				continue;
+				
 			Vec3 position;
 			Vec3 size;
 			

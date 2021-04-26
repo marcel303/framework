@@ -17,9 +17,9 @@ struct TypeDB;
 
 struct SceneNode
 {
-	std::string name; // unique name, used during save/load only
+	std::string name;  // unique name, used during save/load only
 	
-	int id = -1; // id used for run-time lookups. note : not serialized, but allocated when a node is created
+	int id = -1;       // id used for run-time lookups. note : not serialized, but allocated when a node is created
 	int parentId = -1; // parent id used for run-time lookups. note : not serialized, but inferred when loading a scene
 	
 	std::vector<int> childNodeIds;

@@ -70,3 +70,7 @@ ComponentTypeBase * ComponentTypeDB::findComponentType(const std::type_index & t
 {
 	return ::findComponentType(componentTypes, typeIndex);
 }
+
+//
+
+ComponentTypeRegistrationBase * g_componentTypeRegistrationList = nullptr;

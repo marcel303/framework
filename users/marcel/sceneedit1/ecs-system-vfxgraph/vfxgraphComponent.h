@@ -1,11 +1,13 @@
-#if 0
-
 #pragma once
 
 #include "component.h"
 #include <string>
 
 //
+
+#define ENABLE_RESOURCE_TESTS 1 // todo : remove and disable
+
+#if ENABLE_RESOURCE_TESTS
 
 #include "resource.h"
 
@@ -14,7 +16,11 @@ struct TextureResource : Resource<TextureResource> // todo : move elsewhere
 	uint32_t texture;
 };
 
+#endif
+
 //
+
+class Surface;
 
 struct VfxGraphInstance;
 struct VfxGraphManager_Basic;
@@ -22,12 +28,18 @@ struct VfxGraphManager_Basic;
 struct VfxgraphComponent : Component<VfxgraphComponent>
 {
 	std::string path;
+	bool drawToSurface = true;
+	Surface * surface = nullptr;
+	int surfaceWidth = 256;
+	int surfaceHeight = 256;
 	
 	VfxGraphInstance * instance = nullptr;
 	
+#if ENABLE_RESOURCE_TESTS
 	TextureResource textureResource;
 	
 	std::vector<int> array;
+#endif
 	
 	virtual ~VfxgraphComponent() override final;
 	
@@ -54,14 +66,18 @@ extern VfxgraphComponentMgr g_vfxgraphComponentMgr;
 struct VfxgraphComponentType : ComponentType<VfxgraphComponent>
 {
 	VfxgraphComponentType()
-		: ComponentType("VfxgraphComponent")
+		: ComponentType("VfxgraphComponent", &g_vfxgraphComponentMgr)
 	{
-		in("path", &VfxgraphComponent::path);
+		add("path", &VfxgraphComponent::path)
+			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
+		add("drawToSurface", &VfxgraphComponent::drawToSurface);
+		add("surfaceWidth", &VfxgraphComponent::surfaceWidth);
+		add("surfaceHeight", &VfxgraphComponent::surfaceHeight);
 		
-		//in("array", &VfxgraphComponent::array);
+	#if ENABLE_RESOURCE_TESTS
+		add("array", &VfxgraphComponent::array);
+	#endif
 	}
 };
-
-#endif
 
 #endif

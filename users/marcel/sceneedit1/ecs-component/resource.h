@@ -61,7 +61,7 @@ struct ResourceDatabase
 	~ResourceDatabase();
 	
 	void add(const char * name, ResourceBase * resource);
-	void addComponentResource(const char * componentId, const char * resourceName, ResourceBase * resource);
+	void addComponentResource(const int componentId, const char * resourceName, ResourceBase * resource);
 	
 	void remove(ResourceBase * resource);
 	

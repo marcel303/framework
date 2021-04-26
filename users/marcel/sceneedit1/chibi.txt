@@ -10,18 +10,17 @@ library ecs-scene
 	depend_library libreflection-textio
 	scan_files *.cpp path scene
 	scan_files *.h   path scene
+	link_translation_unit_using_function_call link_ecsscene
 	header_path scene expose
 
 library ecs-components
 	depend_library ecs-component
 	depend_library ecs-parameter
 	depend_library ecs-scene
-
-	scan_files *.cpp path components group components
-	scan_files *.h   path components group components
-	
+	scan_files *.cpp path components
+	scan_files *.h   path components
+	link_translation_unit_using_function_call linkEcsComponents
 	header_path components expose
-	
 	resource_path components/data
 
 	# todo : separate out ecs-components-draw from ecs-component
@@ -30,9 +29,26 @@ library ecs-components
 	depend_library framework-gltf
 	depend_library renderOne
 
-library marcel-sceneedit
+library ecs-system-audio
+	depend_library binaural
+	depend_library ecs-component
+	depend_library portaudio
+	scan_files *.cpp path ecs-system-audio
+	scan_files *.h   path ecs-system-audio
+	link_translation_unit_using_function_call link_ecssystem_audio
+	header_path ecs-system-audio expose
+
+library ecs-system-vfxgraph
 	depend_library ecs-component
 	depend_library ecs-components
+	depend_library vfxgraph
+	scan_files *.cpp path ecs-system-vfxgraph
+	scan_files *.h   path ecs-system-vfxgraph
+	link_translation_unit_using_function_call link_ecssystem_vfxgraph
+	header_path ecs-system-vfxgraph expose
+
+library marcel-sceneedit
+	depend_library ecs-component
 	depend_library ecs-parameter
 	depend_library ecs-parameterui
 	depend_library ecs-scene
@@ -43,8 +59,6 @@ library marcel-sceneedit
 	depend_library libreflection-bindtofile
 	depend_library libreflection-jsonio
 	depend_library libreflection-textio
-	#depend_library vfxgraph
-	#depend_library vfxgraph-nodes
 	
 	#with_platform macos|linux|windows depend_library libnfd
 	with_platform macos|linux|windows depend_library ImGuiFileDialog
@@ -56,12 +70,15 @@ library marcel-sceneedit
 	
 	scan_files *.cpp exclude_path main.cpp
 	scan_files *.h
-	scan_files *.cpp path editor group editor
-	scan_files *.h   path editor group editor
+	scan_files *.cpp path editor
+	scan_files *.h   path editor
 	
 	header_path . expose
 	
 	resource_path editor/data
+
+# todo : shouldn't depend on components here!
+	depend_library ecs-components
 
 app marcel-sceneedit-100-bindStructToFile
 	depend_library libreflection-bindtofile
@@ -101,7 +118,10 @@ app marcel-sceneedit-800-realtimeEditing
 	resource_path data
 
 app marcel-sceneedit1
+	depend_library ecs-system-audio
+	#depend_library ecs-system-vfxgraph
 	depend_library marcel-sceneedit
 	depend_library renderOne
+	#depend_library vfxgraph-nodes
 	add_files main.cpp
 	resource_path data
