@@ -1,0 +1,3 @@
+app marcel-beam2d
+	depend_library framework
+	add_files main.cpp
