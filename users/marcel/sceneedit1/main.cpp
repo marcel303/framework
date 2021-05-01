@@ -113,6 +113,29 @@ struct MyRenderOptions
 
 //
 
+struct FpsCounter
+{
+	int frameCounter = 0;
+	
+	int lastSeconds = 0;
+	
+	void nextFrame()
+	{
+		frameCounter++;
+		
+		const int seconds = int(framework.time);
+		
+		if (seconds != lastSeconds)
+		{
+			logInfo("fps: %d", frameCounter);
+			frameCounter = 0;
+			lastSeconds = seconds;
+		}
+	}
+};
+
+//
+
 #include "cameraResource.h"
 
 static void testResources()
@@ -493,16 +516,29 @@ int main(int argc, char * argv[])
 	
 		if (framework.vrMode)
 		{
-			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
-			const bool transformIsValud = vrPointer[0].hasTransform;
-			
-			const int buttonMask =
-				vrPointer[0].isDown(VrButton_Trigger) << 0 |
-				vrPointer[0].isDown(VrButton_GripTrigger) << 1;
-			
+			Mat4x4 transform(true);
+			bool transformIsValid = false;
+			int buttonMask = 0;
+
+			for (auto & pointer : vrPointer)
+			{
+				if (pointer.isPrimary)
+				{
+					if (pointer.hasTransform)
+					{
+						transform = pointer.getTransform(framework.vrOrigin);
+						transformIsValid = true;
+					}
+
+					buttonMask =
+						pointer.isDown(VrButton_Trigger) << 0 |
+						pointer.isDown(VrButton_GripTrigger) << 1;
+				}
+			}
+
 			inputIsCaptured |= framework.tickVirtualDesktop(
 				transform,
-				transformIsValud,
+				transformIsValid,
 				buttonMask,
 				false);
 		}
@@ -738,6 +774,8 @@ int main(int argc, char * argv[])
 		
 		if (framework.isStereoVr())
 		{
+			// view matrices will be changing every frame in VR
+			
 			redrawView3d = true;
 		}
 		
@@ -874,15 +912,7 @@ int main(int argc, char * argv[])
 			framework.present();
 		}
 		
-		static int n = 0; // todo : remove fps counter
-		++n;
-		static int f = 0;
-		if ((int)framework.time != f)
-		{
-			logInfo("fps: %d", n / framework.getEyeCount());
-			n = 0;
-			f = (int)framework.time;
-		}
+		fpsCounter.nextFrame();
 	}
 	
 	renderer.free();

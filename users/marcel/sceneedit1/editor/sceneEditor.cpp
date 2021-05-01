@@ -2451,7 +2451,9 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 
 		if (hoverNodeId != oldHoverNodeId)
 		{
-			vrPointer[0].wantsToVibrate = true;
+			for (auto & pointer : vrPointer)
+				if (pointer.isPrimary)
+					pointer.wantsToVibrate = true;
 		}
 	}
 	
