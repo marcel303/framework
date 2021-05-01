@@ -496,7 +496,7 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 		for (int i = 0; i < 3; ++i)
 		{
 			if (elementVisibility.pad[i] < kMinPadVisibility)
-				continue;;
+				continue;
 				
 			// determine position and size
 			
@@ -806,7 +806,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 			};
 			
 			if (elementVisibility.pad[i] < kMinPadVisibility)
-				continue;;
+				continue;
 
 			const int axis1 = (i + 0) % 3;
 			const int axis2 = (i + 1) % 3;

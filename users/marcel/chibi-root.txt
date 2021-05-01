@@ -10,6 +10,7 @@ with_platform macos    add audiounit1
 with_platform iphoneos add audiounit1
 with_platform macos   add avpaint
 with_platform windows add avpaint
+add beam2d
 add bilateralFilter1
 with_platform macos add biquad-simd
 add box2d1

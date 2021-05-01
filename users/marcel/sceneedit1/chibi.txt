@@ -1,9 +1,13 @@
+# -- ecs component
+
 library ecs-component
 	depend_library libgg
 	depend_library libreflection
 	scan_files cpp path ecs-component
 	scan_files h   path ecs-component
 	header_path ecs-component expose
+
+# -- ecs scene
 
 library ecs-scene
 	depend_library ecs-component
@@ -12,6 +16,8 @@ library ecs-scene
 	scan_files *.h   path scene
 	link_translation_unit_using_function_call link_ecsscene
 	header_path scene expose
+
+# -- ecs basic components
 
 library ecs-components
 	depend_library ecs-component
@@ -29,14 +35,19 @@ library ecs-components
 	depend_library framework-gltf
 	depend_library renderOne
 
+# -- ecs systems
+
 library ecs-system-audio
 	depend_library binaural
 	depend_library ecs-component
+	depend_library ecs-scene
 	depend_library portaudio
+	depend_library zita-rev1
 	scan_files *.cpp path ecs-system-audio
 	scan_files *.h   path ecs-system-audio
 	link_translation_unit_using_function_call link_ecssystem_audio
 	header_path ecs-system-audio expose
+	resource_path ecs-system-audio/data
 
 library ecs-system-vfxgraph
 	depend_library ecs-component
@@ -46,6 +57,8 @@ library ecs-system-vfxgraph
 	scan_files *.h   path ecs-system-vfxgraph
 	link_translation_unit_using_function_call link_ecssystem_vfxgraph
 	header_path ecs-system-vfxgraph expose
+
+# -- ecs scene editor
 
 library marcel-sceneedit
 	depend_library ecs-component
@@ -79,6 +92,8 @@ library marcel-sceneedit
 
 # todo : shouldn't depend on components here!
 	depend_library ecs-components
+
+# -- ecs component + scene test apps
 
 app marcel-sceneedit-100-bindStructToFile
 	depend_library libreflection-bindtofile
@@ -117,7 +132,9 @@ app marcel-sceneedit-800-realtimeEditing
 	header_path .
 	resource_path data
 
-app marcel-sceneedit1
+# -- ecs scene editor test app
+
+app marcel-sceneedit-test
 	depend_library ecs-system-audio
 	#depend_library ecs-system-vfxgraph
 	depend_library marcel-sceneedit

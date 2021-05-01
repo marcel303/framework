@@ -337,7 +337,7 @@ static void TestBeamTree()
 	Bouncer entityList[entityCount];
 
 	for (int i = 0; i < entityCount; ++i)
-		entityList[i].Setup(Vec2F(0.0f, 0.0f), Vec2F(VIEW_SX, VIEW_SY), 100.0f);
+		entityList[i].Setup(Vec2F(0.0f, 0.0f), Vec2F(VIEW_SX, VIEW_SY), 10.0f);
 
 	for (;;)
 	{

@@ -18,6 +18,11 @@
 #include "parameter.h"
 #include "parameterUi.h"
 
+// ecs-system-audio
+#include "audioEmitterToAudioOutput.h" // todo : rename file to StereoOutputBuffer
+#include "audiooutput/AudioOutput_Native.h" // todo : remove
+#include <mutex> // todo : remove
+
 // libreflection
 #include "lineReader.h"
 #include "lineWriter.h"
@@ -63,22 +68,6 @@ todo :
 - add template file list / browser
 - add support for template editing
 - add option to add nodes from template
-
-done :
-
-+ add lookat/focus option to scene structure view
-	+ as a context menu
-+ add 'Paste tree' to scene structure context menu
-+ add support for copying node tree 'Copy tree'
-+ add libreflection-jsonio
-+ remove json references from scene edit
-+ add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
-+ avoid UI from jumping around
-	+ add independent scrolling area for scene structure
-	+ add independent scrolling area for selected node
-+ use scene structure tree to select nodes. remove inline editing
-+ separate node traversal/scene structure view from node editor
-+ add 'path' editor type hint. show a browser button and prompt a file dialog when pressed
 
 */
 
@@ -420,6 +409,50 @@ int main(int argc, char * argv[])
 #if USE_GUI_WINDOW && WINDOW_IS_3D
 	Mat4x4 guiWindowTransform(true);
 #endif
+
+	FpsCounter fpsCounter;
+	
+// todo : remove this test code
+	class MyAudioStream : public AudioStream
+	{
+	public:
+		std::mutex mutex;
+		
+		Mat4x4 worldToView;
+		
+		virtual int Provide(int numSamples, AudioSample * __restrict samples) override
+		{
+			Mat4x4 worldToView_local;
+			
+			mutex.lock();
+			{
+				worldToView_local = worldToView;
+			}
+			mutex.unlock();
+			
+			float outputBufferL[numSamples];
+			float outputBufferR[numSamples];
+			audioEmitterToStereoOutputBuffer(
+				worldToView_local,
+				outputBufferL,
+				outputBufferR,
+				numSamples);
+			
+			const float scale = ((1 << 15) - 1);
+			
+			for (int i = 0; i < numSamples; ++i)
+			{
+				samples[i].channel[0] = int(outputBufferL[i] * scale);
+				samples[i].channel[1] = int(outputBufferR[i] * scale);
+			}
+			
+			return numSamples;
+		}
+	};
+	AudioOutput_Native audioOutput;
+	audioOutput.Initialize(2, 48000, 256);
+	MyAudioStream audioStream;
+	audioOutput.Play(&audioStream);
 	
 	for (;;)
 	{
@@ -756,6 +789,13 @@ int main(int argc, char * argv[])
 					Mat4x4 worldToView;
 					gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 					g_lightComponentMgr.beforeDraw(worldToView);
+
+					// todo : remove this test code
+					audioStream.mutex.lock();
+					{
+						audioStream.worldToView = worldToView;
+					}
+					audioStream.mutex.unlock();
 					
 					// render the scene
 					
