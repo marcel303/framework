@@ -10,7 +10,7 @@
 		switch (level)
 		{
 		case LogLevel_Debug:
-			return ANDROID_LOG_VERBOSE;
+			return ANDROID_LOG_DEBUG;
 		case LogLevel_Info:
 			return ANDROID_LOG_INFO;
 		case LogLevel_Warning:
