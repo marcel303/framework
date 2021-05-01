@@ -83,6 +83,11 @@ namespace binaural
 			mutex != nullptr;
 	}
 	
+	void Binauralizer::setSampleSet(const HRIRSampleSet * in_sampleSet)
+	{
+		sampleSet = in_sampleSet;
+	}
+	
 	void Binauralizer::setSampleLocation(const float elevation, const float azimuth)
 	{
 		mutex->lock();

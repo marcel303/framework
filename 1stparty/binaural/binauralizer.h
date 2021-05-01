@@ -82,13 +82,19 @@ namespace binaural
 		
 		Binauralizer();
 		
-		void init(const HRIRSampleSet * _sampleSet, Mutex * _mutex);
+		void init(const HRIRSampleSet * sampleSet, Mutex * mutex);
 		void shut();
 		
 		bool isInit() const;
 
 		/**
-		 * Sets the sample location used to look up the HRIR data. The location (elevation, azimuth) can be interpreted as the orientation of a sound source to be spatialized, relative to the listener's head.
+		 * Sets the sample set used to look up the HRIR data.
+		 * @param sampleSet The HRIR sample set used to look up the HRIR data.
+		 */
+		void setSampleSet(const HRIRSampleSet * sampleSet);
+		
+		/**
+		 * (THREAD SAFE) Sets the sample location used to look up the HRIR data. The location (elevation, azimuth) can be interpreted as the orientation of a sound source to be spatialized, relative to the listener's head.
 		 * @param elevation The elevation (in degrees) coordinate of the hrtf filter location.
 		 * @param azimuth The azimuth (in degrees) coordinate of the hrtf filter location.
 		 */
