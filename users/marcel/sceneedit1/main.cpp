@@ -21,6 +21,7 @@
 // ecs-system-audio
 #include "audioEmitterToAudioOutput.h" // todo : rename file to StereoOutputBuffer
 #include "audiooutput/AudioOutput_Native.h" // todo : remove
+#include "reverbZoneComponent.h" // todo : remove
 #include <mutex> // todo : remove
 
 // libreflection
@@ -445,6 +446,8 @@ int main(int argc, char * argv[])
 		
 		virtual int Provide(int numSamples, AudioSample * __restrict samples) override
 		{
+			g_reverbZoneComponentMgr.onAudioThreadProcess();
+			
 			Mat4x4 worldToView_local;
 			
 			mutex.lock();
@@ -472,8 +475,12 @@ int main(int argc, char * argv[])
 			return numSamples;
 		}
 	};
+	
 	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, 48000, 256);
+	
+	g_reverbZoneComponentMgr.onAudioThreadBegin();
+	
 	MyAudioStream audioStream;
 	audioOutput.Play(&audioStream);
 	
@@ -915,6 +922,11 @@ int main(int argc, char * argv[])
 		fpsCounter.nextFrame();
 	}
 	
+	audioOutput.Stop();
+	audioOutput.Shutdown();
+	
+	g_reverbZoneComponentMgr.onAudioThreadEnd();
+
 	renderer.free();
 	
 #if USE_GUI_WINDOW

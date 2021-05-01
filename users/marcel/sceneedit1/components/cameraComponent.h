@@ -15,6 +15,11 @@ struct CameraComponent : Component<CameraComponent>
 	std::string controller;
 
 	virtual void tick(const float dt) override final;
+	
+	virtual const char * getGizmoTexturePath() const override
+	{
+		return "gizmo-camera.png";
+	}
 };
 
 struct CameraComponentMgr : ComponentMgr<CameraComponent>

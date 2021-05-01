@@ -8,12 +8,29 @@
 #include "binaural_oalsoft.h" // todo : move to other file
 #include "framework.h" // framework.resolveResourcePath // todo : remove. let entity initializing audio system do the resolve
 
-#include "audiostream/AudioStreamWave.h"
+#include "audiostream/AudioStreamWave.h" // todo : remove
+
+#include "reverb.h" // todo : rename to reverb-zita-rev1.h
 
 static binaural::HRIRSampleSet * s_hrirSampleSet = nullptr;
 
 static AudioStreamWave s_audioStream;
 static AudioSample s_audioStreamSamples[256];
+
+static float computeDistanceSqToReverbZone(
+	Vec3Arg position_world,
+	const ReverbZoneComponentMgr::Zone & reverbZone)
+{
+	// determine distance to world space position based on volume of the reverb zone
+	
+	const Vec3 position_reverbZone = reverbZone.worldToObject.Mul4(position_world).Div(reverbZone.boxExtents);
+	
+// todo : compute in reverb zone space or world space ? pro : distance attenuation scales with reverb zone size. con : not sure if that's actually correct ..
+	const Vec3 nearestPointOnBox_reverbZone = position_reverbZone.Max(Vec3(-1.f)).Min(Vec3(+1.f));
+	const Vec3 delta_reverbZone = position_reverbZone - nearestPointOnBox_reverbZone;
+	
+	return delta_reverbZone.CalcSizeSq();
+}
 
 void audioEmitterToStereoOutputBuffer(
 	const Mat4x4 & worldToListener,
@@ -21,6 +38,9 @@ void audioEmitterToStereoOutputBuffer(
 	float * __restrict outputBufferR,
 	const int numFramesThisBlock)
 {
+	const Mat4x4 listenerToWorld = worldToListener.CalcInv();
+	const Vec3 listenerPosition_world = listenerToWorld.GetTranslation();
+	
 // todo : use eight corners plus nearest vertex method for spatializing reverb zones? or rethink the issue
 
 // todo : add a central place to load the HRIR sample set
@@ -38,7 +58,6 @@ void audioEmitterToStereoOutputBuffer(
 	s_audioStream.Provide(numFramesThisBlock, s_audioStreamSamples); // todo : remove
 
 	g_audioEmitterComponentMgr.mutex.lock();
-	g_reverbZoneComponentMgr.mutex.lock();
 
 	// produce samples for audio emitter
 	
@@ -55,16 +74,18 @@ void audioEmitterToStereoOutputBuffer(
 			audioEmitterComp->outputBuffer[s] = (s_audioStreamSamples[s].channel[0] + s_audioStreamSamples[s].channel[1]) / float(1 << 16);
 		}
 		
-	// todo : add method to change HRIR sample set?
+	// todo : init in some place..
 		audioEmitterComp->binauralizer.shut();
 		audioEmitterComp->binauralizer.init(s_hrirSampleSet, &audioEmitterComp->mutex);
+	// todo : set sample set just once
+		audioEmitterComp->binauralizer.setSampleSet(s_hrirSampleSet);
 	}
 	
 	// compute routing weights for each audio emitter vs each reverb zone,
 	// and insert the weight + reverb zone into a (limited capacity) list
 	// of reverb zones per audio emitter
 	
-	const int kMaxReverbZonesPerAudioEmitter = 2;
+	const int kMaxReverbZonesPerAudioEmitter = 4;
 	
 	int   * __restrict reverbZoneIndices = (int*)  alloca(g_audioEmitterComponentMgr.numComponents * kMaxReverbZonesPerAudioEmitter * sizeof(int));
 	float * __restrict reverbZoneWeights = (float*)alloca(g_audioEmitterComponentMgr.numComponents * kMaxReverbZonesPerAudioEmitter * sizeof(float));
@@ -87,16 +108,22 @@ void audioEmitterToStereoOutputBuffer(
 		if (audioEmitterComp == nullptr || audioEmitterComp->enabled == false)
 			continue;
 		
-		for (int z = 0; z < g_reverbZoneComponentMgr.numComponents; ++z)
+		for (int z = 0; z < g_reverbZoneComponentMgr.zones.size(); ++z)
 		{
-			auto * reverbZoneComp = g_reverbZoneComponentMgr.components[z];
+			auto & reverbZone = g_reverbZoneComponentMgr.zones[z];
 			
-			if (reverbZoneComp == nullptr || reverbZoneComp->enabled == false)
+			if (reverbZone.enabled == false || reverbZone.hasTransform == false)
 				continue;
 				
-		// todo : compute reverb zone weight depending on audio emitter position and reverb zone geometry
+			// compute reverb zone weight depending on audio emitter position and reverb zone geometry
 		
-			const float reverbZoneWeight = 1.f;
+		// fixme : not safe to access scene node comp
+			auto * audioEmitter_sceneNodeComp = audioEmitterComp->componentSet->find<SceneNodeComponent>();
+			const Vec3 audioEmitterPosition_world = audioEmitter_sceneNodeComp->objectToWorld.GetTranslation();
+		
+			const float attenuationDistanceSq = computeDistanceSqToReverbZone(audioEmitterPosition_world, reverbZone);
+			
+			const float reverbZoneWeight = 1.f / fmaxf(1.f, attenuationDistanceSq);
 			
 			if (reverbZoneWeight <= 0.f)
 				continue;;
@@ -130,23 +157,38 @@ void audioEmitterToStereoOutputBuffer(
 				reverbZoneWeights_itr[slot_index] = reverbZoneWeight;
 			}
 		}
+		
+		// normalize weight, so the audio emitter distributes its audio signal amongst the reverb zones
+		
+		float totalWeight = 0.f;
+		
+		for (int i = 0; i < kMaxReverbZonesPerAudioEmitter; ++i)
+			if (reverbZoneIndices_itr[i] != -1)
+				totalWeight += reverbZoneWeights_itr[i];
+		
+		if (totalWeight > 0.f)
+		{
+			for (int i = 0; i < kMaxReverbZonesPerAudioEmitter; ++i)
+				if (reverbZoneIndices_itr[i] != -1)
+					reverbZoneWeights_itr[i] /= totalWeight;
+		}
 	}
 	
 	// perform reverb processing
 	
 	// 1. initialize the reverb input buffer to zero
 	
-	for (int z = 0; z < g_reverbZoneComponentMgr.numComponents; ++z)
+	for (int z = 0; z < g_reverbZoneComponentMgr.zones.size(); ++z)
 	{
-		auto * reverbZoneComp = g_reverbZoneComponentMgr.components[z];
+		auto & reverbZone = g_reverbZoneComponentMgr.zones[z];
 		
-		if (reverbZoneComp == nullptr || reverbZoneComp->enabled == false)
+		if (reverbZone.enabled == false)
 			continue;
 		
 		for (int i = 0; i < numFramesThisBlock; ++i)
 		{
-			reverbZoneComp->inputBuffer[0][i] = 0.f;
-			reverbZoneComp->inputBuffer[1][i] = 0.f;
+			reverbZone.inputBuffer[0][i] = 0.f;
+			reverbZone.inputBuffer[1][i] = 0.f;
 		}
 	}
 	
@@ -172,12 +214,12 @@ void audioEmitterToStereoOutputBuffer(
 				const int   reverbZoneIndex  = reverbZoneIndices_itr[i];
 				const float reverbZoneWeight = reverbZoneWeights_itr[i];
 				
-				auto * reverbZoneComp = g_reverbZoneComponentMgr.components[reverbZoneIndex];
+				auto & reverbZone = g_reverbZoneComponentMgr.zones[reverbZoneIndex];
 				
 				for (int s = 0; s < numFramesThisBlock; ++s)
 				{
-					reverbZoneComp->inputBuffer[0][s] += audioEmitterComp->outputBuffer[s] * reverbZoneWeight;
-					reverbZoneComp->inputBuffer[1][s] += audioEmitterComp->outputBuffer[s] * reverbZoneWeight;
+					reverbZone.inputBuffer[0][s] += audioEmitterComp->outputBuffer[s] * reverbZoneWeight;
+					reverbZone.inputBuffer[1][s] += audioEmitterComp->outputBuffer[s] * reverbZoneWeight;
 				}
 			}
 		}
@@ -191,19 +233,19 @@ void audioEmitterToStereoOutputBuffer(
 	memset(reverbOutputBufferL, 0, numFramesThisBlock * sizeof(float));
 	memset(reverbOutputBufferR, 0, numFramesThisBlock * sizeof(float));
 	
-	for (int z = 0; z < g_reverbZoneComponentMgr.numComponents; ++z)
+	for (int z = 0; z < g_reverbZoneComponentMgr.zones.size(); ++z)
 	{
-		auto * reverbZoneComp = g_reverbZoneComponentMgr.components[z];
+		auto & reverbZone = g_reverbZoneComponentMgr.zones[z];
 		
-		if (reverbZoneComp == nullptr || reverbZoneComp->enabled == false)
+		if (reverbZone.enabled == false)
 			continue;
 		
-		reverbZoneComp->reverb.prepare(numFramesThisBlock);
+		reverbZone.reverb->prepare(numFramesThisBlock);
 		
 		float * src[2] =
 		{
-			reverbZoneComp->inputBuffer[0],
-			reverbZoneComp->inputBuffer[1]
+			reverbZone.inputBuffer[0],
+			reverbZone.inputBuffer[1]
 		};
 		
 		float samplesL[numFramesThisBlock];
@@ -215,32 +257,15 @@ void audioEmitterToStereoOutputBuffer(
 			samplesR
 		};
 		
-		// todo : let zita-rev1 perform accumulation into dst
-		
-		auto & reverb = reverbZoneComp->reverb;
-		
-		reverb.set_delay(reverbZoneComp->preDelay);
-		reverb.set_rtlow(reverbZoneComp->t60Low);
-		reverb.set_rtmid(reverbZoneComp->t60Mid);
-		reverb.set_xover(reverbZoneComp->t60CrossoverFrequency);
-		reverb.set_fdamp(reverbZoneComp->dampingFrequency);
-		reverb.set_eq1( 160.f, reverbZoneComp->eq1Gain);
-		reverb.set_eq2(2500.f, reverbZoneComp->eq2Gain);
+		auto & reverb = *reverbZone.reverb;
 		
 		reverb.process(numFramesThisBlock, src, dst);
 		
 		// calculate distance attenuation
 		
-		auto * sceneNodeComp = reverbZoneComp->componentSet->find<SceneNodeComponent>();
+		const float attenuationDistanceSq = computeDistanceSqToReverbZone(listenerPosition_world, reverbZone);
 		
-	// todo : determine distance to listener based on volume of the reverb zone
-		const Vec3 reverbZonePosition_world = sceneNodeComp->objectToWorld.GetTranslation();
-		const Vec3 reverbZonePosition_listener = worldToListener.Mul4(reverbZonePosition_world);
-		
-		const float distanceToListenerSq = reverbZonePosition_listener.CalcSizeSq();
-		
-		const float kMinDistanceSq = powf(.1f, 2.f);
-		const float distanceAttenuation = 1.f / fmaxf(kMinDistanceSq, distanceToListenerSq);
+		const float distanceAttenuation = 1.f / fmaxf(1.f, attenuationDistanceSq);
 		
 		// apply distance attenuation and accumulate into reverb output buffer
 		
@@ -268,6 +293,7 @@ void audioEmitterToStereoOutputBuffer(
 		
 		// determine audio emitter position relative to the listener and compute elevation and azimuth for binauralization
 		
+	// fixme : not safe to access scene node comp
 		auto * sceneNodeComp = audioEmitterComp->componentSet->find<SceneNodeComponent>();
 		
 		const Vec3 audioEmitterPosition_world = sceneNodeComp->objectToWorld.GetTranslation();
@@ -299,7 +325,6 @@ void audioEmitterToStereoOutputBuffer(
 		
 		// calculate distance attenuation
 		
-	// todo : determine distance to listener based on volume of the audio emitter
 		const float distanceToListenerSq = audioEmitterPosition_listener.CalcSizeSq();
 		
 		const float kMinDistanceSq = powf(.1f, 2.f);
@@ -322,6 +347,5 @@ void audioEmitterToStereoOutputBuffer(
 		outputBufferR[s] = reverbOutputBufferR[s] + binauralOutputBufferR[s];
 	}
 	
-	g_reverbZoneComponentMgr.mutex.unlock();
 	g_audioEmitterComponentMgr.mutex.unlock();
 }

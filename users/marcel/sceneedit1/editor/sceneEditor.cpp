@@ -1,17 +1,15 @@
-// ecs-sceneEditor
+#define DEFINE_COMPONENT_TYPES
+
+// ecs-sceneeditor
 #include "editor/componentPropertyUi.h"
 #include "editor/parameterComponentUi.h"
 #include "editor/raycast.h"
 #include "editor/scene_clipboardHelpers.h"
 #include "editor/sceneEditor.h"
+#include "editor/sceneEditor-componentDraw.h"
 #include "editor/transformGizmos.h"
 
 // ecs-scene
-#define DEFINE_COMPONENT_TYPES
-#include "components/gltfComponent.h"
-#include "components/modelComponent.h"
-#include "components/parameterComponent.h"
-#include "components/transformComponent.h"
 #include "helpers.h" // findComponentType
 #include "scene.h"
 #include "sceneIo.h"
@@ -21,6 +19,15 @@
 // ecs-component
 #include "componentType.h"
 #include "componentTypeDB.h"
+
+// ecs-components
+#include "components/gltfComponent.h"
+#include "components/modelComponent.h"
+#include "components/parameterComponent.h"
+#include "components/transformComponent.h"
+
+// ecs-system-audio
+#include "reverbZoneComponent.h"
 
 // ecs-parameter
 #include "parameterUi.h"
@@ -59,7 +66,6 @@
 #if SCENEEDIT_USE_IMGUIFILEDIALOG
 	#include "ImGuiFileDialog.h"
 #endif
-
 
 //
 
@@ -159,6 +165,9 @@ static bool getBoundingBoxForNode(const SceneNode & node, Vec3 & min, Vec3 & max
 	
 	for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 	{
+		if (component->enabled == false)
+			continue;
+			
 		if (hasMinMax)
 		{
 			Vec3 compMin(false);
@@ -683,6 +692,8 @@ void SceneEditor::editNode(const int nodeId)
 							component->enabled = enabled;
 						}
 						undoCaptureEnd();
+						
+						component->propertyChanged(&component->enabled);
 					}
 					ImGui::SameLine();
 
@@ -1037,7 +1048,6 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 	}
 
 // todo : add some add child node versions with content :
-// - audio emitter (with source) (how is source referenced? resource pointer.. by name.. ??)
 // - video
 // todo : add vfx graph nodes for : video by name
 // todo : vfx graph component : addObject<VfxNodeScene> .. or something .. that gives access to the scene .. allow access to scene nodes by name .. useful for video node for instance, to start / stop playback of a specific video hosted by a node
@@ -3744,266 +3754,33 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 		framework.isStereoVr() ||
 		camera.mode != Camera::kMode_Ortho;
 		
+	ComponentDraw_Framework draw;
+	
 	for (auto node_itr : scene.nodes)
 	{
 		auto * node = node_itr.second;
 		
-		auto * sceneNodeComp = node->components.find<SceneNodeComponent>();
+		draw.sceneNodeComponent = node->components.find<SceneNodeComponent>();
 		
-		const bool isSelected = selection.selectedNodes.count(node->id) != 0;
+		draw.isSelected = selection.selectedNodes.count(node->id) != 0;
 		
-		// draw at node location
-		
-		const Vec3 position = sceneNodeComp->objectToWorld.GetTranslation();
+		// fetch simple texture id and draw gizmo for each component
 		
 		GxTextureId simpleTextureId = 0;
 		
-		for (;;)
+		for (auto * comp = node->components.head; comp != nullptr; comp = comp->next_in_set)
 		{
-			auto * cameraComp = node->components.find<CameraComponent>();
-			
-			if (cameraComp != nullptr && cameraComp->enabled)
+			if (comp->enabled == false)
+				continue;
+				
+			const char * simpleTexturePath = comp->getGizmoTexturePath();
+				
+			if (simpleTexturePath != nullptr)
 			{
-				simpleTextureId = getTexture("gizmo-camera.png");
-				break;
+				simpleTextureId = getTexture(simpleTexturePath);
 			}
-			
-			auto * lightComp = node->components.find<LightComponent>();
-			
-			if (lightComp != nullptr && lightComp->enabled)
-			{
-				simpleTextureId = getTexture("gizmo-light.png");
 				
-				const Color kOutlineColor(127, 127, 255);
-				const Color kDirectionColor(255, 255, 127);
-				
-				switch (lightComp->type)
-				{
-				case LightComponent::kLightType_Directional:
-					{
-						// draw direction lines
-						
-						const float kSpacing = .2f;
-						const float kLength = 1.f;
-						
-						const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized() * kLength;
-						const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * kSpacing;
-						const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * kSpacing;
-						
-						const int count = 7;
-						const float radius = 1.4f;
-						
-						for (int i = 0; i < count; ++i)
-						{
-							const float angle = i / float(count) * Calc::m2PI;
-							const float u = cosf(angle) * radius;
-							const float v = sinf(angle) * radius;
-							
-							const Vec3 origin =
-								position +
-								tangent   * u +
-								bitangent * v;
-								
-							const Vec3 target = origin + forward;
-							
-							setColor(kDirectionColor);
-							drawLine3d(origin, target);
-						}
-					}
-					break;
-				case LightComponent::kLightType_Point:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxTranslatef(position[0], position[1], position[2]);
-							
-							// draw sphere
-							
-							setColor(kOutlineColor);
-							gxBegin(GX_LINES);
-							{
-								const int resolution = 10;
-								
-								float x[resolution + 1];
-								float z[resolution + 1];
-								
-								float y[resolution + 1];
-								float r[resolution + 1];
-								
-								for (int u = 0; u <= resolution; ++u)
-								{
-									const float azimuth = u * Calc::m2PI / float(resolution);
-									
-									x[u] = cosf(azimuth);
-									z[u] = sinf(azimuth);
-								}
-								
-								const float radius = lightComp->farDistance;
-								const float radiusSq = radius * radius;
-								
-								for (int v = 0; v <= resolution; ++v)
-								{
-									const float elevation = v * Calc::mPI / float(resolution);
-									
-									y[v] = cosf(elevation) * radius;
-									r[v] = sinf(elevation) * radius;
-								}
-								
-								for (int u = 0; u < resolution; ++u)
-								{
-									for (int v = 0; v < resolution; ++v)
-									{
-										const float x1 = x[u];
-										const float x2 = x[u + 1];
-										const float z1 = z[u];
-										const float z2 = z[u + 1];
-										
-										const float y1 = y[v];
-										const float y2 = y[v + 1];
-										
-										const float r1 = r[v];
-										const float r2 = r[v + 1];
-										
-										gxVertex3f(x1 * r1, y1, z1 * r1);
-										gxVertex3f(x1 * r2, y2, z1 * r2);
-										
-										gxVertex3f(x1 * r1, y1, z1 * r1);
-										gxVertex3f(x2 * r1, y1, z2 * r1);
-									}
-								}
-							}
-							gxEnd();
-						}
-						gxPopMatrix();
-					}
-					break;
-				case LightComponent::kLightType_Spot:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxTranslatef(position[0], position[1], position[2]);
-							
-							// draw light cone outline
-							
-							const float alpha = tanf(lightComp->spotAngle / 2.f / 180.f * float(M_PI));
-							
-							const Vec3 forward   = sceneNodeComp->objectToWorld.GetAxis(2).CalcNormalized();
-							const Vec3 tangent   = sceneNodeComp->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
-							const Vec3 bitangent = sceneNodeComp->objectToWorld.GetAxis(1).CalcNormalized() * alpha;
-							
-							const int kNumSegments = 7;
-							Vec3 * points = (Vec3*)alloca(kNumSegments * sizeof(Vec3));
-							
-							for (int i = 0; i < kNumSegments; ++i)
-							{
-								const float angle = i / float(kNumSegments) * Calc::m2PI;
-								const float c = cosf(angle);
-								const float s = sinf(angle);
-								
-								points[i] = (forward + tangent * c + bitangent * s) * lightComp->farDistance;
-							}
-							
-							const Vec3 origin;
-							
-							setColor(kOutlineColor);
-							gxBegin(GX_LINES);
-							{
-								for (int i = 0; i < kNumSegments; ++i)
-								{
-									const int index1 = i;
-									const int index2 = i + 1 == kNumSegments ? 0 : i + 1;
-									
-									// cone side
-									gxVertex3fv(&origin[0]);
-									gxVertex3fv(&points[index1][0]);
-									
-									// cone base
-									gxVertex3fv(&points[index1][0]);
-									gxVertex3fv(&points[index2][0]);
-								}
-							}
-							gxEnd();
-						}
-						gxPopMatrix();
-					}
-					break;
-				
-				case LightComponent::kLightType_AreaBox:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-							
-							setColor(kOutlineColor);
-							lineCube(Vec3(), Vec3(1.f));
-						}
-						gxPopMatrix();
-					}
-					break;
-					
-				case LightComponent::kLightType_AreaSphere:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-							
-							setColor(kOutlineColor);
-							drawCircle(0, 0, 1.f, 40);
-							
-							gxRotatef(90, 1, 0, 0);
-							
-							setColor(kOutlineColor);
-							drawCircle(0, 0, 1.f, 40);
-							
-							gxRotatef(90, 0, 1, 0);
-							
-							setColor(kOutlineColor);
-							drawCircle(0, 0, 1.f, 40);
-						}
-						gxPopMatrix();
-					}
-					break;
-					
-				case LightComponent::kLightType_AreaCircle:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-							
-							setColor(kOutlineColor);
-							drawCircle(0, 0, 1.f, 40);
-						}
-						gxPopMatrix();
-					}
-					break;
-					
-				case LightComponent::kLightType_AreaRect:
-					if (isSelected)
-					{
-						gxPushMatrix();
-						{
-							gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
-							
-							setColor(kOutlineColor);
-							drawRectLine(-1, -1, +1, +1);
-						}
-						gxPopMatrix();
-					}
-					break;
-				}
-				break;
-			}
-			
-			// todo : add texture for audio emitter component
-			
-			// todo : add texture for vfx graph component
-			
-			break;
+			comp->drawGizmo(draw);
 		}
 		
 		// draw a simple texture based gizmo when a texture is set
@@ -4013,6 +3790,8 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 			gxPushMatrix();
 			{
 				// translate to node location
+				
+				const Vec3 position = draw.sceneNodeComponent->objectToWorld.GetTranslation();
 				
 				gxTranslatef(position[0], position[1], position[2]);
 				
@@ -4083,6 +3862,8 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 			gxPopMatrix();
 		}
 	}
+	
+	draw.flush();
 }
 
 void SceneEditor::drawEditorSelectedNodeLabels() const

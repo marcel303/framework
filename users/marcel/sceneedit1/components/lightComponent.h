@@ -34,6 +34,9 @@ struct LightComponent : Component<LightComponent>
 	float attenuationBegin = 0.f;  // for point and spot light attenuation
 	float spotAngle = 90.f;
 	bool castShadows = false;
+	
+	virtual void drawGizmo(ComponentDraw & draw) const override;
+	virtual const char * getGizmoTexturePath() const override;
 };
 
 struct LightComponentMgr : ComponentMgr<LightComponent>

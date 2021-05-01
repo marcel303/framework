@@ -30,6 +30,11 @@ struct AudioEmitterComponent : Component<AudioEmitterComponent>
 		
 		return true;
 	}
+	
+	virtual const char * getGizmoTexturePath() const override
+	{
+		return "gizmo-audio-emitter.png";
+	}
 };
 
 struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>

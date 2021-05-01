@@ -7,6 +7,7 @@
 // forward declarations
 
 struct ComponentBase;
+struct ComponentDraw;
 struct ComponentMgrBase;
 struct ComponentSet;
 
@@ -44,6 +45,9 @@ struct ComponentBase
 	
 	virtual void propertyChanged(void * address) { };
 	virtual bool getBoundingBox(Vec3 & min, Vec3 & max) const { return false; }
+	
+	virtual void drawGizmo(ComponentDraw & draw) const { }
+	virtual const char * getGizmoTexturePath() const { return nullptr; }
 	
 	template <typename T>
 	bool isType() const
@@ -90,7 +94,7 @@ struct ComponentMgr : ComponentMgrBase
 	T * head = nullptr;
 	T * tail = nullptr;
 	
-	virtual T * createComponent(const int id) override final
+	virtual T * createComponent(const int id) override
 	{
 		if (id + 1 > numComponents)
 			resizeCapacity(id + 1);
@@ -105,7 +109,7 @@ struct ComponentMgr : ComponentMgrBase
 		return component;
 	}
 	
-	virtual void destroyComponent(const int id) override final
+	virtual void destroyComponent(const int id) override
 	{
 		Assert(id >= 0 && id < numComponents && components[id] != nullptr);
 		auto *& component = components[id];
@@ -167,7 +171,7 @@ struct ComponentMgr : ComponentMgrBase
 		component->next = nullptr;
 	}
 	
-	virtual void tick(const float dt) override final
+	virtual void tick(const float dt) override
 	{
 		for (T * i = head; i != nullptr; i = i->next)
 		{
