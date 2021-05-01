@@ -67,19 +67,47 @@ struct ComponentMemberFlag_EditorType_FilePath : MemberFlag<ComponentMemberFlag_
 {
 };
 
-struct ComponentMemberAdder_Int
+#include <string>
+
+struct ComponentMemberFlag_Description : MemberFlag<ComponentMemberFlag_Description>
+{
+	std::string title;
+	std::string text;
+};
+
+//
+
+template <typename T>
+struct ComponentMemberAdderBase
 {
 	Member * member;
 	
+	ComponentMemberAdderBase(Member * in_member)
+		: member(in_member)
+	{
+	}
+	
+	T & description(const char * title, const char * text)
+	{
+		ComponentMemberFlag_Description * description = new ComponentMemberFlag_Description();
+		description->title = title;
+		description->text = text;
+
+		member->addFlag(description);
+		
+		return *static_cast<T*>(this);
+	}
+};
+
+struct ComponentMemberAdder_Int : ComponentMemberAdderBase<ComponentMemberAdder_Int>
+{
 	ComponentMemberAdder_Int(Member * in_member);
 	
 	ComponentMemberAdder_Int & limits(const int min, const int max);
 };
 
-struct ComponentMemberAdder_Float
+struct ComponentMemberAdder_Float : ComponentMemberAdderBase<ComponentMemberAdder_Float>
 {
-	Member * member;
-	
 	ComponentMemberAdder_Float(Member * in_member);
 	
 	ComponentMemberAdder_Float & limits(const float min, const float max);

@@ -748,7 +748,7 @@ namespace ImGui
 										
 										ImGui::Columns(2);
 										ImGui::SetColumnWidth(0, 30.f);
-										ImGui::Text("%d", i + 0);
+										ImGui::Text("%d", int(i + 0));
 										ImGui::NextColumn();
 										
 										result |= ReflectionMember_traverse(
@@ -896,6 +896,25 @@ namespace ImGui
 				
 				if (changedMemberObject != nullptr)
 					*changedMemberObject = object;
+			}
+		}
+		
+		if (in_member != nullptr && ImGui::IsItemHovered())
+		{
+			auto * description = in_member->findFlag<ComponentMemberFlag_Description>();
+			
+			if (description != nullptr)
+			{
+				ImGui::SetNextWindowSize(ImVec2(300, 0));
+				ImGui::BeginTooltip();
+				{
+					PushStyleColor(ImGuiCol_Text, ImVec4(255, 127, 127, 255));
+					ImGui::TextWrapped("%s", description->title.c_str());
+					PopStyleColor();
+					if (description->text.empty() == false)
+						ImGui::TextWrapped("%s", description->text.c_str());
+				}
+				ImGui::EndTooltip();
 			}
 		}
 		

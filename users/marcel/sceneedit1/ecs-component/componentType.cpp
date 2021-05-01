@@ -13,7 +13,7 @@ ComponentTypeBase::ComponentTypeBase(const char * in_typeName, ComponentMgrBase 
 //
 
 ComponentMemberAdder_Int::ComponentMemberAdder_Int(Member * in_member)
-	: member(in_member)
+	: ComponentMemberAdderBase(in_member)
 {
 }
 
@@ -31,7 +31,7 @@ ComponentMemberAdder_Int & ComponentMemberAdder_Int::limits(const int min, const
 //
 
 ComponentMemberAdder_Float::ComponentMemberAdder_Float(Member * in_member)
-	: member(in_member)
+	: ComponentMemberAdderBase(in_member)
 {
 }
 
