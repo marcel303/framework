@@ -24,7 +24,6 @@ void registerBuiltinTypes(TypeDB & typeDB)
 	typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
 	typeDB.addPlain<std::string>("string", kDataType_String);
 	
-// todo : move AngleAxis to ecs-component?
 	AngleAxis::reflect(typeDB);
 }
 

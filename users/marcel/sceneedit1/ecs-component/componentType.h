@@ -21,6 +21,8 @@ struct ComponentTypeBase : StructuredType
 	
 	ComponentMgrBase * componentMgr = nullptr;
 	
+	ComponentBase * defaultComponent = nullptr; // default component object. used by the editor so it may know the default component property values
+	
 	ComponentTypeBase(const char * in_typeName, ComponentMgrBase * in_componentMgr);
 	
 	virtual void reflect(TypeDB & typeDB) { }
@@ -120,6 +122,13 @@ struct ComponentType : ComponentTypeBase
 	ComponentType(const char * in_typeName, ComponentMgrBase * in_componentMgr)
 		: ComponentTypeBase(in_typeName, in_componentMgr)
 	{
+		defaultComponent = new T();
+	}
+	
+	virtual ~ComponentType()
+	{
+		delete defaultComponent;
+		defaultComponent = nullptr;
 	}
 	
 	// note : we duplicate some adders inherited from StructuredType, so they are

@@ -96,8 +96,9 @@ void AudioEmitterComponentMgr::onAudioThreadProcess()
 					emitters.emplace_back(Emitter());
 					auto & emitter = emitters.back();
 					emitter.id = command.addEmitter.id;
+					emitter.mutex = new binaural::Mutex_Dummy();
 					emitter.binauralizer = new binaural::Binauralizer();
-					emitter.binauralizer->init(nullptr, &emitter.mutex);
+					emitter.binauralizer->init(nullptr, emitter.mutex);
 					memset(emitter.outputBuffer, 0, sizeof(emitter.outputBuffer)); // fixme : adds/remove of emitters may trigger vector resize, which may copy a lot of data around
 				}
 				break;
@@ -113,6 +114,9 @@ void AudioEmitterComponentMgr::onAudioThreadProcess()
 						{
 							delete emitter.binauralizer;
 							emitter.binauralizer = nullptr;
+							
+							delete emitter.mutex;
+							emitter.mutex = nullptr;
 							
 							emitters.erase(i);
 							found = true;

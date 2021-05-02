@@ -96,7 +96,7 @@ void ReverbZoneComponentMgr::tick(const float dt)
 				Command command;
 				command.type = kCommandType_UpdateZoneTransform;
 				command.updateZoneTransform.id = i;
-				command.updateZoneTransform.objectToWorld = sceneNodeComp->objectToWorld;
+				command.updateZoneTransform.worldToObject = sceneNodeComp->objectToWorld.CalcInv();
 				
 				commands.push_back(command);
 			}
@@ -227,8 +227,7 @@ void ReverbZoneComponentMgr::onAudioThreadProcess()
 						if (zone.id != command.updateZoneTransform.id)
 							continue;
 						
-						//zone.objectToWorld = command.updateZoneTransform.objectToWorld; // todo : remove ?
-						zone.worldToObject = command.updateZoneTransform.objectToWorld.CalcInv();
+						zone.worldToObject = command.updateZoneTransform.worldToObject;
 						zone.hasTransform = true;
 						
 						found = true;

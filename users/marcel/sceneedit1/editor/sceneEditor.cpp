@@ -17,7 +17,7 @@
 #include "templateIo.h"
 
 // ecs-system-render
-#include "sceneRenderRegistration.h"
+#include "sceneRender.h"
 
 // ecs-component
 #include "componentDraw.h"
@@ -745,9 +745,7 @@ void SceneEditor::editNode(const int nodeId)
 							{
 								undoCaptureEnd();
 							};
-						
-						// todo : would be nice to pass the default object along..
-						
+												
 						bool isSet = true;
 						void * changedMemberObject = nullptr;
 						
@@ -756,7 +754,7 @@ void SceneEditor::editNode(const int nodeId)
 							*componentType,
 							component,
 							isSet,
-							nullptr,
+							componentType->defaultComponent,
 							&changedMemberObject,
 							&callbacks))
 						{
@@ -1046,8 +1044,6 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		result = kNodeStructureEditingAction_NodeRemove;
 	}
 
-// todo : add some add child node versions with content :
-// - video
 // todo : add vfx graph nodes for : video by name
 // todo : vfx graph component : addObject<VfxNodeScene> .. or something .. that gives access to the scene .. allow access to scene nodes by name .. useful for video node for instance, to start / stop playback of a specific video hosted by a node
 // todo : automatically (?) add vfx node types for all registered component types and their inputs

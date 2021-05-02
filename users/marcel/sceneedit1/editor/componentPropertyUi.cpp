@@ -769,14 +769,28 @@ namespace ImGui
 											{
 												member_interface->vector_swap(object, i, i - 1);
 												
+												//
+												
+												result = true;
+												
 												valueDidChange(callbacks);
+												
+												if (changedMemberObject != nullptr)
+													*changedMemberObject = object;
 											}
 											
 											if (i + 1 < vector_size && ImGui::MenuItem("Move down"))
 											{
 												member_interface->vector_swap(object, i, i + 1);
 												
+												//
+												
+												result = true;
+												
 												valueDidChange(callbacks);
+												
+												if (changedMemberObject != nullptr)
+													*changedMemberObject = object;
 											}
 											
 											if (ImGui::MenuItem("Insert before"))
@@ -813,7 +827,14 @@ namespace ImGui
 									member_interface->vector_swap(object, i, i - 1);
 								}
 								
+								//
+								
+								result = true;
+								
 								valueDidChange(callbacks);
+								
+								if (changedMemberObject != nullptr)
+									*changedMemberObject = object;
 							}
 							
 							if (remove_index != (size_t)-1)
@@ -825,14 +846,28 @@ namespace ImGui
 								
 								member_interface->vector_resize(object, vector_size - 1);
 								
+								//
+								
+								result = true;
+								
 								valueDidChange(callbacks);
+								
+								if (changedMemberObject != nullptr)
+									*changedMemberObject = object;
 							}
 							
 							if (do_resize)
 							{
 								member_interface->vector_resize(object, new_size);
 								
+								//
+								
+								result = true;
+								
 								valueDidChange(callbacks);
+								
+								if (changedMemberObject != nullptr)
+									*changedMemberObject = object;;
 							}
 						}
 					}
@@ -860,19 +895,43 @@ namespace ImGui
 								default_member_object,
 								changedMemberObject,
 								callbacks);
-								
-							/*
-						// todo : add the ability to set component properties to their default value
-							if (ImGui::BeginPopupContextItem("Scalar"))
+							
+							if (default_member_object != nullptr)
 							{
-								if (ImGui::MenuItem("Set to default"))
+								if (ImGui::BeginPopupContextItem("Scalar"))
 								{
-									// copy default object value
+									if (ImGui::MenuItem("Set to default"))
+									{
+										if (default_member_object != nullptr)
+										{
+											LineWriter line_writer;
+											const bool copy_result = member_tolines_recursive(typeDB, member, default_object, line_writer, 0);
+											Assert(copy_result);
+											(void)copy_result;
+											
+											if (copy_result)
+											{
+												auto lines = line_writer.to_lines();
+												LineReader line_reader(lines, 0, 0);
+												const bool copy_result = member_fromlines_recursive(typeDB, member, object, line_reader);
+												Assert(copy_result);
+												(void)copy_result;
+												
+												//
+												
+												result = true;
+												
+												valueDidChange(callbacks);
+												
+												if (changedMemberObject != nullptr)
+													*changedMemberObject = member_object;
+											}
+										}
+									}
+									
+									ImGui::EndPopup();
 								}
-								
-								ImGui::EndPopup();
 							}
-							*/
 						}
 					}
 				}

@@ -1,19 +1,14 @@
 #pragma once
 
-// todo : move to separate file ?
-
-#include "MemAllocators2.h"
-
-typedef MemAllocatorTransient RenderDrawableAllocator;
-
-//
-
 #include "renderDrawable.h"
 
 #include "Mat4x4.h"
+#include "MemAllocators2.h"
 
 #include <algorithm> // std::sort
 #include <new> // placement new
+
+typedef MemAllocatorTransient RenderDrawableAllocator;
 
 struct RenderDrawableList
 {

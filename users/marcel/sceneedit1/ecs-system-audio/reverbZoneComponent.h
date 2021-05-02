@@ -84,7 +84,7 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 		struct
 		{
 			int id;
-			Mat4x4 objectToWorld;
+			Mat4x4 worldToObject;
 		} updateZoneTransform;
 	};
 	
@@ -95,7 +95,6 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 		bool enabled = false; // todo : remove zones when disabled..
 		Vec3 boxExtents = Vec3(1.f);
 		
-		//Mat4x4 objectToWorld;
 		Mat4x4 worldToObject;
 		bool hasTransform = false;
 		

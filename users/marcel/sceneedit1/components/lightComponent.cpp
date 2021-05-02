@@ -246,7 +246,7 @@ const char * LightComponent::getGizmoTexturePath() const
 
 #include "sceneNodeComponent.h"
 
-#include "sceneRenderRegistration.h"
+#include "sceneRender.h"
 
 #include "forwardLighting.h"
 #include "shadowMapDrawer.h"

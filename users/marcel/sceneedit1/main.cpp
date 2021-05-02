@@ -1,5 +1,4 @@
 // component types
-#include "gltfComponent.h" // todo : remove
 #include "components/lightComponent.h"
 #include "components/transformComponent.h"
 #include "scene/sceneNodeComponent.h"
@@ -26,7 +25,7 @@
 #include <mutex> // todo : remove
 
 // ecs-system-render-one
-#include "sceneRenderRegistration.h" // todo : rename
+#include "sceneRender.h"
 
 // libreflection
 #include "lineReader.h"
@@ -98,18 +97,23 @@ struct MyRenderOptions
 	ParameterBool * drawWireframe = nullptr;
 	ParameterBool * drawNormals = nullptr;
 	
-	MyRenderOptions()
+	MyRenderOptions(const bool addDeferredModes)
 	{
 		parameterMgr.init("renderer");
 		
-		mode = parameterMgr.addEnum("Mode", kMode_Flat,
+		std::vector<ParameterEnum::Elem> modes;
+		{
+			modes.push_back({ "Flat", kMode_Flat });
+			if (addDeferredModes)
 			{
-				{ "Flat", kMode_Flat },
-				{ "Deferred Shaded", kMode_DeferredShaded },
-				{ "Deferred Shaded + Shadows", kMode_DeferredShadedWithShadows },
-				{ "Forward Shaded", kMode_ForwardShaded },
-				{ "Forward Shaded + Shadows", kMode_ForwardShadedWithShadows }
-			});
+				modes.push_back({ "Deferred Shaded", kMode_DeferredShaded });
+				modes.push_back({ "Deferred Shaded + Shadows", kMode_DeferredShadedWithShadows });
+			}
+			modes.push_back({ "Forward Shaded", kMode_ForwardShaded });
+			modes.push_back({ "Forward Shaded + Shadows", kMode_ForwardShadedWithShadows });
+		}
+			
+		mode = parameterMgr.addEnum("Mode", kMode_Flat, modes);
 		
 		drawWireframe = parameterMgr.addBool("Draw Wireframe", false);
 		drawNormals = parameterMgr.addBool("Draw Normals", false);
@@ -260,10 +264,13 @@ int main(int argc, char * argv[])
 	SceneEditor editor;
 	editor.init(&typeDB);
 	
-	MyRenderOptions myRenderOptions;
+	const bool useFlatRenderingModeExclusively = framework.isStereoVr();
+	const bool exposeDeferredRenderModes = false;//framework.isStereoVr() == false;
+	
+	MyRenderOptions myRenderOptions(exposeDeferredRenderModes);
 	
 #if USE_GUI_WINDOW
-	Window * guiWindow = new Window("Gui", 400, 600, true);
+	Window * guiWindow = new Window("Gui", 400, 740, true);
 	guiWindow->setPosition(40, 100);
 #endif
 	
@@ -409,7 +416,7 @@ int main(int argc, char * argv[])
 				}
 			}
 		};
-		
+	
 	rOne::Renderer renderer;
 	renderer.registerShaderOutputs();
 	
@@ -420,7 +427,7 @@ int main(int argc, char * argv[])
 	renderFunctions.drawLights = drawLights;
 	
 	rOne::RenderOptions renderOptions;
-	if (framework.isStereoVr() == false)
+	if (useFlatRenderingModeExclusively == false)
 	{
 		renderOptions.bloom.enabled = true;
 		renderOptions.motionBlur.enabled = true;
@@ -851,45 +858,76 @@ int main(int argc, char * argv[])
 					audioStream.mutex.unlock();
 					
 					// render the scene
-					
-				// todo : perhaps add a SceneRenderComponentMgr which will render the scene for us (on request). forward lighting helper and shadow map drawer could live there
 				
+					SceneRenderParams sceneRenderParams;
+					
 					switch (myRenderOptions.mode->get())
 					{
 					case MyRenderOptions::kMode_Flat:
 						renderOptions.renderMode = rOne::kRenderMode_Flat;
+						sceneRenderParams.lightingIsEnabled = false;
+						sceneRenderParams.shadowsAreEnabled = false;
+						sceneRenderParams.hasDeferredLightingPass = false;
+						sceneRenderParams.outputToLinearColorSpace = false;
 						g_lightComponentMgr.enableShadowMaps = false;
-						g_gltfComponentMgr.enableForwardShading = true;
 						break;
 						
 					case MyRenderOptions::kMode_DeferredShaded:
 						renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+						sceneRenderParams.lightingIsEnabled = true;
+						sceneRenderParams.shadowsAreEnabled = false;
+						sceneRenderParams.hasDeferredLightingPass = true;
+						sceneRenderParams.outputToLinearColorSpace = renderOptions.linearColorSpace;
 						g_lightComponentMgr.enableShadowMaps = false;
-						g_gltfComponentMgr.enableForwardShading = false;
 						break;
 						
 					case MyRenderOptions::kMode_DeferredShadedWithShadows:
 						renderOptions.renderMode = rOne::kRenderMode_DeferredShaded;
+						sceneRenderParams.lightingIsEnabled = true;
+						sceneRenderParams.shadowsAreEnabled = true;
+						sceneRenderParams.hasDeferredLightingPass = true;
+						sceneRenderParams.outputToLinearColorSpace = renderOptions.linearColorSpace;
 						g_lightComponentMgr.enableShadowMaps = true;
-						g_gltfComponentMgr.enableForwardShading = false;
 						break;
 					
 					case MyRenderOptions::kMode_ForwardShaded:
-						renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+						renderOptions.renderMode =
+							useFlatRenderingModeExclusively
+							? rOne::kRenderMode_Flat
+							: rOne::kRenderMode_ForwardShaded;
+						sceneRenderParams.lightingIsEnabled = true;
+						sceneRenderParams.shadowsAreEnabled = false;
+						sceneRenderParams.hasDeferredLightingPass = false;
+						sceneRenderParams.outputToLinearColorSpace =
+							useFlatRenderingModeExclusively
+							? false
+							: renderOptions.linearColorSpace;
 						g_lightComponentMgr.enableShadowMaps = false;
-						g_gltfComponentMgr.enableForwardShading = true;
 						break;
 						
 					case MyRenderOptions::kMode_ForwardShadedWithShadows:
-						renderOptions.renderMode = rOne::kRenderMode_ForwardShaded;
+						renderOptions.renderMode =
+							useFlatRenderingModeExclusively
+							? rOne::kRenderMode_Flat
+							: rOne::kRenderMode_ForwardShaded;
+						sceneRenderParams.lightingIsEnabled = true;
+						sceneRenderParams.shadowsAreEnabled = true;
+						sceneRenderParams.hasDeferredLightingPass = false;
+						sceneRenderParams.outputToLinearColorSpace =
+							useFlatRenderingModeExclusively
+							? false
+							: renderOptions.linearColorSpace;
 						g_lightComponentMgr.enableShadowMaps = true;
-						g_gltfComponentMgr.enableForwardShading = true;
 						break;
 					}
 					
 					renderOptions.drawNormals = myRenderOptions.drawNormals->get();
 					
-					renderer.render(renderFunctions, renderOptions, framework.timeStep);
+					sceneRender_beginDraw(sceneRenderParams);
+					{
+						renderer.render(renderFunctions, renderOptions, framework.timeStep);
+					}
+					sceneRender_endDraw();
 					
 					if (!framework.isStereoVr())
 					{

@@ -177,14 +177,14 @@ static void setMaterialShaders(MaterialShaders & materialShaders, const bool for
 
 void GltfComponentMgr::drawOpaque() const
 {
-	if (enableForwardShading)
+	if (_enableForwardShading)
 		return;
 		
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	
 	MaterialShaders materialShaders;
-	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	setMaterialShaders(materialShaders, _enableForwardShading, _outputLinearColorSpace, worldToView);
 		
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
@@ -201,14 +201,14 @@ void GltfComponentMgr::drawOpaque() const
 
 void GltfComponentMgr::drawOpaque_ForwardShaded() const
 {
-	if (!enableForwardShading)
+	if (!_enableForwardShading)
 		return;
 		
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	
 	MaterialShaders materialShaders;
-	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	setMaterialShaders(materialShaders, _enableForwardShading, _outputLinearColorSpace, worldToView);
 		
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
@@ -229,7 +229,7 @@ void GltfComponentMgr::drawTranslucent() const
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	
 	MaterialShaders materialShaders;
-	setMaterialShaders(materialShaders, enableForwardShading, false, worldToView);
+	setMaterialShaders(materialShaders, _enableForwardShading, false, worldToView);
 	
 	for (auto * i = head; i != nullptr; i = i->next)
 	{

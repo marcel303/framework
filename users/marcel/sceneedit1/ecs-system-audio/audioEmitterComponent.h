@@ -81,7 +81,7 @@ struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 	
 		float outputBuffer[256]; // todo : max buffer size
 		
-		binaural::Mutex_Dummy mutex;
+		binaural::Mutex_Dummy * mutex = nullptr;
 		
 		binaural::Binauralizer * binauralizer = nullptr;
 	};

@@ -45,7 +45,8 @@ struct Scene;
 
 struct GltfComponentMgr : ComponentMgr<GltfComponent>
 {
-	bool enableForwardShading = false;
+	bool _enableForwardShading = false;
+	bool _outputLinearColorSpace = false;
 	
 	void drawOpaque() const;
 	void drawOpaque_ForwardShaded() const;
