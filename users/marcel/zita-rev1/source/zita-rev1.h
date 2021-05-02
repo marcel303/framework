@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "pareq.h"
+#include "zita-rev1-pareq.h"
 
 namespace ZitaRev1
 {

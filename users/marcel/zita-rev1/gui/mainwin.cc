@@ -19,8 +19,9 @@
 // ----------------------------------------------------------------------
 
 #include "mainwin.h"
-#include "reverb.h"
 #include "styles.h"
+
+#include "zita-rev1.h"
 
 #include <math.h>
 #include <stdlib.h>

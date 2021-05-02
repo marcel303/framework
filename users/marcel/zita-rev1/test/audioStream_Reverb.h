@@ -23,7 +23,7 @@
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamWave.h"
 
-#include "reverb.h"
+#include "zita-rev1.h"
 
 struct AudioStream_Reverb : AudioStream
 {

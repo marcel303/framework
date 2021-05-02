@@ -18,7 +18,7 @@
 //
 // ----------------------------------------------------------------------
 
-#include "pareq.h"
+#include "zita-rev1-pareq.h"
 
 #include <math.h>
 #include <string.h>

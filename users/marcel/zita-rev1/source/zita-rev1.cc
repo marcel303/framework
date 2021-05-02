@@ -18,7 +18,7 @@
 //
 // -----------------------------------------------------------------------
 
-#include "reverb.h"
+#include "zita-rev1.h"
 
 #include <math.h>
 #include <stdio.h>
