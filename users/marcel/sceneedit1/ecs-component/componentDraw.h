@@ -36,4 +36,3 @@ struct ComponentDraw
 	virtual void translate(Vec3Arg t) = 0;
 	virtual void rotate(float angle, Vec3Arg axis) = 0;
 };
-

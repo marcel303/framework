@@ -42,7 +42,7 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 {
 	// the reverb component mgr maintains a copy of the reverb zones accessible exclusively on the audio thread. this allows us to
 	// add and remove reverb zone components without blocking the audio thread and vice versa processing the audio thread without
-	// blocking the main thread. to manage the copy commands are used to schedule additionals, removals and updates on the audio thread
+	// blocking the main thread. to manage the copy commands are used to schedule additions, removals and updates on the audio thread
 	
 	enum CommandType
 	{

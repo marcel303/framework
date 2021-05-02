@@ -4,30 +4,16 @@
 
 #include "binauralizer.h"
 
+#include "Mat4x4.h"
+
 #include <mutex>
 
 struct AudioEmitterComponent : Component<AudioEmitterComponent>
 {
-	struct Mutex : binaural::Mutex
-	{
-		std::mutex mutex;
-		
-		virtual void lock() override final { mutex.lock(); }
-		virtual void unlock() override final { mutex.unlock(); }
-	};
-	
-	float outputBuffer[256]; // todo : max buffer size
-	
-	Mutex mutex;
-	
-	binaural::Binauralizer binauralizer;
+	bool dirty = false;
 	
 	virtual bool init() override final
 	{
-		memset(outputBuffer, 0, sizeof(outputBuffer));
-		
-		binauralizer.init(nullptr, &mutex);
-		
 		return true;
 	}
 	
@@ -35,40 +21,115 @@ struct AudioEmitterComponent : Component<AudioEmitterComponent>
 	{
 		return "gizmo-audio-emitter.png";
 	}
+	
+	virtual void propertyChanged(void * address) override final
+	{
+		dirty = true;
+	}
 };
 
 struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 {
-	std::mutex mutex;
+	// the audio emitter component mgr maintains a copy of the emitters accessible exclusively on the audio thread. this allows us to
+	// add and remove audio emitter components without blocking the audio thread and vice versa processing the audio thread without
+	// blocking the main thread. to manage the copy commands are used to schedule additions, removals and updates on the audio thread
+	
+	enum CommandType
+	{
+		kCommandType_None,
+		kCommandType_AddEmitter,
+		kCommandType_RemoveEmitter,
+		kCommandType_UpdateEmitterParams,   // should be infrequent
+		kCommandType_UpdateEmitterTransform // should be infrequent, but could be each frame when parented to an animated node
+	};
+	
+	struct Command
+	{
+		CommandType type = kCommandType_None;
+		
+		struct
+		{
+			int id;
+		} addEmitter;
+		
+		struct
+		{
+			int id;
+		} removeEmitter;
+		
+		struct
+		{
+			int id;
+			bool enabled;
+		} updateEmitter;
+		
+		struct
+		{
+			int id;
+			Mat4x4 objectToWorld;
+		} updateEmitterTransform;
+	};
+	
+	struct Emitter
+	{
+		int id = -1;
+		
+		bool enabled = false; // todo : remove emitters when disabled..
+		
+		Mat4x4 objectToWorld;
+		bool hasTransform = false;
+	
+		float outputBuffer[256]; // todo : max buffer size
+		
+		binaural::Mutex_Dummy mutex;
+		
+		binaural::Binauralizer * binauralizer = nullptr;
+	};
+	
+	std::vector<Emitter> emitters;
+	
+	std::vector<Command> commands;
+	std::mutex commands_mutex;
+	
+	bool audioThreadIsActive = false;
 	
 	virtual AudioEmitterComponent * createComponent(const int id) override final
 	{
-		mutex.lock();
-		
 		auto * component = ComponentMgr<AudioEmitterComponent>::createComponent(id);
 		
-		mutex.unlock();
-		
-		// todo : register for audio processing
+		component->dirty = true;
+	
+		commands_mutex.lock();
+		{
+			Command command;
+			command.type = kCommandType_AddEmitter;
+			command.addEmitter.id = id;
+			commands.push_back(command);
+		}
+		commands_mutex.unlock();
 		
 		return component;
 	}
 	
 	virtual void destroyComponent(const int id) override final
 	{
-		// todo : unregister from audio processing
+		commands_mutex.lock();
+		{
+			Command command;
+			command.type = kCommandType_RemoveEmitter;
+			command.removeEmitter.id = id;
+			commands.push_back(command);
+		}
+		commands_mutex.unlock();
 	
-		mutex.lock();
-		
 		ComponentMgr<AudioEmitterComponent>::destroyComponent(id);
-		
-		mutex.unlock();
 	}
 	
-	virtual void tick(const float dt) override final
-	{
-		// todo : update audio processing properties
-	}
+	virtual void tick(const float dt) override final;
+	
+	void onAudioThreadBegin();
+	void onAudioThreadEnd();
+	void onAudioThreadProcess();
 };
 
 extern AudioEmitterComponentMgr g_audioEmitterComponentMgr;

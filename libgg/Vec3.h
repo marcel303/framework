@@ -95,7 +95,7 @@ public:
 		*this = CalcNormalized();
 	}
 	
-	inline Vec3 Min(const Vec3 & other)
+	inline Vec3 Min(const Vec3 & other) const
 	{
 		return Vec3(
 			m_v[0] < other.m_v[0] ? m_v[0] : other.m_v[0],
@@ -103,7 +103,7 @@ public:
 			m_v[2] < other.m_v[2] ? m_v[2] : other.m_v[2]);
 	}
 	
-	inline Vec3 Max(const Vec3 & other)
+	inline Vec3 Max(const Vec3 & other) const
 	{
 		return Vec3(
 			m_v[0] > other.m_v[0] ? m_v[0] : other.m_v[0],

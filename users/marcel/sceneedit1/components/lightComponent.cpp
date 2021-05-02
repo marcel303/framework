@@ -246,8 +246,7 @@ const char * LightComponent::getGizmoTexturePath() const
 
 #include "sceneNodeComponent.h"
 
-#include "gltfComponent.h"
-#include "modelComponent.h"
+#include "sceneRenderRegistration.h"
 
 #include "forwardLighting.h"
 #include "shadowMapDrawer.h"
@@ -338,22 +337,14 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 			}
 		}
 		
-	// todo : component mgrs should register for opaque, forward and translucent draw somewhere ? currently the calls to draw stuff are all over the place
-	
 		shadowMapDrawer->drawOpaque = []()
 			{
-			// todo : component mgrs should know this is a shadow map pass, so they can optimize drawing, and not draw geometry not tagged as shadow casting
-			
-				g_gltfComponentMgr.drawOpaque();
-				
-				g_gltfComponentMgr.drawOpaque_ForwardShaded();
-				
-				g_modelComponentMgr.draw();
+				sceneRender_drawShadow(kShadowPass_Opaque);
 			};
 		
 		shadowMapDrawer->drawTranslucent = []()
 			{
-				g_gltfComponentMgr.drawTranslucent();
+				sceneRender_drawShadow(kShadowPass_Translucent);
 			};
 		
 		shadowMapDrawer->enableColorShadows = false;

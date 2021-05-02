@@ -1,5 +1,5 @@
 // component types
-#include "components/gltfComponent.h"
+#include "gltfComponent.h" // todo : remove
 #include "components/lightComponent.h"
 #include "components/transformComponent.h"
 #include "scene/sceneNodeComponent.h"
@@ -21,8 +21,12 @@
 // ecs-system-audio
 #include "audioEmitterToAudioOutput.h" // todo : rename file to StereoOutputBuffer
 #include "audiooutput/AudioOutput_Native.h" // todo : remove
+#include "audioEmitterComponent.h" // todo : remove
 #include "reverbZoneComponent.h" // todo : remove
 #include <mutex> // todo : remove
+
+// ecs-system-render-one
+#include "sceneRenderRegistration.h" // todo : rename
 
 // libreflection
 #include "lineReader.h"
@@ -425,6 +429,8 @@ int main(int argc, char * argv[])
 		renderOptions.linearColorSpace = true;
 	}
 	
+	sceneRender_setup();
+	
 #if USE_GUI_WINDOW
 	int framesSinceIdleForGuiWindow = 0;
 #endif
@@ -446,6 +452,7 @@ int main(int argc, char * argv[])
 		
 		virtual int Provide(int numSamples, AudioSample * __restrict samples) override
 		{
+			g_audioEmitterComponentMgr.onAudioThreadProcess();
 			g_reverbZoneComponentMgr.onAudioThreadProcess();
 			
 			Mat4x4 worldToView_local;
@@ -479,6 +486,7 @@ int main(int argc, char * argv[])
 	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, 48000, 256);
 	
+	g_audioEmitterComponentMgr.onAudioThreadBegin();
 	g_reverbZoneComponentMgr.onAudioThreadBegin();
 	
 	MyAudioStream audioStream;
@@ -926,6 +934,7 @@ int main(int argc, char * argv[])
 	audioOutput.Shutdown();
 	
 	g_reverbZoneComponentMgr.onAudioThreadEnd();
+	g_audioEmitterComponentMgr.onAudioThreadEnd();
 
 	renderer.free();
 	

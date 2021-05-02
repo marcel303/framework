@@ -5,7 +5,9 @@
 
 #include "AngleAxis.h"
 #include "component.h"
+
 #include "Mat4x4.h"
+
 #include <string>
 
 struct GltfComponent : Component<GltfComponent>

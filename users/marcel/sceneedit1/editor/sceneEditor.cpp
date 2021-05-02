@@ -16,18 +16,17 @@
 #include "sceneNodeComponent.h"
 #include "templateIo.h"
 
+// ecs-system-render
+#include "sceneRenderRegistration.h"
+
 // ecs-component
+#include "componentDraw.h"
 #include "componentType.h"
 #include "componentTypeDB.h"
 
 // ecs-components
-#include "components/gltfComponent.h"
-#include "components/modelComponent.h"
 #include "components/parameterComponent.h"
 #include "components/transformComponent.h"
-
-// ecs-system-audio
-#include "reverbZoneComponent.h"
 
 // ecs-parameter
 #include "parameterUi.h"
@@ -3501,9 +3500,7 @@ void SceneEditor::drawSceneOpaque() const
 {
 	if (preview.drawScene)
 	{
-		g_modelComponentMgr.draw();
-		
-		g_gltfComponentMgr.drawOpaque();
+		sceneRender_draw(kRenderPass_Opaque);
 	}
 }
 
@@ -3511,7 +3508,7 @@ void SceneEditor::drawSceneOpaque_ForwardShaded() const
 {
 	if (preview.drawScene)
 	{
-		g_gltfComponentMgr.drawOpaque_ForwardShaded();
+		sceneRender_draw(kRenderPass_Opaque_ForwardShaded);
 	}
 }
 
@@ -3519,7 +3516,7 @@ void SceneEditor::drawSceneTranslucent() const
 {
 	if (preview.drawScene)
 	{
-		g_gltfComponentMgr.drawTranslucent();
+		sceneRender_draw(kRenderPass_Translucent);
 	}
 }
 
@@ -3728,9 +3725,6 @@ void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 		: TransformGizmo::kDrawPass_Opaque);
 #endif
 }
-
-#include "components/cameraComponent.h"
-#include "components/lightComponent.h"
 
 void SceneEditor::drawEditorGizmosTranslucent() const
 {

@@ -64,7 +64,7 @@ namespace binaural
 	
 	void Binauralizer::init(const HRIRSampleSet * in_sampleSet, Mutex * in_mutex)
 	{
-		debugAssert(in_sampleSet->sampleGrid.triangles.empty() == false); // sample set must be finalized
+		debugAssert(in_sampleSet == nullptr || in_sampleSet->sampleGrid.triangles.empty() == false); // sample set must be finalized
 	
 		sampleSet = in_sampleSet;
 		mutex = in_mutex;
@@ -85,6 +85,8 @@ namespace binaural
 	
 	void Binauralizer::setSampleSet(const HRIRSampleSet * in_sampleSet)
 	{
+		debugAssert(in_sampleSet == nullptr || in_sampleSet->sampleGrid.triangles.empty() == false); // sample set must be finalized
+		
 		sampleSet = in_sampleSet;
 	}
 	

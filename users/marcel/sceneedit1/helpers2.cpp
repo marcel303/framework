@@ -4,7 +4,7 @@
 #include "helpers2.h"
 #include "reflection.h"
 
-#include "components/AngleAxis.h"
+#include "AngleAxis.h"
 
 // libgg
 #include "Vec2.h"

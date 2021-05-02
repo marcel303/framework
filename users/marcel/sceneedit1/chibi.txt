@@ -33,7 +33,27 @@ library ecs-components
 	#        draw would contain lighting, gltf and model components
 	depend_library framework
 	depend_library framework-gltf
+	
+	# todo : render system should register some basic shadow includes, conforming to a well defined interface, with regards to lighting, shadow mapping
 	depend_library renderOne
+	
+	# todo : for light and model we need this. maybe move model component to a separate library and light to render system
+	depend_library ecs-system-render
+
+# -- ecs component gltf
+
+library ecs-component-gltf
+	depend_library ecs-component
+	depend_library ecs-system-render
+	depend_library framework-gltf
+	scan_files cpp path ecs-component-gltf
+	scan_files h   path ecs-component-gltf
+	link_translation_unit_using_function_call linkGltfComponents
+	header_path ecs-component-gltf expose
+	resource_path ecs-component-gltf/data
+	
+	# todo : depending on ecs-components here due to light component dependency. light should be part of ecs-system-render maybe ?
+	depend_library ecs-components
 
 # -- ecs systems
 
@@ -48,6 +68,12 @@ library ecs-system-audio
 	link_translation_unit_using_function_call link_ecssystem_audio
 	header_path ecs-system-audio expose
 	resource_path ecs-system-audio/data
+
+library ecs-system-render
+	depend_library libgg
+	scan_files *.cpp path ecs-system-render
+	scan_files *.h   path ecs-system-render
+	header_path ecs-system-render expose
 
 library ecs-system-vfxgraph
 	depend_library ecs-component
@@ -135,7 +161,9 @@ app marcel-sceneedit-800-realtimeEditing
 # -- ecs scene editor test app
 
 app marcel-sceneedit-test
+	depend_library ecs-component-gltf
 	depend_library ecs-system-audio
+	depend_library ecs-system-render
 	#depend_library ecs-system-vfxgraph
 	depend_library marcel-sceneedit
 	depend_library renderOne
