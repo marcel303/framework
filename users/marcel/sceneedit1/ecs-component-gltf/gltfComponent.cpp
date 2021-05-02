@@ -130,8 +130,6 @@ static Shader s_specularGlossinessShader;
 
 static void setMaterialShaders(MaterialShaders & materialShaders, const bool forwardShaded, const bool outputLinearColorSpace, const Mat4x4 & worldToView)
 {
-// todo : set outputLinearColorSpace appropriately
-
 	if (forwardShaded)
 	{
 		s_metallicRoughnessShader = Shader("ecs-component/gltf/forward-pbr-metallicRoughness");

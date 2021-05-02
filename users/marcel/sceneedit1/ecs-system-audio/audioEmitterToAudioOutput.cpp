@@ -10,7 +10,7 @@
 
 #include "audiostream/AudioStreamWave.h" // todo : remove
 
-#include "reverb.h" // todo : rename to reverb-zita-rev1.h
+#include "zita-rev1.h"
 
 static binaural::HRIRSampleSet * s_hrirSampleSet = nullptr;
 

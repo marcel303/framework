@@ -4,7 +4,7 @@
 
 #include "sceneNodeComponent.h"
 
-#include "reverb.h" // todo : rename to reverb-zita-rev1.h
+#include "zita-rev1.h"
 
 void ReverbZoneComponent::drawGizmo(ComponentDraw & draw) const
 {
