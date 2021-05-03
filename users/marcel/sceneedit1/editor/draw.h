@@ -1,8 +1,11 @@
 #pragma once
 
+class Mat4x4;
 class Vec3;
 
-void drawCylinder(
+class Color;
+
+void fillCylinder(
 	const Vec3 & position,
 	const int axis,
 	const float radius1,
@@ -18,3 +21,9 @@ void drawAxisArrow(
 	const float top_radius,
 	const float top_length,
 	const bool mirrored);
+
+void drawSelectionBox(
+	const Mat4x4 & objectToWorld,
+	const Vec3 & min,
+	const Vec3 & max,
+	const Color & color);

@@ -32,7 +32,6 @@ library ecs-components
 	# todo : separate out ecs-components-draw from ecs-component
 	#        draw would contain lighting, gltf and model components
 	depend_library framework
-	depend_library framework-gltf
 	
 	# todo : render system should register some basic shadow includes, conforming to a well defined interface, with regards to lighting, shadow mapping
 	depend_library renderOne
@@ -52,7 +51,7 @@ library ecs-component-gltf
 	header_path ecs-component-gltf expose
 	resource_path ecs-component-gltf/data
 	
-	# todo : depending on ecs-components here due to light component dependency. light should be part of ecs-system-render maybe ?
+	# require : lightComponent, sceneNodeComponent
 	depend_library ecs-components
 
 # -- ecs systems
@@ -68,6 +67,9 @@ library ecs-system-audio
 	link_translation_unit_using_function_call link_ecssystem_audio
 	header_path ecs-system-audio expose
 	resource_path ecs-system-audio/data
+	
+	# todo : remove framework dependency. here for AudioOutput. ultimately doesn't belong here
+	depend_library framework
 
 library ecs-system-render
 	depend_library libgg
@@ -116,7 +118,7 @@ library marcel-sceneedit
 	
 	resource_path editor/data
 
-# todo : shouldn't depend on components here!
+	# require : parameterComponent, transformComponent
 	depend_library ecs-components
 
 # -- ecs component + scene test apps

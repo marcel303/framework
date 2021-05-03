@@ -27,10 +27,6 @@ bool ModelComponent::init()
 	return true;
 }
 
-void ModelComponent::tick(const float dt)
-{
-}
-
 void ModelComponent::propertyChanged(void * address)
 {
 	if (address == &filename)

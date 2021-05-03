@@ -8,6 +8,12 @@
 #include <algorithm> // std::sort
 #include <new> // placement new
 
+#define SORT_USING_PRIORITY_QUEUE 1
+
+#if SORT_USING_PRIORITY_QUEUE
+	#include <queue>
+#endif
+
 typedef MemAllocatorTransient RenderDrawableAllocator;
 
 struct RenderDrawableList
@@ -65,10 +71,33 @@ struct RenderDrawableList
 		drawable_tail->next = nullptr;
 	}
 	
-	void sortByViewZ()
+	template <typename C>
+	void sort()
 	{
 		if (drawable_head != nullptr)
 		{
+		#if SORT_USING_PRIORITY_QUEUE
+		// todo : is this a stable sort ? would be nice, as it would avoid flickering in some cases where sort order is indeterminate
+		
+			std::priority_queue<RenderDrawable*, std::vector<RenderDrawable*>, C> queue;
+			
+			for (auto * drawable = drawable_head; drawable != nullptr; drawable = drawable->next)
+				queue.push(drawable);
+			
+			drawable_head = queue.top(); queue.pop();
+			drawable_tail = drawable_head;
+			drawable_tail->next = nullptr;
+			
+			while (queue.empty() == false)
+			{
+				auto * drawable = queue.top(); queue.pop();
+				
+				drawable->next = drawable_head;
+				drawable_head = drawable;
+			}
+		#else
+			// create sortable list
+			
 			int numDrawables = 0;
 			for (auto * drawable = drawable_head; drawable != nullptr; drawable = drawable->next)
 				numDrawables++;
@@ -78,18 +107,19 @@ struct RenderDrawableList
 			for (auto * drawable = drawable_head; drawable != nullptr; drawable = drawable->next)
 				drawables[numDrawables++] = drawable;
 			
-			std::sort(drawables, drawables + numDrawables, [](const RenderDrawable * a, const RenderDrawable * b)
-			{
-				// todo : sort order depends on pass. should specify as function argument
-				return a->viewZ < b->viewZ;
-			});
+			std::stable_sort(drawables, drawables + numDrawables, C());
 			
 			// patch the linked list
+			
 			for (int i = 1; i < numDrawables; ++i)
 				drawables[i - 1]->next = drawables[i];
 			drawables[numDrawables - 1]->next = nullptr;
+			
 			// assign the new head
+			
 			drawable_head = drawables[0];
+			drawable_tail = drawables[numDrawables - 1];
+		#endif
 		}
 	}
 	
@@ -132,6 +162,13 @@ struct RenderDrawableList
 	RenderDrawableList & worldPosition(Vec3Arg position)
 	{
 		drawable_tail->viewZ = worldToView.Mul4(position)[2];
+		
+		return *this;
+	}
+	
+	RenderDrawableList & viewZ(const float value)
+	{
+		drawable_tail->viewZ = value;
 		
 		return *this;
 	}

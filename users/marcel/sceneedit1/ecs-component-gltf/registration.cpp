@@ -9,20 +9,6 @@ ComponentTypeRegistration(GltfComponentType);
 
 struct SceneRenderRegistration_GltfComponent : SceneRenderRegistrationBase
 {
-	/*
-	// todo : let GltfComponent mgr perform a scene capture and draw meshes Z-sorted
-	
-	SceneToSceneCaptureSystem sceneToSceneCapture;
-	sceneToSceneCapture.addCaptureFunctions(captureFunctions);
-	
-	RenderDrawableAllocator allocator(8 * 1024);
-	
-	SceneCapture capture(allocator);
-	
-	SceneCaptureToRenderOneSystem sceneCaptureToRender;
-	sceneCaptureToRender.init();
-	*/
-	
 	virtual void beginDraw(const SceneRenderParams & params) override final
 	{
 		g_gltfComponentMgr._enableForwardShading = (params.hasDeferredLightingPass == false);
@@ -31,6 +17,8 @@ struct SceneRenderRegistration_GltfComponent : SceneRenderRegistrationBase
 	
 	virtual void setup() override final
 	{
+		// todo : let GltfComponentMgr perform a scene capture and draw meshes Z-sorted
+	
 		draw = [](const RenderPass pass)
 		{
 			switch (pass)

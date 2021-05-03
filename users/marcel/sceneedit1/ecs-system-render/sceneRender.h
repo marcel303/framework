@@ -20,4 +20,5 @@ void sceneRender_beginDraw(const SceneRenderParams & params);
 void sceneRender_endDraw();
 void sceneRender_draw(const RenderPass pass);
 void sceneRender_drawShadow(const ShadowPass pass);
+void sceneRender_drawDeferredLights();
 

@@ -57,7 +57,7 @@ void ReverbZoneComponentMgr::destroyComponent(const int id)
 	ComponentMgr<ReverbZoneComponent>::destroyComponent(id);
 }
 
-void ReverbZoneComponentMgr::tick(const float dt)
+void ReverbZoneComponentMgr::tickAlways()
 {
 	// queue update-params command
 	
@@ -91,7 +91,7 @@ void ReverbZoneComponentMgr::tick(const float dt)
 			}
 			
 			{
-				auto * sceneNodeComp = comp->componentSet->find<SceneNodeComponent>();
+				auto * sceneNodeComp = g_sceneNodeComponentMgr.getComponent(comp->componentSet->id);
 				
 				Command command;
 				command.type = kCommandType_UpdateZoneTransform;
@@ -112,9 +112,20 @@ void ReverbZoneComponentMgr::tick(const float dt)
 	}
 }
 
-void ReverbZoneComponentMgr::onAudioThreadBegin()
+void ReverbZoneComponentMgr::onAudioThreadBegin(const int frameRate, const int bufferSize)
 {
 	audioThreadIsActive = true;
+	
+	commands_mutex.lock();
+	{
+		Command command;
+		command.type = kCommandType_UpdateAudioParams;
+		command.updateAudioParams.frameRate = frameRate;
+		command.updateAudioParams.bufferSize = bufferSize;
+		
+		commands.push_back(command);
+	}
+	commands_mutex.unlock();
 }
 
 void ReverbZoneComponentMgr::onAudioThreadEnd()
@@ -158,10 +169,10 @@ void ReverbZoneComponentMgr::onAudioThreadProcess()
 					auto & zone = zones.back();
 					zone.id = command.addZone.id;
 					zone.reverb = new ZitaRev1::Reverb();
-				// todo : configure audio frame rate somewhere and react to changes
-					zone.reverb->init(48000, false);
+					zone.reverb->init(audioFrameRate, false);
 					zone.reverb->set_opmix(1.f);
 					zone.reverb->set_rgxyz(0.f);
+					zone.inputBuffer = new float[audioBufferSize];
 				}
 				break;
 				
@@ -174,6 +185,9 @@ void ReverbZoneComponentMgr::onAudioThreadProcess()
 						auto & zone = *i;
 						if (zone.id == command.removeZone.id)
 						{
+							delete zone.inputBuffer;
+							zone.inputBuffer = nullptr;
+							
 							delete zone.reverb;
 							zone.reverb = nullptr;
 							
@@ -235,6 +249,28 @@ void ReverbZoneComponentMgr::onAudioThreadProcess()
 					}
 					
 					Assert(found);
+				}
+				break;
+				
+			case kCommandType_UpdateAudioParams:
+				{
+					audioFrameRate = command.updateAudioParams.frameRate;
+					audioBufferSize = command.updateAudioParams.bufferSize;
+					
+					for (auto & zone : zones)
+					{
+						// re-initialize reverb
+						
+						zone.reverb->shut();
+						zone.reverb->init(audioFrameRate, false);
+						
+						// re-allocate input buffer
+						
+						delete zone.inputBuffer;
+						zone.inputBuffer = nullptr;
+						
+						zone.inputBuffer = new float[audioBufferSize];
+					}
 				}
 				break;
 			}

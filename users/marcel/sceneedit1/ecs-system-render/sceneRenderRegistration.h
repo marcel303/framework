@@ -12,6 +12,8 @@ struct SceneRenderRegistrationBase
 	std::function<void(const RenderPass pass)> draw;
 	std::function<void(const ShadowPass pass)> drawShadow;
 	
+	std::function<void()> drawDeferredLights;
+	
 	SceneRenderRegistrationBase();
 	
 	virtual void setup() = 0;

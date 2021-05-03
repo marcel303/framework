@@ -123,7 +123,7 @@ void LightComponent::drawGizmo(ComponentDraw & draw) const
 				
 				// draw light cone outline
 				
-				const float alpha = tanf(spotAngle / 2.f / 180.f * float(M_PI));
+				const float alpha = tanf(spotAngle / 2.f * Calc::deg2rad);
 				
 				const Vec3 forward   = draw.sceneNodeComponent->objectToWorld.GetAxis(2).CalcNormalized();
 				const Vec3 tangent   = draw.sceneNodeComponent->objectToWorld.GetAxis(0).CalcNormalized() * alpha;
@@ -293,7 +293,7 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 			
 			nextLightId++;
 			
-			if (lightComp->castShadows == false)
+			if (lightComp->castShadows == false || lightComp->farDistance <= shadowMapNearDistance)
 				continue;
 			
 			auto * sceneNodeComp = lightComp->componentSet->find<SceneNodeComponent>();
@@ -304,13 +304,12 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 			{
 			case LightComponent::kLightType_Directional:
 				{
-					// todo : light comp needs shadow map near/far distances and extents
 					shadowMapDrawer->addDirectionalLight(
 						nextLightId,
 						objectToWorld,
-						lightComp->farDistance / 100.f,
+						shadowMapNearDistance,
 						lightComp->farDistance,
-						10.f);
+						10.f); // todo : directional light needs shadow map extents
 				}
 				break;
 				
@@ -319,12 +318,11 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 			
 			case LightComponent::kLightType_Spot:
 				{
-					// todo : light comp needs shadow map near/far distances
 					shadowMapDrawer->addSpotLight(
 						nextLightId,
 						objectToWorld,
-						lightComp->spotAngle / 180.f * float(M_PI),
-						lightComp->farDistance / 100.f,
+						lightComp->spotAngle * Calc::deg2rad,
+						shadowMapNearDistance,
 						lightComp->farDistance);
 				}
 				break;
@@ -399,7 +397,7 @@ void LightComponentMgr::beforeDraw(const Mat4x4 & worldToView)
 				forwardLightingHelper->addSpotLight(
 					objectToWorld.GetTranslation(),
 					objectToWorld.GetAxis(2).CalcNormalized(),
-					lightComp->spotAngle / 180.f * float(M_PI),
+					lightComp->spotAngle * Calc::deg2rad,
 					lightComp->farDistance,
 					lightComp->color,
 					lightComp->intensity,

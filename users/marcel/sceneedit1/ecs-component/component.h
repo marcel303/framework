@@ -38,7 +38,6 @@ struct ComponentBase
 	
 	virtual ~ComponentBase();
 	
-	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
 	
 	virtual std::type_index typeIndex() const = 0;
@@ -78,9 +77,11 @@ struct ComponentMgrBase
 	virtual ComponentBase * createComponent(const int id) = 0;
 	virtual void destroyComponent(const int id) = 0;
 	
+	virtual ComponentBase * findComponent(const int id) = 0;
 	virtual ComponentBase * getComponent(const int id) = 0;
 	
-	virtual void tick(const float dt) = 0;
+	virtual void tick(const float dt) { }
+	virtual void tickAlways() { }
 	
 	virtual std::type_index typeIndex() const = 0;
 };
@@ -120,11 +121,27 @@ struct ComponentMgr : ComponentMgrBase
 		component = nullptr;
 	}
 	
+	virtual T * findComponent(const int id) override final
+	{
+		Assert(id >= 0);
+		if (id < numComponents)
+		{
+			auto * component = components[id];
+			
+			return component;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	
 	virtual T * getComponent(const int id) override final
 	{
 		Assert(id >= 0 && id < numComponents);
 		auto * component = components[id];
 		
+		Assert(component != nullptr);
 		return component;
 	}
 	
@@ -171,14 +188,6 @@ struct ComponentMgr : ComponentMgrBase
 		component->next = nullptr;
 	}
 	
-	virtual void tick(const float dt) override
-	{
-		for (T * i = head; i != nullptr; i = i->next)
-		{
-			i->tick(dt);
-		}
-	}
-	
 	inline T * castToComponentType(ComponentBase * component)
 	{
 		return static_cast<T*>(component);
@@ -189,6 +198,15 @@ struct ComponentMgr : ComponentMgrBase
 		return std::type_index(typeid(T));
 	}
 };
+
+template <typename T>
+static void tickComponents(T * head, const float dt)
+{
+	for (T * i = head; i != nullptr; i = i->next)
+	{
+		i->tick(dt);
+	}
+}
 
 // component set
 

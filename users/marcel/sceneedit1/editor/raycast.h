@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Vec3.h"
+
 #include <algorithm>
 #include <math.h>
 #include <limits>
@@ -233,4 +235,157 @@ static bool intersectSphere(
 		
 		return true;
 	}
+}
+
+static float intersectCone_squaref(const float x)
+{
+	return x * x;
+}
+
+static bool intersectCone_surface(
+	Vec3Arg rayOrigin,
+	Vec3Arg rayDirection,
+	Vec3Arg coneC, // tip position
+	Vec3Arg coneAxis, // axis
+	const float coneRadius,
+	const float coneHeight,
+	float & out_t)
+{
+	const float coneGamma = coneRadius / coneHeight;            // sin(coneAngle / 2)
+	const float coneAlpha = sqrtf(1.f - coneGamma * coneGamma); // cos(coneAngle / 2)
+	
+	// source: https://www.shadertoy.com/view/MtcXWr
+	
+    const Vec3 co = rayOrigin - coneC;
+    const float coneAlphaSq = coneAlpha * coneAlpha;
+
+    const float a = intersectCone_squaref(rayDirection * coneAxis) - coneAlphaSq;
+    const float b = 2.f * ((rayDirection * coneAxis) * (co * coneAxis) - (rayDirection * co) * coneAlphaSq);
+    const float c = intersectCone_squaref(co * coneAxis) - (co * co) * coneAlphaSq;
+
+    float det = b * b - 4.f * a * c;
+    
+    if (det < 0.f)
+		return false;
+
+    det = sqrtf(det);
+    
+    const float t1 = (-b - det) / (2.f * a);
+    const float t2 = (-b + det) / (2.f * a);
+
+    float t = t1;
+    if (t < 0.f || (t2 > 0.f && t2 < t))
+		t = t2;
+    if (t < 0.f)
+		return false;
+
+	// calculate the distance from the plane running from the tip & perpendicular to the axis, and the point on the cone
+	
+#if 0
+	const Vec3 conePoint = rayOrigin + rayDirection * t;
+    
+    const float height = conePoint * coneAxis - coneC * coneAxis;
+#else
+    const Vec3 conePoint = rayOrigin + rayDirection * t - coneC;
+    
+    const float height = conePoint * coneAxis;
+#endif
+    
+    if (height < 0.f || height > coneHeight)
+		return false;
+
+	out_t = t;
+	
+	return true;
+}
+
+static bool intersectCone_base(
+	Vec3Arg rayOrigin,
+	Vec3Arg rayDirection,
+	Vec3Arg coneC,    // tip position
+	Vec3Arg coneAxis, // axis
+	const float coneRadius,
+	const float coneHeight,
+	float & out_t)
+{
+	const Vec3 coneBase = coneC + coneAxis * coneHeight;
+
+	float t1, t2;
+	if (intersectCircle3d_2(
+		rayOrigin[0],
+		rayOrigin[1],
+		rayOrigin[2],
+		rayDirection[0],
+		rayDirection[1],
+		rayDirection[2],
+		coneBase[0],
+		coneBase[1],
+		coneBase[2],
+		coneRadius,
+		t1,
+		t2) == false)
+	{
+		return false;
+	}
+	else
+	{
+		const float t = fmaxf(0.f, fminf(t1, t2));
+		
+		out_t = t;
+		
+		return true;
+	}
+}
+
+static bool intersectCone(
+	Vec3Arg rayOrigin,
+	Vec3Arg rayDirection,
+	Vec3Arg coneC,    // tip position
+	Vec3Arg coneAxis, // axis
+	const float coneRadius,
+	const float coneHeight,
+	float & out_t,
+	bool & out_hitsBase)
+{
+	float surface_t;
+	if (intersectCone_surface(
+		rayOrigin,
+		rayDirection,
+		coneC,
+		coneAxis,
+		coneRadius,
+		coneHeight,
+		surface_t) == false)
+	{
+		surface_t = -1.f;
+	}
+	
+	float base_t;
+	if (intersectCone_base(
+		rayOrigin,
+		rayDirection,
+		coneC,
+		coneAxis,
+		coneRadius,
+		coneHeight,
+		base_t) == false)
+	{
+		base_t = -1.f;
+	}
+	
+	if (base_t != -1.f && (base_t < surface_t || surface_t == -1.f))
+	{
+		out_t = base_t;
+		out_hitsBase = true;
+		return true;
+	}
+	
+	if (surface_t != -1.f && (surface_t < base_t || base_t == -1.f))
+	{
+		out_t = surface_t;
+		out_hitsBase = false;
+		return true;
+	}
+	
+	return false;
 }

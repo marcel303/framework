@@ -49,8 +49,9 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 		kCommandType_None,
 		kCommandType_AddZone,
 		kCommandType_RemoveZone,
-		kCommandType_UpdateZoneParams,   // should be infrequent
-		kCommandType_UpdateZoneTransform // should be infrequent, but could be each frame when parented to an animated node
+		kCommandType_UpdateZoneParams,    // should be infrequent
+		kCommandType_UpdateZoneTransform, // should be infrequent, but could be each frame when parented to an animated node
+		kCommandType_UpdateAudioParams
 	};
 	
 	struct Command
@@ -86,24 +87,33 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 			int id;
 			Mat4x4 worldToObject;
 		} updateZoneTransform;
+		
+		struct
+		{
+			int frameRate;
+			int bufferSize;
+		} updateAudioParams;
 	};
 	
 	struct Zone
 	{
 		int id = -1;
 		
-		bool enabled = false; // todo : remove zones when disabled..
+		bool enabled = false;
 		Vec3 boxExtents = Vec3(1.f);
 		
 		Mat4x4 worldToObject;
 		bool hasTransform = false;
 		
-		float inputBuffer[2][256]; // todo : max buffer size
+		float * inputBuffer = nullptr;
 		
 		ZitaRev1::Reverb * reverb = nullptr;
 	};
 	
 	std::vector<Zone> zones;
+	
+	int audioFrameRate = 0;
+	int audioBufferSize = 0;
 	
 	std::vector<Command> commands;
 	std::mutex commands_mutex;
@@ -115,9 +125,9 @@ struct ReverbZoneComponentMgr : ComponentMgr<ReverbZoneComponent>
 	virtual ReverbZoneComponent * createComponent(const int id) override final;
 	virtual void destroyComponent(const int id) override final;
 	
-	virtual void tick(const float dt) override final;
+	virtual void tickAlways() override final;
 	
-	void onAudioThreadBegin();
+	void onAudioThreadBegin(const int frameRate, const int bufferSize);
 	void onAudioThreadEnd();
 	void onAudioThreadProcess();
 };

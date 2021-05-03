@@ -2,7 +2,8 @@
 
 // ecs-sceneEditor
 #include "editor/interactiveRing.h"
-#include "editor/transformGizmos.h"
+#include "editor/orientationGizmo.h"
+#include "editor/transformGizmos.h" // todo : rename to transformGizmo
 
 // ecs-scene
 #include "scene.h"

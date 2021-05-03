@@ -4,7 +4,7 @@
 
 AudioEmitterComponentMgr g_audioEmitterComponentMgr;
 
-void AudioEmitterComponentMgr::tick(const float dt)
+void AudioEmitterComponentMgr::tickAlways()
 {
 	// queue update-params command
 	
@@ -51,13 +51,28 @@ void AudioEmitterComponentMgr::tick(const float dt)
 	}
 }
 
-void AudioEmitterComponentMgr::onAudioThreadBegin()
+void AudioEmitterComponentMgr::onAudioThreadBegin(const int frameRate, const int bufferSize)
 {
+	Assert(audioThreadIsActive == false);
+	
 	audioThreadIsActive = true;
+	
+	commands_mutex.lock();
+	{
+		Command command;
+		command.type = kCommandType_UpdateAudioParams;
+		command.updateAudioParams.bufferSize = bufferSize;
+		command.updateAudioParams.frameRate = frameRate;
+		
+		commands.push_back(command);
+	}
+	commands_mutex.unlock();
 }
 
 void AudioEmitterComponentMgr::onAudioThreadEnd()
 {
+	Assert(audioThreadIsActive == true);
+	
 	audioThreadIsActive = false;
 }
 
@@ -99,7 +114,7 @@ void AudioEmitterComponentMgr::onAudioThreadProcess()
 					emitter.mutex = new binaural::Mutex_Dummy();
 					emitter.binauralizer = new binaural::Binauralizer();
 					emitter.binauralizer->init(nullptr, emitter.mutex);
-					memset(emitter.outputBuffer, 0, sizeof(emitter.outputBuffer)); // fixme : adds/remove of emitters may trigger vector resize, which may copy a lot of data around
+					emitter.outputBuffer = new float[audioBufferSize];
 				}
 				break;
 				
@@ -112,6 +127,9 @@ void AudioEmitterComponentMgr::onAudioThreadProcess()
 						auto & emitter = *i;
 						if (emitter.id == command.removeEmitter.id)
 						{
+							delete emitter.outputBuffer;
+							emitter.outputBuffer = nullptr;
+							
 							delete emitter.binauralizer;
 							emitter.binauralizer = nullptr;
 							
@@ -166,6 +184,21 @@ void AudioEmitterComponentMgr::onAudioThreadProcess()
 					}
 					
 					Assert(found);
+				}
+				break;
+				
+			case kCommandType_UpdateAudioParams:
+				{
+					audioBufferSize = command.updateAudioParams.bufferSize;
+					audioFrameRate = command.updateAudioParams.frameRate;
+					
+					for (auto & emitter : emitters)
+					{
+						delete emitter.outputBuffer;
+						emitter.outputBuffer = nullptr;
+						
+						emitter.outputBuffer = new float[audioBufferSize];
+					}
 				}
 				break;
 			}

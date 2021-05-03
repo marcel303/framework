@@ -1,7 +1,7 @@
 #include "draw.h"
 #include "framework.h"
 
-void drawCylinder(
+void fillCylinder(
 	const Vec3 & position,
 	const int axis,
 	const float radius1,
@@ -106,9 +106,47 @@ void drawAxisArrow(
 {
 	// draw a cylinder with a cone on top
 	
-	drawCylinder(position, axis, radius, radius, length, mirrored);
+	fillCylinder(position, axis, radius, radius, length, mirrored);
 	
 	Vec3 offset;
 	offset[axis] = length * (mirrored ? -1.f : +1.f);
-	drawCylinder(position + offset, axis, top_radius, 0.f, top_length, mirrored);
+	fillCylinder(position + offset, axis, top_radius, 0.f, top_length, mirrored);
+}
+
+void drawSelectionBox(
+	const Mat4x4 & objectToWorld,
+	const Vec3 & min,
+	const Vec3 & max,
+	const Color & color)
+{
+	setColor(color);
+	gxBegin(GX_LINES);
+	{
+		const float length = .2f;
+		
+		const Vec3 direction_x = objectToWorld.Mul3(Vec3(length, 0, 0));
+		const Vec3 direction_y = objectToWorld.Mul3(Vec3(0, length, 0));
+		const Vec3 direction_z = objectToWorld.Mul3(Vec3(0, 0, length));
+		
+		const Vec3 points[2] = { min, max };
+		
+		for (int x = 0; x < 2; ++x)
+		{
+			for (int y = 0; y < 2; ++y)
+			{
+				for (int z = 0; z < 2; ++z)
+				{
+					const Vec3 point1 = objectToWorld * Vec3(points[x][0], points[y][1], points[z][2]);
+					const Vec3 point2_x = point1 + (x == 0 ? direction_x : -direction_x);
+					const Vec3 point2_y = point1 + (y == 0 ? direction_y : -direction_y);
+					const Vec3 point2_z = point1 + (z == 0 ? direction_z : -direction_z);
+					
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_x[0]);
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_y[0]);
+					gxVertex3fv(&point1[0]); gxVertex3fv(&point2_z[0]);
+				}
+			}
+		}
+	}
+	gxEnd();
 }

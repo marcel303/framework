@@ -39,8 +39,9 @@ struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 		kCommandType_None,
 		kCommandType_AddEmitter,
 		kCommandType_RemoveEmitter,
-		kCommandType_UpdateEmitterParams,   // should be infrequent
-		kCommandType_UpdateEmitterTransform // should be infrequent, but could be each frame when parented to an animated node
+		kCommandType_UpdateEmitterParams,    // should be infrequent
+		kCommandType_UpdateEmitterTransform, // should be infrequent, but could be each frame when parented to an animated node
+		kCommandType_UpdateAudioParams
 	};
 	
 	struct Command
@@ -68,18 +69,24 @@ struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 			int id;
 			Mat4x4 objectToWorld;
 		} updateEmitterTransform;
+		
+		struct
+		{
+			int bufferSize;
+			int frameRate;
+		} updateAudioParams;
 	};
 	
 	struct Emitter
 	{
 		int id = -1;
 		
-		bool enabled = false; // todo : remove emitters when disabled..
+		bool enabled = false;
 		
 		Mat4x4 objectToWorld;
 		bool hasTransform = false;
 	
-		float outputBuffer[256]; // todo : max buffer size
+		float * outputBuffer = nullptr;
 		
 		binaural::Mutex_Dummy * mutex = nullptr;
 		
@@ -87,6 +94,8 @@ struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 	};
 	
 	std::vector<Emitter> emitters;
+	int audioBufferSize = 0;
+	int audioFrameRate = 0;
 	
 	std::vector<Command> commands;
 	std::mutex commands_mutex;
@@ -125,9 +134,9 @@ struct AudioEmitterComponentMgr : ComponentMgr<AudioEmitterComponent>
 		ComponentMgr<AudioEmitterComponent>::destroyComponent(id);
 	}
 	
-	virtual void tick(const float dt) override final;
+	virtual void tickAlways() override final;
 	
-	void onAudioThreadBegin();
+	void onAudioThreadBegin(const int frameRate, const int bufferSize);
 	void onAudioThreadEnd();
 	void onAudioThreadProcess();
 };

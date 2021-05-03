@@ -6,11 +6,12 @@ struct RotateTransformComponent : Component<RotateTransformComponent>
 {
 	float speed = 0.f;
 	
-	virtual void tick(const float dt) override final;
+	void tick(const float dt);
 };
 
 struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
 {
+	virtual void tick(const float dt) override final;
 };
 
 extern RotateTransformComponentMgr g_rotateTransformComponentMgr;

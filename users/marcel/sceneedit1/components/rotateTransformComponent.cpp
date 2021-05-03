@@ -24,3 +24,10 @@ void RotateTransformComponent::tick(const float dt)
 		transformComponent->angleAxis.angle = angle;
 	}
 }
+
+//
+
+void RotateTransformComponentMgr::tick(const float dt)
+{
+	tickComponents(head, dt);
+}

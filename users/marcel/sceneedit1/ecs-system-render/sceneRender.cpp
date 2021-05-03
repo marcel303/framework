@@ -32,3 +32,10 @@ void sceneRender_drawShadow(const ShadowPass pass)
 		if (renderRegistration->drawShadow != nullptr)
 			renderRegistration->drawShadow(pass);
 }
+
+void sceneRender_drawDeferredLights()
+{
+	for (auto * renderRegistration = g_sceneRenderRegistrationList; renderRegistration != nullptr; renderRegistration = renderRegistration->next)
+		if (renderRegistration->drawDeferredLights != nullptr)
+			renderRegistration->drawDeferredLights();
+}

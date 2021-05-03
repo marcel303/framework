@@ -18,11 +18,7 @@
 #include "parameterUi.h"
 
 // ecs-system-audio
-#include "audioEmitterToAudioOutput.h" // todo : rename file to StereoOutputBuffer
-#include "audiooutput/AudioOutput_Native.h" // todo : remove
-#include "audioEmitterComponent.h" // todo : remove
-#include "reverbZoneComponent.h" // todo : remove
-#include <mutex> // todo : remove
+#include "audioEngine.h"
 
 // ecs-system-render-one
 #include "sceneRender.h"
@@ -145,13 +141,42 @@ struct FpsCounter
 
 //
 
-#include "cameraResource.h"
+#if 1
 
-static void testResources()
+#include "renderDrawableList.h"
+
+static void testDrawableListSort()
 {
-	g_resourceDatabase.add("controller 1", new Resource<CameraControllerTest>());
-	g_resourceDatabase.add("controller 2", new Resource<CameraControllerTest>());
+	RenderDrawableAllocator allocator(8 * 1024);
+	
+	RenderDrawableList drawableList;
+	
+	drawableList.captureBegin(Mat4x4(true), &allocator);
+	{
+		for (int i = 0; i < 10; ++i)
+		{
+			drawableList.add(nullptr)
+				.viewZ(random<float>(-10.f, +10.f));
+		}
+	}
+	drawableList.captureEnd();
+	
+	logDebug("sort using IncreasingViewZ..");
+	drawableList.sort<RenderDrawableCompare_IncreasingViewZ>();
+	for (auto * drawable = drawableList.drawable_head; drawable != nullptr; drawable = drawable->next)
+		logDebug("viewZ: %.2f", drawable->viewZ);
+	
+	logDebug("sort using DecreasingViewZ..");
+	drawableList.sort<RenderDrawableCompare_DecreasingViewZ>();
+	for (auto * drawable = drawableList.drawable_head; drawable != nullptr; drawable = drawable->next)
+		logDebug("viewZ: %.2f", drawable->viewZ);
+	
+	logDebug("done");
+	
+	allocator.Reset();
 }
+
+#endif
 
 //
 
@@ -255,8 +280,10 @@ int main(int argc, char * argv[])
 	
 	g_componentTypeDB.initComponentMgrs();
 	
-	testResources(); // todo : remove
-	
+#if 1
+	testDrawableListSort(); // todo : remove
+#endif
+
 #if 0
 	testResourcePointers(typeDB); // todo : remove
 #endif
@@ -449,55 +476,9 @@ int main(int argc, char * argv[])
 
 	FpsCounter fpsCounter;
 	
-// todo : remove this test code
-	class MyAudioStream : public AudioStream
-	{
-	public:
-		std::mutex mutex;
-		
-		Mat4x4 worldToView;
-		
-		virtual int Provide(int numSamples, AudioSample * __restrict samples) override
-		{
-			g_audioEmitterComponentMgr.onAudioThreadProcess();
-			g_reverbZoneComponentMgr.onAudioThreadProcess();
-			
-			Mat4x4 worldToView_local;
-			
-			mutex.lock();
-			{
-				worldToView_local = worldToView;
-			}
-			mutex.unlock();
-			
-			float outputBufferL[numSamples];
-			float outputBufferR[numSamples];
-			audioEmitterToStereoOutputBuffer(
-				worldToView_local,
-				outputBufferL,
-				outputBufferR,
-				numSamples);
-			
-			const float scale = ((1 << 15) - 1);
-			
-			for (int i = 0; i < numSamples; ++i)
-			{
-				samples[i].channel[0] = int(outputBufferL[i] * scale);
-				samples[i].channel[1] = int(outputBufferR[i] * scale);
-			}
-			
-			return numSamples;
-		}
-	};
-	
-	AudioOutput_Native audioOutput;
-	audioOutput.Initialize(2, 48000, 256);
-	
-	g_audioEmitterComponentMgr.onAudioThreadBegin();
-	g_reverbZoneComponentMgr.onAudioThreadBegin();
-	
-	MyAudioStream audioStream;
-	audioOutput.Play(&audioStream);
+	AudioEngineBase * audioEngine = createAudioEngine();
+	audioEngine->init();
+	audioEngine->start();
 	
 	for (;;)
 	{
@@ -590,7 +571,7 @@ int main(int argc, char * argv[])
 			redrawView3d |= !editor.guiContext.isIdle();
 		#endif
 		
-		// todo : active gui context.. ?
+		// todo : active gui context.. ? perhaps scene editor should manage renderer.. ?
 			if (ImGui::BeginMainMenuBar())
 			{
 				if (ImGui::BeginMenu("Renderer"))
@@ -792,6 +773,11 @@ int main(int argc, char * argv[])
 			redrawView3d = true;
 		}
 		
+		for (auto * type : g_componentTypeDB.componentTypes)
+		{
+			type->componentMgr->tickAlways();
+		}
+		
 		//
 		
 		if (framework.isStereoVr())
@@ -850,12 +836,9 @@ int main(int argc, char * argv[])
 					gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 					g_lightComponentMgr.beforeDraw(worldToView);
 
-					// todo : remove this test code
-					audioStream.mutex.lock();
-					{
-						audioStream.worldToView = worldToView;
-					}
-					audioStream.mutex.unlock();
+					// update audio engine
+					
+					audioEngine->setListenerTransform(worldToView);
 					
 					// render the scene
 				
@@ -968,11 +951,10 @@ int main(int argc, char * argv[])
 		fpsCounter.nextFrame();
 	}
 	
-	audioOutput.Stop();
-	audioOutput.Shutdown();
-	
-	g_reverbZoneComponentMgr.onAudioThreadEnd();
-	g_audioEmitterComponentMgr.onAudioThreadEnd();
+	audioEngine->stop();
+	audioEngine->shut();
+	delete audioEngine;
+	audioEngine = nullptr;
 
 	renderer.free();
 	

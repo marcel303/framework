@@ -165,10 +165,6 @@ bool ParameterComponent::init()
 	return result;
 }
 
-void ParameterComponent::tick(const float dt)
-{
-}
-
 void ParameterComponent::propertyChanged(void * address)
 {
 	if (address == &prefix)

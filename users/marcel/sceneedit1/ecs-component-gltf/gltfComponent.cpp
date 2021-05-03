@@ -40,10 +40,6 @@ bool GltfComponent::init()
 	return true;
 }
 
-void GltfComponent::tick(const float dt)
-{
-}
-
 void GltfComponent::propertyChanged(void * address)
 {
 	if (address == &filename)

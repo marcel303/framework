@@ -1,21 +1,25 @@
-#include "audioEmitterToAudioOutput.h"
+#include "audioEmitterToStereoOutputBuffer.h"
 
+// ecs-system-audio
 #include "audioEmitterComponent.h"
 #include "reverbZoneComponent.h"
 
+// ecs-scene
 #include "sceneNodeComponent.h"
 
-#include "binaural_oalsoft.h" // todo : move to other file
-#include "framework.h" // framework.resolveResourcePath // todo : remove. let entity initializing audio system do the resolve
-
-#include "audiostream/AudioStreamWave.h" // todo : remove
-
+// zita-rev1
 #include "zita-rev1.h"
 
-static binaural::HRIRSampleSet * s_hrirSampleSet = nullptr;
+#define ENABLE_AUDIO_SOURCE_HACK 1
 
+#if ENABLE_AUDIO_SOURCE_HACK
+#include "audiostream/AudioStreamWave.h" // todo : remove
+#include "framework.h" // todo : remove
+
+static bool s_isInit = false;
 static AudioStreamWave s_audioStream;
 static AudioSample s_audioStreamSamples[256];
+#endif
 
 static float computeDistanceSqToReverbZone(
 	Vec3Arg position_world,
@@ -33,6 +37,7 @@ static float computeDistanceSqToReverbZone(
 }
 
 void audioEmitterToStereoOutputBuffer(
+	const binaural::HRIRSampleSet * hrirSampleSet,
 	const Mat4x4 & worldToListener,
 	float * __restrict outputBufferL,
 	float * __restrict outputBufferR,
@@ -43,19 +48,16 @@ void audioEmitterToStereoOutputBuffer(
 	
 // todo : use eight corners plus nearest vertex method for spatializing reverb zones? or rethink the issue
 
-// todo : add a central place to load the HRIR sample set
-	if (s_hrirSampleSet == nullptr)
+#if ENABLE_AUDIO_SOURCE_HACK
+// todo : remove wave sample hack
+	if (s_isInit == false)
 	{
-		s_hrirSampleSet = new binaural::HRIRSampleSet();
-	// fixme : resolve on audio thread is not safe
-		auto * resolved_path = framework.resolveResourcePath("ecs-system-audio/binaural/Default HRTF.mhr");
-		binaural::loadHRIRSampleSet_Oalsoft(resolved_path, *s_hrirSampleSet);
-		s_hrirSampleSet->finalize();
-		
-		resolved_path = framework.resolveResourcePath("snare.wav");
+		s_isInit = true;
+		auto * resolved_path = framework.resolveResourcePath("snare.wav");
 		s_audioStream.Open(resolved_path, true);
 	}
 	s_audioStream.Provide(numFramesThisBlock, s_audioStreamSamples); // todo : remove
+#endif
 
 	// produce samples for audio emitter
 	
@@ -66,14 +68,15 @@ void audioEmitterToStereoOutputBuffer(
 		if (audioEmitter.enabled == false)
 			continue;
 		
+	#if ENABLE_AUDIO_SOURCE_HACK
 		for (int s = 0; s < numFramesThisBlock; ++s)
 		{
-			audioEmitter.outputBuffer[s] = (rand() / float(RAND_MAX) - .5f) * .4f;
-			//audioEmitter.outputBuffer[s] = (s_audioStreamSamples[s].channel[0] + s_audioStreamSamples[s].channel[1]) / float(1 << 16);
+			//audioEmitter.outputBuffer[s] = (rand() / float(RAND_MAX) - .5f) * .4f;
+			audioEmitter.outputBuffer[s] = (s_audioStreamSamples[s].channel[0] + s_audioStreamSamples[s].channel[1]) / float(1 << 16);
 		}
+	#endif
 		
-	// todo : set sample set just once
-		audioEmitter.binauralizer->setSampleSet(s_hrirSampleSet);
+		audioEmitter.binauralizer->setSampleSet(hrirSampleSet);
 	}
 	
 	// compute routing weights for each audio emitter vs each reverb zone,
@@ -180,8 +183,7 @@ void audioEmitterToStereoOutputBuffer(
 		
 		for (int i = 0; i < numFramesThisBlock; ++i)
 		{
-			reverbZone.inputBuffer[0][i] = 0.f;
-			reverbZone.inputBuffer[1][i] = 0.f;
+			reverbZone.inputBuffer[i] = 0.f;
 		}
 	}
 	
@@ -211,8 +213,7 @@ void audioEmitterToStereoOutputBuffer(
 				
 				for (int s = 0; s < numFramesThisBlock; ++s)
 				{
-					reverbZone.inputBuffer[0][s] += audioEmitter.outputBuffer[s] * reverbZoneWeight;
-					reverbZone.inputBuffer[1][s] += audioEmitter.outputBuffer[s] * reverbZoneWeight;
+					reverbZone.inputBuffer[s] += audioEmitter.outputBuffer[s] * reverbZoneWeight;
 				}
 			}
 		}
@@ -237,8 +238,8 @@ void audioEmitterToStereoOutputBuffer(
 		
 		float * src[2] =
 		{
-			reverbZone.inputBuffer[0],
-			reverbZone.inputBuffer[1]
+			reverbZone.inputBuffer,
+			reverbZone.inputBuffer
 		};
 		
 		float samplesL[numFramesThisBlock];

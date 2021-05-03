@@ -4,7 +4,6 @@ enum RenderPass
 {
 	kRenderPass_Opaque,
 	kRenderPass_Opaque_ForwardShaded,
-	kRenderPass_Lights,
 	kRenderPass_Background,
 	kRenderPass_Translucent,
 	kRenderPass_COUNT

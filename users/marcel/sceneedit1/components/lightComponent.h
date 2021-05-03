@@ -27,12 +27,12 @@ struct LightComponent : Component<LightComponent>
 	};
 	
 	LightType type = kLightType_Point;
-	float intensity = 1.f;
-	Vec3 color = Vec3(1, 1, 1);
-	Vec3 bottomColor = Vec3(0, 0, 0);
-	float farDistance = 10.f; // for point and spot light attenuation
-	float attenuationBegin = 0.f;  // for point and spot light attenuation
-	float spotAngle = 90.f;
+	float intensity = 1.f;             // linear light intensity
+	Vec3 color = Vec3(1, 1, 1);        // light color encoded in the sRGB color space
+	Vec3 bottomColor = Vec3(0, 0, 0);  // todo : rename to secondaryColor
+	float farDistance = 10.f;          // for light attenuation for non-directional light types, and for directional and spot light shadow map rendering
+	float attenuationBegin = 0.f;      // for light attenuation for non-directional light types
+	float spotAngle = 90.f;            // the spot light angle in degrees
 	bool castShadows = false;
 	
 	virtual void drawGizmo(ComponentDraw & draw) const override;
@@ -46,6 +46,7 @@ struct LightComponentMgr : ComponentMgr<LightComponent>
 	rOne::ShadowMapDrawer * shadowMapDrawer = nullptr;
 	
 	bool enableShadowMaps = false;
+	float shadowMapNearDistance = .05f; // the near distance (meters) to use for shadow map rendering
 	
 	virtual bool init() override;
 	virtual void shut() override;
