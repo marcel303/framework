@@ -1800,7 +1800,90 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 				ImGuiWindowFlags_NoBackground |
 				ImGuiWindowFlags_NoTitleBar))
 			{
-				if (editingMode == kEditingMode_NodePlacement)
+				if (ImGui::Button("Scene"))
+				{
+					guiTab = kGuiTab_SceneStructure;
+					editingMode = kEditingMode_NodeSelection;
+				}
+				
+				ImGui::SameLine();
+				if (ImGui::Button("Visibility"))
+					guiTab = kGuiTab_Visibility;
+				
+				ImGui::SameLine();
+				if (ImGui::Button("Placement"))
+				{
+					guiTab = kGuiTab_NodePlacement;
+					editingMode = kEditingMode_NodePlacement;
+				}
+				
+				// preview/simulation options
+				
+				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Indent();
+					{
+						ImGui::Checkbox("Tick", &preview.tickScene);
+						ImGui::SameLine();
+						ImGui::Checkbox("Draw", &preview.drawScene);
+						ImGui::SameLine();
+						ImGui::PushItemWidth(80.f);
+						ImGui::PushID("Tick Mult");
+						ImGui::SliderFloat("", &preview.tickMultiplier, 0.f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
+						ImGui::PopID();
+						ImGui::PopItemWidth();
+						ImGui::SameLine();
+						if (ImGui::Button("100%"))
+						{
+							preview.tickScene = true;
+							preview.tickMultiplier = 1.f;
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("--"))
+						{
+							preview.tickScene = true;
+							preview.tickMultiplier /= 1.25f;
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("++"))
+						{
+							preview.tickScene = true;
+							preview.tickMultiplier *= 1.25f;
+						}
+					}
+					ImGui::Unindent();
+				}
+				
+				if (ImGui::CollapsingHeader("VrPointer"))
+				{
+					for (auto & pointer : vrPointer)
+					{
+						ImGui::Text("Pointer");
+						ImGui::Indent();
+						{
+							ImGui::Text("Touches | A:%d, B:%d, T:%d, G:%d",
+								pointer.isTouched(VrButton_A),
+								pointer.isTouched(VrButton_B),
+								pointer.isTouched(VrButton_Trigger),
+								pointer.isTouched(VrButton_GripTrigger));
+								
+							ImGui::Text("Pressure | A:%d, B:%d, T:%d, G:%d",
+								int(pointer.getPressure(VrButton_A) * 100.f),
+								int(pointer.getPressure(VrButton_B) * 100.f),
+								int(pointer.getPressure(VrButton_Trigger) * 100.f),
+								int(pointer.getPressure(VrButton_GripTrigger) * 100.f));
+
+							ImGui::Text("Buttons | A:%d, B:%d, T:%d, G:%d",
+								pointer.isDown(VrButton_A),
+								pointer.isDown(VrButton_B),
+								pointer.isDown(VrButton_Trigger),
+								pointer.isDown(VrButton_GripTrigger));
+						}
+						ImGui::Unindent();
+					}
+				}
+				
+				if (guiTab == kGuiTab_NodePlacement)
 				{
 					if (ImGui::CollapsingHeader("Node Placement", ImGuiTreeNodeFlags_DefaultOpen))
 					{
@@ -1848,214 +1931,183 @@ void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 					}
 				}
 				
-				// visibility options
-				
-				if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
+				if (guiTab == kGuiTab_Visibility)
 				{
-					ImGui::Indent();
+					// visibility options
+					
+					if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						ImGui::Checkbox("Draw grid", &visibility.drawGrid);
-						ImGui::SliderFloat("Grid opacity", &visibility.gridOpacity, 0.f, 1.f);
-						ImGui::Checkbox("Draw ground plane", &visibility.drawGroundPlane);
-						ImGui::Checkbox("Draw nodes", &visibility.drawNodes);
-						ImGui::Checkbox("Draw node bounding boxes", &visibility.drawNodeBoundingBoxes);
-						ImGui::Checkbox("Draw component details", &visibility.drawComponentDetails);
-						ImGui::Checkbox("Draw axes helper", &visibility.drawAxesHelper);
+						ImGui::Indent();
+						{
+							ImGui::Checkbox("Draw grid", &visibility.drawGrid);
+							ImGui::SliderFloat("Grid opacity", &visibility.gridOpacity, 0.f, 1.f);
+							ImGui::Checkbox("Draw ground plane", &visibility.drawGroundPlane);
+							ImGui::Checkbox("Draw nodes", &visibility.drawNodes);
+							ImGui::Checkbox("Draw node bounding boxes", &visibility.drawNodeBoundingBoxes);
+							ImGui::Checkbox("Draw component details", &visibility.drawComponentDetails);
+							ImGui::Checkbox("Draw axes helper", &visibility.drawAxesHelper);
+						}
+						ImGui::Unindent();
 					}
-					ImGui::Unindent();
 				}
 				
-				// preview/simulation options
-				
-				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
+				if (guiTab == kGuiTab_SceneStructure)
 				{
-					ImGui::Indent();
+					// scene structure
+					
+					if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						ImGui::Checkbox("Tick", &preview.tickScene);
-						ImGui::SameLine();
-						ImGui::Checkbox("Draw", &preview.drawScene);
-						ImGui::SameLine();
-						ImGui::PushItemWidth(80.f);
-						ImGui::PushID("Tick Mult");
-						ImGui::SliderFloat("", &preview.tickMultiplier, 0.f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
-						ImGui::PopID();
-						ImGui::PopItemWidth();
-						ImGui::SameLine();
-						if (ImGui::Button("100%"))
+						if (ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter))
 						{
-							preview.tickScene = true;
-							preview.tickMultiplier = 1.f;
+							updateNodeVisibility();
 						}
-						ImGui::SameLine();
-						if (ImGui::Button("--"))
+						
+						if (ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter))
 						{
-							preview.tickScene = true;
-							preview.tickMultiplier /= 1.25f;
+							updateNodeVisibility();
 						}
-						ImGui::SameLine();
-						if (ImGui::Button("++"))
-						{
-							preview.tickScene = true;
-							preview.tickMultiplier *= 1.25f;
-						}
-					}
-					ImGui::Unindent();
-				}
-				
-				// scene structure
-				
-				if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					if (ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter))
-					{
+						
 						updateNodeVisibility();
-					}
-					
-					if (ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter))
-					{
-						updateNodeVisibility();
-					}
-					
-					updateNodeVisibility();
-					
-					ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-					{
-					#if SCENEEDIT_USE_IMGUIFILEDIALOG
-						const char * attachSceneDialogKey = "AttachScene";
-						const char * importSceneDialogKey = "ImportScene";
-					#endif
-					
-						nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
-						nodeUi.nodesToOpen_deferred.clear();
 						
-						const NodeStructureEditingAction action = editNodeStructure_traverse(scene.rootNodeId);
-						
-						switch (action)
+						ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
-						case kNodeStructureEditingAction_None:
-							break;
-							
-						case kNodeStructureEditingAction_NodeCopy:
-							performAction_copy(false);
-							break;
-						case kNodeStructureEditingAction_NodeCopyTree:
-							performAction_copy(true);
-							break;
-							
-						case kNodeStructureEditingAction_NodePasteChild:
-							performAction_pasteChild();
-							break;
-						case kNodeStructureEditingAction_NodePasteSibling:
-							performAction_pasteSibling();
-							break;
-						case kNodeStructureEditingAction_NodeDuplicate:
-							performAction_duplicate();
-							break;
-							
-						case kNodeStructureEditingAction_NodeRemove:
-							performAction_remove();
-							break;
-							
-						case kNodeStructureEditingAction_NodeAddChild:
-							performAction_addChild();
-							break;
+						#if SCENEEDIT_USE_IMGUIFILEDIALOG
+							const char * attachSceneDialogKey = "AttachScene";
+							const char * importSceneDialogKey = "ImportScene";
+						#endif
 						
-						case kNodeStructureEditingAction_NodeAddChildFromTemplate:
-							performAction_sceneImport(action_nodeAddFromTemplate.path.c_str());
-							action_nodeAddFromTemplate = Action_NodeAddFromTemplate();
-							break;
+							nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
+							nodeUi.nodesToOpen_deferred.clear();
 							
-						case kNodeStructureEditingAction_NodeSceneAttach:
-						#if SCENEEDIT_USE_LIBNFD
-							performAction_sceneAttach(nullptr, nullptr);
-						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-							openImGuiOpenDialog(
-								attachSceneDialogKey,
-								"Attach Scene..",
-								".*",
-								"");
-						#endif
-							break;
-						case kNodeStructureEditingAction_NodeSceneAttachUpdate:
-							performAction_sceneAttachUpdate();
-							break;
+							const NodeStructureEditingAction action = editNodeStructure_traverse(scene.rootNodeId);
 							
-						case kNodeStructureEditingAction_NodeSceneImport:
-						#if SCENEEDIT_USE_LIBNFD
-							performAction_sceneImport(nullptr);
-						#elif SCENEEDIT_USE_IMGUIFILEDIALOG
-							openImGuiOpenDialog(
-								importSceneDialogKey,
-								"Import Scene..",
-								".*",
-								"");
-						#endif
-							break;
-							
-						case kNodeStructureEditingAction_NodeParent:
-							performAction_parent(
-								action_nodeParent.childNodeId,
-								action_nodeParent.newParentNodeId);
-							action_nodeParent = Action_NodeParent();
-							break;
-							
-						case kNodeStructureEditingAction_NodeGroup:
-							performAction_group();
-							break;
-							
-						case kNodeStructureEditingAction_NodeFocus:
+							switch (action)
 							{
-								performAction_focus(action_nodeFocus.nodeId);
-								action_nodeFocus = Action_NodeFocus();
+							case kNodeStructureEditingAction_None:
+								break;
+								
+							case kNodeStructureEditingAction_NodeCopy:
+								performAction_copy(false);
+								break;
+							case kNodeStructureEditingAction_NodeCopyTree:
+								performAction_copy(true);
+								break;
+								
+							case kNodeStructureEditingAction_NodePasteChild:
+								performAction_pasteChild();
+								break;
+							case kNodeStructureEditingAction_NodePasteSibling:
+								performAction_pasteSibling();
+								break;
+							case kNodeStructureEditingAction_NodeDuplicate:
+								performAction_duplicate();
+								break;
+								
+							case kNodeStructureEditingAction_NodeRemove:
+								performAction_remove();
+								break;
+								
+							case kNodeStructureEditingAction_NodeAddChild:
+								performAction_addChild();
+								break;
+							
+							case kNodeStructureEditingAction_NodeAddChildFromTemplate:
+								performAction_sceneImport(action_nodeAddFromTemplate.path.c_str());
+								action_nodeAddFromTemplate = Action_NodeAddFromTemplate();
+								break;
+								
+							case kNodeStructureEditingAction_NodeSceneAttach:
+							#if SCENEEDIT_USE_LIBNFD
+								performAction_sceneAttach(nullptr, nullptr);
+							#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+								openImGuiOpenDialog(
+									attachSceneDialogKey,
+									"Attach Scene..",
+									".*",
+									"");
+							#endif
+								break;
+							case kNodeStructureEditingAction_NodeSceneAttachUpdate:
+								performAction_sceneAttachUpdate();
+								break;
+								
+							case kNodeStructureEditingAction_NodeSceneImport:
+							#if SCENEEDIT_USE_LIBNFD
+								performAction_sceneImport(nullptr);
+							#elif SCENEEDIT_USE_IMGUIFILEDIALOG
+								openImGuiOpenDialog(
+									importSceneDialogKey,
+									"Import Scene..",
+									".*",
+									"");
+							#endif
+								break;
+								
+							case kNodeStructureEditingAction_NodeParent:
+								performAction_parent(
+									action_nodeParent.childNodeId,
+									action_nodeParent.newParentNodeId);
+								action_nodeParent = Action_NodeParent();
+								break;
+								
+							case kNodeStructureEditingAction_NodeGroup:
+								performAction_group();
+								break;
+								
+							case kNodeStructureEditingAction_NodeFocus:
+								{
+									performAction_focus(action_nodeFocus.nodeId);
+									action_nodeFocus = Action_NodeFocus();
+								}
+								break;
 							}
-							break;
-						}
+							
+						#if SCENEEDIT_USE_IMGUIFILEDIALOG
+							const char * path;
 						
-					#if SCENEEDIT_USE_IMGUIFILEDIALOG
-						const char * path;
-					
-						if ((path = doImGuiFileDialog(*this, attachSceneDialogKey)))
-						{
-							performAction_sceneAttach(makePathRelativeToDocumentPath(path).c_str(), nullptr);
+							if ((path = doImGuiFileDialog(*this, attachSceneDialogKey)))
+							{
+								performAction_sceneAttach(makePathRelativeToDocumentPath(path).c_str(), nullptr);
+							}
+							
+							if ((path = doImGuiFileDialog(*this, importSceneDialogKey)))
+							{
+								performAction_sceneImport(makePathRelativeToDocumentPath(path).c_str());
+							}
+						#endif
 						}
+						ImGui::EndChild();
 						
-						if ((path = doImGuiFileDialog(*this, importSceneDialogKey)))
+						if (ImGui::IsItemHovered())
 						{
-							performAction_sceneImport(makePathRelativeToDocumentPath(path).c_str());
+							if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
+								ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+							{
+								performAction_remove();
+							}
 						}
-					#endif
 					}
-					ImGui::EndChild();
 					
-					if (ImGui::IsItemHovered())
-					{
-						if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
-							ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
-						{
-							performAction_remove();
-						}
-					}
-				}
-				
-				// node editing
-				
-				if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
-					{
-						ImGui::PushItemWidth(180.f);
-						for (auto & selectedNodeId : selection.selectedNodes)
-						{
-							editNode(selectedNodeId);
-						}
-						ImGui::PopItemWidth();
-					}
-					ImGui::EndChild();
+					// node editing
 					
-					// one or more transforms may have been edited or invalidated due to a parent node being invalidated
-					// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
-					// to work
-					g_transformComponentMgr.calculateTransforms(scene);
+					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						{
+							ImGui::PushItemWidth(180.f);
+							for (auto & selectedNodeId : selection.selectedNodes)
+							{
+								editNode(selectedNodeId);
+							}
+							ImGui::PopItemWidth();
+						}
+						ImGui::EndChild();
+						
+						// one or more transforms may have been edited or invalidated due to a parent node being invalidated
+						// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
+						// to work
+						g_transformComponentMgr.calculateTransforms(scene);
+					}
 				}
 			}
 			ImGui::End();
@@ -2483,13 +2535,13 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		// action: select node(s)
 		if (inputIsCaptured == false && hasPointer && pointerBecameActive)
 		{
-			inputIsCaptured = true;
-			
 			if (!modShift())
 				selection = Selection();
 			
 			if (hoverNodeId != -1)
 			{
+				inputIsCaptured = true;
+				
 				selection.selectedNodes.insert(hoverNodeId);
 				markNodeOpenUntilRoot(hoverNodeId);
 				nodeUi.nodeToGiveFocus = hoverNodeId;

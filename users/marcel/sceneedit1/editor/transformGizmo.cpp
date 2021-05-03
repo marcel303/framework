@@ -1,7 +1,7 @@
 #include "draw.h"
 #include "framework.h"
 #include "raycast.h"
-#include "transformGizmos.h"
+#include "transformGizmo.h"
 #include <math.h>
 
 static const float kMinArrowVisibility = .01f; // cos of angle (rad) at which the arrows will start to disappear

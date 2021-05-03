@@ -50,6 +50,13 @@ struct SceneEditor
 		kEditingMode_NodePlacement
 	};
 	
+	enum GuiTab
+	{
+		kGuiTab_SceneStructure,
+		kGuiTab_Visibility,
+		kGuiTab_NodePlacement
+	};
+	
 	TypeDB * typeDB = nullptr;
 	
 	Scene scene;
@@ -68,6 +75,8 @@ struct SceneEditor
 	bool showUi = true;
 	
 	EditingMode editingMode = kEditingMode_NodeSelection;
+	
+	GuiTab guiTab = kGuiTab_SceneStructure;
 	
 	struct Selection
 	{
