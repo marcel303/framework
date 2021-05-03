@@ -280,7 +280,7 @@ int main(int argc, char * argv[])
 	
 	g_componentTypeDB.initComponentMgrs();
 	
-#if 1
+#if 0
 	testDrawableListSort(); // todo : remove
 #endif
 
@@ -729,8 +729,6 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-		// todo : add SceneEditor::drawPreview, when true, let the editor show a preview window
-		// todo : add SceneEditor::previewTextureId, and draw it before the editor draws itself
 			framework.getCurrentViewportSize(
 				editor.preview.viewportSx,
 				editor.preview.viewportSy);

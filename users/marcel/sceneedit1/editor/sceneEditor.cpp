@@ -129,6 +129,10 @@ void SceneEditor::init(TypeDB * in_typeDB)
 	camera.firstPerson.position = Vec3(0, 1, -2);
 	camera.firstPerson.height = 0.f;
 
+	orientationGizmo.init(256, 256);
+	orientationGizmo.x = 32;
+	orientationGizmo.y = 64;
+	
 	guiContext.init();
 	
 	initTemplateUi();
@@ -2341,14 +2345,14 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			transformGizmo.show(globalTransform);
 			
 			if (transformGizmo.tick(
-					pointerOrigin_world,
-					pointerDirection_world,
-					pointerIsActive && hasPointer,
-					pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
-					inputIsCaptured,
-					viewToWorld.GetTranslation(),
-					viewToWorld.GetAxis(2).CalcNormalized(),
-					dt))
+				pointerOrigin_world,
+				pointerDirection_world,
+				pointerIsActive && hasPointer,
+				pointerBecameActive && hasPointer, // todo : propagate hasPointer to transform gizmo (?)
+				inputIsCaptured,
+				viewToWorld.GetTranslation(),
+				viewToWorld.GetAxis(2).CalcNormalized(),
+				dt))
 			{
 				// transform the global transform into local space
 				
@@ -3895,6 +3899,64 @@ void SceneEditor::drawEditorSelectedNodeLabels() const
 	}
 }
 
+void SceneEditor::drawEditorComponentDetails(const Mat4x4 & viewToWorld, const bool opaquePass) const
+{
+	// todo : make this into a nice card that we can inspect in VR when we want to
+
+	for (auto nodeId : selection.selectedNodes)
+	{
+		gxPushMatrix();
+		{
+			auto & node = scene.getNode(nodeId);
+
+			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+			auto translation = sceneNodeComp->objectToWorld.GetTranslation();
+
+			gxTranslatef(translation[0], translation[1], translation[2]);
+
+			// rotate to face the camera
+			const Vec3 forwardVector = viewToWorld.GetAxis(2);
+			const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
+			gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
+
+			// flip Y axis to make sure text renders correctly
+			gxScalef(1, -1, 1);
+
+			if (opaquePass == false)
+			{
+				setFont("calibri.ttf"); // todo : font spec once
+				
+				pushFontMode(FONT_SDF);
+				beginTextBatch();
+				{
+					const float kFontSize = .2f;
+
+					float y = 0.f;
+
+					for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+					{
+						auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
+
+						setColor(100, 100, 200);
+						drawText(0, y, kFontSize, 0, 0, "%s", componentType->typeName);
+						y += kFontSize;
+
+						for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+						{
+							setColor(200, 100, 100);
+							drawText(kFontSize, y, kFontSize, 0, 0, "%s", member->name);
+							y += kFontSize;
+						}
+					}
+				}
+				endTextBatch();
+				popFontMode();
+			}
+		}
+		gxPopMatrix();
+	}
+}
+
 void SceneEditor::drawGui() const
 {
 	const_cast<SceneEditor*>(this)->guiContext.draw();
@@ -3903,6 +3965,12 @@ void SceneEditor::drawGui() const
 void SceneEditor::drawView2d() const
 {
 	drawEditorSelectedNodeLabels();
+	
+	((SceneEditor*)this)->orientationGizmo.tick(framework.timeStep); // todo : dt
+	((SceneEditor*)this)->camera.firstPersonQuat.orientation = orientationGizmo.orientation.calcInverse();
+	
+	orientationGizmo.draw();
+
 }
 
 void SceneEditor::drawView3dOpaque() const
@@ -3928,62 +3996,7 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 
 	if (visibility.drawComponentDetails)
 	{
-	// todo : make this into a nice card that we can inspect in VR when we want to
-
-		// draw node details
-
-		for (auto nodeId : selection.selectedNodes)
-		{
-			gxPushMatrix();
-			{
-				auto & node = scene.getNode(nodeId);
-
-				auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
-				auto translation = sceneNodeComp->objectToWorld.GetTranslation();
-
-				gxTranslatef(translation[0], translation[1], translation[2]);
-
-				// rotate to face the camera
-				const Vec3 forwardVector = viewToWorld.GetAxis(2);
-				const float rotationY = atan2f(forwardVector[0], forwardVector[2]);
-				gxRotatef(Calc::RadToDeg(rotationY), 0, 1, 0);
-
-				// flip Y axis to make sure text renders correctly
-				gxScalef(1, -1, 1);
-
-				pushFontMode(FONT_SDF); // todo : font spec once
-				setFont("calibri.ttf");
-
-				const float kFontSize = .2f;
-
-				float y = 0.f;
-
-				pushBlend(BLEND_ALPHA); // todo : opaque font rendering support. enforce alpha = 100% or 0% but no in-between values. but what about depth write? discard pixels?
-				beginTextBatch();
-				{
-					for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
-					{
-						auto * componentType = g_componentTypeDB.findComponentType(component->typeIndex());
-
-						setColor(100, 100, 200);
-						drawText(0, y, kFontSize, 0, 0, "%s", componentType->typeName);
-						y += kFontSize;
-
-						for (auto * member = componentType->members_head; member != nullptr; member = member->next)
-						{
-							setColor(200, 100, 100);
-							drawText(kFontSize, y, kFontSize, 0, 0, "%s", member->name);
-							y += kFontSize;
-						}
-					}
-				}
-				endTextBatch();
-				popBlend();
-
-				popFontMode();
-			}
-			gxPopMatrix();
-		}
+		drawEditorComponentDetails(viewToWorld, true);
 	}
 	
 	if (visibility.drawAxesHelper)
@@ -3998,6 +4011,10 @@ void SceneEditor::drawView3dOpaque_ForwardShaded() const
 
 void SceneEditor::drawView3dTranslucent() const
 {
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	const Mat4x4 viewToWorld = worldToView.CalcInv();
+	
 	pushLineSmooth(true);
 	{
 		drawEditorGridTranslucent();
@@ -4005,6 +4022,11 @@ void SceneEditor::drawView3dTranslucent() const
 		drawEditorGizmosTranslucent();
 		
 		drawEditorNodesTranslucent();
+		
+		if (visibility.drawComponentDetails)
+		{
+			drawEditorComponentDetails(viewToWorld, false);
+		}
 		
 		// always on top things
 		

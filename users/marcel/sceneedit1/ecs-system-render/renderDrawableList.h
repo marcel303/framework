@@ -77,8 +77,6 @@ struct RenderDrawableList
 		if (drawable_head != nullptr)
 		{
 		#if SORT_USING_PRIORITY_QUEUE
-		// todo : is this a stable sort ? would be nice, as it would avoid flickering in some cases where sort order is indeterminate
-		
 			std::priority_queue<RenderDrawable*, std::vector<RenderDrawable*>, C> queue;
 			
 			for (auto * drawable = drawable_head; drawable != nullptr; drawable = drawable->next)

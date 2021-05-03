@@ -3,7 +3,7 @@
 // ecs-sceneEditor
 #include "editor/interactiveRing.h"
 #include "editor/orientationGizmo.h"
-#include "editor/transformGizmos.h" // todo : rename to transformGizmo
+#include "editor/transformGizmo.h"
 
 // ecs-scene
 #include "scene.h"
@@ -60,6 +60,8 @@ struct SceneEditor
 #if ENABLE_TRANSFORM_GIZMOS
 	TransformGizmo transformGizmo;
 #endif
+
+	OrientationGizmo orientationGizmo;
 
 	FrameworkImGuiContext guiContext;
 	
@@ -361,6 +363,7 @@ protected:
 	void drawEditorGizmosOpaque(const bool depthObscuredPass) const;
 	void drawEditorGizmosTranslucent() const;
 	void drawEditorSelectedNodeLabels() const;
+	void drawEditorComponentDetails(const Mat4x4 & viewToWorld, const bool opaquePass) const;
 	
 public:
 	void drawGui() const;
