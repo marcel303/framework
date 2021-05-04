@@ -27,59 +27,65 @@
 
 #pragma once
 
-#if AUDIOOUTPUT_HD_USE_PORTAUDIO
+#if AUDIOOUTPUT_HD_USE_OPENSL
 
 #include "AudioOutputHD.h"
+#include "Multicore/Mutex.h"
+
+#include <SLES/OpenSLES.h>
+#include <SLES/OpenSLES_Android.h>
+
 #include <atomic>
-#include <mutex>
 
-typedef void PaStream;
-
-class AudioOutputHD_PortAudio : public AudioOutputHD
+class AudioOutputHD_OpenSL : public AudioOutputHD
 {
-	bool m_paInitialized = false;
-	PaStream * m_paStream = nullptr;
-	
-	std::mutex m_mutex;
-	
+	SLObjectItf engineObject;
+	SLEngineItf engineEngine;
+	SLObjectItf outputMixObject;
+
+	SLObjectItf playObj;
+	SLPlayItf playPlay;
+	SLAndroidSimpleBufferQueueItf playBufferQueue;
+	SLVolumeItf playVolume;
+
+	bool m_isInitialized = false;
+
+	Mutex m_mutex;
+
 	AudioStreamHD * m_stream = nullptr;
 	AudioStreamHD::StreamInfo m_streamInfo;
-	
-	int m_numInputChannels = 0;
-	int m_numOutputChannels = 0;
+
+	int m_numChannels = 0;
 	int m_frameRate = 0;
 	int m_bufferSize = 0;
-	
+
+	int16_t * m_buffers[2] = { };
+	int m_nextBuffer = 0;
+
 	std::atomic<bool> m_isPlaying;
 	std::atomic<float> m_volume;
 	std::atomic<int64_t> m_framesSincePlay;
+
+	static void playbackHandler_static(SLAndroidSimpleBufferQueueItf bq, void * obj);
+	void playbackHandler(SLAndroidSimpleBufferQueueItf bq);
 	
-	void lock();
-	void unlock();
-	
-	bool initPortAudio(const int numInputChannels, const int numOutputChannels, const int frameRate, const int bufferSize);
-	bool shutPortAudio();
-	
+	bool doInitialize(const int numChannels, const int frameRate, const int bufferSize);
+
 public:
-	void portAudioCallback(
-		const void * inputBuffer,
-		void * outputBuffer,
-		const int framesPerBuffer);
-	
-	AudioOutputHD_PortAudio();
-	virtual ~AudioOutputHD_PortAudio() override;
+	AudioOutputHD_OpenSL();
+	virtual ~AudioOutputHD_OpenSL() override;
 	
 	virtual bool Initialize(const int numInputChannels, const int numOutputChannels, const int frameRate, const int bufferSize) override;
 	virtual bool Shutdown() override;
 	
 	virtual void Play(AudioStreamHD * stream) override;
 	virtual void Stop() override;
-	
-	virtual void Volume_set(const float volume) override;
+
+	virtual void Volume_set(float volume) override;
 	virtual float Volume_get() const override;
-	
+
 	virtual bool IsPlaying_get() const override;
-	
+
 	virtual int BufferSize_get() const override;
 	virtual int FrameRate_get() const override;
 };

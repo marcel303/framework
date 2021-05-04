@@ -418,9 +418,9 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 	}
 	self->unlock();
 	
-	// mute channels that we're provided
+	// mute channels that weren't provided
 	
-	for (int i = numChannelsProvided; i < self->m_numOutputChannels; ++i)
+	for (int i = numChannelsProvided; i < provideInfo.numOutputChannels; ++i)
 	{
 		memset(provideInfo.outputSamples[i], 0, provideInfo.numFrames * sizeof(float));
 	}

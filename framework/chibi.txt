@@ -48,10 +48,17 @@ library audiooutput-hd
 	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 1 expose
 	with_platform android  compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
 	
+	with_platform macos    compile_definition AUDIOOUTPUT_HD_USE_OPENSL 0 expose
+	with_platform linux    compile_definition AUDIOOUTPUT_HD_USE_OPENSL 0 expose
+	with_platform windows  compile_definition AUDIOOUTPUT_HD_USE_OPENSL 0 expose
+	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_OPENSL 0 expose
+	with_platform android  compile_definition AUDIOOUTPUT_HD_USE_OPENSL 1 expose
+	
 	with_platform macos    depend_library portaudio
 	with_platform linux    depend_library portaudio
 	with_platform windows  depend_library portaudio
 	with_platform iphoneos depend_library CoreAudio find
+	with_platform android  depend_library OpenSLES global
 	
 	scan_files cpp path audiooutput-hd group audiooutput-hd
 	scan_files h   path audiooutput-hd group audiooutput-hd
