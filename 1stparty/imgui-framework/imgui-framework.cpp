@@ -275,7 +275,7 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			{
 				const float speed = 10.f;
 				
-				io.MouseWheelH += pointer.getAnalog(VrAnalog_X) * speed * dt;
+				io.MouseWheelH -= pointer.getAnalog(VrAnalog_X) * speed * dt;
 				io.MouseWheel  += pointer.getAnalog(VrAnalog_Y) * speed * dt;
 			}
 		}
