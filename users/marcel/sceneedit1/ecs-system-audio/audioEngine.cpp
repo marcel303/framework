@@ -1,7 +1,7 @@
 #include "audioEngine.h"
 
 #include "audioEmitterToStereoOutputBuffer.h"
-#include "audiooutput/AudioOutput_Native.h"
+#include "audiooutput-hd/AudioOutputHD_Native.h"
 
 #include "audioEmitterComponent.h"
 #include "reverbZoneComponent.h"
@@ -47,32 +47,30 @@ struct AudioEngine_Binaural : AudioEngineBase
 	
 	Mat4x4 worldToView = Mat4x4(true);
 		
-	class MyAudioStream : public AudioStream
+	class MyAudioStream : public AudioStreamHD
 	{
 	public:
 		std::mutex mutex;
 		
 		AudioEngine_Binaural * audioEngine = nullptr;
 		
-		virtual int Provide(int numSamples, AudioSample * __restrict samples) override
+		virtual int Provide(const ProvideInfo & provideInfo, const StreamInfo & streamInfo) override
 		{
 			audioEngine->onAudioThreadProcess();
 			
 			g_audioEmitterComponentMgr.onAudioThreadProcess();
 			g_reverbZoneComponentMgr.onAudioThreadProcess();
 			
-			float outputBufferL[numSamples];
-			float outputBufferR[numSamples];
+			float outputBufferL[provideInfo.numFrames];
+			float outputBufferR[provideInfo.numFrames];
 			audioEmitterToStereoOutputBuffer(
 				audioEngine->hrirSampleSet,
 				audioEngine->worldToView,
 				outputBufferL,
 				outputBufferR,
-				numSamples);
+				provideInfo.numFrames);
 			
-			const float scale = ((1 << 15) - 1);
-			
-			for (int i = 0; i < numSamples; ++i)
+			for (int i = 0; i < provideInfo.numFrames; ++i)
 			{
 				float l = outputBufferL[i];
 				float r = outputBufferR[i];
@@ -81,15 +79,15 @@ struct AudioEngine_Binaural : AudioEngineBase
 				l = l / (1.f + sqrtf(l * l));
 				r = r / (1.f + sqrtf(r * r));
 				
-				samples[i].channel[0] = int(l * scale);
-				samples[i].channel[1] = int(l * scale);
+				provideInfo.outputSamples[0][i] = l;
+				provideInfo.outputSamples[1][i] = r;
 			}
 			
-			return numSamples;
+			return 2;
 		}
 	};
 	
-	AudioOutput_Native audioOutput;
+	AudioOutputHD_Native audioOutput;
 	
 	MyAudioStream audioStream;
 	
@@ -108,7 +106,7 @@ struct AudioEngine_Binaural : AudioEngineBase
 	
 void AudioEngine_Binaural::init()
 {
-	audioOutput.Initialize(2, kAudioFrameRate, kAudioBufferSize);
+	audioOutput.Initialize(0, 2, kAudioFrameRate, kAudioBufferSize);
 	
 	audioStream.audioEngine = this;
 	
