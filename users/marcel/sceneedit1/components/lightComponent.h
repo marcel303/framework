@@ -29,7 +29,7 @@ struct LightComponent : Component<LightComponent>
 	LightType type = kLightType_Point;
 	float intensity = 1.f;             // linear light intensity
 	Vec3 color = Vec3(1, 1, 1);        // light color encoded in the sRGB color space
-	Vec3 bottomColor = Vec3(0, 0, 0);  // todo : rename to secondaryColor
+	Vec3 secondaryColor = Vec3(0.f);   // secondary color. used for lighting from 'below' for directional light type
 	float farDistance = 10.f;          // for light attenuation for non-directional light types, and for directional and spot light shadow map rendering
 	float attenuationBegin = 0.f;      // for light attenuation for non-directional light types
 	float spotAngle = 90.f;            // the spot light angle in degrees
@@ -73,7 +73,7 @@ struct LightComponentType : ComponentType<LightComponent>
 			.editingCurveExponential(4.f);
 		add("color", &LightComponent::color)
 			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
-		add("bottomColor", &LightComponent::bottomColor)
+		add("secondaryColor", &LightComponent::secondaryColor)
 			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
 		add("farDistance", &LightComponent::farDistance);
 		add("attenuationBegin", &LightComponent::attenuationBegin)

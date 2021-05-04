@@ -28,21 +28,18 @@ library ecs-components
 	link_translation_unit_using_function_call linkEcsComponents
 	header_path components expose
 	resource_path components/data
-
-	# todo : separate out ecs-components-draw from ecs-component
-	#        draw would contain lighting, gltf and model components
-	depend_library framework
 	
 	# todo : render system should register some basic shadow includes, conforming to a well defined interface, with regards to lighting, shadow mapping
 	depend_library renderOne
 	
-	# todo : for light and model we need this. maybe move model component to a separate library and light to render system
+	# todo : for light component we need this. maybe move light component to render system
 	depend_library ecs-system-render
 
 # -- ecs component gltf
 
 library ecs-component-gltf
 	depend_library ecs-component
+	depend_library ecs-scene
 	depend_library ecs-system-render
 	depend_library framework-gltf
 	scan_files cpp path ecs-component-gltf
@@ -51,9 +48,21 @@ library ecs-component-gltf
 	header_path ecs-component-gltf expose
 	resource_path ecs-component-gltf/data
 	
-	# require : lightComponent, sceneNodeComponent
+	# require : lightComponent
 	depend_library ecs-components
 
+# -- ecs component framework
+
+library ecs-component-framework
+	depend_library ecs-component
+	depend_library ecs-scene
+	depend_library ecs-system-render
+	depend_library framework
+	scan_files cpp path ecs-component-framework
+	scan_files h   path ecs-component-framework
+	link_translation_unit_using_function_call linkFrameworkComponents
+	header_path ecs-component-framework expose
+	
 # -- ecs systems
 
 library ecs-system-audio
@@ -163,6 +172,7 @@ app marcel-sceneedit-800-realtimeEditing
 # -- ecs scene editor test app
 
 app marcel-sceneedit-test
+	depend_library ecs-component-framework
 	depend_library ecs-component-gltf
 	depend_library ecs-system-audio
 	depend_library ecs-system-render

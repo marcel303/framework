@@ -141,45 +141,6 @@ struct FpsCounter
 
 //
 
-#if 1
-
-#include "renderDrawableList.h"
-
-static void testDrawableListSort()
-{
-	RenderDrawableAllocator allocator(8 * 1024);
-	
-	RenderDrawableList drawableList;
-	
-	drawableList.captureBegin(Mat4x4(true), &allocator);
-	{
-		for (int i = 0; i < 10; ++i)
-		{
-			drawableList.add(nullptr)
-				.viewZ(random<float>(-10.f, +10.f));
-		}
-	}
-	drawableList.captureEnd();
-	
-	logDebug("sort using IncreasingViewZ..");
-	drawableList.sort<RenderDrawableCompare_IncreasingViewZ>();
-	for (auto * drawable = drawableList.drawable_head; drawable != nullptr; drawable = drawable->next)
-		logDebug("viewZ: %.2f", drawable->viewZ);
-	
-	logDebug("sort using DecreasingViewZ..");
-	drawableList.sort<RenderDrawableCompare_DecreasingViewZ>();
-	for (auto * drawable = drawableList.drawable_head; drawable != nullptr; drawable = drawable->next)
-		logDebug("viewZ: %.2f", drawable->viewZ);
-	
-	logDebug("done");
-	
-	allocator.Reset();
-}
-
-#endif
-
-//
-
 #if 0
 
 #include "vfxgraphComponent.h"
@@ -279,10 +240,6 @@ int main(int argc, char * argv[])
 	registerComponentTypes(typeDB, g_componentTypeDB);
 	
 	g_componentTypeDB.initComponentMgrs();
-	
-#if 0
-	testDrawableListSort(); // todo : remove
-#endif
 
 #if 0
 	testResourcePointers(typeDB); // todo : remove
@@ -394,7 +351,7 @@ int main(int argc, char * argv[])
 					rOne::g_lightDrawer.drawDeferredDirectionalLight(
 						lightDir_world.CalcNormalized(),
 						light->color,
-						light->bottomColor,
+						light->secondaryColor,
 						light->intensity);
 				}
 				else if (light->type == LightComponent::kLightType_Point)
@@ -745,6 +702,9 @@ int main(int argc, char * argv[])
 		
 		editor.tickView(dt, inputIsCaptured);
 	
+		if (editor.orientationGizmo.animation.isActive()) // todo : remove. how to signal redraw is needed ?
+			redrawView3d = true;
+			
 		if (!mouse.isIdle() || !keyboard.isIdle())
 			redrawView3d = true;
 			

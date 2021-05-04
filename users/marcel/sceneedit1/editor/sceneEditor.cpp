@@ -69,14 +69,18 @@
 //
 
 #if defined(DEBUG)
-	#define DEBUG_UNDO 0
+	#define ENABLE_LOAD_AFTER_SAVE_TEST 0
+	#define ENABLE_SAVE_LOAD_TIMING     0
+	#define DEBUG_UNDO                  0
 #else
-	#define DEBUG_UNDO 0 // do not alter
+	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
+	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
+	#define DEBUG_UNDO                  0 // do not alter
 #endif
 
 #define ENABLE_TRANSFORM_RESTORE_ON_SCENE_UPDATE 1
 
-#define ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO 0 // todo : requires unique names for each nodes to always exist (not just on auto assign during save)
+#define ENABLE_NODE_SELECTION_RESTORE_ON_UNDO_REDO 0 // todo : requires unique names for each node to always exist (not just on auto assign during save)
 
 static const float kMinNodeRadius = .25f;
 
@@ -2268,6 +2272,14 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	const Mat4x4 viewToWorld = worldToView.CalcInv();
 	
+	// -- orientation gizmo
+	
+	{
+		orientationGizmo.tick(dt);
+		
+		camera.firstPersonQuat.orientation = orientationGizmo.orientation.calcInverse();
+	}
+	
 	// -- mouse picking
 	
 	// 1. transform mouse coordinates into a world space direction vector
@@ -2359,7 +2371,6 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 		secondaryBecameActive = mouse.wentDown(BUTTON_LEFT) && keyCommand();
 	}
 	
-#if ENABLE_TRANSFORM_GIZMOS
 	// 2.1 transformation gizmo interaction
 	
 	transformGizmo.editingWillBegin = [this]()
@@ -2455,7 +2466,6 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 			}
 		}
 	}
-#endif
 
 	// 2.1 interactive ring interaction
 	
@@ -3735,19 +3745,15 @@ void SceneEditor::drawEditorNodesTranslucent() const
 
 void SceneEditor::drawEditorGizmosOpaque(const bool depthObscuredPass) const
 {
-#if ENABLE_TRANSFORM_GIZMOS
 	transformGizmo.draw(
 		depthObscuredPass
 		? TransformGizmo::kDrawPass_DepthObscured
 		: TransformGizmo::kDrawPass_Opaque);
-#endif
 }
 
 void SceneEditor::drawEditorGizmosTranslucent() const
 {
-#if ENABLE_TRANSFORM_GIZMOS
 	transformGizmo.draw(TransformGizmo::kDrawPass_Translucent);
-#endif
 
 	// draw component specific gizmos
 	
@@ -4018,11 +4024,7 @@ void SceneEditor::drawView2d() const
 {
 	drawEditorSelectedNodeLabels();
 	
-	((SceneEditor*)this)->orientationGizmo.tick(framework.timeStep); // todo : dt
-	((SceneEditor*)this)->camera.firstPersonQuat.orientation = orientationGizmo.orientation.calcInverse();
-	
 	orientationGizmo.draw();
-
 }
 
 void SceneEditor::drawView3dOpaque() const

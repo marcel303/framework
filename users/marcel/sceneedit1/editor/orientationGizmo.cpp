@@ -20,6 +20,8 @@ void OrientationGizmo::init(const int in_sx, const int in_sy)
 	surface->setClearColor(0, 0, 0, 0);
 	
 	orientation.fromAngleAxis(0.f, Vec3(0, 1, 0));
+	
+	drawSurface();
 }
 
 void OrientationGizmo::shut()
@@ -82,9 +84,13 @@ void OrientationGizmo::hitTest(
 
 void OrientationGizmo::tick(const float dt)
 {
+	bool redraw = false;
+	
 	if (animation.isActive())
 	{
 		animation.tick(dt, orientation);
+		
+		redraw = true;
 	}
 	else
 	{
@@ -107,7 +113,7 @@ void OrientationGizmo::tick(const float dt)
 		Vec3 pointerDirection_world = viewToWorld.Mul3(
 			Vec3(
 				+mousePosition_view[0],
-				-mousePosition_view[1],
+				+mousePosition_view[1],
 				1.f));
 		pointerDirection_world = pointerDirection_world.CalcNormalized();
 		
@@ -123,6 +129,8 @@ void OrientationGizmo::tick(const float dt)
 		{
 			if (hitTestResult.axis != -1)
 			{
+				redraw = true;
+				
 				if (hitTestResult.hitsBase)
 				{
 					if (hitTestResult.axis == 0) animation.begin(orientation, Quat(-Calc::mPI2, Vec3(0, 1, 0)));
@@ -137,8 +145,10 @@ void OrientationGizmo::tick(const float dt)
 		}
 	}
 	
-// todo : only redraw surface when dirty
-	drawSurface();
+	if (mouse.isIdle() == false || redraw)
+	{
+		drawSurface();
+	}
 }
 
 void OrientationGizmo::drawSurface()

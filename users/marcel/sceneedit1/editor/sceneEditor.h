@@ -21,18 +21,6 @@
 
 //
 
-#if defined(DEBUG)
-	#define ENABLE_LOAD_AFTER_SAVE_TEST 0
-	#define ENABLE_SAVE_LOAD_TIMING     0
-#else
-	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
-	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
-#endif
-
-#define ENABLE_TRANSFORM_GIZMOS 1
-
-//
-
 struct AngleAxis;
 
 //
@@ -64,9 +52,7 @@ struct SceneEditor
 	Camera camera;
 	bool cameraIsActive = false;
 	
-#if ENABLE_TRANSFORM_GIZMOS
 	TransformGizmo transformGizmo;
-#endif
 
 	OrientationGizmo orientationGizmo;
 

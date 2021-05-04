@@ -14,7 +14,13 @@
 	#include <queue>
 #endif
 
-typedef MemAllocatorTransient RenderDrawableAllocator;
+struct RenderDrawableAllocator : public MemAllocatorTransient
+{
+	RenderDrawableAllocator(const size_t size)
+		: MemAllocatorTransient(size)
+	{
+	}
+};
 
 struct RenderDrawableList
 {
