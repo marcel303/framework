@@ -120,8 +120,13 @@ void AudioEngine_Binaural::shut()
 
 void AudioEngine_Binaural::start()
 {
-	g_audioEmitterComponentMgr.onAudioThreadBegin(kAudioFrameRate, kAudioBufferSize); // todo : use actual values from audio output
-	g_reverbZoneComponentMgr.onAudioThreadBegin(kAudioFrameRate, kAudioBufferSize);
+	g_audioEmitterComponentMgr.onAudioThreadBegin(
+		audioOutput.FrameRate_get(),
+		audioOutput.BufferSize_get());
+		
+	g_reverbZoneComponentMgr.onAudioThreadBegin(
+		audioOutput.FrameRate_get(),
+		audioOutput.BufferSize_get());
 	
 	audioOutput.Play(&audioStream);
 }
