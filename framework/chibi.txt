@@ -32,6 +32,35 @@ library audiostream-vorbis
 
 	header_path . expose
 
+library audiooutput-hd
+
+	depend_library libgg
+	
+	with_platform macos    compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 1 expose
+	with_platform linux    compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 1 expose
+	with_platform windows  compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 1 expose
+	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 0 expose
+	with_platform android  compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 0 expose
+
+	with_platform macos    compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
+	with_platform linux    compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
+	with_platform windows  compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
+	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 1 expose
+	with_platform android  compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
+	
+	with_platform macos    depend_library portaudio
+	with_platform linux    depend_library portaudio
+	with_platform windows  depend_library portaudio
+	with_platform iphoneos depend_library CoreAudio find
+	
+	scan_files cpp path audiooutput-hd group audiooutput-hd
+	scan_files h   path audiooutput-hd group audiooutput-hd
+	
+	with_platform macos    scan_files mm path audiooutput-hd group audiooutput-hd
+	with_platform iphoneos scan_files mm path audiooutput-hd group audiooutput-hd
+	
+	header_path . expose
+
 library waveloader
 
 	depend_library libgg
@@ -108,7 +137,7 @@ library framework objc-arc
 	
 	scan_files cpp path audiooutput group audiooutput
 	scan_files h   path audiooutput group audiooutput
-
+	
 	with_platform macos    scan_files mm path audiooutput group audiooutput
 	with_platform iphoneos scan_files mm path audiooutput group audiooutput
 
