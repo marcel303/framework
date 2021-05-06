@@ -19,7 +19,7 @@
 #endif
 
 #if defined(__arm__) || defined(__aarch64__)
-	#include "SSE2NEON.h"
+	#include "sse2neon.h"
 #endif
 
 #if defined(WIN32) && defined(__SSE2__)

@@ -130,7 +130,7 @@ namespace binaural
 	// for SSE we do not need to define any compatibility functions
 #elif BINAURAL_USE_NEON
 	// use an external dependency to translate SSE intrinsics to NEON intrinsics
-	#include "sse2neon/SSE2NEON.h"
+	#include "sse2neon.h"
 #elif BINAURAL_USE_GCC_VECTOR
 	// translate SSE intrinsics into GCC vector code
 	inline float4 _mm_set_ps(const float z, const float y, const float x, const float w)

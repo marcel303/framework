@@ -14,9 +14,9 @@
 
 /*
 
-todo : draw windows in 3d using framework
+DIBE : draw windows in 3d using framework
 
-todo : tick events for windows in 3d
+DONE : tick events for windows in 3d
 	- let the app or framework determine pointer direction and button presses
 	- intersect pointer with windows. determine nearest intersection
 	- on button press, make the intersecting window active

@@ -31,6 +31,7 @@ add rapidjson-support
 add remotery
 add rgbe
 add rtmidi-support
+add sse2neon
 add syphon
 add tinyxml2
 add turbojpeg

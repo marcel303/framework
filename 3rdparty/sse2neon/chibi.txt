@@ -1,0 +1,4 @@
+library sse2neon
+	add_files sse2neon.h dummy.cpp
+	license_file LICENSE
+	header_path . expose

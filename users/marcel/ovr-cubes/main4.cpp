@@ -36,7 +36,7 @@
  todo : integrate vfxgraph for some vfx processing: let it modulate lines or points and draw them in 3d
 
  DONE : check if Window class works conveniently with render passes and color/depth targets
- todo : integrate 3d virtual pointer with Window objects. create a small 3d Window picking system? should this be part of framework? perhaps just prototype it here and see what feels right
+ DONE : integrate 3d virtual pointer with Window objects. create a small 3d Window picking system? should this be part of framework? perhaps just prototype it here and see what feels right
 
  DONE : integrate imgui drawing to a Window. composite the result in 3d
 

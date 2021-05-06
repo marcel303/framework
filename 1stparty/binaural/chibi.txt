@@ -3,6 +3,7 @@ library binaural
 	depend_library libdelaunay
 	depend_library libgg
 	depend_library soundfile
+	depend_library sse2neon
 
 	scan_files cpp conglomerate conglomerates/binaural_all.cpp
 	scan_files h
