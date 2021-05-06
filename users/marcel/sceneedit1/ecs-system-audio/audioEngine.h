@@ -11,6 +11,8 @@ struct AudioEngineBase
 	virtual void stop() = 0;
 	
 	virtual void setListenerTransform(const Mat4x4 & worldToView) = 0;
+	
+	virtual ~AudioEngineBase() { }
 };
 
 AudioEngineBase * createAudioEngine();

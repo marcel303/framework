@@ -1052,7 +1052,6 @@ SceneEditor::NodeStructureEditingAction SceneEditor::doNodeStructureContextMenu(
 		result = kNodeStructureEditingAction_NodeRemove;
 	}
 
-// todo : add vfx graph nodes for : video by name
 // todo : vfx graph component : addObject<VfxNodeScene> .. or something .. that gives access to the scene .. allow access to scene nodes by name .. useful for video node for instance, to start / stop playback of a specific video hosted by a node
 // todo : automatically (?) add vfx node types for all registered component types and their inputs
 	if (ImGui::MenuItem("Add child node"))
@@ -2471,7 +2470,9 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	const bool ringIsActive = secondaryIsActive && hasPointer;
 	
-	if (ringIsActive && !interactiveRing.captureElem.hasCapture)
+	if (inputIsCaptured == false &&
+		interactiveRing.captureElem.hasCapture == false &&
+		ringIsActive)
 	{
 		inputIsCaptured = true;
 		

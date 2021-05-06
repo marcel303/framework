@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
-#if FRAMEWORK_IS_NATIVE_VR || 1 // todo : decide what to do here
+#if FRAMEWORK_IS_NATIVE_VR || 1 // todo : decide what to do here. setting vr mode has the benefit of vsyncs working properly
 	framework.vrMode = true;
 	framework.enableVrMovement = true;
 #endif
@@ -256,6 +256,9 @@ int main(int argc, char * argv[])
 #if USE_GUI_WINDOW
 	Window * guiWindow = new Window("Gui", 400, 740, true);
 	guiWindow->setPosition(40, 100);
+#if WINDOW_IS_3D
+	guiWindow->setPixelsPerMeter(400.f);
+#endif
 #endif
 	
 	auto drawOpaque = [&]()
@@ -465,7 +468,9 @@ int main(int argc, char * argv[])
 	#if USE_GUI_WINDOW && WINDOW_IS_3D
 		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
-			guiWindowTransform = vrPointer[1].getTransform(Vec3());
+			guiWindowTransform =
+				vrPointer[1].getTransform(Vec3())
+				.Translate(0, 0, 1.f);
 		}
 		
 		guiWindow->setTransform(

@@ -21,6 +21,9 @@ static AudioStreamWave s_audioStream;
 static AudioSample s_audioStreamSamples[256];
 #endif
 
+// todo : integrate spatial audio system from ovr-cubes6. it has a nice interface for dealing with spatial audio sources, and lerps distance intensity nicely
+// todo : separate spatialization from mixing audio emitters into reverb zones and reverb processing. reverb zones eventually become just another spatial audio source
+
 static float computeDistanceSqToReverbZone(
 	Vec3Arg position_world,
 	const ReverbZoneComponentMgr::Zone & reverbZone)
