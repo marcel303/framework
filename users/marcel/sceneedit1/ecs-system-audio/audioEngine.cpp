@@ -15,7 +15,7 @@
 #include <vector>
 
 const int kAudioBufferSize = 256; // todo : configure somewhere
-const int kAudioFrameRate = 44100;
+const int kAudioFrameRate = 48000; // note : needs to be 48kHz for OculusVR, and for binaulization due to HRIR sample sets being authored for 48kHz
 	
 struct AudioEngine_Binaural : AudioEngineBase
 {
@@ -61,27 +61,12 @@ struct AudioEngine_Binaural : AudioEngineBase
 			g_audioEmitterComponentMgr.onAudioThreadProcess();
 			g_reverbZoneComponentMgr.onAudioThreadProcess();
 			
-			float outputBufferL[provideInfo.numFrames];
-			float outputBufferR[provideInfo.numFrames];
 			audioEmitterToStereoOutputBuffer(
 				audioEngine->hrirSampleSet,
 				audioEngine->worldToView,
-				outputBufferL,
-				outputBufferR,
+				provideInfo.outputSamples[0],
+				provideInfo.outputSamples[1],
 				provideInfo.numFrames);
-			
-			for (int i = 0; i < provideInfo.numFrames; ++i)
-			{
-				float l = outputBufferL[i];
-				float r = outputBufferR[i];
-				
-				// apply a sigmoid function to ensure the values are between -1 and +1
-				l = l / (1.f + sqrtf(l * l));
-				r = r / (1.f + sqrtf(r * r));
-				
-				provideInfo.outputSamples[0][i] = l;
-				provideInfo.outputSamples[1][i] = r;
-			}
 			
 			return 2;
 		}
