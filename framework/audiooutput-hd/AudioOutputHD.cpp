@@ -27,12 +27,20 @@
 
 #include "AudioOutputHD.h"
 
+#include <math.h> // log10f
+
 void AudioOutputHD::GainDb_set(const float gainDb)
 {
-
+	const float volume = powf(10.f, volume / 20.f);
+	
+	Volume_set(volume);
 }
 
 float AudioOutputHD::GainDb_get() const
 {
-
+	const float volume = Volume_get();
+	
+	const float gainDb = 20.f * log10f(volume);
+	
+	return gainDb;
 }
