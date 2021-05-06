@@ -55,9 +55,6 @@ class AudioOutputHD_CoreAudio : public AudioOutputHD
 	std::atomic<float> m_volume;
 	std::atomic<int64_t> m_framesSincePlay;
 	
-	void lock();
-	void unlock();
-	
 	bool initCoreAudio(const int numInputChannels, const int numOutputChannels, const int frameRate, const int bufferSize);
 	bool shutCoreAudio();
 	

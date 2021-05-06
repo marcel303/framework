@@ -41,16 +41,6 @@
 	#include <portaudio/portaudio.h>
 #endif
 
-void AudioOutputHD_PortAudio::lock()
-{
-	m_mutex.lock();
-}
-
-void AudioOutputHD_PortAudio::unlock()
-{
-	m_mutex.unlock();
-}
-
 static int portaudioCallback(
 	const void * inputBuffer,
 	void * outputBuffer,
@@ -183,7 +173,7 @@ void AudioOutputHD_PortAudio::portAudioCallback(
 	
 	int numChannelsProvided = 0;
 	
-	lock();
+	m_mutex.lock();
 	{
 		if (m_stream && m_isPlaying)
 		{
@@ -192,7 +182,7 @@ void AudioOutputHD_PortAudio::portAudioCallback(
 			m_framesSincePlay.store(m_framesSincePlay.load() + framesPerBuffer);
 		}
 	}
-	unlock();
+	m_mutex.unlock();
 	
 	// mute channels that weren't provided
 	
@@ -242,18 +232,18 @@ void AudioOutputHD_PortAudio::Play(AudioStreamHD * stream)
 {
 	Assert(m_framesSincePlay.load() == 0);
 	
-	lock();
+	m_mutex.lock();
 	{
 		m_isPlaying = true;
 		
 		m_stream = stream;
 	}
-	unlock();
+	m_mutex.unlock();
 }
 
 void AudioOutputHD_PortAudio::Stop()
 {
-	lock();
+	m_mutex.lock();
 	{
 		m_stream = nullptr;
 		
@@ -261,7 +251,7 @@ void AudioOutputHD_PortAudio::Stop()
 		
 		m_framesSincePlay = 0;
 	}
-	unlock();
+	m_mutex.unlock();
 }
 
 void AudioOutputHD_PortAudio::Volume_set(const float volume)

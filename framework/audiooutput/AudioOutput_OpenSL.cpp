@@ -376,7 +376,10 @@ void AudioOutput_OpenSL::Volume_set(float volume)
 #if USE_VOLUME_INTERFACE
     if (playVolume != nullptr)
 	{
-        auto result = (*playVolume)->SetVolumeLevel(playVolume, volume); // todo: millibel. should convert from volume to dB, and multiply by 1000.0
+		const float minValue = SL_MILLIBEL_MIN;
+		const float maxValue = (*playVolume)->GetMaxVolumeLevel();
+		const float value = clamp<float>(20.f * log10f(volume) * 1000.f, minValue, maxValue);
+        auto result = (*playVolume)->SetVolumeLevel(playVolume, value);
         assert(SL_RESULT_SUCCESS == result);
         (void)result;
     }

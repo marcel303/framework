@@ -257,14 +257,14 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// set the hardware buffer size
 		
-		UInt32 bufferSize = 256; // todo : use specified buffer size or try multiples thereof. make sure during Provide to use the specified buffer size!
+		const UInt32 bufferSize_u32 = bufferSize; // todo : use specified buffer size or try multiples thereof. make sure during Provide to use the specified buffer size!
 	
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
 			kAudioDevicePropertyBufferFrameSize,
 			kAudioUnitScope_Output,
 			0,
-			&bufferSize, sizeof(bufferSize));
+			&bufferSize_u32, sizeof(bufferSize_u32));
 		checkStatus(status);
 	}
 #endif

@@ -70,6 +70,7 @@ if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 #include <SLES/OpenSLES_AndroidConfiguration.h>
 
 #include <alloca.h>
+#include <math.h> // sqrtf for sigmoid soft clipping
 #include <string.h>
 
 #define USE_VOLUME_INTERFACE 0
@@ -135,7 +136,15 @@ void AudioOutputHD_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 	{
 		for (int s = 0; s < provideInfo.numFrames; ++s)
 		{
-			provideInfo.outputSamples[i][s] *= volume;
+			float value = provideInfo.outputSamples[i][s];
+			
+			value *= volume;
+			
+			// apply a sigmoid function as a soft clipping method
+			
+			value = value / (1.f + sqrtf(value * value));
+			
+			provideInfo.outputSamples[i][s] = value;
 		}
 	}
 

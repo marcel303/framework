@@ -182,8 +182,8 @@ namespace binaural
 	{
 		if (sampleBuffer.totalWriteSize < AUDIO_UPDATE_SIZE)
 		{
-			memset(audioBufferL.samples, 0, sizeof(audioBufferL));
-			memset(audioBufferR.samples, 0, sizeof(audioBufferR));
+			memset(audioBufferL.samples, 0, sizeof(audioBufferL.samples));
+			memset(audioBufferR.samples, 0, sizeof(audioBufferR.samples));
 			nextReadLocation = AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
 			return;
 		}

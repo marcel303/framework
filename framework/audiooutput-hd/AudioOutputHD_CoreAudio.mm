@@ -89,16 +89,6 @@ static bool checkStatus(OSStatus status)
 	}
 }
 
-void AudioOutputHD_CoreAudio::lock()
-{
-	m_mutex.lock();
-}
-
-void AudioOutputHD_CoreAudio::unlock()
-{
-	m_mutex.unlock();
-}
-
 bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const int numOutputChannels, const int frameRate, const int bufferSize)
 {
 	Assert(m_numInputChannels == 0);
@@ -404,7 +394,7 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 		
 	int numChannelsProvided = 0;
 	
-	self->lock();
+	self->m_mutex.lock();
 	{
 		if (self->m_stream && self->m_isPlaying)
 		{
@@ -416,7 +406,7 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 			self->m_framesSincePlay.store(self->m_framesSincePlay.load() + inNumberFrames);
 		}
 	}
-	self->unlock();
+	self->m_mutex.unlock();
 	
 	// mute channels that weren't provided
 	
@@ -476,13 +466,13 @@ void AudioOutputHD_CoreAudio::Play(AudioStreamHD * stream)
 {
 	Assert(m_framesSincePlay.load() == 0);
 	
-	lock();
+	m_mutex.lock();
 	{
 		m_isPlaying = true;
 		
 		m_stream = stream;
 	}
-	unlock();
+	m_mutex.unlock();
 	
 	if (m_audioUnit != nullptr)
 	{
@@ -499,7 +489,7 @@ void AudioOutputHD_CoreAudio::Stop()
 			LOG_ERR("failed to stop audio unit");
 	}
 		
-	lock();
+	m_mutex.lock();
 	{
 		m_stream = nullptr;
 		
@@ -508,7 +498,7 @@ void AudioOutputHD_CoreAudio::Stop()
 		m_framesSincePlay = 0;
 
 	}
-	unlock();
+	m_mutex.unlock();
 }
 
 void AudioOutputHD_CoreAudio::Volume_set(const float volume)
