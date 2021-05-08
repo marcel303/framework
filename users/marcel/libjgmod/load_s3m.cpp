@@ -463,7 +463,7 @@ namespace jgmod
 		// get the pannings ------------------------------------------------------
 		for (int index = 0; index < 32; ++index)
 		{
-			if (chn_set[index] < 16 && remap[index] != -1)
+			if (chn_set[index] < 16 && remap[index] != (char)-1)
 			{
 				if (chn_set[index] < 8)
 					j->panning[(int)remap[index]] = 64;
@@ -476,7 +476,7 @@ namespace jgmod
 		{
 			for (int index = 0; index < 32; ++index)
 			{
-				if ((pan[index] & 0x20) != 0 && chn_set[index] < 16 && remap[index] != -1)
+				if ((pan[index] & 0x20) != 0 && chn_set[index] < 16 && remap[index] != (char)-1)
 					j->panning[(int)remap[index]] = (pan[index] & 0xf) * 17;
 			}
 		}

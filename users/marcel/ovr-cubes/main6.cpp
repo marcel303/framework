@@ -938,7 +938,7 @@ struct ParticleEffectObject
 	{
 		for (auto * effect : effects)
 		{
-			effect->emitter.active = mouse.isDown(BUTTON_LEFT);
+			effect->emitter.active = mouse.isDown(BUTTON_LEFT) || vrPointer[1].isDown(VrButton_A);
 		}
 	}
 };

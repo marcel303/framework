@@ -43,8 +43,9 @@ struct VfxgraphComponent : Component<VfxgraphComponent>
 	
 	virtual ~VfxgraphComponent() override final;
 	
-	virtual void tick(const float dt) override final;
 	virtual bool init() override final;
+	
+	void tick(const float dt);
 	
 	virtual void propertyChanged(void * address) override final;
 };
@@ -55,6 +56,8 @@ struct VfxgraphComponentMgr : ComponentMgr<VfxgraphComponent>
 	
 	VfxgraphComponentMgr();
 	virtual ~VfxgraphComponentMgr() override final;
+	
+	virtual void tick(const float dt) override final;
 };
 
 extern VfxgraphComponentMgr g_vfxgraphComponentMgr;

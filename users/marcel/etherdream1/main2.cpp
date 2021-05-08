@@ -940,8 +940,8 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Mask value 1", &maskValue1, 0.f, 1.f);
 					ImGui::SliderFloat("Mask value 2", &maskValue2, 0.f, 1.f);
 					ImGui::Checkbox("Enable color cycle", &enableColorCycle);
-					ImGui::SliderFloat("Color cycle speed", &colorCycleSpeed, 0.f, 4.f, "%.3f", 2.f);
-					ImGui::SliderFloat("Color cycle stretch", &colorCycleStretch, 0.f, 1.f, "%.3f", 2.f);
+					ImGui::SliderFloat("Color cycle speed", &colorCycleSpeed, 0.f, 4.f, "%.3f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Color cycle stretch", &colorCycleStretch, 0.f, 1.f, "%.3f", ImGuiSliderFlags_Logarithmic);
 					doDacSelection();
 					ImGui::Checkbox("Enable laser output", &enableOutput);
 					ImGui::Checkbox("Output red only", &outputRedOnly);
@@ -964,9 +964,9 @@ int main(int argc, char * argv[])
 				{
 					ImGui::Checkbox("Pause simulation", &pauseSimulation);
 					
-					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Rain drop life", &dropLife, 0.001f, 2.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Rain drop size", &dropSize, 0.001f, 2.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Rain drop interval", &dropInterval, 0.001f, 2.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Rain drop life", &dropLife, 0.001f, 2.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Rain drop size", &dropSize, 0.001f, 2.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 					
 					for (int i = 0; i < kNumStrings; ++i)
 					{
@@ -976,29 +976,29 @@ int main(int argc, char * argv[])
 							
 							float mass = strings[i].mass;
 							float tension = strings[i].tension;
-							ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
-							ImGui::SliderFloat("String tension", &tension, 0.f, 100000.f, "%.4f", 2.f);
+							ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+							ImGui::SliderFloat("String tension", &tension, 0.f, 100000.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 							strings[i].mass = mass;
 							strings[i].tension = tension;
 						}
 						ImGui::PopID();
 					}
-					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 					
 					if (ImGui::Button("Start noise sweep"))
 						noiseSweep.begin(-1.f, +5.f);
-					ImGui::SliderFloat("Noise sweep strength", &noiseSweep.strength, 0.f, 100.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Noise sweep duration", &noiseSweep.duration, 0.f, 100.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Noise sweep noise frequency", &noiseSweep.noiseFrequency, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise sweep strength", &noiseSweep.strength, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Noise sweep duration", &noiseSweep.duration, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Noise sweep noise frequency", &noiseSweep.noiseFrequency, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 					
 					ImGui::Separator();
-					ImGui::SliderFloat("Noise modulator strength", &noiseModulator.strength, 0.f, 100.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Noise modulator follow factor", &noiseModulator.followFactor, 0.f, 1.f, "%.4f", 1.f);
-					ImGui::SliderFloat("Noise modulator falloff", &noiseModulator.falloff_strength, 0.f, 200.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Noise modulator spatial frequency", &noiseModulator.noiseFrequency_spat, 0.f, 100.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Noise modulator time frequency", &noiseModulator.noiseFrequency_time, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise modulator strength", &noiseModulator.strength, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Noise modulator follow factor", &noiseModulator.followFactor, 0.f, 1.f, "%.4f");
+					ImGui::SliderFloat("Noise modulator falloff", &noiseModulator.falloff_strength, 0.f, 200.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Noise modulator spatial frequency", &noiseModulator.noiseFrequency_spat, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Noise modulator time frequency", &noiseModulator.noiseFrequency_time, 0.f, 100.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 				}
 				else if (tab == kTab_Calibration)
 				{
@@ -1050,7 +1050,7 @@ int main(int argc, char * argv[])
 								
 								char name[32];
 								sprintf(name, "v%d", i + 1);
-								ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", .1f);
+								ImGui::SliderFloat2(name, (float*)&vertices[i]->viewPosition, -.5f, +.5f, "%.6f", ImGuiSliderFlags_Logarithmic);
 							}
 						}
 						ImGui::PopItemWidth();

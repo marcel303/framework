@@ -31,7 +31,7 @@
 #include <string.h>
 
 #if BINAURAL_USE_NEON
-	#include "sse2neon/SSE2NEON.h"
+	#include "sse2neon.h"
 #endif
 
 #undef AUDIO_UPDATE_SIZE

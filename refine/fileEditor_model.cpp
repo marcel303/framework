@@ -116,14 +116,14 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			if (ImGui::Button("Restart animation"))
 				model.startAnim(model.getAnimName());
 			
-			ImGui::SliderFloat("Animation speed", &model.animSpeed, 0.f, 10.f, "%.2f", 2.f);
+			ImGui::SliderFloat("Animation speed", &model.animSpeed, 0.f, 10.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 			
 			if (ImGui::CollapsingHeader("Visibility"))
 			{
 				ImGui::Checkbox("Show colored normals", &showColorNormals);
 				ImGui::Checkbox("Show colored texture UVs", &showColorTexCoords);
 				ImGui::Checkbox("Show normals", &showNormals);
-				ImGui::SliderFloat("Normals scale", &normalsScale, 0.f, 100.f, "%.2f", 2.f);
+				ImGui::SliderFloat("Normals scale", &normalsScale, 0.f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 				ImGui::Checkbox("Show bones", &showBones);
 				ImGui::Checkbox("Show bind pose", &showBindPose);
 				ImGui::Checkbox("Unskinned", &showUnskinned);
@@ -133,7 +133,7 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 				ImGui::Checkbox("Show bounding box", &showBoundingBox);
 				ImGui::Checkbox("Show axis", &showAxis);
 			}
-			ImGui::SliderFloat("Scale", &scale, 0.f, 4.f, "%.2f", 2.f);
+			ImGui::SliderFloat("Scale", &scale, 0.f, 4.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 			ImGui::Checkbox("Enable lighting", &enableLighting);
 			if (ImGui::CollapsingHeader("Lighting"))
 			{

@@ -14,7 +14,7 @@
 
 /*
 
-DIBE : draw windows in 3d using framework
+DONE : draw windows in 3d using framework
 
 DONE : tick events for windows in 3d
 	- let the app or framework determine pointer direction and button presses

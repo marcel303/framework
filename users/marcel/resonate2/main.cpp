@@ -1110,8 +1110,8 @@ int main(int argc, char * argv[])
 							s_gpuSimulationContext->fetchImpulseResponseProbesFromGpu();
 						}
 					}
-					ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", 4.f);
-					ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", 2.f);
+					ImGui::SliderFloat("Lattice tension", &latticeTension, .1f, 100.f, "%.3f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Simulation time step (ms)", &simulationTimeStep_ms, 1.f / 1000.f, .1f, "%.3f", ImGuiSliderFlags_Logarithmic);
 					ImGui::SliderInt("Num simulation steps per draw", &numSimulationStepsPerDraw, 1, 100);
 					ImGui::SliderFloat("Velocity falloff", &velocityFalloff, 0.f, 1.f);
 					if (ImGui::Button("(Re)start simulation"))
@@ -1153,8 +1153,8 @@ int main(int argc, char * argv[])
 						else
 							sonify->shut();
 					}
-					ImGui::SliderFloat("Volume", &sonificationVolume, 0.f, 1.f, "%.4f", 2.f);
-					ImGui::SliderFloat("Frequency multiplier", &sonificationFrequencyMultiplier, .02f, 16.f, "%.4f", 4.f);
+					ImGui::SliderFloat("Volume", &sonificationVolume, 0.f, 1.f, "%.4f", ImGuiSliderFlags_Logarithmic);
+					ImGui::SliderFloat("Frequency multiplier", &sonificationFrequencyMultiplier, .02f, 16.f, "%.4f", ImGuiSliderFlags_Logarithmic);
 					
 					ImGui::Separator();
 					ImGui::Text("Statistics");

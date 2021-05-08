@@ -113,10 +113,11 @@ static void drawBranches(const Tree & tree)
 			if (branch.parent_index == -1)
 				continue;
 			
-			float sat = branch.parent_index / float(tree.branches.size());
-			sat *= sat;
+			const float alpha = branch.parent_index / float(tree.branches.size());
+			const float sat = alpha * alpha;
 			
 			setColor(Color::fromHSL(.5f, sat, .5f));
+			setAlphaf(lerp<float>(.2f, 1.f, sat));
 			
 			auto & parent_branch = tree.branches[branch.parent_index];
 			
@@ -130,7 +131,7 @@ static void drawBranches(const Tree & tree)
 				parent_branch.z);
 		}
 	}
-	hqEnd();
+	gxEnd();
 }
 
 int main(int argc, char * argv[])

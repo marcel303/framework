@@ -1,8 +1,8 @@
 // sceneedit
 #define DEFINE_COMPONENT_TYPES
-#include "components/gltfComponent.h"
-#include "components/modelComponent.h"
-#include "components/transformComponent.h"
+#include "gltfComponent.h"
+#include "modelComponent.h"
+#include "transformComponent.h"
 #include "helpers2.h"
 
 // ecs-scene

@@ -98,7 +98,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				ImGui::ColorEdit4("Wireframe color", &wireframeColor[0]);
 			}
 			
-			ImGui::SliderFloat("Scale", &desiredScale, 0.f, 4.f, "%.2f", 2.f);
+			ImGui::SliderFloat("Scale", &desiredScale, 0.f, 4.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 			
 			ImGui::PopItemWidth();
 		}

@@ -18,18 +18,6 @@ VfxgraphComponent::~VfxgraphComponent()
 	g_resourceDatabase.remove(&textureResource);
 }
 
-void VfxgraphComponent::tick(const float dt)
-{
-	if (instance != nullptr)
-	{
-		// todo : width and height. take inspiration from vfx graph's vfx graph node
-		
-		instance->vfxGraph->tick(surfaceWidth, surfaceHeight, dt);
-		
-		textureResource.texture = instance->vfxGraph->traverseDraw();
-	}
-}
-
 bool VfxgraphComponent::init()
 {
 // fixme : this assumes scene node ids are global; which they are not. resource DB should be a member of scene ?
@@ -70,6 +58,18 @@ bool VfxgraphComponent::init()
 	return true;
 }
 
+void VfxgraphComponent::tick(const float dt)
+{
+	if (instance != nullptr)
+	{
+		// todo : width and height. take inspiration from vfx graph's vfx graph node
+		
+		instance->vfxGraph->tick(surfaceWidth, surfaceHeight, dt);
+		
+		textureResource.texture = instance->vfxGraph->traverseDraw();
+	}
+}
+
 void VfxgraphComponent::propertyChanged(void * address)
 {
 	if (address == &path)
@@ -101,4 +101,9 @@ VfxgraphComponentMgr::~VfxgraphComponentMgr()
 {
 	delete vfxGraphMgr;
 	vfxGraphMgr = nullptr;
+}
+
+void VfxgraphComponentMgr::tick(const float dt)
+{
+	tickComponents(head, dt);
 }

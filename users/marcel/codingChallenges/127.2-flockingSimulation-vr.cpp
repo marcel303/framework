@@ -187,12 +187,12 @@ static void flock(Boid & boid, const BoidsArray & other_boids, const float dt)
 	if (do_cohesion)
 		cohesion(boid, other_boids, dt);
 	
-	boid.velocity *= powf(.5f, dt);
-	
 	boid.acceleration[0] += 1000.f * octave_noise_4d(4, .5f, .002f, boid.position[0], boid.position[1], boid.position[2], framework.time);
 	boid.acceleration[1] +=  400.f * octave_noise_4d(4, .5f, .002f, boid.position[0], boid.position[1], boid.position[2], framework.time / 1.234f);
 	boid.acceleration[2] += 1000.f * octave_noise_4d(4, .5f, .002f, boid.position[0], boid.position[1], boid.position[2], framework.time / 2.345f);
 	boid.acceleration -= boid.position * .2f;
+
+	boid.velocity *= powf(.8f, dt);
 }
 
 static void edges(Boid & boid, const float worldSize)

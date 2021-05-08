@@ -117,7 +117,7 @@ struct FileEditor_Sprite : FileEditor
 				}
 				
 				ImGui::SliderFloat("angle", &sprite.angle, -360.f, +360.f);
-				ImGui::SliderFloat("scale", &desiredScale, 0.f, 100.f, "%.2f", 2);
+				ImGui::SliderFloat("scale", &desiredScale, 0.f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 				ImGui::Checkbox("flip X", &sprite.flipX);
 				ImGui::Checkbox("flip Y", &sprite.flipY);
 				ImGui::InputFloat("pivot X", &sprite.pivotX);
