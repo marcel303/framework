@@ -1,16 +1,3 @@
-library magicavoxel
-	depend_library libgg
-	add_files magicavoxel/magicavoxel.cpp
-	add_files magicavoxel/magicavoxel.h
-	header_path magicavoxel expose
-
-library magicavoxel-framework
-	depend_library framework
-	depend_library magicavoxel
-	add_files magicavoxel-framework/magicavoxel-framework.cpp
-	add_files magicavoxel-framework/magicavoxel-framework.h
-	header_path magicavoxel-framework expose
-
 app marcel-voxviewer
 	depend_library magicavoxel-framework
 	depend_library renderOne

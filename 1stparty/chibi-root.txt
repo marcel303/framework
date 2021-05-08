@@ -12,6 +12,8 @@ add libreflection
 add libreflection-bindtofile
 add libreflection-jsonio
 add libreflection-textio
+add magicavoxel
+add magicavoxel-framework
 add nanovg-framework
 with_platform android.ovr-mobile add ovr-mobile-opengl
 add tinyxml2-helpers

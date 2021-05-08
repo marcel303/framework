@@ -1,0 +1,6 @@
+library magicavoxel-framework
+	depend_library framework
+	depend_library magicavoxel
+	add_files magicavoxel-framework/magicavoxel-framework.cpp
+	add_files magicavoxel-framework/magicavoxel-framework.h
+	header_path magicavoxel-framework expose

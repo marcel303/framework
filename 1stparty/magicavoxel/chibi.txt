@@ -1,0 +1,5 @@
+library magicavoxel
+	depend_library libgg
+	add_files magicavoxel/magicavoxel.cpp
+	add_files magicavoxel/magicavoxel.h
+	header_path magicavoxel expose
