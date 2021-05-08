@@ -238,7 +238,7 @@ int main(int argc, char * argv[])
 				ImGui::Checkbox("Cohesion", &do_cohesion);
 				ImGui::SliderFloat("Max Steering", &kSteeringSpeed, 0.f, 400.f);
 				ImGui::SliderFloat("Max Force", &kMaxForce, 0.f, 400.f);
-				ImGui::SliderFloat("Separation Force", &kSeparationForce, 0.f, 1000000.f, "%.2f", 4.f);
+				ImGui::SliderFloat("Separation Force", &kSeparationForce, 0.f, 1000000.f, "%.2f", ImGuiSliderFlags_Logarithmic);
 			}
 			ImGui::End();
 		}
@@ -288,6 +288,8 @@ int main(int argc, char * argv[])
 	}
 	
 	guiCtx.shut();
+	
+	framework.shutdown();
 	
 	return 0;
 }

@@ -8,9 +8,9 @@ app codingChallenges-017-spaceColonization
 	add_files 017-spaceColonization.cpp
 	resource_path data
 
-app codingChallenges-017.2-spaceColonization-3d
+app codingChallenges-017.2-spaceColonization-vr
 	depend_library framework
-	add_files 017.2-spaceColonization-3d.cpp
+	add_files 017.2-spaceColonization-vr.cpp
 	resource_path data
 
 app codingChallenges-033-poissonDiscSampling
@@ -43,6 +43,12 @@ app codingChallenges-086-cubeWave
 	depend_library imgui-framework
 	add_files 086-cubeWave.cpp
 	resource_path data
+	
+app codingChallenges-086.2-cubeWave-vr
+	depend_library framework
+	depend_library imgui-framework
+	add_files 086.2-cubeWave-vr.cpp
+	resource_path data
 
 app codingChallenges-116-lissajousCurveTable
 	depend_library framework
@@ -52,6 +58,11 @@ app codingChallenges-127-flockingSimulation
 	depend_library framework
 	depend_library imgui-framework
 	add_files 127-flockingSimulation.cpp
+
+app codingChallenges-127.2-flockingSimulation-vr
+	depend_library framework
+	depend_library imgui-framework
+	add_files 127.2-flockingSimulation-vr.cpp
 
 app codingChallenges-129-kochFractalSnowflake
 	depend_library framework

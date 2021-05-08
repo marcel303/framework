@@ -25,13 +25,14 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
 	framework.enableDepthBuffer = true;
 	
 	if (!framework.init(1000, 800))
 		return -1;
 	
-	Camera3d camera;
-	camera.position = Vec3(0, 0, -4);
+	Window * guiWindow = new Window("Gui", 400, 300);
 	
 	FrameworkImGuiContext guiCtx;
 	guiCtx.init();
@@ -45,27 +46,45 @@ int main(int argc, char * argv[])
 	{
 		framework.process();
 		
-		bool inputIsCaptured = false;
-		guiCtx.processBegin(framework.timeStep, 1000, 800, inputIsCaptured);
+		framework.tickVirtualDesktop(
+			vrPointer[0].getTransform(framework.vrOrigin),
+			vrPointer[0].hasTransform,
+			(vrPointer[0].isDown(VrButton_Trigger) << 0) |
+			(vrPointer[0].isDown(VrButton_GripTrigger) << 1),
+			false);
+		
+		pushWindow(*guiWindow);
 		{
-			if (ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			bool inputIsCaptured = false;
+			guiCtx.processBegin(framework.timeStep, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
 			{
-				ImGui::SliderInt("Resolution", &halfSize, 0, 50);
-				ImGui::SliderFloat("Animation speed", &animSpeed, 0.f, 40.f, "%.2f", ImGuiSliderFlags_Logarithmic);
-				
-				ImGui::PushItemWidth(ImGui::CalcItemWidth() * .6f);
+				ImGui::SetNextWindowPos(ImVec2(0, 0));
+				if (ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
-					ImGui::ColorPicker3("Color 1", (float*)&color1);
-					ImGui::SameLine();
-					ImGui::ColorPicker3("Color 2", (float*)&color2);
-					ImGui::SameLine();
-					ImGui::ColorPicker3("Color 3", (float*)&color3);
+					ImGui::SliderInt("Resolution", &halfSize, 0, 50);
+					ImGui::SliderFloat("Animation speed", &animSpeed, 0.f, 40.f, "%.2f", ImGuiSliderFlags_Logarithmic);
+					
+					ImGui::PushItemWidth(ImGui::CalcItemWidth() * .6f);
+					{
+						ImGui::ColorPicker3("Color 1", (float*)&color1);
+						ImGui::SameLine();
+						ImGui::ColorPicker3("Color 2", (float*)&color2);
+						ImGui::SameLine();
+						ImGui::ColorPicker3("Color 3", (float*)&color3);
+					}
+					ImGui::PopItemWidth();
 				}
-				ImGui::PopItemWidth();
+				ImGui::End();
 			}
-			ImGui::End();
+			guiCtx.processEnd();
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				guiCtx.draw();
+			}
+			framework.endDraw();
 		}
-		guiCtx.processEnd();
+		popWindow();
 		
 		animTime += animSpeed * framework.timeStep;
 		
@@ -74,18 +93,15 @@ int main(int argc, char * argv[])
 			1.3f,
 			sinf(framework.time / 7.f) * 2.f);
 		
-		Mat4x4 viewMatrix;
-		viewMatrix.MakeLookat(position, Vec3(), Vec3(0, 1, 0));
-		
-		framework.beginDraw(0, 0, 0, 0);
+		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
-			projectPerspective3d(90.f, .01f, 100.f);
-			pushDepthTest(true, DEPTH_LESS);
-			pushBlend(BLEND_OPAQUE);
-			
-			gxPushMatrix();
+			framework.beginEye(i, colorBlack);
 			{
-				gxMultMatrixf(viewMatrix.m_v);
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
+				pushCullMode(CULL_BACK, CULL_CCW);
+				
+				framework.drawVirtualDesktop();
 				
 				Shader shader("086-cube");
 				setShader(shader);
@@ -114,19 +130,21 @@ int main(int argc, char * argv[])
 					}
 				}
 				endCubeBatch();
+			
+				popCullMode();
+				popBlend();
+				popDepthTest();
 			}
-			gxPopMatrix();
-			
-			popBlend();
-			popDepthTest();
-			projectScreen2d();
-			
-			guiCtx.draw();
+			framework.endEye();
 		}
-		framework.endDraw();
+		
+		framework.present();
 	}
 	
 	guiCtx.shut();
+	
+	delete guiWindow;
+	guiWindow = nullptr;
 	
 	framework.shutdown();
 	

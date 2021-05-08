@@ -68,10 +68,10 @@ static void randomizeLeafs(Tree & tree)
 			if (distance > 1.f)
 				continue;
 			
-			//const float chance = powf(distance, 1.f / .4f);
+			const float chance = powf(distance, 1.f / .4f);
 			
-			//if (chance < random<float>(0.f, 1.f))
-			//	continue;
+			if (chance < random<float>(0.f, 1.f))
+				continue;
 			
 			const float kDistanceMultiplier = kSimScale;
 			
@@ -89,6 +89,7 @@ static void drawTree(const Tree & tree)
 	gxBegin(GX_POINTS);
 	{
 		setLumi(200);
+		setAlpha(255);
 		
 		for (auto & leaf : tree.leafs)
 		{
@@ -98,7 +99,7 @@ static void drawTree(const Tree & tree)
 			gxVertex3f(leaf.x, leaf.y, leaf.z);
 		}
 	}
-	hqEnd();
+	gxEnd();
 }
 
 static void drawBranches(const Tree & tree)
@@ -138,6 +139,7 @@ int main(int argc, char * argv[])
 	
 	framework.vrMode = true;
 	framework.enableVrMovement = true;
+	framework.enableDepthBuffer = true;
 	
 	if (!framework.init(800, 600))
 		return -1;
@@ -173,7 +175,7 @@ int main(int argc, char * argv[])
 		
 		framework.timeStep = fminf(framework.timeStep, 1.f / 30.f);
 		
-		if (mouse.wentDown(BUTTON_LEFT))
+		if (mouse.wentDown(BUTTON_LEFT) || vrPointer[0].wentDown(VrButton_Trigger))
 		{
 			restart();
 		}
