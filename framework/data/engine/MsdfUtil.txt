@@ -79,7 +79,7 @@ float sampleMsdf(sampler2D msdf, vec2 texcoord, int sampleMethod)
 	return clamp(opacity, 0.0, 1.0);
 }
 
-float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSuperSampling)
+float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSuperSampling, int maxAA)
 {
 	vec2 msdfSize = textureSizef(msdf, 0);
 
@@ -95,7 +95,7 @@ float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSup
     }
     else
     {
-	    int kernelSize = min(5, int(length(dFdx(texcoord * msdfSize))) + 1);
+	    int kernelSize = min(maxAA, int(length(dFdx(texcoord * msdfSize))) + 1);
 
 	    // note : devision by two provides sharpening and is more correct, as we sample in the range [-0.5, +0.5] of the derivative of texcoord, for a total sampled area of 1.0 x 1.0 = 1.0
 	    vec2 du = dFdx(texcoord) / float(kernelSize) / 2.0;

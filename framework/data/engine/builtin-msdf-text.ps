@@ -8,7 +8,11 @@ uniform sampler2D msdf;
 
 void main()
 {
-    float opacity = sampleMsdf_aa(msdf, v_texcoord, 3, true);
+#if _SHADER_TARGET_LOWPOWER_
+    float opacity = sampleMsdf_aa(msdf, v_texcoord, 3, true, 1);
+#else
+    float opacity = sampleMsdf_aa(msdf, v_texcoord, 3, true, 3);
+#endif
     
     vec4 color = v_color;
     color.a *= opacity;

@@ -10,7 +10,7 @@ include engine/ShaderUtil.txt
 	#define debugHq (_debugHq != 0.0)
 #else
 	#define enableOptimizations true
-	#define enableAA true
+	#define enableAA (_SHADER_TARGET_LOWPOWER_ == 0)
 	#define debugHq false
 #endif
 
