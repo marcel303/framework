@@ -246,8 +246,14 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
 			#endif
 			
+			#if ENABLE_OPENGL_ES3
+				const GLchar * lowpower = "#define _SHADER_TARGET_LOWPOWER_ 1\n";
+			#else
+				const GLchar * lowpower = "#define _SHADER_TARGET_LOWPOWER_ 0\n";
+			#endif
+			
 				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, defines, "#line 0 0", sourceData };
+				const GLchar * sources[] = { version, debugs, lowpower, defines, "#line 0 0", sourceData };
 
 				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 				checkErrorGL();
