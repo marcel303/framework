@@ -358,15 +358,14 @@ void LiveUi::applyLayout(const ControlSurfaceDefinition::Surface & surface, cons
 
 void LiveUi::tick(const float dt, bool & inputIsCaptured)
 {
-	if (inputIsCaptured)
+	const bool captureContinuation =
+		activeElem != nullptr &&
+		mouse.captureContinuation(activeElem);
+		
+	if (inputIsCaptured && captureContinuation == false)
 	{
 		hoverElem = nullptr;
-
-		if (activeElem != nullptr)
-		{
-			mouse.release(activeElem);
-			activeElem = nullptr;
-		}
+		activeElem = nullptr;
 		
 		for (auto & e : elems)
 		{
@@ -430,7 +429,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					mouse.release(activeElem);
 					activeElem = nullptr;
 				}
 				
@@ -488,7 +486,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					mouse.release(activeElem);
 					activeElem = nullptr;
 					
 					if (button.isToggle)
@@ -535,7 +532,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					mouse.release(activeElem);
 					activeElem = nullptr;
 				}
 				
@@ -584,7 +580,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					mouse.release(activeElem);
 					activeElem = nullptr;
 				}
 				
@@ -631,7 +626,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					mouse.release(activeElem);
 					activeElem = nullptr;
 				}
 				
@@ -722,7 +716,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						e.liveState[0] = 0;
 						
-						mouse.release(activeElem);
 						activeElem = nullptr;
 					}
 				
@@ -855,7 +848,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						e.liveState[0] = 0;
 						
-						mouse.release(activeElem);
 						activeElem = nullptr;
 					}
 				
@@ -1158,7 +1150,7 @@ void LiveUi::draw() const
 				float x1;
 				float y1;
 				
-				for (int i = 0; i < numSteps; ++i)
+				for (int i = numSteps - 1; i >= 0; --i)
 				{
 					const float t = i / float(numSteps - 1);
 					const float angle = angle1 * (1.f - t) + angle2 * t;
@@ -1179,7 +1171,7 @@ void LiveUi::draw() const
 					const float x2 = midX + cosf(angle) * radius;
 					const float y2 = midY + sinf(angle) * radius;
 					
-					if (i != 0)
+					if (i != numSteps - 1)
 						hqLine(x1, y1, strokeSize, x2, y2, strokeSize);
 					
 					x1 = x2;

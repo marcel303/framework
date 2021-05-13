@@ -2,9 +2,8 @@
 
 namespace ControlSurfaceDefinition
 {
-	struct Element;
 	struct ElementLayout;
-	struct Surface;
+	struct LayoutConstraintsBase;
 	struct SurfaceLayout;
 	
 	struct LayoutEditor
@@ -20,7 +19,9 @@ namespace ControlSurfaceDefinition
 			kState_DragSize
 		};
 		
-		const Surface * surface = nullptr;
+		const LayoutConstraintsBase * constraints = nullptr;
+		
+		const SurfaceLayout * base_layout = nullptr;
 		
 		SurfaceLayout * layout = nullptr;
 		
@@ -39,9 +40,7 @@ namespace ControlSurfaceDefinition
 		int snap_x = 0;
 		int snap_y = 0;
 		
-		LayoutEditor(const Surface * in_surface, SurfaceLayout * in_layout);
-		
-		const Element * findSurfaceElement(const char * groupName, const char * name) const;
+		LayoutEditor(const LayoutConstraintsBase * in_constraints, const SurfaceLayout * in_base_layout, SurfaceLayout * in_layout);
 		
 		void getElementPositionAndSize(const char * groupName, const char * name, int & x, int & y, int & sx, int & sy) const;
 		
@@ -73,6 +72,11 @@ namespace ControlSurfaceDefinition
 			const int mouse_x,
 			const int drag_corner_x,
 			const int min_size);
+			
+		void getMinimumElementSize(
+			const ElementLayout & layout_elem,
+			int & minSx,
+			int & minSy) const;
 		
 		bool tick(const float dt, bool & inputIsCaptured, const bool enableEditing, const bool enableSnapping);
 		

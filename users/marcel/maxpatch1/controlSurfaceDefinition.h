@@ -6,6 +6,55 @@
 struct StructuredType;
 struct TypeDB;
 
+// todo : move layout definition to a separate file
+namespace ControlSurfaceDefinition
+{
+	struct ElementLayout
+	{
+		std::string groupName;
+		std::string name;
+		
+		bool hasPosition = false;
+		int x, y;
+		
+		bool hasSize = false;
+		int sx, sy;
+		
+		static void reflect(TypeDB & typeDB);
+	};
+	
+	struct SurfaceLayout
+	{
+		int sx = 0;
+		int sy = 0;
+		
+		int marginX = 0;
+		int marginY = 0;
+		
+		int paddingX = 0;
+		int paddingY = 0;
+		
+		std::vector<ElementLayout> elems;
+		
+		ElementLayout * addElement(const char * groupName, const char * name);
+		ElementLayout * findElement(const char * groupName, const char * name);
+		const ElementLayout * findElement(const char * groupName, const char * name) const;
+	};
+	
+	struct LayoutConstraintsBase
+	{
+		virtual void getElementSizeConstraints(
+			const char * groupName,
+			const char * name,
+			bool & hasMinSize,
+			int & minSx,
+			int & minSy,
+			bool & hasMaxSize,
+			int & maxSx,
+			int & maxSy) const = 0;
+	};
+}
+
 namespace ControlSurfaceDefinition
 {
 	struct Element;
@@ -345,45 +394,13 @@ namespace ControlSurfaceDefinition
 		}
 	};
 	
-	struct ElementLayout
-	{
-		std::string groupName;
-		std::string name;
-		
-		bool hasPosition = false;
-		int x, y;
-		
-		bool hasSize = false;
-		int sx, sy;
-		
-		static void reflect(TypeDB & typeDB);
-	};
-
 	struct Group
 	{
 		std::string name;
 		std::vector<Element> elems;
 	};
 	
-	struct SurfaceLayout
-	{
-		int sx = 0;
-		int sy = 0;
-		
-		int marginX = 0;
-		int marginY = 0;
-		
-		int paddingX = 0;
-		int paddingY = 0;
-		
-		std::vector<ElementLayout> elems;
-		
-		ElementLayout * addElement(const char * groupName, const char * name);
-		ElementLayout * findElement(const char * groupName, const char * name);
-		const ElementLayout * findElement(const char * groupName, const char * name) const;
-	};
-	
-	struct Surface
+	struct Surface : LayoutConstraintsBase
 	{
 		std::string name;
 		
@@ -398,6 +415,18 @@ namespace ControlSurfaceDefinition
 		
 		Element * findElement(const char * groupName, const char * name);
 		const Element * findElement(const char * groupName, const char * name) const;
+		
+		// -- LayoutConstraintsBase
+		
+		virtual void getElementSizeConstraints(
+			const char * groupName,
+			const char * name,
+			bool & hasMinSize,
+			int & minSx,
+			int & minSy,
+			bool & hasMaxSize,
+			int & maxSx,
+			int & maxSy) const override;
 	};
 	
 	void reflect(TypeDB & typeDB);

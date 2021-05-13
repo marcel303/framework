@@ -4,32 +4,16 @@
 
 namespace ControlSurfaceDefinition
 {
-	LayoutEditor::LayoutEditor(const Surface * in_surface, SurfaceLayout * in_layout)
-		: surface(in_surface)
+	LayoutEditor::LayoutEditor(const LayoutConstraintsBase * in_constraints, const SurfaceLayout * in_base_layout, SurfaceLayout * in_layout)
+		: constraints(in_constraints)
+		, base_layout(in_base_layout)
 		, layout(in_layout)
 	{
 	}
 	
-	const Element * LayoutEditor::findSurfaceElement(const char * groupName, const char * name) const
-	{
-		for (auto & group : surface->groups)
-			if (group.name == groupName)
-				for (auto & elem : group.elems)
-					if (elem.name == name)
-						return &elem;
-		
-		return nullptr;
-	}
-	
 	void LayoutEditor::getElementPositionAndSize(const char * groupName, const char * name, int & x, int & y, int & sx, int & sy) const
 	{
-		x = 0;
-		y = 0;
-		
-		sx = 0;
-		sy = 0;
-		
-		auto * base_layout_element = surface->layout.findElement(groupName, name);
+		auto * base_layout_element = base_layout->findElement(groupName, name);
 		
 		auto * layout_element = layout->findElement(groupName, name);
 		
@@ -51,11 +35,7 @@ namespace ControlSurfaceDefinition
 	{
 		Assert(layout_elem.hasPosition);
 		
-		const Element * self = findSurfaceElement(
-			layout_elem.groupName.c_str(),
-			layout_elem.name.c_str());
-		
-		auto * base_layout_elem = surface->layout.findElement(
+		auto * base_layout_elem = base_layout->findElement(
 			layout_elem.groupName.c_str(),
 			layout_elem.name.c_str());
 		
@@ -72,14 +52,20 @@ namespace ControlSurfaceDefinition
 		int * nearest_d[2] = { &nearest_dx, &nearest_dy };
 		int * snap[2] = { &snap_x, &snap_y };
 		const int * snap_direction[2] = { &snap_direction_x, &snap_direction_y };
-		
+	
 		// snap with padding
 		
-		for (auto & group : surface->groups)
+		const SurfaceLayout * layouts[] = { base_layout, layout };
+		
+		for (auto * layout : layouts)
 		{
-			for (auto & elem : group.elems)
+			for (auto & other_layout_elem : layout->elems)
 			{
-				if (&elem == self)
+				const bool is_self =
+					other_layout_elem.groupName == layout_elem.groupName &&
+					other_layout_elem.name == layout_elem.name;
+					
+				if (is_self)
 					continue;
 				
 				const int layout_elem_p1[2] = { layout_elem.x,                  layout_elem.y                  };
@@ -87,7 +73,13 @@ namespace ControlSurfaceDefinition
 				
 				int elem_p1[2];
 				int elem_p2[2];
-				getElementPositionAndSize(group.name.c_str(), elem.name.c_str(), elem_p1[0], elem_p1[1], elem_p2[0], elem_p2[1]);
+				getElementPositionAndSize(
+					other_layout_elem.groupName.c_str(),
+					other_layout_elem.name.c_str(),
+					elem_p1[0],
+					elem_p1[1],
+					elem_p2[0],
+					elem_p2[1]);
 				elem_p2[0] += elem_p1[0];
 				elem_p2[1] += elem_p1[1];
 				
@@ -135,21 +127,27 @@ namespace ControlSurfaceDefinition
 		{
 			// snap side to side (top to top, bottom to bottom, etc)
 			
-			for (auto & group : surface->groups)
+			const SurfaceLayout * layouts[] = { base_layout, layout };
+			
+			for (auto * layout : layouts)
 			{
-				for (auto & elem : group.elems)
+				for (auto & other_layout_elem : layout->elems)
 				{
-					if (&elem == self)
+					const bool is_self =
+						other_layout_elem.groupName.c_str() == layout_elem.groupName &&
+						other_layout_elem.name.c_str() == layout_elem.name;
+					
+					if (is_self)
 						continue;
-
+						
 					int other_x;
 					int other_y;
 					int other_sx;
 					int other_sy;
 					
 					getElementPositionAndSize(
-						group.name.c_str(),
-						elem.name.c_str(),
+						other_layout_elem.groupName.c_str(),
+						other_layout_elem.name.c_str(),
 						other_x,
 						other_y,
 						other_sx,
@@ -216,10 +214,6 @@ namespace ControlSurfaceDefinition
 		bool & has_snap_y,
 		int & snap_y) const
 	{
-		const Element * elem_to_skip = findSurfaceElement(
-			layout_elem_to_skip.groupName.c_str(),
-			layout_elem_to_skip.name.c_str());
-		
 		bool has_nearest_dx = false;
 		bool has_nearest_dy = false;
 		
@@ -233,19 +227,31 @@ namespace ControlSurfaceDefinition
 		
 		// snap with padding
 		
-		for (auto & group : surface->groups)
+		const SurfaceLayout * layouts[] = { base_layout, layout };
+		
+		for (auto * layout : layouts)
 		{
-			for (auto & elem : group.elems)
+			for (auto & other_layout_elem : layout->elems)
 			{
-				if (&elem == elem_to_skip)
-					continue;
+				const bool is_elem_to_skip =
+					other_layout_elem.groupName.c_str() == layout_elem_to_skip.groupName &&
+					other_layout_elem.name.c_str() == layout_elem_to_skip.name;
 				
+				if (is_elem_to_skip)
+					continue;
+					
 				const int layout_elem_p1[2] = { x1, y1 };
 				const int layout_elem_p2[2] = { x2, y2 };
 				
 				int elem_p1[2];
 				int elem_p2[2];
-				getElementPositionAndSize(group.name.c_str(), elem.name.c_str(), elem_p1[0], elem_p1[1], elem_p2[0], elem_p2[1]);
+				getElementPositionAndSize(
+					other_layout_elem.groupName.c_str(),
+					other_layout_elem.name.c_str(),
+					elem_p1[0],
+					elem_p1[1],
+					elem_p2[0],
+					elem_p2[1]);
 				elem_p2[0] += elem_p1[0];
 				elem_p2[1] += elem_p1[1];
 				
@@ -291,21 +297,27 @@ namespace ControlSurfaceDefinition
 		{
 			// snap side to side (top to top, bottom to bottom, etc)
 			
-			for (auto & group : surface->groups)
+			const SurfaceLayout * layouts[] = { base_layout, layout };
+			
+			for (auto * layout : layouts)
 			{
-				for (auto & elem : group.elems)
+				for (auto & other_layout_elem : layout->elems)
 				{
-					if (&elem == elem_to_skip)
-						continue;
+					const bool is_elem_to_skip =
+						other_layout_elem.groupName == layout_elem_to_skip.groupName &&
+						other_layout_elem.name == layout_elem_to_skip.name;
 
+					if (is_elem_to_skip)
+						continue;
+						
 					int other_x;
 					int other_y;
 					int other_sx;
 					int other_sy;
 					
 					getElementPositionAndSize(
-						group.name.c_str(),
-						elem.name.c_str(),
+						other_layout_elem.groupName.c_str(),
+						other_layout_elem.name.c_str(),
 						other_x,
 						other_y,
 						other_sx,
@@ -398,11 +410,42 @@ namespace ControlSurfaceDefinition
 		}
 	}
 	
+	void LayoutEditor::getMinimumElementSize(
+		const ElementLayout & layout_elem,
+		int & minSx,
+		int & minSy) const
+	{
+		bool hasMinSize = false;
+		bool hasMaxSize = false;
+		int maxSx;
+		int maxSy;
+	
+		constraints->getElementSizeConstraints(
+			layout_elem.groupName.c_str(),
+			layout_elem.name.c_str(),
+			hasMinSize,
+			minSx,
+			minSy,
+			hasMaxSize,
+			maxSx,
+			maxSy);
+		
+		if (hasMinSize == false)
+		{
+			minSx = 1;
+			minSy = 1;
+		}
+	}
+	
 	bool LayoutEditor::tick(const float dt, bool & inputIsCaptured, const bool enableEditing, const bool enableSnapping)
 	{
+		const bool captureContinuation =
+			state != kState_Idle &&
+			mouse.captureContinuation(selected_element);
+			
 		bool hasChanged = false;
 		
-		if (inputIsCaptured)
+		if (inputIsCaptured && captureContinuation == false)
 		{
 			state = kState_Idle;
 			has_snap_x = false;
@@ -418,7 +461,7 @@ namespace ControlSurfaceDefinition
 				
 				for (auto & layout_elem : layout->elems)
 				{
-					auto * base_layout_elem = surface->layout.findElement(layout_elem.groupName.c_str(), layout_elem.name.c_str());
+					auto * base_layout_elem = base_layout->findElement(layout_elem.groupName.c_str(), layout_elem.name.c_str());
 					
 					if (base_layout_elem == nullptr)
 						continue;
@@ -469,6 +512,11 @@ namespace ControlSurfaceDefinition
 						}
 					}
 				}
+				
+				if (state != kState_Idle)
+				{
+					mouse.capture(selected_element);
+				}
 			}
 			
 			if (selected_element != nullptr)
@@ -485,7 +533,7 @@ namespace ControlSurfaceDefinition
 			{
 				if (mouse.dx != 0 || mouse.dy != 0)
 				{
-					auto * base_layout_elem = surface->layout.findElement(
+					auto * base_layout_elem = base_layout->findElement(
 						selected_element->groupName.c_str(),
 						selected_element->name.c_str());
 					
@@ -528,7 +576,7 @@ namespace ControlSurfaceDefinition
 			{
 				if (mouse.dx != 0 || mouse.dy != 0)
 				{
-					auto * base_layout_elem = surface->layout.findElement(
+					auto * base_layout_elem = base_layout->findElement(
 						selected_element->groupName.c_str(),
 						selected_element->name.c_str());
 					
@@ -545,20 +593,27 @@ namespace ControlSurfaceDefinition
 						selected_element->sx = base_layout_elem->sx;
 						selected_element->sy = base_layout_elem->sy;
 					}
+						
+					int minSx;
+					int minSy;
+					getMinimumElementSize(
+						*selected_element,
+						minSx,
+						minSy);
 					
 					dragSize(
 						selected_element->x,
 						selected_element->sx,
 						mouse.x + drag_offset_x,
 						drag_corner_x,
-						40);
+						minSx);
 					
 					dragSize(
 						selected_element->y,
 						selected_element->sy,
 						mouse.y + drag_offset_y,
 						drag_corner_y,
-						40);
+						minSy);
 					
 					int x1 = selected_element->x;
 					int y1 = selected_element->y;
@@ -609,7 +664,7 @@ namespace ControlSurfaceDefinition
 		{
 			for (auto & layout_elem : layout->elems)
 			{
-				auto * base_layout_elem = surface->layout.findElement(
+				auto * base_layout_elem = base_layout->findElement(
 					layout_elem.groupName.c_str(),
 					layout_elem.name.c_str());
 				

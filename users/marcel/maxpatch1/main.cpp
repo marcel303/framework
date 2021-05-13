@@ -327,6 +327,8 @@ int main(int arg, char * argv[])
 	
 	// live UI app from control surface definition
 	
+	framework.windowIsResizable = true;
+	
 	framework.init(1200, 200);
 	
 	LiveUi liveUi;
@@ -336,7 +338,7 @@ int main(int arg, char * argv[])
 #if ENABLE_LAYOUT_EDITOR
 	ControlSurfaceDefinition::SurfaceLayout layout;
 	
-	ControlSurfaceDefinition::LayoutEditor layoutEditor(&surface, &layout);
+	ControlSurfaceDefinition::LayoutEditor layoutEditor(&surface, &surface.layout, &layout);
 	
 	LayoutEditorView layoutEditorView;
 #endif
@@ -392,7 +394,7 @@ int main(int arg, char * argv[])
 					if (elem.name.empty() == false)
 						layout.addElement(group.name.c_str(), elem.name.c_str());
 			
-			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &surface.layout, &layout);
 		#endif
 		}
 		
@@ -502,7 +504,7 @@ int main(int arg, char * argv[])
 					if (layout.findElement(group.name.c_str(), elem.name.c_str()) == nullptr)
 						layout.addElement(group.name.c_str(), elem.name.c_str());
 			
-			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &surface.layout, &layout);
 			
 			// re-apply layout overrides
 			
@@ -555,6 +557,7 @@ int main(int arg, char * argv[])
 			framework.getCurrentViewportSize(viewSx, viewSy);
 			
 			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
 			
 			pushScroll(ui_x, ui_y);
 			{
@@ -603,6 +606,8 @@ int main(int arg, char * argv[])
 			layoutEditorView.drawOverlay();
 			
 			liveUi.drawTooltip();
+			
+			popFontMode();
 		}
 		framework.endDraw();
 	}

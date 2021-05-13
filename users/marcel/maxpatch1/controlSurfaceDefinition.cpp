@@ -316,6 +316,81 @@ namespace ControlSurfaceDefinition
 		return const_cast<Surface*>(this)->findElement(groupName, name);
 	}
 	
+	void Surface::getElementSizeConstraints(
+		const char * groupName,
+		const char * name,
+		bool & hasMinSize,
+		int & minSx,
+		int & minSy,
+		bool & hasMaxSize,
+		int & maxSx,
+		int & maxSy) const
+	{
+		hasMinSize = false;
+		hasMaxSize = false;
+		
+		//
+		
+		const Element * elem = findElement(groupName, name);
+		
+		if (elem != nullptr)
+		{
+			switch (elem->type)
+			{
+			case kElementType_None:
+				break;
+				
+			case kElementType_Label:
+				hasMinSize = true;
+				minSx = 16;
+				minSy = 16;
+				break;
+				
+			case kElementType_Knob:
+				hasMinSize = true;
+				minSx = 40;
+				minSy = 40;
+				break;
+				
+			case kElementType_Button:
+				hasMinSize = true;
+				minSx = 16;
+				minSy = 16;
+				break;
+				
+			case kElementType_Slider2:
+				hasMinSize = true;
+				minSx = 16;
+				minSy = 16;
+				break;
+				
+			case kElementType_Slider3:
+				hasMinSize = true;
+				minSx = 16;
+				minSy = 16;
+				break;
+				
+			case kElementType_Listbox:
+				hasMinSize = true;
+				minSx = 16;
+				minSy = 16;
+				break;
+				
+			case kElementType_ColorPicker:
+				hasMinSize = true;
+				minSx = 50;
+				minSy = 20;
+				break;
+				
+			case kElementType_Separator:
+				hasMinSize = true;
+				minSx = 4;
+				minSy = 4;
+				break;
+			}
+		}
+	}
+	
 	//
 	
 	void reflect(TypeDB & typeDB)

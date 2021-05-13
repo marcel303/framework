@@ -10,6 +10,7 @@ struct LiveUi
 	struct Elem
 	{
 		ControlSurfaceDefinition::Element * elem = nullptr;
+		
 		int x = 0;
 		int y = 0;
 		int sx = 0;
@@ -17,10 +18,12 @@ struct LiveUi
 		
 		float value = 0.f;
 		float defaultValue = 0.f;
+		
+		ControlSurfaceDefinition::Vector4 value4;
 		ControlSurfaceDefinition::Vector4 defaultValue4;
+		
 		float doubleClickTimer = 0.f;
 		bool valueHasChanged = false;
-		ControlSurfaceDefinition::Vector4 value4;
 		
 		int liveState[4] = { };
 		
