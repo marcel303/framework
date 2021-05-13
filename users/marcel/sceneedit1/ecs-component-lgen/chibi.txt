@@ -1,0 +1,10 @@
+library ecs-component-lgen
+	depend_library ecs-component
+	depend_library ecs-scene
+	depend_library ecs-system-render
+	depend_library framework
+	depend_library lgen
+	scan_files cpp
+	scan_files h
+	link_translation_unit_using_function_call linkLgenComponents
+	header_path . expose

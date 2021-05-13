@@ -36,6 +36,12 @@ struct ComponentMemberFlag_IntLimits : MemberFlag<ComponentMemberFlag_IntLimits>
 {
 	int min;
 	int max;
+	
+	ComponentMemberFlag_IntLimits(int in_min, int in_max)
+		: min(in_min)
+		, max(in_max)
+	{
+	}
 };
 
 struct ComponentMemberFlag_FloatLimits : MemberFlag<ComponentMemberFlag_FloatLimits>

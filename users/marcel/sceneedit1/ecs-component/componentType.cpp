@@ -19,9 +19,9 @@ ComponentMemberAdder_Int::ComponentMemberAdder_Int(Member * in_member)
 
 ComponentMemberAdder_Int & ComponentMemberAdder_Int::limits(const int min, const int max)
 {
-	ComponentMemberFlag_IntLimits * limits = new ComponentMemberFlag_IntLimits();
-	limits->min = min;
-	limits->max = max;
+	ComponentMemberFlag_IntLimits * limits = new ComponentMemberFlag_IntLimits(
+		min,
+		max);
 
 	member->addFlag(limits);
 	

@@ -2,6 +2,8 @@
 #include "gltfComponent.h"
 
 #include "lightComponent.h"
+
+#define DEFINE_COMPONENT_TYPES
 #include "sceneNodeComponent.h"
 
 #include "gltf-draw.h"
@@ -230,7 +232,7 @@ void GltfComponentMgr::drawTranslucent() const
 		if (i->enabled == false)
 			continue;
 			
-		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
+		auto * sceneNodeComp = g_sceneNodeComponentMgr.getComponent(i->componentSet->id);
 		
 		Assert(sceneNodeComp != nullptr);
 		if (sceneNodeComp != nullptr)

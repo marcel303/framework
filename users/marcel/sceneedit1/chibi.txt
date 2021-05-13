@@ -176,6 +176,7 @@ app marcel-sceneedit-800-realtimeEditing
 
 app marcel-sceneedit-test
 	depend_library ecs-component-framework
+	depend_library ecs-component-lgen
 	depend_library ecs-component-gltf
 	depend_library ecs-system-audio
 	depend_library ecs-system-render
@@ -185,3 +186,5 @@ app marcel-sceneedit-test
 	#depend_library vfxgraph-nodes
 	add_files main.cpp
 	resource_path data
+
+add ecs-component-lgen
