@@ -530,7 +530,10 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 					? pad_color_highlight
 					: pad_color;
 			
-			const float base_opacity = 191 / 255.f;
+			const float base_opacity =
+				drawPass != kDrawPass_DepthObscured
+				? 191 / 255.f
+				: 63 / 255.f;
 			const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.pad[i] - kMinPadVisibility) / (1.f - kMinPadVisibility))), .5f);
 			const float opacity = fadeValue * base_opacity;
 			
@@ -615,7 +618,10 @@ void TransformGizmo::draw(const DrawPass drawPass) const
 						? scale_color_highlight
 						: scale_color;
 			
-				const float base_opacity = 191/255.f;
+				const float base_opacity =
+					drawPass != kDrawPass_DepthObscured
+					? 191 / 255.f
+					: 63 / 255.f;
 				const float fadeValue = powf(saturate<float>(lerp<float>(0.f, 1.f, (elementVisibility.scale[i] - kMinScaleVisibility) / (1.f - kMinScaleVisibility))), .5f);
 				const float opacity = fadeValue * base_opacity;
 				
@@ -1041,6 +1047,7 @@ void TransformGizmo::setColorForArrow(const int axis) const
 		setColor(colorWhite);
 	else
 		setColor(colors[axis]);
+	setAlpha(63);
 }
 
 void TransformGizmo::setColorForRing(const int axis, const bool isLine) const

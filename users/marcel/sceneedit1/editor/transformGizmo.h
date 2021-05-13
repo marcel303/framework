@@ -79,11 +79,11 @@ struct TransformGizmo
 	bool enableRotation = true;
 	bool enableScaling = true;
 	
-	float arrow_radius = .04f;
+	float arrow_radius = .025f;
 	float arrow_length = 1.f;
 	float arrow_top_radius = arrow_radius * 1.4f;
 	float arrow_top_length = arrow_radius * 3.f;
-	float arrow_collision_radius = .08f;
+	float arrow_collision_radius = .05f;
 	float arrow_smoothingAmount = .3f;
 	
 	float pad_offset = .5f;

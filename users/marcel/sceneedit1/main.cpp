@@ -463,6 +463,8 @@ int main(int argc, char * argv[])
 		
 		bool inputIsCaptured = false;
 		
+		inputIsCaptured |= mouse.isCaptured();
+		
 		uiCaptureBeginFrame(inputIsCaptured);
 		
 	#if USE_GUI_WINDOW && WINDOW_IS_3D
@@ -470,7 +472,7 @@ int main(int argc, char * argv[])
 		{
 			guiWindowTransform =
 				vrPointer[1].getTransform(Vec3())
-				.Translate(0, 0, 1.f);
+				.Translate(0, 0, .5f);
 		}
 		
 		guiWindow->setTransform(
