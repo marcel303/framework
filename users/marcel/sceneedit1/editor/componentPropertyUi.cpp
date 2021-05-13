@@ -254,7 +254,7 @@ namespace ImGui
 				
 				if (isAngle)
 				{
-					if (ImGui::SliderFloat(member.name, &value, -360.f, +360.f, "%.0f deg", 1.0f))
+					if (ImGui::SliderFloat(member.name, &value, -360.f, +360.f, "%.0f deg"))
 					{
 						result = true;
 					}
@@ -471,7 +471,7 @@ namespace ImGui
 					float value_as_float = float(value);
 					
 					if (ImGui::SliderFloat(member.name, &value_as_float, limits->min, limits->max, "%.3f",
-						curveExponential == nullptr ? 1.f : curveExponential->exponential))
+						curveExponential == nullptr ? 0 : curveExponential->exponential != 1.f ? ImGuiSliderFlags_Logarithmic : 0))
 					{
 						result = true;
 					}

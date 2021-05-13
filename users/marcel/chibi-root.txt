@@ -95,6 +95,7 @@ add voxel1
 add voxelizer-test
 add voxviewer
 add voxworld1
+add vrChallenges
 add zita-rev1
 
 add ../ggj2015/game

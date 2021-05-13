@@ -1,6 +1,7 @@
 app vrChallenges-010-magic-carpet
 	depend_library framework
 	add_files 010-magic-carpet.cpp
+	resource_path data
 
 app vrChallenges-020-magic-floor
 	depend_library framework

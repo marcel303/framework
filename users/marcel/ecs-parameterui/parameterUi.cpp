@@ -117,7 +117,7 @@ namespace parameterUi
 				{
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloat(parameter.name.c_str(), &value, parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloat(parameter.name.c_str(), &value, parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential != 1.f ? ImGuiSliderFlags_Logarithmic : 0))
 						parameter.set(value);
 				}
 				else
@@ -144,7 +144,7 @@ namespace parameterUi
 				{
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 2, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 2, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential != 1.f ? ImGuiSliderFlags_Logarithmic : 0))
 						parameter.set(value);
 				}
 				else
@@ -171,7 +171,7 @@ namespace parameterUi
 				{
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 3, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 3, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential != 1.f ? ImGuiSliderFlags_Logarithmic : 0))
 						parameter.set(value);
 				}
 				else
@@ -198,7 +198,7 @@ namespace parameterUi
 				{
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 4, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 4, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential != 1.f ? ImGuiSliderFlags_Logarithmic : 0))
 						parameter.set(value);
 				}
 				else

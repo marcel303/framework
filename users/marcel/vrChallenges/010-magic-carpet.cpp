@@ -12,9 +12,11 @@
 
 // todo : add forward shader with distance fog + simple directional lighting
 
-static const float kHeadHeight = 1.f;
+static const float kHeadHeight = .8f;
 
 static const float kMinimumTerrainDistance = 1.f;
+
+static Shader shader;
 
 static float sampleTerrain(const float x, const float z)
 {
@@ -55,6 +57,8 @@ struct Carpet
 	{
 		{
 			// draw carpet
+			
+			shader.setImmediate("u_hasTexture", 0.f);
 			
 			Mat4x4 worldToView;
 			gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
@@ -111,7 +115,7 @@ struct Carpet
 						const Vec3 dx = gridPoints_itr1[1] - gridPoints_itr1[0];
 						const Vec3 dz = gridPoints_itr2[0] - gridPoints_itr1[0];
 						const Vec3 n = (dx % dz).CalcNormalized();
-						gxColor3fv(&n[0]);
+						gxNormal3fv(&n[0]);
 						
 						gxVertex3fv(&gridPoints_itr1[0][0]);
 						gxVertex3fv(&gridPoints_itr1[1][0]);
@@ -148,7 +152,6 @@ struct World
 			for (int x = 0; x < img.sx; ++x)
 			{
 				const int value = 256 - 64 + (rand() & 63);
-				//const int value = rand() & 255;
 				
 				line[x].r = value;
 				line[x].g = value;
@@ -222,13 +225,12 @@ struct World
 			setColor(colorWhite);
 			gxSetTexture(terrainTexture.id);
 			gxSetTextureSampler(GX_SAMPLE_MIPMAP, false);
+			shader.setImmediate("u_hasTexture", 1.f);
+			shader.setTexture("u_texture", 0, terrainTexture.id, true, false);
 			
 			gxBegin(GX_QUADS);
 			{
 				const Vec3 * gridPoints_itr = gridPoints;
-				
-				const Color color1 = colorBlue;
-				const Color color2 = colorRed;
 				
 				for (int tx = -gridExtents; tx + 1 <= +gridExtents; ++tx)
 				{
@@ -240,12 +242,7 @@ struct World
 						const Vec3 dx = gridPoints_itr1[1] - gridPoints_itr1[0];
 						const Vec3 dz = gridPoints_itr2[0] - gridPoints_itr1[0];
 						const Vec3 n = (dx % dz).CalcNormalized();
-					#if 0
-						gxColor3fv(&n[0]);
-					#else
-						const Color color = color1.interp(color2, n[1]);
-						gxColor3fv(&color.r);
-					#endif
+						gxNormal3fv(&n[0]);
 						
 						gxTexCoord2f(gridPoints_itr1[0][0], gridPoints_itr1[0][2]); gxVertex3fv(&gridPoints_itr1[0][0]);
 						gxTexCoord2f(gridPoints_itr1[1][0], gridPoints_itr1[1][2]); gxVertex3fv(&gridPoints_itr1[1][0]);
@@ -282,6 +279,8 @@ int main(int argc, char * argv[])
 	
 	world.init();
 	
+	const Color fogColor(.2f, .1f, .05f);
+	
 	for (;;)
 	{
 		framework.process();
@@ -293,7 +292,7 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
-			framework.beginEye(i, colorBlack);
+			framework.beginEye(i, fogColor);
 			{
 				Mat4x4 headTransform = framework.getHeadTransform();
 				headTransform.SetTranslation(world.carpet.position + Vec3(0, kHeadHeight, 0));
@@ -302,7 +301,15 @@ int main(int argc, char * argv[])
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
 				{
+					shader = Shader("010-shader");
+					
+					setShader(shader);
+					shader.setImmediate("u_fogColor", fogColor.r, fogColor.g, fogColor.b);
+					shader.setImmediate("u_fogDistance", 40.f);
+					
 					world.draw();
+					
+					framework.drawVrPointers();
 				}
 				popBlend();
 				popDepthTest();
