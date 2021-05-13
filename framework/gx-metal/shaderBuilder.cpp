@@ -308,6 +308,9 @@ R"SHADER(
 
 #define _SHADER_ 1
 
+#define _SHADER_DEBUGGING_ 0
+#define _SHADER_TARGET_LOWPOWER_ 0
+
 using namespace metal;
 
 // standard types
