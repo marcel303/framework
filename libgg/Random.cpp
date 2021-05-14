@@ -75,6 +75,8 @@ namespace RNG
 		uint32_t mask1 = 1;
 		uint32_t mask2 = 0xFFFFFFFF;
 
+		int srand_restore = rand();
+		
 		srand(seed);
 		
 		while (i-- > 250)
@@ -106,6 +108,8 @@ namespace RNG
 
 		r250_index = 0;
 		r521_index = 0;
+		
+		srand(srand_restore);
 	}
 
 	uint32_t R250_521::next()

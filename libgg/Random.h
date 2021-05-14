@@ -145,12 +145,16 @@ namespace RNG
 		
 		void init(const uint32_t seed)
 		{
+			const int srand_restore = rand();
+			
 			srand(seed);
 			
 			XORSHIFT_x = (uint32_t)rand();
 			XORSHIFT_y = (uint32_t)rand();
 			XORSHIFT_z = (uint32_t)rand();
 			XORSHIFT_w = (uint32_t)rand();
+			
+			srand(srand_restore);
 		}
 
 		uint32_t next()
