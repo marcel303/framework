@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "Lgen.h"
+#include <stdlib.h> // rand
 
 static GxTextureId createTexture(const lgen::Heightfield & heightfield)
 {
@@ -27,7 +28,7 @@ int main(int argc, char * argv[])
 	heightfield.setSize(512, 512);
 	
 	lgen::Generator_OffsetSquare generator;
-	generator.generate(heightfield);
+	generator.generate(heightfield, rand());
 	heightfield.rerange(0, 255);
 	
 	GxTextureId texture = createTexture(heightfield);
@@ -47,7 +48,7 @@ int main(int argc, char * argv[])
 		
 		if (mouse.wentDown(BUTTON_LEFT))
 		{
-			generator.generate(heightfield);
+			generator.generate(heightfield, rand());
 			heightfield.rerange(0, 255);
 			
 			freeTexture(texture);
