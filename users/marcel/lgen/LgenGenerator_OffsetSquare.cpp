@@ -1,9 +1,8 @@
 #include "LgenGenerator_OffsetSquare.h"
-#include <stdlib.h>
 
 namespace lgen
 {
-	bool Generator_OffsetSquare::generate(Heightfield & heightfield)
+	bool Generator_OffsetSquare::generate(Heightfield & heightfield, const uint32_t seed)
 	{
 		// Current implementation expects w and h to be the same.
 	        
@@ -20,10 +19,13 @@ namespace lgen
 		{
 			return false;
 		}
-	                
-		#define RAND(x, y) ((x) + (rand() & (y)) - ((y) >> 1))
+		
+		#define RAND(x, y) ((x) + (rng.next() & (y - 1)) - ((y) >> 1))
+		
+		R250_521 rng(seed);
 	        
 		int rowOffset = 0;  // Start at zero for first row.
+		
 		const int mask = heightfield.w - 1;
 	    
 		for (int squareSize = heightfield.w; squareSize > 1; squareSize >>= 1)
@@ -39,10 +41,10 @@ namespace lgen
 					int x2 = (x1 + squareSize) & mask;
 					int y2 = (y1 + squareSize) & mask;
 
-					const int i1 = heightfield.height[x1][y1];
-					const int i2 = heightfield.height[x2][y1];
-					const int i3 = heightfield.height[x1][y2];
-					const int i4 = heightfield.height[x2][y2];
+					const int i1 = (int)heightfield.height[x1][y1];
+					const int i2 = (int)heightfield.height[x2][y1];
+					const int i3 = (int)heightfield.height[x1][y2];
+					const int i4 = (int)heightfield.height[x2][y2];
 
 					// Obtain new points by averaging the corner points.
 
@@ -72,8 +74,10 @@ namespace lgen
 				}
 			}
 
-			rowOffset = squareSize >> 2;  // Set offset for next row.
+			rowOffset = squareSize >> 2; // Set offset for next row.
 		}
+		
+		#undef RAND
 
 		return true;
 	}

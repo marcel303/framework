@@ -1,10 +1,9 @@
 #include "LgenGenerator_DiamondSquare.h"
-#include <math.h>	// sqrt
-#include <stdlib.h>	// rand
+#include <math.h> // sqrtf
 
 namespace lgen
 {
-	bool Generator_DiamondSquare::generate(Heightfield & heightfield)
+	bool Generator_DiamondSquare::generate(Heightfield & heightfield, const uint32_t seed)
 	{
 		// Check if w and h are powers of 2.
 		
@@ -14,21 +13,26 @@ namespace lgen
 		{
 			return false;
 		}
+		
+		#define RND(_a)      ((_a) * rng.nextf(-1.f, +1.f))
+		#define XADD(_i, _j) (((_i) + (_j)) & mx)
+		#define YADD(_i, _j) (((_i) + (_j)) & my)
+		#define XSUB(_i, _j) (((_i) - (_j)) & mx)
+		#define YSUB(_i, _j) (((_i) - (_j)) & my)
 
-		#define RND(_a)      ((_a) * ((rand() & 65535) - 32768))
-		#define XADD(_i, _j) (((_i) + (_j)) & (heightfield.w - 1))
-		#define YADD(_i, _j) (((_i) + (_j)) & (heightfield.h - 1))
-		#define XSUB(_i, _j) (((_i) - (_j)) & (heightfield.w - 1))
-		#define YSUB(_i, _j) (((_i) - (_j)) & (heightfield.h - 1))
-
-		const int size = heightfield.w > heightfield.h ? heightfield.w : heightfield.h;
+		R250_521 rng(seed);
+		
+		const int size =
+			heightfield.w > heightfield.h
+			? heightfield.w
+			: heightfield.h;
 		
 		const int mx = heightfield.w - 1;
 		const int my = heightfield.h - 1;
 		
 		const float sqrt2 = sqrtf(2.0f);
 		
-		int amount = size >> 1;	
+		float amount = size / 2.f;
 
 		// Initially seed the four corner points.
 
@@ -37,7 +41,7 @@ namespace lgen
 		heightfield.height[(size - 1) & mx][(size - 1) & my] = RND(amount);
 		heightfield.height[0              ][(size - 1) & my] = RND(amount);
 
-		amount = (int)(amount / sqrt2);
+		amount = amount / sqrt2;
 		
 		for (int i = size >> 1; i > 0; i >>= 1)
 		{
@@ -53,12 +57,12 @@ namespace lgen
 						heightfield.height[XSUB(j, i)][YSUB(k, i)] +
 						heightfield.height[XSUB(j, i)][YADD(k, i)] +
 						heightfield.height[XADD(j, i)][YADD(k, i)] +
-						heightfield.height[XADD(j, i)][YSUB(k, i)]) >> 2) +
+						heightfield.height[XADD(j, i)][YSUB(k, i)]) / 4.f) +
 						RND(amount);
 				}
 			}
 
-			amount = (int)(amount / sqrt2);
+			amount = amount / sqrt2;
 
 			// Diamond.
 
@@ -74,16 +78,15 @@ namespace lgen
 							heightfield.height[XSUB(j, i)][k & my    ] +
 							heightfield.height[j & mx    ][YSUB(k, i)] +
 							heightfield.height[XADD(j, i)][k & my    ] +
-							heightfield.height[j & mx    ][YADD(k, i)]) >> 2) +
+							heightfield.height[j & mx    ][YADD(k, i)]) / 4.f) +
 							RND(amount);
 					}
 					
 					odd = 1 - odd;
-					
 				}
 			}
 
-			amount = (int)(amount / sqrt2);
+			amount = amount / sqrt2;
 		}
 
 		return true;

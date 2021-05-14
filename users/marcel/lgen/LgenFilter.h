@@ -1,6 +1,5 @@
 #pragma once
 
-#include "LgenGenerator.h"
 #include "LgenHeightfield.h"
 #include <string>
 
@@ -24,7 +23,7 @@ namespace lgen
 
 		virtual ~Filter();
 
-	    int getHeight(const Heightfield & heightfield, int x, int y) const; ///< Return height at (x, y). Applies borderMode setting.
+	    float getHeight(const Heightfield & heightfield, int x, int y) const; ///< Return height at (x, y). Applies borderMode setting.
 	    void getClippingRect(const Heightfield & heightfield, int & x1, int & y1, int & x2, int & y2) const;
 	    void setClippingRect(int x1, int y1, int x2, int y2);
 	    

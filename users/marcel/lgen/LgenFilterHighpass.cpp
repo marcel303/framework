@@ -18,7 +18,7 @@ namespace lgen
 	    const int maskX = src.w - 1;
 	    const int maskY = src.h - 1;
 
-	    #define PIXEL(x, y) src.height[(x) & maskX][(y) & maskY]
+	    #define PIXEL(x, y) getHeight(src, x, y)
 
 	    // Highpass filter with 1.0 radius.. never really gives good results ;-).
 	    

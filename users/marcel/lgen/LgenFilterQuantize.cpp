@@ -6,9 +6,16 @@ namespace lgen
 {
 	bool FilterQuantize::setNumLevels(const int in_numLevels)
 	{
-		numLevels = in_numLevels;
+		if (in_numLevels < 2)
+		{
+			return false;
+		}
+		else
+		{
+			numLevels = in_numLevels;
 
-        return true;
+			return true;
+		}
 	}
 	
     bool FilterQuantize::apply(const Heightfield & src, Heightfield & dst)
@@ -19,55 +26,53 @@ namespace lgen
         
         // Find min / max.
         
-        int min = dst.height[0][0];
-        int max = dst.height[0][0];
+        float min = src.height[x1][y1];
+        float max = src.height[x1][y1];
 
         for (int i = x1; i <= x2; ++i)
         {
-            int * tmp = dst.height[i] + y1;
+            const float * src_itr = src.height[i] + y1;
             
             for (int j = y1; j <= y2; ++j)
             {
-                if (*tmp < min)
+				const float value = *src_itr++;
+				
+                if (value < min)
                 {
-                    min = *tmp;
+                    min = value;
                 }
-                else if (*tmp > max)
+                else if (value > max)
                 {
-                    max = *tmp;
+                    max = value;
                 }
-                
-                tmp++;
             }
         }
 
-        const int a_min = min;
-        const int a_max = max;
-
         // Get scaling factors.
         
-        int s1 = max - min;
+        float s1 = max - min;
         
-        if (!s1)
+        if (s1 == 0.f)
         {
-            s1 = 1;
+            s1 = 1.f;
         }
         
-        int s2 = a_max - a_min;
+        float s2 = max - min;
 
         // Translate and scale.
         
         for (int i = x1; i <= x2; ++i)
         {
-            int * tmp = dst.height[i] + y1;
+            const float * src_itr = src.height[i] + y1;
+                  float * dst_itr = dst.height[i] + y1;
             
             for (int j = y1; j <= y2; ++j)
             {
-                const int value = *tmp;
+                const float value = *src_itr++;
 				
-                const int level = (value - min) * numLevels / (s2 + 1);
+                const int level = (value - min) * (numLevels - 1e-3f) / s1;
                 
-                *tmp++ = a_min + level * s2 / (numLevels - 1);
+                *dst_itr++ = min + level * s2 / (numLevels - 1);
             }
         }
 

@@ -6,7 +6,7 @@ namespace lgen
 	
 	struct Heightfield
 	{
-		int ** height = nullptr;
+		float ** height = nullptr;
 		int w = 0;
 		int h = 0;
 
@@ -15,14 +15,14 @@ namespace lgen
 		bool setSize(int w, int h);
 		void clear();
 		
-		int getHeight(int x, int y) const
+		float getHeight(int x, int y) const
 		{
 			return height[x][y];
 		}
 
-		void clamp(int min, int max);
-		void rerange(int min, int max);
-		void mapMaximum(int max);
+		void clamp(float min, float max);
+		void rerange(float min, float max);
+		void mapMaximum(float max);
 		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 	};
@@ -42,14 +42,14 @@ namespace lgen
 			return heightfield[currentIndex];
 		}
 		
-		int getHeight(int x, int y) const
+		float getHeight(int x, int y) const
 		{
 			return heightfield[currentIndex].getHeight(x, y);
 		}
 
-		void clamp(int min, int max);
-		void rerange(int min, int max);
-		void mapMaximum(int max);
+		void clamp(float min, float max);
+		void rerange(float min, float max);
+		void mapMaximum(float max);
 		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 		

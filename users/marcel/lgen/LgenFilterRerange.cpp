@@ -3,7 +3,7 @@
 
 namespace lgen
 {
-	bool FilterRerange::setMinMax(const int in_min, const int in_max)
+	bool FilterRerange::setMinMax(const float in_min, const float in_max)
 	{
 		min = in_min;
 		max = in_max;
@@ -19,62 +19,63 @@ namespace lgen
 		
 		// Swap if min > max.
 		
-		int a_min = min;
-		int a_max = max;
+		float a_min = min;
+		float a_max = max;
 		
 		if (a_min > a_max)
 		{
-			int tmp = a_min;
+			float tmp = a_min;
 			a_min = a_max;
 			a_max = tmp;
 		}
 
 		// Find min / max.
 		
-		int min = dst.height[0][0];
-		int max = dst.height[0][0];
+		float min = src.height[x1][y1];
+		float max = src.height[x1][y1];
 
 		for (int i = x1; i <= x2; ++i)
 		{
-			int * tmp = dst.height[i] + y1;
+			const float * src_itr = src.height[i] + y1;
 			
 			for (int j = y1; j <= y2; ++j)
 			{
-				if (*tmp < min)
-				{
-					min = *tmp;
-				}
-				else if (*tmp > max)
-				{
-					max = *tmp;
-				}
+				const float value = *src_itr++;
 				
-				tmp++;
+				if (value < min)
+				{
+					min = value;
+				}
+				else if (value > max)
+				{
+					max = value;
+				}
 			}
 		}
 
 		// Get scaling factors.
 		
-		int s1 = max - min;
+		float s1 = max - min;
 		
-		if (!s1)
+		if (s1 == 0.f)
 		{
-			s1 = 1;
+			s1 = 1.f;
 		}
 		
-		int s2 = a_max - a_min;
+		float s2 = a_max - a_min;
 
 		// Translate and scale.
 		
 		for (int i = x1; i <= x2; ++i)
 		{
-			int * tmp = dst.height[i] + y1;
+			const float * src_itr = src.height[i] + y1;
+			      float * dst_itr = dst.height[i] + y1;
 			
 			for (int j = y1; j <= y2; ++j)
 			{
-				const int value = *tmp;
+				const float value = *src_itr++;
 				
-				*tmp++ = a_min + (value - min) * s2 / s1;
+				*dst_itr++ = a_min + (value - min) * s2 / s1;
 			}
 		}
 
@@ -103,7 +104,7 @@ namespace lgen
 	
     //
 	
-    bool filterRerange(const Heightfield & src, Heightfield & dst, const int min, const int max)
+    bool filterRerange(const Heightfield & src, Heightfield & dst, const float min, const float max)
 	{
 		FilterRerange filter;
 		return

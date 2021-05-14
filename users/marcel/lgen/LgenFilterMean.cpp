@@ -32,27 +32,22 @@ namespace lgen
     	
         getClippingRect(src, x1, y1, x2, y2);
         
-        const int maskX = src.w - 1;
-        const int maskY = src.h - 1;
-        
         const int rx = (matrixW - 1) >> 1;
         const int ry = (matrixH - 1) >> 1;
         
         const int area = matrixW * matrixH;
         
-        #define PIXEL(x, y) src.height[(x) & maskX][(y) & maskY]
-
         for (int i = x1; i <= x2; ++i)
         {
             for (int j = y1; j <= y2; ++j)
             {
-                int sum = 0;
+                float sum = 0;
                 
                 for (int k = -rx; k <= rx; ++k)
                 {
                     for (int l = -ry; l <= ry; ++l)
                     {
-                        sum += PIXEL(i + k, j + l);
+                        sum += getHeight(src, i + k, j + l);
     				}
     			}
     			

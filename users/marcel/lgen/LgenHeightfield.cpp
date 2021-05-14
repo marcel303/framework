@@ -42,11 +42,11 @@ namespace lgen
 
 		// Allocate.
 		
-		height = new int*[a_w];
+		height = new float*[a_w];
 		
 		for (int i = 0; i < a_w; ++i)
 		{
-			height[i] = new int[a_h];
+			height[i] = new float[a_h];
 		}
 
 		w = a_w;
@@ -61,25 +61,25 @@ namespace lgen
 		{
 			for (int j = 0; j < h; ++j)
 			{
-				height[i][j] = 0;
+				height[i][j] = 0.f;
 			}
 		}
 	}
 
-	void Heightfield::clamp(int min, int max)
+	void Heightfield::clamp(float min, float max)
 	{
 		// Swap if min > max.
 		
 		if (min > max)
 		{
-			int tmp = min;
+			float tmp = min;
 			min = max;
 			max = tmp;
 		}
 
 		for (int i = 0; i < w; ++i)
 		{
-			int * tmp = height[i];
+			float * tmp = height[i];
 			
 			for (int j = 0; j < h; ++j)
 			{
@@ -97,7 +97,7 @@ namespace lgen
 		}
 	}
 
-	void Heightfield::rerange(int a_min, int a_max)
+	void Heightfield::rerange(float a_min, float a_max)
 	{
 		if (height == nullptr)
 		{
@@ -108,19 +108,19 @@ namespace lgen
 		
 		if (a_min > a_max) 
 		{
-			int tmp = a_min;
+			float tmp = a_min;
 			a_min = a_max;
 			a_max = tmp;
 		}
 
 		// Find min / max.
 		
-		int min = height[0][0];
-		int max = height[0][0];
+		float min = height[0][0];
+		float max = height[0][0];
 
 		for (int i = 0; i < w; ++i)
 		{
-			int * tmp = height[i];
+			float * tmp = height[i];
 			
 			for (int j = 0; j < h; ++j)
 			{
@@ -139,31 +139,31 @@ namespace lgen
 
 		// Get scaling factors.
 		
-		int s1 = max - min;
+		float s1 = max - min;
 		
-		if (!s1)
+		if (s1 == 0.f)
 		{
-			s1 = 1;
+			s1 = 1.f;
 		}
 		
-		int s2 = a_max - a_min;
+		float s2 = a_max - a_min;
 
 		// Translate and scale.
 		
 		for (int i = 0; i < w; ++i)
 		{
-			int * tmp = height[i];
+			float * tmp = height[i];
 			
 			for (int j = 0; j < h; ++j)
 			{
-				const int value = *tmp;
+				const float value = *tmp;
 				
 				*tmp++ = a_min + (value - min) * s2 / s1;
 			}
 		}
 	}
 	
-	void Heightfield::mapMaximum(int max)
+	void Heightfield::mapMaximum(float max)
 	{
 		FilterMapMaximum filter;
 		filter.setMax(max);
@@ -179,12 +179,12 @@ namespace lgen
 	    
 	    for (int i = 0; i < w; ++i)
 	    {
-	        int * tmp1 = height[i];
-	        int * tmp2 = dst.height[i];
+	        const float * src_itr = height[i];
+	              float * dst_itr = dst.height[i];
 	        
 	        for (int j = 0; j < h; ++j)
 	        {
-	            *tmp2++ = *tmp1++;
+	            *dst_itr++ = *src_itr++;
 			}
 	    }
 	}
@@ -237,17 +237,17 @@ namespace lgen
 		return heightfield[currentIndex].clear();
 	}
 
-	void DoubleBufferedHeightfield::clamp(int min, int max)
+	void DoubleBufferedHeightfield::clamp(float min, float max)
 	{
 		return heightfield[currentIndex].clamp(min, max);
 	}
 	
-	void DoubleBufferedHeightfield::rerange(int min, int max)
+	void DoubleBufferedHeightfield::rerange(float min, float max)
 	{
 		return heightfield[currentIndex].rerange(min, max);
 	}
 	
-	void DoubleBufferedHeightfield::mapMaximum(int max)
+	void DoubleBufferedHeightfield::mapMaximum(float max)
 	{
 		return heightfield[currentIndex].mapMaximum(max);
 	}

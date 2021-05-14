@@ -17,7 +17,7 @@ namespace lgen
 		{
 			for (int y = y1; y <= y2; ++y)
 			{
-				float v = 0.0;
+				float v = 0.f;
 				
 				for (int mx = -ex; mx <= ex; ++mx)
 				{
@@ -27,7 +27,7 @@ namespace lgen
 					}
 				}
 				
-				dst.height[x][y] = (int)v;
+				dst.height[x][y] = v;
 			}
 		}
 		

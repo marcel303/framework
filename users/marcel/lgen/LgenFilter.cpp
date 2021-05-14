@@ -41,10 +41,15 @@ namespace lgen
 		}
 	}
 
-	int Filter::getHeight(const Heightfield & lgen, int x, int y) const
+	float Filter::getHeight(const Heightfield & lgen, int x, int y) const
 	{
-		if (x >= 0 && y >= 0 && x < lgen.w && y < lgen.h)
+		if (x >= 0 &&
+			y >= 0 &&
+			x < lgen.w &&
+			y < lgen.h)
+		{
 			return lgen.height[x][y];
+		}
 			
 		switch (borderMode)
 		{		
