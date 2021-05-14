@@ -52,16 +52,13 @@ void LgenComponent::generate()
 		1 << resolution,
 		1 << resolution);
 	
-// fixme : let lgen have its own RNG with local scope
-	srand(seed);
-	
 	switch (type)
 	{
 	case kGeneratorType_OffsetSquare:
 		{
 			lgen::Generator_OffsetSquare g;
 			
-			g.generate(h.get());
+			g.generate(h.get(), seed);
 		}
 		break;
 		
@@ -69,7 +66,7 @@ void LgenComponent::generate()
 		{
 			lgen::Generator_DiamondSquare g;
 			
-			g.generate(h.get());
+			g.generate(h.get(), seed);
 		}
 		break;
 	}
@@ -82,9 +79,9 @@ void LgenComponent::generate()
 			continue;
 			
 		const int size = filter.radius * 2 + 1;
-	
-	// todo : we don't want filters to use wrap-around sampling
-	
+		
+		// note : the default border mode for filters is bmClamp, which is what we want
+		
 		switch (filter.type)
 		{
 		case kFilterType_Highpass:
@@ -141,35 +138,125 @@ void LgenComponent::generate()
 	{
 		setColor(colorWhite);
 		
-		gxBegin(GX_QUADS);
+		if (blocky)
 		{
-			auto & hs = h.get();
-			
-			for (int tx = 0; tx + 1 < hs.w; ++tx)
+			gxBegin(GX_QUADS);
 			{
-				for (int tz = 0; tz + 1 < hs.h; ++tz)
+				auto & hs = h.get();
+
+				// emit quads
+				
+				for (int tx = 0; tx < hs.w; ++tx)
 				{
-					const float h00 = hs.getHeight(tx + 0, tz + 0);
-					const float h10 = hs.getHeight(tx + 1, tz + 0);
-					const float h11 = hs.getHeight(tx + 1, tz + 1);
-					const float h01 = hs.getHeight(tx + 0, tz + 1);
-					
-				// todo : compute smooth normals
-					const float dx = h10 - h00;
-					const float dz = h01 - h00;
-					//const Vec3 n = (Vec3(1, dx, 0) % Vec3(0, dz, 1)).CalcNormalized();
-					const Vec3 n = -(Vec3(scale, dx * height, 0) % Vec3(0, dz * height, scale)).CalcNormalized();
-					gxNormal3fv(&n[0]);
-					gxColor3fv(&n[0]);
-					
-					gxVertex3f(tx + 0, h00, tz + 0);
-					gxVertex3f(tx + 1, h10, tz + 0);
-					gxVertex3f(tx + 1, h11, tz + 1);
-					gxVertex3f(tx + 0, h01, tz + 1);
+					for (int tz = 0; tz < hs.h; ++tz)
+					{
+						// x-edge
+						
+						if (tz + 1 < hs.h)
+						{
+							const float h0 = hs.getHeight(tx, tz + 0);
+							const float h1 = hs.getHeight(tx, tz + 1);
+							
+							setColor(colorRed);
+							gxNormal3f(0, 0, h0 < h1 ? -1 : +1);
+							gxVertex3f(tx + 0, h0, tz + 1);
+							gxVertex3f(tx + 1, h0, tz + 1);
+							gxVertex3f(tx + 1, h1, tz + 1);
+							gxVertex3f(tx + 0, h1, tz + 1);
+						}
+						
+						// z-edge
+						
+						if (tx + 1 < hs.w)
+						{
+							const float h0 = hs.getHeight(tx + 0, tz);
+							const float h1 = hs.getHeight(tx + 1, tz);
+							
+							setColor(colorBlue);
+							gxNormal3f(h0 < h1 ? -1 : +1, 0, 0);
+							gxVertex3f(tx + 1, h1, tz + 0);
+							gxVertex3f(tx + 1, h1, tz + 1);
+							gxVertex3f(tx + 1, h0, tz + 1);
+							gxVertex3f(tx + 1, h0, tz + 0);
+						}
+						
+						// top
+						
+						{
+							const float h = hs.getHeight(tx, tz);
+							
+							setColor(colorGreen);
+							gxNormal3f(0, 1, 0);
+							gxVertex3f(tx + 0, h, tz + 0);
+							gxVertex3f(tx + 1, h, tz + 0);
+							gxVertex3f(tx + 1, h, tz + 1);
+							gxVertex3f(tx + 0, h, tz + 1);
+						}
+					}
 				}
 			}
+			gxEnd();
 		}
-		gxEnd();
+		else
+		{
+			gxBegin(GX_QUADS);
+			{
+				auto & hs = h.get();
+				
+				// calculate normals
+				
+				Vec3 * normals = new Vec3[hs.w * hs.h];
+				
+			// todo : remove scale/height. shader should handle this
+				const Vec3 s(scale, height, scale);
+						
+				for (int tx = 0; tx < hs.w; ++tx)
+				{
+					for (int tz = 0; tz < hs.h; ++tz)
+					{
+						const int x1 = tx - 1 >= 0 ? tx - 1 : 0;
+						const int z1 = tz - 1 >= 0 ? tz - 1 : 0;
+						
+						const int x2 = tx + 1 <= hs.w - 1 ? tx + 1 : hs.w - 1;
+						const int z2 = tz + 1 <= hs.h - 1 ? tz + 1 : hs.h - 1;
+						
+						const Vec3 px1(x1, hs.getHeight(x1, tz), tz);
+						const Vec3 px2(x2, hs.getHeight(x2, tz), tz);
+						
+						const Vec3 pz1(tx, hs.getHeight(tx, z1), z1);
+						const Vec3 pz2(tx, hs.getHeight(tx, z2), z2);
+						
+						const Vec3 dx = (px2 - px1) / 2.f;
+						const Vec3 dz = (pz2 - pz1) / 2.f;
+						
+						const Vec3 n = -(dx.Mul(s) % dz.Mul(s)).CalcNormalized();
+						
+						normals[tx + tz * hs.w] = n;
+					}
+				}
+				
+				// emit quads
+				
+			#define n(x, z) &normals[(tx + x) + (tz + z) * hs.w][0]
+			
+				for (int tx = 0; tx + 1 < hs.w; ++tx)
+				{
+					for (int tz = 0; tz + 1 < hs.h; ++tz)
+					{
+						gxColor3fv(n(0, 0)); gxNormal3fv(n(0, 0)); gxVertex3f(tx + 0, hs.getHeight(tx + 0, tz + 0), tz + 0);
+						gxColor3fv(n(1, 0)); gxNormal3fv(n(1, 0)); gxVertex3f(tx + 1, hs.getHeight(tx + 1, tz + 0), tz + 0);
+						gxColor3fv(n(1, 1)); gxNormal3fv(n(1, 1)); gxVertex3f(tx + 1, hs.getHeight(tx + 1, tz + 1), tz + 1);
+						gxColor3fv(n(0, 1)); gxNormal3fv(n(0, 1)); gxVertex3f(tx + 0, hs.getHeight(tx + 0, tz + 1), tz + 1);
+					}
+				}
+				
+			#undef n
+				
+				delete [] normals;
+				normals = nullptr;
+			}
+			gxEnd();
+		}
 	}
 	gxCaptureMeshEnd();
 }

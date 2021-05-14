@@ -31,7 +31,7 @@ struct LgenComponent : Component<LgenComponent>
 		bool enabled = true;
 		FilterType type = kFilterType_Mean;
 		int radius = 1;
-		float numLevels = 1.f;
+		int numLevels = 3;
 	};
 	
 	GeneratorType type = kGeneratorType_OffsetSquare;
@@ -40,6 +40,7 @@ struct LgenComponent : Component<LgenComponent>
 	float scale = 1.f;
 	float height = 1.f;
 	std::vector<Filter> filters;
+	bool blocky = false;
 	bool castShadows = false;
 	
 	GxVertexBuffer * vb = nullptr;
@@ -79,6 +80,7 @@ struct LgenComponentType : ComponentType<LgenComponent>
 		add("scale", &LgenComponent::scale);
 		add("height", &LgenComponent::height);
 		add("filters", &LgenComponent::filters);
+		add("blocky", &LgenComponent::blocky);
 		add("castShadows", &LgenComponent::castShadows);
 	}
 	
@@ -101,7 +103,8 @@ struct LgenComponentType : ComponentType<LgenComponent>
 			.add("type", &LgenComponent::Filter::type)
 			.add("radius", &LgenComponent::Filter::radius)
 				.addFlag(new ComponentMemberFlag_IntLimits(1, 8))
-			.add("numLevels", &LgenComponent::Filter::numLevels);
+			.add("numLevels", &LgenComponent::Filter::numLevels)
+				.addFlag(new ComponentMemberFlag_IntLimits(2, 32));
 	}
 };
 
