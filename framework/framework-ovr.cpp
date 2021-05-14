@@ -356,7 +356,7 @@ void FrameworkOvr::processEvents()
 	        if (ident < 0)
 	            break;
 
-		#if true
+		#if false
             if (ident == LOOPER_ID_MAIN)
             {
                 auto cmd = android_app_read_cmd(app);
