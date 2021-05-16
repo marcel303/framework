@@ -1,0 +1,11 @@
+library spatialAudioSystem-binaural
+	# audiograph-core : audioBuffer* functions
+	depend_library audiograph-core
+	depend_library binaural
+	depend_library ecs-parameter
+	# framework : for listFiles
+	depend_library framework
+	depend_library spatialAudioSystem
+	scan_files cpp
+	scan_files h
+	header_path . expose

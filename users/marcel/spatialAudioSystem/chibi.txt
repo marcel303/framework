@@ -1,0 +1,7 @@
+library spatialAudioSystem
+	# todo : remove. audiograph dep : here for AudioSource
+	depend_library audiograph
+	depend_library libgg
+	scan_files cpp
+	scan_files h
+	header_path . expose
