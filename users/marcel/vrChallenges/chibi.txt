@@ -4,5 +4,8 @@ app vrChallenges-010-magic-carpet
 	resource_path data
 
 app vrChallenges-020-magic-floor
+	depend_library audiooutput-hd
 	depend_library framework
+	depend_library spatialAudioSystem-binaural
 	add_files 020-magic-floor.cpp
+	resource_path data
