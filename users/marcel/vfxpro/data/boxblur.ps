@@ -11,8 +11,6 @@ vec4 sampleColormap(in vec4 color, in vec2 offset)
 
 void main()
 {
-	// todo : add simple boxblur with integer offsets for texcoords
-	
 	vec4 color = vec4(0.0f);
 	
 	color = sampleColormap(color, vec2( 0, -1));

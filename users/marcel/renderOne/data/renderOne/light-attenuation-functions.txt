@@ -6,7 +6,9 @@
 // much. Karis13 proposed the below windowing function, which will dampen the energy more
 // near the outer radius of the light, while approximating the true interse-square
 // intensity of the light nearby
-// todo : provide source to Karis13 paper
+// --> I tried to find a direct link to the paper I got this strategy from, but couldn't
+//     find it (anymore). When you search for 'Karis13' plenty of interesting papers and
+//     presentations pop up though!
 float caculateInverseSquareWithWindowingFunction(float distanceSquared, float lightRadiusSquared)
 {
     float normalizedDistance = distanceSquared / lightRadiusSquared;

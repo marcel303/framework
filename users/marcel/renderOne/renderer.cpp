@@ -56,7 +56,7 @@ namespace rOne
 		// draw a single large triangle covering the view. this is more efficient
 		// than drawing a quad, which gets rasterized as two triangles. when
 		// drawing two triangles, there will be a seam diagonally across the view,
-		// which makes more difficult for the gpu to schedule wave fronts
+		// which makes it more difficult for the gpu to schedule wave fronts
 		// efficiently. a large triangle doesn't have this issue
 		// see: https://michaldrobot.com/2014/04/01/gcn-execution-patterns-in-full-screen-passes/
 		const int size = (viewSx > viewSy ? viewSx : viewSy) * 2;

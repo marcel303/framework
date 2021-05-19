@@ -3,22 +3,13 @@ include fsfx/common.inc
 uniform float gaussianKernelSize;
 uniform vec4 gaussianKernelWeights[32] buffer gaussianKernel;
 
-// todo : optimize getWeight function
-
 float getWeight(int i)
 {
 	vec4 v = gaussianKernelWeights[i / 4];
 
 	i = i & 3;
 
-	if (i == 0)
-		return v.x;
-	else if (i == 1)
-		return v.y;
-	else if (i == 2)
-		return v.z;
-	else
-		return v.w;
+	return v[i];
 }
 
 vec4 fsfx()

@@ -61,7 +61,7 @@ namespace ZitaRev1
 		void process1(const int nsamp, const int nchan, float * data[]);
 
 		// -- dirty tracking
-		volatile int16_t  _touch0; // todo : why volatile?
+		volatile int16_t  _touch0; // fixme : not thread safe
 		volatile int16_t  _touch1;
 		
 		int   _state;

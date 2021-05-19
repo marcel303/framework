@@ -1309,7 +1309,7 @@ int main(int argc, char * argv[])
 				{
 					auto & segment = mask.mergedSegments[segment_index];
 					
-					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ < segment.begin)
+					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme # hack */ < segment.begin)
 					{
 						points[point_index].r *= maskValue1;
 						points[point_index].g *= maskValue1;
@@ -1338,7 +1338,7 @@ int main(int argc, char * argv[])
 						points[point_index - 1].x = x1 + (x2 - x1) * t;
 						points[point_index - 1].y = y1 + (y2 - y1) * t;
 						
-					// fixme : wrong color
+					// fixme # wrong color
 						points[point_index - 1].r = 1.f;
 						points[point_index - 1].g = 1.f;
 						points[point_index - 1].b = 1.f;
@@ -1347,7 +1347,7 @@ int main(int argc, char * argv[])
 					const int begin_index = point_index > 0 ? point_index - 1 : point_index;
 				#endif
 					
-					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme : hack */ <= segment.end)
+					while (point_index < kLineSize && (points[point_index].x + 1.f)/2.f /* fixme # hack */ <= segment.end)
 					{
 						points[point_index].r *= maskValue2;
 						points[point_index].g *= maskValue2;
@@ -1376,7 +1376,7 @@ int main(int argc, char * argv[])
 						points[point_index - 0].x = x1 + (x2 - x1) * t;
 						points[point_index - 0].y = y1 + (y2 - y1) * t;
 						
-					// fixme : wrong color
+					// fixme # wrong color
 						points[point_index - 0].r = 1.f;
 						points[point_index - 0].g = 1.f;
 						points[point_index - 0].b = 1.f;
@@ -1543,7 +1543,7 @@ int main(int argc, char * argv[])
 					
 					gxBegin(GX_LINES);
 					{
-						for (int i = 0; i < kFrameSize - 1; ++i) // todo : closed
+						for (int i = 0; i < kFrameSize - 1; ++i) // todo # closed
 						{
 							auto & point1 = frame.points[(i + 0) % kFrameSize];
 							auto & point2 = frame.points[(i + 1) % kFrameSize];

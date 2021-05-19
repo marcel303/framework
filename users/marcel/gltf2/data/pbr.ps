@@ -53,7 +53,6 @@ void forEachLightId(int id)
             lightDir = light.direction;
             lightAttenuation = 1.0;
         }
-        // todo : handle different light types
 
         Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
 

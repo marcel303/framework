@@ -1343,16 +1343,6 @@ struct VfxNodeNewBeat : VfxNodeBase
 	
 	virtual void handleTrigger(const int index) override
 	{
-	#if 0 // todo : remove
-		if (index == kInput_Begin)
-		{
-			newBeat.begin();
-		}
-		else if (index == kInput_End)
-		{
-			newBeat.end();
-		}
-	#endif
 	}
 	
 	NewBeat newBeat;

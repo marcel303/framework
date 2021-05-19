@@ -72,7 +72,6 @@ void main()
 
     // -- add ambient light
 
-// todo : use lighting model to compute ambient contribution
     vec3 ambient = scene_ambientLightColor;
     ambient *= surfaceProperties.baseColor;
     ambient *= gltfAmbientOcclusion();

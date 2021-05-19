@@ -417,7 +417,6 @@ float Watersim::sample(const float x, const float y) const
 		toSampleIndex(x, numElems, x1, tx2);
 		toSampleIndex(y, numElems, y1, ty2);
 
-		// todo : sampling should be either wrapped or clamped.. need to choose
 		const int x2 = x1 + 1 == numElems ? 0 : x1 + 1;
 		const int y2 = y1 + 1 == numElems ? 0 : y1 + 1;
 		const float tx1 = 1.f - tx2;

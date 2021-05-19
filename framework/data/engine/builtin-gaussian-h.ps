@@ -5,24 +5,15 @@ uniform sampler2D source;
 uniform float kernelSize;
 uniform float radius;
 
-uniform vec4 weights[32] buffer filterKernel;
-
-// todo : optimize getWeight function
+uniform vec4 weights[32] buffer filterKernel; // note : OpenGL's layout(std140) aligns each float in float[] to 16 bytes.. which is pretty useless. so we use vec4[] instead
 
 float getWeight(int i)
 {
-	vec4 v = weights[i / 4];
+	vec4 v = weights[i >> 2];
 
-	i = i & 3;
+	i &= 3;
 
-	if (i == 0)
-		return v.x;
-	else if (i == 1)
-		return v.y;
-	else if (i == 2)
-		return v.z;
-	else
-		return v.w;
+	return v[i];
 }
 
 void main()

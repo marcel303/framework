@@ -10,7 +10,7 @@ uniform float useSuperSampling;
 
 void main()
 {
-    float opacity = sampleMsdf_aa(msdf, v_texcoord, int(sampleMethod), useSuperSampling != 0.0);
+    float opacity = sampleMsdf_aa(msdf, v_texcoord, int(sampleMethod), useSuperSampling != 0.0, 3);
     
     vec4 color = v_color;
     color.a *= opacity;
