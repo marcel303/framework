@@ -10,11 +10,9 @@
 
 // test : immerse the user into the scene using bodily head movement
 
-// todo : add forward shader with distance fog + simple directional lighting
+static const float kHeadHeight = .4f;
 
-static const float kHeadHeight = .8f;
-
-static const float kMinimumTerrainDistance = 1.f;
+static const float kMinimumTerrainDistance = .8f;
 
 static Shader shader;
 
@@ -35,7 +33,7 @@ struct Carpet
 		
 		float speed;
 		if (framework.isStereoVr())
-			speed = vrPointer[0].getPressure(VrButton_Trigger) * 4.f;
+			speed = vrPointer[0].getPressure(VrButton_Trigger) * 1.5f;
 		else
 			speed = 1.f;
 		
@@ -78,7 +76,7 @@ struct Carpet
 			Vec3 * gridPoints = (Vec3*)alloca(numGridPoints * sizeof(Vec3));
 			
 			const float gridScale = (kCarpetSize / 2.f) / gridExtents;
-			const float noiseFrequencyRcp = .05f / gridScale;
+			const float noiseFrequencyRcp = .02f / gridScale;
 			
 			Vec3 * gridPoints_itr = gridPoints;
 			
@@ -91,7 +89,7 @@ struct Carpet
 					
 					// note : we use a noise function to give the impression of wind making waves on the carpet
 					
-					const float noise = octave_noise_3d(2, .5f, noiseFrequencyRcp, x, z, framework.time * .3f);
+					const float noise = octave_noise_3d(2, .5f, noiseFrequencyRcp, x, z, framework.time * .7f);
 					
 					const float y = position[1] + noise * .2f;
 					
@@ -289,13 +287,15 @@ int main(int argc, char * argv[])
 			break;
 		
 		world.tick(framework.timeStep);
-		
+
+		framework.vrOrigin = world.carpet.position + Vec3(0, kHeadHeight, 0);
+
 		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
 			framework.beginEye(i, fogColor);
 			{
 				Mat4x4 headTransform = framework.getHeadTransform();
-				headTransform.SetTranslation(world.carpet.position + Vec3(0, kHeadHeight, 0));
+				headTransform.SetTranslation(framework.vrOrigin);
 				gxLoadMatrixf(headTransform.CalcInv().m_v);
 				
 				pushDepthTest(true, DEPTH_LESS);
