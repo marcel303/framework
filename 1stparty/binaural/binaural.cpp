@@ -33,9 +33,9 @@
 #include <stdio.h>
 #include <string.h> // memset, memcpy
 
-#define USE_FRAMEWORK 1
+#define BINAURAL_USE_FRAMEWORK 1
 
-#if USE_FRAMEWORK
+#if BINAURAL_USE_FRAMEWORK
 	#include "soundfile/SoundIO.h" // loadSound
 	#include "Parse.h"
 	#include "StringEx.h" // sprintf_s
@@ -60,11 +60,11 @@
 	#endif
 #endif
 
-#if ENABLE_WDL_FFT
+#if BINAURAL_ENABLE_WDL_FFT
 	#include "WDL/fft.h"
 #endif
 
-#if ENABLE_DEBUGGING
+#if BINAURAL_ENABLE_DEBUGGING
 	#include <assert.h>
 	#include <map>
 #endif
@@ -78,7 +78,7 @@ done : quality :
 	-> the reason is due to the way HRIR samples are combined. this creates a comb-like filter effect and colors the sound. the effect is not present when using the OpenAL soft HRTF filters, as they are properly processed to be able to blend them
 
 todo : performance :
-- batch binaural object : most of the remaining cost is in performing the fourier transformations prior and after the convolution step is performed. for the source to frequency <-> time domain transformations, it's possible to do four source of them at once when we create a batch binauralizer object. this object would then perform binauralization on four streams at a time. convolution etc which operates on the left and right channels separately could be made to use 8-component AVX instructions, for additional gains
+- batch binaural object : most of the remaining cost is in performing the fourier transformations prior and after the convolution step is performed. for the source to frequency <-> time domain transformations, it's possible to do four of them at once when we create a batch binauralizer object. this object would then perform binauralization on four streams at a time. convolution etc which operates on the left and right channels separately could be made to use 8-component AVX instructions, for additional gains
 - optimize the time domain to frequency domain transformation by using a FFT optimized for working with real-values inputs. since the last 50% of the fourier transformation is a mirror of the first 50% (symmetry), the algortihm could be optimized to only compute the first half
 
 */
@@ -339,7 +339,7 @@ namespace binaural
 	{
 		debugTimerBegin("hrirToHrtf");
 		
-	#if ENABLE_FOURIER4
+	#if BINAURAL_ENABLE_FOURIER4
 		// this will generate the HRTF from the HRIR samples
 		
 		float4 filterReal[HRTF_BUFFER_SIZE];
@@ -352,7 +352,7 @@ namespace binaural
 		
 		deinterleaveAudioBuffers_4_to_2(filterReal, lFilter.real, rFilter.real);
 		deinterleaveAudioBuffers_4_to_2(filterImag, lFilter.imag, rFilter.imag);
-	#elif ENABLE_WDL_FFT
+	#elif BINAURAL_ENABLE_WDL_FFT
 		static bool isInit = false;
 		
 		if (isInit == false)
@@ -406,7 +406,7 @@ namespace binaural
 		const float * __restrict src,
 		float * __restrict dst)
 	{
-	#if !ENABLE_FOURIER4 && ENABLE_WDL_FFT
+	#if !BINAURAL_ENABLE_FOURIER4 && BINAURAL_ENABLE_WDL_FFT
 		memcpy(dst, src, AUDIO_BUFFER_SIZE * sizeof(float));
 	#else
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
@@ -451,7 +451,7 @@ namespace binaural
 	{
 		debugTimerBegin("convolveAudio_2");
 		
-	#if ENABLE_FOURIER4
+	#if BINAURAL_ENABLE_FOURIER4
 		// transform audio data from the time-domain into the frequency-domain
 		
 		source.transformToFrequencyDomain(true);
@@ -474,7 +474,7 @@ namespace binaural
 		Fourier::fft1D(convolvedReal, convolvedImag, AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE, true, true);
 		
 		deinterleaveAudioBuffers_4(convolvedReal, lResultOld, rResultOld, lResultNew, rResultNew);
-	#elif ENABLE_WDL_FFT
+	#elif BINAURAL_ENABLE_WDL_FFT
 		static bool isInit = false;
 		
 		if (isInit == false)
@@ -663,7 +663,7 @@ namespace binaural
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
 		float4 t2 = _mm_set_ps(tStepScalar * 7.f, tStepScalar * 6.f, tStepScalar * 5.f, tStepScalar * 4.f);
 		
-	#if ENABLE_DEBUGGING
+	#if BINAURAL_ENABLE_DEBUGGING
 		float * t1_array = (float*)&t1;
 		float * t2_array = (float*)&t2;
 		debugAssert(t2[3] == tStepScalar * 7.f);
@@ -706,7 +706,7 @@ namespace binaural
 	#endif
 	}
 	
-#if ENABLE_FOURIER4
+#if BINAURAL_ENABLE_FOURIER4
 	void interleaveAudioBuffers_4(
 		const float * __restrict array1,
 		const float * __restrict array2,
@@ -968,7 +968,7 @@ namespace binaural
 	
 	//
 	
-#if ENABLE_DEBUGGING && USE_FRAMEWORK
+#if BINAURAL_ENABLE_DEBUGGING && BINAURAL_USE_FRAMEWORK
 	static std::map<std::string, uint64_t> debugTimers;
 	
 	void debugAssert(const bool condition)
@@ -1016,7 +1016,7 @@ namespace binaural
 	}
 #endif
 	
-#if USE_FRAMEWORK
+#if BINAURAL_USE_FRAMEWORK
 	void listFiles(const char * path, bool recurse, std::vector<std::string> & result)
 	{
 		debugTimerBegin("list_files");
@@ -1192,7 +1192,7 @@ namespace binaural
 		}
 	}
 	
-#if ENABLE_FOURIER4 || ENABLE_WDL_FFT
+#if BINAURAL_ENABLE_FOURIER4 || BINAURAL_ENABLE_WDL_FFT
 	void AudioBuffer::convolveAndReverseIndices_4(
 		const float4 * __restrict filterReal,
 		const float4 * __restrict filterImag,

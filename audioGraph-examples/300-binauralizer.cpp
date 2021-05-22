@@ -44,7 +44,7 @@
 
 #include "ui.h"
 
-#if ENABLE_WDL_FFT
+#if BINAURAL_ENABLE_WDL_FFT
 	#include "WDL/fft.h"
 #endif
 
@@ -716,7 +716,7 @@ int main(int argc, char * argv[])
 				
 				//
 				
-			#if ENABLE_WDL_FFT
+			#if BINAURAL_ENABLE_WDL_FFT
 				const int * fftPermuteTable = WDL_fft_permute_tab(HRTF_BUFFER_SIZE);
 			#endif
 			
@@ -732,7 +732,7 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
-					#if ENABLE_WDL_FFT
+					#if BINAURAL_ENABLE_WDL_FFT
 						const int j = fftPermuteTable[(i + sx/2) % sx];
 					#else
 						const int j = (i + sx/2) % sx;
@@ -760,7 +760,7 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
-					#if ENABLE_WDL_FFT
+					#if BINAURAL_ENABLE_WDL_FFT
 						const int j = fftPermuteTable[(i + sx/2) % sx];
 					#else
 						const int j = (i + sx/2) % sx;
