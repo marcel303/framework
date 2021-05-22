@@ -19,9 +19,9 @@
 
 #include "watersim.h"
 
+#include "spatialAudioSystem-binaural.h"
+
 #include "audiooutput/AudioOutput_Native.h"
-#include "binauralizer.h"
-#include "binaural_oalsoft.h"
 
 #include "objects/audioSourceVorbis.h"
 #include "objects/delayLine.h"
@@ -30,7 +30,7 @@
 #include "particle_editor.h"
 #include "ui.h"
 
-#include "Path.h" // GetExtension for mhr file listing
+#include "Path.h" // GetExtension for jgmod file listing
 #include "Quat.h"
 
 /*
@@ -109,16 +109,13 @@ DONE : optimize matrix multiplication for neon
 
  */
 
-#include <algorithm> // std::find
 #include <math.h>
-#include <mutex>
 
 #define SAMPLE_RATE 48000
 
 #define AUDIO_BUFFER_VALIDATION 0
 
 struct Scene;
-struct SpatialAudioSystem;
 
 //
 
@@ -146,7 +143,7 @@ struct ControlPanel
 	FrameworkImGuiContext guiContext;
 
 	Scene * scene = nullptr;
-	SpatialAudioSystem * spatialAudioSystem = nullptr;
+	SpatialAudioSystem_Binaural * spatialAudioSystem = nullptr;
 	
 	ParticleEditor particleEditor;
 
@@ -155,7 +152,7 @@ struct ControlPanel
 	
 	Tab activeTab = kTab_Scene;
 
-	ControlPanel(const Vec3 position, const float angle, Scene * in_scene, SpatialAudioSystem * in_spatialAudioSystem)
+	ControlPanel(const Vec3 position, const float angle, Scene * in_scene, SpatialAudioSystem_Binaural * in_spatialAudioSystem)
 		: window("Window", 340, 340)
 	{
 	#if WINDOW_IS_3D
@@ -242,27 +239,6 @@ static const int kCollisionFlag_Watersim = 1 << 0;
 static CollisionSystemInterface * collisionSystem = nullptr;
 
 // -- spatial audio system
-
-struct SpatialAudioSystemInterface
-{
-	virtual void * addSource(
-		const Mat4x4 & transform,
-		AudioSource * audioSource,
-		const float recordedDistance,
-		const float headroomInDb) = 0;
-	virtual void removeSource(void * source) = 0;
-
-	virtual void setSourceTransform(void * source, const Mat4x4 & transform) = 0;
-
-	virtual void setListenerTransform(const Mat4x4 & transform) = 0;
-
-	virtual void updatePanning() = 0;
-
-	virtual void generateLR(
-		float * __restrict outputSamplesL,
-		float * __restrict outputSamplesR,
-		const int numSamples) = 0;
-};
 
 static SpatialAudioSystemInterface * spatialAudioSystem = nullptr;
 
@@ -1103,7 +1079,7 @@ void Scene::create()
 	pointerBeamsEffect.loadFromFile("drifter-particles1.pfx");
 	pointerBeamsEffect.createEffects(particleEffectSystem);
 
-	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, this, (SpatialAudioSystem*)spatialAudioSystem);
+	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, this, (SpatialAudioSystem_Binaural*)spatialAudioSystem);
 #if WINDOW_IS_3D && 0
 	controlPanel_audioSource.open("180328-004.ogg", true);
 	controlPanel_spatialAudioSource = spatialAudioSystem->addSource(controlPanel->window.getTransform(), &controlPanel_audioSource, 4.f, 12.f);
@@ -1527,8 +1503,6 @@ void Scene::drawOpaque() const
 				window->draw3d();
 			}
 		}
-
-		//framework.drawVirtualDesktop();
 	}
 	clearShader();
 
@@ -1807,260 +1781,7 @@ void Scene::drawWatersimHandProjections() const
 
 // -- SpatialAudioSystem
 
-struct SpatialAudioSystem : SpatialAudioSystemInterface
-{
-	struct Source
-	{
-		Mat4x4 transform = Mat4x4(true);
-		
-		AudioSource * audioSource = nullptr;
-		float recordedDistance = 1.f;
-		float headroomInDb = 0.f;
-		
-		binaural::Binauralizer binauralizer;
-
-		std::atomic<bool> enabled;
-		std::atomic<float> elevation;
-		std::atomic<float> azimuth;
-		std::atomic<float> intensity;
-		
-		float lastIntensity;
-
-		Source()
-			: enabled(true)
-			, elevation(0.f)
-			, azimuth(0.f)
-			, intensity(0.f)
-			, lastIntensity(0.f)
-		{
-		}
-	};
-
-	std::vector<binaural::HRIRSampleSet> sampleSets;
-	binaural::HRIRSampleSet * sampleSet = nullptr;
-	
-	binaural::Mutex_Dummy mutex_binaural; // we use a dummy mutex for the binauralizer, since we change (elevation, azimuth) only from the audio thread
-	std::mutex mutex_sources; // mutex for sources array
-	std::mutex mutex_sampleSet; // mutex for sample set selection
-
-	std::vector<Source*> sources;
-
-	Mat4x4 listenerTransform = Mat4x4(true);
-
-	ParameterMgr parameterMgr;
-	ParameterBool * enabled = nullptr;
-	ParameterFloat * volume = nullptr;
-	ParameterEnum * sampleSetId = nullptr;
-	
-	SpatialAudioSystem()
-	{
-		parameterMgr.setPrefix("spatialAudioSystem");
-		enabled = parameterMgr.addBool("enabled", true);
-		volume = parameterMgr.addFloat("volume", 1.f);
-		volume->setLimits(0.f, 1.f);
-		
-		std::vector<std::string> sampleSetFiles;
-		{
-			// list all of the mhr sample set files
-			auto files = listFiles("binaural", false);
-			for (auto & file : files)
-				if (Path::GetExtension(file, true) == "mhr")
-					sampleSetFiles.push_back(file);
-			std::sort(sampleSetFiles.begin(), sampleSetFiles.end());
-		}
-		
-		// load sample sets
-		sampleSets.resize(sampleSetFiles.size());
-		for (size_t i = 0; i < sampleSetFiles.size(); ++i)
-		{
-			loadHRIRSampleSet_Oalsoft(sampleSetFiles[i].c_str(), sampleSets[i]);
-			sampleSets[i].finalize();
-		}
-		
-		std::vector<ParameterEnum::Elem> sampleSetElems;
-		for (size_t i = 0; i < sampleSetFiles.size(); ++i)
-			sampleSetElems.push_back({ Path::GetBaseName(sampleSetFiles[i]).c_str(), (int)i });
-		sampleSetId = parameterMgr.addEnum("sampleSet", 0, sampleSetElems);
-		sampleSet = &sampleSets[sampleSetId->get()];
-	}
-
-	virtual void * addSource(
-		const Mat4x4 & transform,
-		AudioSource * audioSource,
-		const float recordedDistance,
-		const float headroomInDb) override final
-	{
-		Source * source = new Source();
-		source->transform = transform;
-		source->audioSource = audioSource;
-		source->recordedDistance = recordedDistance;
-		source->headroomInDb = headroomInDb;
-		source->binauralizer.init(sampleSet, &mutex_binaural);
-
-		mutex_sources.lock();
-		{
-			sources.push_back(source);
-		}
-		mutex_sources.unlock();
-
-		return source;
-	}
-
-	virtual void removeSource(void * in_source) override final
-	{
-		Source * source = (Source*)in_source;
-
-		auto i = std::find(sources.begin(), sources.end(), source);
-		Assert(i != sources.end());
-
-		mutex_sources.lock();
-		{
-			sources.erase(i);
-		}
-		mutex_sources.unlock();
-
-		delete source;
-		source = nullptr;
-	}
-
-	virtual void setSourceTransform(void * in_source, const Mat4x4 & transform) override final
-	{
-		Source * source = (Source*)in_source;
-		
-		source->transform = transform;
-	}
-
-	virtual void setListenerTransform(const Mat4x4 & transform) override final
-	{
-		listenerTransform = transform;
-	}
-
-	virtual void updatePanning() override final
-	{
-		// Update binauralization parameters from listener and audio source transforms.
-		const Mat4x4 & listenerToWorld = listenerTransform;
-		const Mat4x4 worldToListener = listenerToWorld.CalcInv();
-
-		for (auto * source : sources)
-		{
-			if (enabled->get())
-			{
-				const Mat4x4 & sourceToWorld = source->transform;
-				const Vec3 sourcePosition_world = sourceToWorld.GetTranslation();
-				const Vec3 sourcePosition_listener = worldToListener.Mul4(sourcePosition_world);
-				float elevation;
-				float azimuth;
-				binaural::cartesianToElevationAndAzimuth(
-						sourcePosition_listener[2],
-						sourcePosition_listener[1],
-						sourcePosition_listener[0],
-						elevation,
-						azimuth);
-				const float distance = sourcePosition_listener.CalcSize();
-				const float recordedDistance = source->recordedDistance;
-				const float headroomInDb = source->headroomInDb;
-				const float maxGain = powf(10.f, headroomInDb/20.f);
-				const float normalizedDistance = distance / recordedDistance;
-				const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f)) * volume->get();
-
-				source->enabled = true;
-				source->elevation = elevation;
-				source->azimuth = azimuth;
-				source->intensity = intensity;
-			}
-			else
-			{
-				source->enabled = false;
-				source->elevation = 0.f;
-				source->azimuth = 0.f;
-				source->intensity = volume->get();
-			}
-		}
-		
-		if (sampleSetId->isDirty)
-		{
-			sampleSetId->isDirty = false;
-			sampleSet = &sampleSets[sampleSetId->get()];
-			
-			mutex_sources.lock();
-			{
-				for (auto * source : sources)
-				{
-					if (source->binauralizer.isInit())
-						source->binauralizer.shut();
-					
-					source->binauralizer.init(sampleSet, &mutex_binaural);
-				}
-			}
-			mutex_sources.unlock();
-		}
-	}
-
-	virtual void generateLR(float * __restrict outputSamplesL, float * __restrict outputSamplesR, const int numSamples) override final
-	{
-		memset(outputSamplesL, 0, numSamples * sizeof(float));
-		memset(outputSamplesR, 0, numSamples * sizeof(float));
-
-		mutex_sources.lock();
-		{
-			for (auto * source : sources)
-			{
-				ALIGN16 float inputSamples[numSamples];
-
-				// generate source audio
-				source->audioSource->generate(inputSamples, numSamples);
-				
-			#if AUDIO_BUFFER_VALIDATION
-				for (int i = 0; i < numSamples; ++i)
-					Assert(isfinite(inputSamples[i]) && fabsf(inputSamples[i]) <= 1000.f);
-			#endif
-				
-				if (source->enabled.load())
-				{
-					// distance attenuation
-					const float intensity = source->intensity.load();
-					audioBufferRamp(inputSamples, numSamples, source->lastIntensity, intensity);
-					source->lastIntensity = intensity;
-
-					source->binauralizer.provide(inputSamples, numSamples);
-
-					source->binauralizer.setSampleLocation(
-						source->elevation.load(),
-						source->azimuth.load());
-
-					ALIGN16 float samplesL[numSamples];
-					ALIGN16 float samplesR[numSamples];
-					source->binauralizer.generateLR(
-						samplesL,
-						samplesR,
-						numSamples);
-					
-				#if AUDIO_BUFFER_VALIDATION
-					for (int i = 0; i < numSamples; ++i)
-					{
-						Assert(isfinite(samplesL[i]) && isfinite(samplesR[i]));
-						Assert(fabsf(samplesL[i]) <= 1000.f && fabsf(samplesR[i]) <= 1000.f);
-					}
-				#endif
-					
-					audioBufferAdd(outputSamplesL, samplesL, numSamples);
-					audioBufferAdd(outputSamplesR, samplesR, numSamples);
-				}
-				else
-				{
-					// volume
-					const float intensity = source->intensity.load();
-					audioBufferRamp(inputSamples, numSamples, source->lastIntensity, intensity);
-					source->lastIntensity = intensity;
-					
-					audioBufferAdd(outputSamplesL, inputSamples, numSamples);
-					audioBufferAdd(outputSamplesR, inputSamples, numSamples);
-				}
-			}
-		}
-		mutex_sources.unlock();
-	}
-};
+// todo : use HD audio output and stream
 
 #include "limiter.h"
 
@@ -2208,7 +1929,7 @@ void ControlPanel::tick(const float dt)
 				{
 					parameterUi::doParameterUi_recursive(spatialAudioSystem->parameterMgr, nullptr);
 					
-					auto * spatialAudioSystemImpl = (SpatialAudioSystem*)spatialAudioSystem;
+					auto * spatialAudioSystemImpl = (SpatialAudioSystem_Binaural*)spatialAudioSystem;
 					spatialAudioSystemImpl->mutex_sources.lock();
 					{
 						for (auto * source : spatialAudioSystemImpl->sources)
@@ -2389,21 +2110,6 @@ int main(int argc, char * argv[])
 					-scene.playerLocation[1],
 					-scene.playerLocation[2]);
 				{
-				#if false
-					// depth pre-pass
-					pushDepthTest(true, DEPTH_LESS);
-					pushBlend(BLEND_OPAQUE);
-					pushColorWriteMask(0, 0, 0, 0);
-					pushShaderOutputs("");
-					{
-						scene.drawOpaque();
-					}
-					popShaderOutputs();
-					popColorWriteMask();
-					popBlend();
-					popDepthTest();
-				#endif
-
 					pushDepthTest(true, DEPTH_LESS);
 					pushBlend(BLEND_OPAQUE);
 					{
@@ -2413,7 +2119,6 @@ int main(int argc, char * argv[])
 					popDepthTest();
 
 					pushDepthTest(true, DEPTH_LESS, false);
-					//pushBlend(BLEND_ADD);
 					pushBlend(BLEND_ALPHA);
 					{
 						scene.drawTranslucent();

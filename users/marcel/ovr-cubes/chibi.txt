@@ -46,6 +46,7 @@ app ovr-cubes6
 	depend_library framework-gltf
 	depend_library imgui-framework
 	depend_library libjgmod
+	depend_library spatialAudioSystem-binaural
 	depend_library sse2neon
 	add_files main6.cpp
 	add_files simd.h
