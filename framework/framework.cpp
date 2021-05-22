@@ -901,7 +901,7 @@ bool Framework::shutdown()
 	droppedFiles.clear();
 	
 	vrOrigin.Set(0, 0, 0);
-	enableVrMovement = true;
+	enableVrMovement = false;
 	
 	backgrounded = false;
 	
@@ -1554,6 +1554,8 @@ void Framework::process()
 		bool inputIsCaptured = false;
 		globals.emulatedVrCamera.mode = Camera::kMode_FirstPerson;
 		globals.emulatedVrCamera.tick(framework.timeStep, inputIsCaptured, false);
+		if (enableVrMovement == false)
+			globals.emulatedVrCamera.firstPerson.position.SetZero();
 
 		if (enableVrMovement)
 		{
@@ -1967,11 +1969,6 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 	if (vrMode)
 	{
 		frameworkOvr.beginEye(eyeIndex, clearColor);
-		
-		// note : the OVR API prepares a right-handed OpenGL matrix for us. we convert it from a right-handed coordinate system into a left-handed one, since framework uses a left-handed system cross-platform
-		gxScalef(1, 1, -1);
-		updateCullFlip();
-		Assert(globals.frontFaceWinding == +1);
 		
 		gxTranslatef(
 			-vrOrigin[0],
@@ -3171,6 +3168,7 @@ bool Mouse::isIdle() const
 	return
 		dx == 0 &&
 		dy == 0 &&
+		scrollY == 0 &&
 		!currentWindowData->mouseData.mouseChange[0] &&
 		!currentWindowData->mouseData.mouseChange[1];
 }
@@ -4480,7 +4478,7 @@ void logDebug(const char * format, ...)
 	va_end(args);
 
 #if defined(ANDROID)
-	__android_log_write(ANDROID_LOG_VERBOSE, "Framework", text);
+	__android_log_write(ANDROID_LOG_DEBUG, "Framework", text);
 #else
 	fprintf(stderr, "[DD] %s\n", text);
 #endif

@@ -426,7 +426,7 @@ void Window::setTransform(const Mat4x4 & transform)
 	m_transform = transform;
 }
 
-void Window::setPixelsPerMeters(const float ppm)
+void Window::setPixelsPerMeter(const float ppm)
 {
 	m_pixelsPerMeter = ppm;
 }
@@ -471,7 +471,7 @@ void Window::draw3d() const
 		gxMultMatrixf(transformForDraw.m_v);
 
 		gxSetTexture(getColorTarget()->getTextureId());
-		gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
 		{
 			setColor(colorWhite);
 

@@ -634,7 +634,7 @@ public:
 
 #if WINDOW_IS_3D
 	void setTransform(const Mat4x4 & transform);
-	void setPixelsPerMeters(const float ppm);
+	void setPixelsPerMeter(const float ppm);
 	bool intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float depthThreshold, Vec2 & out_pixelPos, float & out_distance) const;
 	void draw3d() const;
 	void draw3dCursor() const;
