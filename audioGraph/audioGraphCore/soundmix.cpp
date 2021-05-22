@@ -747,6 +747,7 @@ void PcmData::alloc(const int _numSamples)
 	Assert(numSamples == 0);
 	samples = new float[_numSamples];
 	numSamples = _numSamples;
+	ownData = true;
 }
 
 void PcmData::set(float * _samples, const int _numSamples)
