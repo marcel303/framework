@@ -189,8 +189,9 @@ class JsonException : public std::exception {
      @brief Get exception message
      @return exception message
      */
+	mutable std::string message;
     virtual const char* what() const throw() {
-        std::string message;
+		message.clear();
         switch (errorType_) {
             case JsonErrorType::JsonMissingNode:
                 message = "Json Structure Error: Missing Node";
