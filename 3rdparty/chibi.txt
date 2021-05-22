@@ -6,7 +6,6 @@ with_platform windows  add libsdl2-win32
 add libetherdream
 
 add box2d-support
-#add DeepBelief
 add DeepBelief-src
 add freetype2-support
 add glew
