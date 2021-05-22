@@ -27,11 +27,17 @@
 
 #pragma once
 
-// todo : replace this with a decent PCM data cache object and make it a global
-// todo : move PCM data cache to somewhere else
+#include <map>
+#include <string>
 
 struct PcmData;
 
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches);
-void clearPcmDataCache();
-const PcmData * getPcmData(const char * filename);
+struct PcmDataCache
+{
+	std::map<std::string, PcmData*> elems;
+	
+	void addPath(const char * path, const bool recurse, const bool stripPaths, const bool createCaches);
+	void clear();
+	
+	const PcmData * get(const char * filename) const;
+};

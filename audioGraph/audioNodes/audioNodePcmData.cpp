@@ -44,7 +44,12 @@ void AudioNodePcmData::tick(const float dt)
 	{
 		currentFilename = filename;
 		
-		const PcmData * newPcmData = getPcmData(filename);
+		auto * pcmDataCache = g_currentAudioGraph->context->findObject<PcmDataCache>();
+		
+		const PcmData * newPcmData =
+			pcmDataCache == nullptr
+			? nullptr
+			: pcmDataCache->get(filename);
 		
 		if (newPcmData == nullptr)
 		{

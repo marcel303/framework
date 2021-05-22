@@ -49,7 +49,8 @@ struct AudioSourcePcm : AudioSource
 	
 	AudioSourcePcm();
 	
-	void init(const PcmData * pcmData, const int samplePosition);
+	void setPcmData(const PcmData * pcmData, const int samplePosition = 0);
+	void setLooping(const bool looping);
 	
 	void setRange(const int begin, const int length);
 	void setRangeNorm(const float begin, const float length);

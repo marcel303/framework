@@ -44,12 +44,17 @@ AudioSourcePcm::AudioSourcePcm()
 {
 }
 
-void AudioSourcePcm::init(const PcmData * _pcmData, const int _samplePosition)
+void AudioSourcePcm::setPcmData(const PcmData * _pcmData, const int _samplePosition)
 {
 	pcmData = _pcmData;
 	samplePosition = _samplePosition;
 	
-	clearRange();
+	clearRange(); // note : rangeBegin & rangeEnd must be set to the pcm data extents, as we don't actually check 'hasRange' when generating samples
+}
+
+void AudioSourcePcm::setLooping(const bool looping)
+{
+	maxLoopCount = looping ? 0 : 1;
 }
 
 void AudioSourcePcm::setRange(const int begin, const int length)

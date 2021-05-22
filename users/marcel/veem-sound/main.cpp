@@ -1,4 +1,5 @@
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
@@ -668,14 +669,6 @@ int main(int argc, char * argv[])
 	
 	initUi();
 	
-#if ENABLE_AUDIO
-	fillPcmDataCache("bang", false, false, true);
-	fillPcmDataCache("droplets", false, false, true);
-	fillPcmDataCache("droplets2", false, false, true);
-	fillPcmDataCache("env", false, false, true);
-	fillPcmDataCache("sats", false, false, true);
-#endif
-
 	int inputDeviceIndex = -1;
 	int outputDeviceIndex = -1;
 	
@@ -747,6 +740,16 @@ int main(int argc, char * argv[])
 	audioGraphMgr.init(&audioMutex, &voiceMgr);
 	s_audioGraphMgr = &audioGraphMgr;
 	
+#if ENABLE_AUDIO
+	PcmDataCache pcmDataCache;
+	pcmDataCache.addPath("bang", false, false, true);
+	pcmDataCache.addPath("droplets", false, false, true);
+	pcmDataCache.addPath("droplets2", false, false, true);
+	pcmDataCache.addPath("env", false, false, true);
+	pcmDataCache.addPath("sats", false, false, true);
+	audioGraphMgr.context->addObject(&pcmDataCache, "PCM data cache");
+#endif
+
 	AudioUpdateHandler audioUpdateHandler;
 	audioUpdateHandler.init(&audioMutex, &voiceMgr, &audioGraphMgr);
 	

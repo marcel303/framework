@@ -97,7 +97,12 @@ void AudioNodeSourcePcm::tick(const float dt)
 	
 	if (filename != nullptr)
 	{
-		pcmData = getPcmData(filename);
+		auto * pcmDataCache = g_currentAudioGraph->context->findObject<PcmDataCache>();
+		
+		pcmData =
+			pcmDataCache == nullptr
+			? nullptr
+			: pcmDataCache->get(filename);
 	}
 	
 	audioSource.pcmData = pcmData;

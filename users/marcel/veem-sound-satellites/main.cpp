@@ -1,4 +1,5 @@
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
@@ -185,6 +186,10 @@ struct SatellitesApp
 	int inputDeviceIndex = -1;
 	int outputDeviceIndex = -1;
 	
+#if ENABLE_AUDIO
+	PcmDataCache pcmDataCache;
+#endif
+
 	AudioMutex * audioMutex = nullptr;
 	AudioVoiceManagerBasic * voiceMgr = nullptr;
 	AudioGraphManager_RTE * audioGraphMgr = nullptr;
@@ -251,6 +256,10 @@ struct SatellitesApp
 	
 	bool init()
 	{
+	#if ENABLE_AUDIO
+		pcmDataCache.addPath("sats", false, false, true);
+	#endif
+
 		audioMutex = new AudioMutex();
 		audioMutex->init();
 		
@@ -261,6 +270,10 @@ struct SatellitesApp
 		audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
 		audioGraphMgr->init(audioMutex, voiceMgr);
 		
+	#if ENABLE_AUDIO
+		audioGraphMgr->context->addObject(&pcmDataCache, "PCM data cache");
+	#endif
+
 		audioUpdateHandler = new AudioUpdateHandler();
 		audioUpdateHandler->init(audioMutex, voiceMgr, audioGraphMgr);
 		
@@ -327,10 +340,6 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	initUi();
-	
-#if ENABLE_AUDIO
-	fillPcmDataCache("sats", false, false, true);
-#endif
 
 	SatellitesApp app;
 	

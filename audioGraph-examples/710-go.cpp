@@ -110,11 +110,12 @@ int main(int argc, char * argv[])
 
 	// load resources
 	
-	fillPcmDataCache("birds", true, false, true);
-	fillPcmDataCache("testsounds", true, true, true);
-	fillPcmDataCache("thegrooop", true, true, true);
-	fillPcmDataCache("voice-fragments", false, false, true);
-	
+	PcmDataCache pcmDataCache;
+	pcmDataCache.addPath("birds", true, false, true);
+	pcmDataCache.addPath("testsounds", true, true, true);
+	pcmDataCache.addPath("thegrooop", true, true, true);
+	pcmDataCache.addPath("voice-fragments", false, false, true);
+
 	// initialize audio related systems
 	
 	AudioMutex mutex;
@@ -126,6 +127,8 @@ int main(int argc, char * argv[])
 
 	AudioGraphManager_Basic audioGraphMgr(true);
 	audioGraphMgr.init(&mutex, &voiceMgr);
+	
+	audioGraphMgr.context->addObject(&pcmDataCache, "PCM data cache");
 
 	AudioUpdateHandler audioUpdateHandler;
 	audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);

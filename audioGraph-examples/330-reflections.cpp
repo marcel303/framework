@@ -687,6 +687,8 @@ struct GamepadController : Controller
 
 struct MyAudioSource : AudioSource
 {
+	PcmDataCache pcmDataCache;
+
 	AudioSourcePcm pcm;
 	
 	Source * source = nullptr;
@@ -703,8 +705,9 @@ struct MyAudioSource : AudioSource
 
 	MyAudioSource()
 	{
-		fillPcmDataCache("thegrooop", true, true, true);
-		pcm.init(getPcmData("talkative.ogg"), 0);
+		pcmDataCache.addPath("thegrooop", true, true, true);
+
+		pcm.setPcmData(pcmDataCache.get("talkative.ogg"), 0);
 		pcm.play();
 		
 		source = new Source();

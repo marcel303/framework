@@ -1875,9 +1875,12 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	fillPcmDataCache("birds", true, false, true);
-	fillPcmDataCache("testsounds", true, true, true);
-	fillPcmDataCache("voice-fragments", false, false, true);
+	// load resources
+
+	PcmDataCache pcmDataCache;
+	pcmDataCache.addPath("birds", true, false, true);
+	pcmDataCache.addPath("testsounds", true, true, true);
+	pcmDataCache.addPath("voice-fragments", false, false, true);
 
 	//
 
@@ -1939,6 +1942,8 @@ int main(int argc, char * argv[])
 	
 	Assert(s_audioGraphMgr == nullptr);
 	s_audioGraphMgr = &audioGraphMgr;
+
+	audioGraphMgr.context->addObject(&pcmDataCache, "PCM data cache");
 	
 	//
 	

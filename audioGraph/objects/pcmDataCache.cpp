@@ -32,108 +32,85 @@
 #include "soundmix.h" // PcmData
 #include "StringEx.h" // ToLower
 #include "Timer.h"
-#include <map>
 
 // todo : use a system-provided temp path for the cache files, to avoid polluting the data folder
 
-struct PcmDataCache
+void PcmDataCache::addPath(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
 {
-	std::map<std::string, PcmData*> elems;
-
-	void addPath(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
+	LOG_DBG("filling PCM data cache with path: %s", path);
+	
+	const auto t1 = g_TimerRT.TimeUS_get();
+	
+	const auto filenames = listFiles(path, recurse);
+	
+	for (auto & filename : filenames)
 	{
-		LOG_DBG("filling PCM data cache with path: %s", path);
+		const auto extension = Path::GetExtension(filename, true);
 		
-		const auto t1 = g_TimerRT.TimeUS_get();
+		if (extension == "cache")
+			continue;
 		
-		const auto filenames = listFiles(path, recurse);
+		if (extension != "wav" && extension != "ogg")
+			continue;
 		
-		for (auto & filename : filenames)
+		const std::string filenameLower = String::ToLower(filename);
+		
+		PcmData * pcmData = new PcmData();
+		
+		if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
 		{
-			const auto extension = Path::GetExtension(filename, true);
+			delete pcmData;
+			pcmData = nullptr;
+		}
+		else
+		{
+			const std::string name = stripPaths ? Path::GetFileName(filenameLower) : filenameLower;
 			
-			if (extension == "cache")
-				continue;
+			// check if this is a duplicate element. this could happen if different folders contain
+			// a file with the same name, due to stripping paths
 			
-			if (extension != "wav" && extension != "ogg")
-				continue;
+			auto & elem = elems[name];
 			
-			const std::string filenameLower = String::ToLower(filename);
-			
-			PcmData * pcmData = new PcmData();
-			
-			if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
+			if (elem != nullptr)
 			{
 				delete pcmData;
 				pcmData = nullptr;
 			}
 			else
 			{
-				const std::string name = stripPaths ? Path::GetFileName(filenameLower) : filenameLower;
-				
-				// check if this is a duplicate element. this could happen if different folders contain
-				// a file with the same name, due to stripping paths
-				
-				auto & elem = elems[name];
-				
-				if (elem != nullptr)
-				{
-					delete pcmData;
-					pcmData = nullptr;
-				}
-				else
-				{
-					elem = pcmData;
-				}
+				elem = pcmData;
 			}
 		}
-		
-		const auto t2 = g_TimerRT.TimeUS_get();
-		
-		LOG_INF("loading PCM data from %s took %.2fms", path, (t2 - t1) / 1000.0);
 	}
-
-	void clear()
-	{
-		for (auto & i : elems)
-		{
-			delete i.second;
-			i.second = nullptr;
-		}
-		
-		elems.clear();
-	}
-
-	const PcmData * get(const char * filename) const
-	{
-		const std::string filenameLower = String::ToLower(filename);
-		
-		auto i = elems.find(filenameLower);
-		
-		if (i == elems.end())
-		{
-			return nullptr;
-		}
-		else
-		{
-			return i->second;
-		}
-	}
-};
-
-static PcmDataCache s_pcmDataCache;
-
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
-{
-	s_pcmDataCache.addPath(path, recurse, stripPaths, createCaches);
+	
+	const auto t2 = g_TimerRT.TimeUS_get();
+	
+	LOG_INF("loading PCM data from %s took %.2fms", path, (t2 - t1) / 1000.0);
 }
 
-void clearPcmDataCache()
+void PcmDataCache::clear()
 {
-	s_pcmDataCache.clear();
+	for (auto & i : elems)
+	{
+		delete i.second;
+		i.second = nullptr;
+	}
+	
+	elems.clear();
 }
 
-const PcmData * getPcmData(const char * filename)
+const PcmData * PcmDataCache::get(const char * filename) const
 {
-	return s_pcmDataCache.get(filename);
+	const std::string filenameLower = String::ToLower(filename);
+	
+	auto i = elems.find(filenameLower);
+	
+	if (i == elems.end())
+	{
+		return nullptr;
+	}
+	else
+	{
+		return i->second;
+	}
 }

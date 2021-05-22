@@ -127,15 +127,20 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 		
 		const std::vector<std::string> filenames = listFiles(path, false);
 
-		for (auto & filename : filenames)
+		auto * pcmDataCache = g_currentAudioGraph->context->findObject<PcmDataCache>();
+
+		if (pcmDataCache != nullptr)
 		{
-			const PcmData * pcmData = getPcmData(filename.c_str());
-			
-			if (pcmData != nullptr && pcmData->numSamples > 0)
+			for (auto & filename : filenames)
 			{
-				files.push_back(pcmData);
+				const PcmData * pcmData = pcmDataCache->get(filename.c_str());
 				
-				this->filenames.push_back(filename);
+				if (pcmData != nullptr && pcmData->numSamples > 0)
+				{
+					files.push_back(pcmData);
+					
+					this->filenames.push_back(filename);
+				}
 			}
 		}
 		

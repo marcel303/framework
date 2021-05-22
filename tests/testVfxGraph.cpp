@@ -33,6 +33,7 @@
 #include "vfxNodeBase.h"
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioUi.h"
 #include "audioUpdateHandler.h"
@@ -48,6 +49,8 @@
 
 extern const int GFX_SX;
 extern const int GFX_SY;
+
+static PcmDataCache s_pcmDataCache;
 
 static AudioMutex * s_audioMutex = nullptr;
 static AudioUpdateHandler * s_audioUpdateHandler = nullptr;
@@ -490,9 +493,8 @@ void testVfxGraph()
 {
 	setAbout("This example shows Vfx Graph in action!");
 	
-	// fixme !
-	fillPcmDataCache("../4dworld/testsounds", true, true, true);
-	
+	s_pcmDataCache.addPath("../../audioGraph-examples/data/testsounds", true, true, true);
+
 	initAudioGraph();
 	
 	VfxGraph * vfxGraph = nullptr;
@@ -630,6 +632,8 @@ static void initAudioGraph()
 	s_audioGraphMgr = new AudioGraphManager_Basic(true);
 #endif
 	s_audioGraphMgr->init(s_audioMutex, s_audioVoiceMgr);
+
+	s_audioGraphMgr->context->addObject(&s_pcmDataCache, "PCM data cache");
 	
 	Assert(s_audioUpdateHandler == nullptr);
 	s_audioUpdateHandler = new AudioUpdateHandler();
