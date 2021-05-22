@@ -1,0 +1,55 @@
+library deepbelief shared
+
+	# todo : raspberry-pi: USE_GEMM, USE_QPU_GEMM/USE_MKL_GEMM/USE_EIGEN_GEMM/USE_ATLAS_GEMM .. ?
+
+	with_platform macos|iphoneos compile_definition USE_OS_IMAGE *
+	with_platform macos|iphoneos compile_definition USE_ACCELERATE_GEMM *
+
+	with_platform linux.raspberry-pi compile_definition USE_NEON *
+
+	# note : we don't want to use OpenGL unless we have to
+	#        compile_definition USE_OPENGL *
+
+	# todo : define LOAD_BUFFERS_AS_FLOAT ?
+
+	with_platform macos|iphoneos depend_library Accelerate find
+	with_platform macos|iphoneos depend_library ApplicationServices find
+	with_platform macos|iphoneos depend_library CoreFoundation find
+	with_platform macos|iphoneos depend_library CoreGraphics find
+	with_platform macos|iphoneos depend_library ImageIO find
+
+	scan_files cpp path src/lib group lib
+	scan_files h   path src/lib group lib
+	header_path         src/lib
+
+	scan_files cpp path src/lib/graph group graph
+	scan_files h   path src/lib/graph group graph
+	header_path         src/lib/graph
+
+	scan_files cpp path src/lib/math group math
+	scan_files h   path src/lib/math group math
+	header_path         src/lib/math
+
+	scan_files cpp path src/lib/opengl group opengl
+	scan_files h   path src/lib/opengl group opengl
+	header_path         src/lib/opengl
+
+	scan_files cpp path src/lib/svm group svm
+	scan_files h   path src/lib/svm group svm
+	header_path         src/lib/svm
+
+	scan_files cpp path src/lib/third_party group third_party
+	scan_files h   path src/lib/third_party group third_party
+	header_path         src/lib/third_party
+
+	scan_files cpp path src/lib/utility group utility
+	scan_files h   path src/lib/utility group utility
+	header_path         src/lib/utility
+
+	license_file LICENSE
+
+	scan_files h path src/include
+	header_path       src/include expose
+
+	scan_files h path DeepBelief
+	header_path       . expose
