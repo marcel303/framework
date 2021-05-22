@@ -261,7 +261,7 @@ int main(int argc, char * argv[])
 			
 			const size_t num_branches = tree.branches.size();
 			
-			const float direction_retain = .7f;
+			const float direction_retain = powf(.7f, framework.timeStep * 72.f);
 			
 			for (size_t i = 0; i < num_branches; ++i)
 			{
@@ -300,7 +300,7 @@ int main(int argc, char * argv[])
 					next.direction_y /= direction_mag;
 					next.direction_z /= direction_mag;
 					 
-					const float step_scale = kSimScale / 100.f; // todo : dt
+					const float step_scale = kSimScale / 3.f * framework.timeStep;
 					
 					next.x += next.direction_x * step_scale;
 					next.y += next.direction_y * step_scale;
