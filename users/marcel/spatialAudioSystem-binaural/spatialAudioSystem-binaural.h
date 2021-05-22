@@ -14,15 +14,17 @@
 // libgg
 #include "Mat4x4.h"
 
-// stdc++
+// libstdc++
 #include <atomic>
 #include <mutex>
-#include <vector>
 
 struct SpatialAudioSystem_Binaural : SpatialAudioSystemInterface
 {
 	struct Source
 	{
+		Source * prev = nullptr;
+		Source * next = nullptr;
+		
 		Mat4x4 transform = Mat4x4(true);
 		
 		AudioSource * audioSource = nullptr;
@@ -50,21 +52,21 @@ struct SpatialAudioSystem_Binaural : SpatialAudioSystemInterface
 
 	std::vector<binaural::HRIRSampleSet> sampleSets;
 	binaural::HRIRSampleSet * sampleSet = nullptr;
-	
-	binaural::Mutex_Dummy mutex_binaural; // we use a dummy mutex for the binauralizer, since we change (elevation, azimuth) only from the audio thread
-	std::mutex mutex_sources; // mutex for sources array
-	std::mutex mutex_sampleSet; // mutex for sample set selection
 
-	std::vector<Source*> sources;
+	Source * sources = nullptr;
+	std::mutex sources_mutex;
 
 	Mat4x4 listenerTransform = Mat4x4(true);
 
 	ParameterMgr parameterMgr;
-	ParameterBool * enabled = nullptr;
-	ParameterFloat * volume = nullptr;
-	ParameterEnum * sampleSetId = nullptr;
+	ParameterBool  * enabled     = nullptr;
+	ParameterFloat * volume      = nullptr;
+	ParameterEnum  * sampleSetId = nullptr;
+	
+	binaural::Mutex_Dummy mutex_binaural; // we use a dummy mutex for the binauralizer, since we change (elevation, azimuth) only from the audio thread
 	
 	SpatialAudioSystem_Binaural(const char * sampleSetPath);
+	
 	virtual void * addSource(
 		const Mat4x4 & transform,
 		AudioSource * audioSource,

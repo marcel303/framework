@@ -59,11 +59,16 @@ void * SpatialAudioSystem_Binaural::addSource(
 	source->headroomInDb = headroomInDb;
 	source->binauralizer.init(sampleSet, &mutex_binaural);
 
-	mutex_sources.lock();
+	sources_mutex.lock();
 	{
-		sources.push_back(source);
+		source->next = sources;
+		
+		if (sources != nullptr)
+			sources->prev = source;
+			
+		sources = source;
 	}
-	mutex_sources.unlock();
+	sources_mutex.unlock();
 
 	return source;
 }
@@ -72,14 +77,17 @@ void SpatialAudioSystem_Binaural::removeSource(void *& in_source)
 {
 	Source * source = (Source*)in_source;
 
-	auto i = std::find(sources.begin(), sources.end(), source);
-	Assert(i != sources.end());
-
-	mutex_sources.lock();
+	sources_mutex.lock();
 	{
-		sources.erase(i);
+		if (source->prev != nullptr)
+			source->prev->next = source->next;
+		if (source->next != nullptr)
+			source->next->prev = source->prev;
+			
+		if (source == sources)
+			sources = source->next;
 	}
-	mutex_sources.unlock();
+	sources_mutex.unlock();
 
 	delete source;
 	source = nullptr;
@@ -105,7 +113,7 @@ void SpatialAudioSystem_Binaural::updatePanning()
 	const Mat4x4 & listenerToWorld = listenerTransform;
 	const Mat4x4 worldToListener = listenerToWorld.CalcInv();
 
-	for (auto * source : sources)
+	for (Source * source = sources; source != nullptr; source = source->next)
 	{
 		if (enabled->get())
 		{
@@ -146,17 +154,14 @@ void SpatialAudioSystem_Binaural::updatePanning()
 		sampleSetId->isDirty = false;
 		sampleSet = &sampleSets[sampleSetId->get()];
 		
-		mutex_sources.lock();
+		sources_mutex.lock();
 		{
-			for (auto * source : sources)
+			for (Source * source = sources; source != nullptr; source = source->next)
 			{
-				if (source->binauralizer.isInit())
-					source->binauralizer.shut();
-				
-				source->binauralizer.init(sampleSet, &mutex_binaural);
+				source->binauralizer.setSampleSet(sampleSet);
 			}
 		}
-		mutex_sources.unlock();
+		sources_mutex.unlock();
 	}
 }
 
@@ -165,9 +170,9 @@ void SpatialAudioSystem_Binaural::generateLR(float * __restrict outputSamplesL, 
 	memset(outputSamplesL, 0, numSamples * sizeof(float));
 	memset(outputSamplesR, 0, numSamples * sizeof(float));
 
-	mutex_sources.lock();
+	sources_mutex.lock();
 	{
-		for (auto * source : sources)
+		for (Source * source = sources; source != nullptr; source = source->next)
 		{
 			ALIGN16 float inputSamples[numSamples];
 
@@ -222,5 +227,5 @@ void SpatialAudioSystem_Binaural::generateLR(float * __restrict outputSamplesL, 
 			}
 		}
 	}
-	mutex_sources.unlock();
+	sources_mutex.unlock();
 }
