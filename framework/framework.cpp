@@ -204,7 +204,7 @@ Framework::Framework()
 	droppedFiles.clear();
 	
 	vrOrigin.Set(0, 0, 0);
-	enableVrMovement = true;
+	enableVrMovement = false;
 	
 	backgrounded = false;
 	
