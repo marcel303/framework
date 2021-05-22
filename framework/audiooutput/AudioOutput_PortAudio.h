@@ -31,16 +31,15 @@
 
 #include "AudioOutput.h"
 #include <atomic>
+#include <mutex>
 
 typedef void PaStream;
-
-struct SDL_mutex;
 
 class AudioOutput_PortAudio : public AudioOutput
 {
 	bool m_paInitialized;
 	PaStream * m_paStream;
-	SDL_mutex * m_mutex;
+	std::mutex m_mutex;
 	AudioStream * m_stream;
 	int m_numChannels;
 	int m_sampleRate;

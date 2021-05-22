@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(IPHONEOS) || defined(MACOS)
+#if defined(IPHONEOS)
 	#include "AudioOutput_CoreAudio.h"
 	typedef AudioOutput_CoreAudio AudioOutput_Native;
 #elif defined(ANDROID)

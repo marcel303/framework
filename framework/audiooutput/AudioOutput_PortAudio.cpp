@@ -28,7 +28,8 @@
 #if FRAMEWORK_USE_PORTAUDIO
 
 #include "AudioOutput_PortAudio.h"
-#include "framework.h"
+#include "Debugging.h"
+#include "Log.h"
 #include <algorithm>
 #include <string.h>
 
@@ -40,12 +41,12 @@
 
 void AudioOutput_PortAudio::lock()
 {
-	Verify(SDL_LockMutex(m_mutex) == 0);
+	m_mutex.lock();
 }
 
 void AudioOutput_PortAudio::unlock()
 {
-	Verify(SDL_UnlockMutex(m_mutex) == 0);
+	m_mutex.unlock();
 }
 
 static int portaudioCallback(
@@ -71,11 +72,11 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 
 	if ((err = Pa_Initialize()) != paNoError)
 	{
-		logError("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
+		LOG_ERR("portaudio: failed to initialize: %s", Pa_GetErrorText(err));
 		return false;
 	}
 
-	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
 	m_paInitialized = true;
 	
@@ -95,7 +96,7 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	
 	if ((err = Pa_OpenStream(&m_paStream, nullptr, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
 	{
-		logError("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
+		LOG_ERR("portaudio: failed to open stream: %s", Pa_GetErrorText(err));
 		return false;
 	}
 
@@ -104,7 +105,7 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	
 	if ((err = Pa_StartStream(m_paStream)) != paNoError)
 	{
-		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
+		LOG_ERR("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
 		return false;
 	}
 
@@ -121,14 +122,14 @@ bool AudioOutput_PortAudio::shutPortAudio()
 		{
 			if ((err = Pa_StopStream(m_paStream)) != paNoError)
 			{
-				logError("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
+				LOG_ERR("portaudio: failed to stop stream: %s", Pa_GetErrorText(err));
 				return false;
 			}
 		}
 		
 		if ((err = Pa_CloseStream(m_paStream)) != paNoError)
 		{
-			logError("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
+			LOG_ERR("portaudio: failed to close stream: %s", Pa_GetErrorText(err));
 			return false;
 		}
 		
@@ -141,7 +142,7 @@ bool AudioOutput_PortAudio::shutPortAudio()
 		
 		if ((err = Pa_Terminate()) != paNoError)
 		{
-			logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
 			return false;
 		}
 	}
@@ -215,7 +216,7 @@ void AudioOutput_PortAudio::portAudioCallback(
 AudioOutput_PortAudio::AudioOutput_PortAudio()
 	: m_paInitialized(false)
 	, m_paStream(nullptr)
-	, m_mutex(nullptr)
+	, m_mutex()
 	, m_stream(nullptr)
 	, m_numChannels(0)
 	, m_sampleRate(0)
@@ -224,26 +225,20 @@ AudioOutput_PortAudio::AudioOutput_PortAudio()
 	, m_position(0)
 	, m_isDone(false)
 {
-	m_mutex = SDL_CreateMutex();
-	Assert(m_mutex != nullptr);
 }
 
 AudioOutput_PortAudio::~AudioOutput_PortAudio()
 {
 	Shutdown();
-	
-	Assert(m_mutex != nullptr);
-	SDL_DestroyMutex(m_mutex);
-	m_mutex = nullptr;
 }
 
 bool AudioOutput_PortAudio::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
 {
-	fassert(numChannels == 1 || numChannels == 2);
+	Assert(numChannels == 1 || numChannels == 2);
 
 	if (numChannels != 1 && numChannels != 2)
 	{
-		logError("portaudio: invalid number of channels");
+		LOG_ERR("portaudio: invalid number of channels");
 		return false;
 	}
 

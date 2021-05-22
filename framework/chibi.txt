@@ -32,6 +32,45 @@ library audiostream-vorbis
 
 	header_path . expose
 
+library audiooutput
+
+	depend_library libgg
+
+	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
+	with_platform android  compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
+
+	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
+	with_platform android  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+
+	with_platform macos    compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform android  compile_definition FRAMEWORK_USE_OPENSL 1 expose
+	
+	with_platform macos    depend_library portaudio
+	with_platform linux    depend_library portaudio
+	with_platform windows  depend_library portaudio
+	
+	with_platform macos    depend_library CoreAudio find
+	with_platform iphoneos depend_library CoreAudio find
+	
+	with_platform android  depend_library OpenSLES global
+	
+	scan_files cpp path audiooutput group audiooutput
+	scan_files h   path audiooutput group audiooutput
+	
+	with_platform macos    scan_files mm path audiooutput group audiooutput
+	with_platform iphoneos scan_files mm path audiooutput group audiooutput
+	
+	header_path . expose
+	
 library audiooutput-hd
 
 	depend_library libgg
@@ -57,7 +96,10 @@ library audiooutput-hd
 	with_platform macos    depend_library portaudio
 	with_platform linux    depend_library portaudio
 	with_platform windows  depend_library portaudio
+	
+	with_platform macos    depend_library CoreAudio find
 	with_platform iphoneos depend_library CoreAudio find
+	
 	with_platform android  depend_library OpenSLES global
 	
 	scan_files cpp path audiooutput-hd group audiooutput-hd
@@ -118,15 +160,13 @@ library framework objc-arc
 	with_platform android  compile_definition FRAMEWORK_USE_SDL 0 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_SDL 1 expose
 
+	depend_library audiooutput
 	depend_library audiostream
 	depend_library audiostream-vorbis
 	depend_library audiostream-wave
 	depend_library glew
 	depend_library msdfgen
 	depend_library soundfile
-	
-	with_platform linux   depend_library portaudio
-	with_platform windows depend_library portaudio
 
 	with_platform macos   depend_library remotery
 	with_platform linux   depend_library remotery
@@ -142,12 +182,6 @@ library framework objc-arc
 	scan_files cpp
 	scan_files h
 	
-	scan_files cpp path audiooutput group audiooutput
-	scan_files h   path audiooutput group audiooutput
-	
-	with_platform macos    scan_files mm path audiooutput group audiooutput
-	with_platform iphoneos scan_files mm path audiooutput group audiooutput
-
 	with_platform macos|linux|windows|iphoneos|android scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform macos|linux|windows|iphoneos|android scan_files h   path gx-opengl group gx-opengl
 
@@ -164,24 +198,6 @@ library framework objc-arc
 	header_path . expose
 
 	compile_definition NO_SDL_GLEXT            * expose
-
-	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
-	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
-	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
-	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
-	with_platform android  compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
-
-	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
-	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
-	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
-	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
-	with_platform android  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
-
-	with_platform macos    compile_definition FRAMEWORK_USE_OPENSL 0 expose
-	with_platform linux    compile_definition FRAMEWORK_USE_OPENSL 0 expose
-	with_platform windows  compile_definition FRAMEWORK_USE_OPENSL 0 expose
-	with_platform iphoneos compile_definition FRAMEWORK_USE_OPENSL 0 expose
-	with_platform android  compile_definition FRAMEWORK_USE_OPENSL 1 expose
 
 	compile_definition HAVE_M_PI               * expose toolchain msvc
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
@@ -215,7 +231,6 @@ library framework objc-arc
 	with_platform linux depend_package OpenGL
 	with_platform linux depend_library pthread find
 	with_platform linux depend_package GLEW
-	with_platform linux depend_library portaudio find
 	with_platform linux depend_library FreeImage
 	with_platform linux depend_package SDL2
 
@@ -228,7 +243,6 @@ library framework objc-arc
 	with_platform android depend_library log global
 	with_platform android depend_library GLESv3 global
 	with_platform android depend_library EGL global
-	with_platform android depend_library OpenSLES global
 
 # Oculus VR Mobile includes and libraries
 
