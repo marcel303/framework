@@ -2593,13 +2593,14 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			// drag and zoom
 			
-		#if !defined(MACOS) // fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
+		#if defined(MACOS) // note : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
+			if (SDL_GetNumTouchDevices() == 0)
+		#endif
 			{
 				const float magnitude = std::pow<float>(1.1f, mouse.scrollY);
 			
 				dragAndZoom.desiredZoom *= magnitude;
 			}
-		#endif
 			
 			if (enabled(kFlag_Zoom) && keyboard.wentDown(SDLK_MINUS) && commandMod())
 			{
