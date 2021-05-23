@@ -11,8 +11,8 @@ struct SceneRenderRegistration_GltfComponent : SceneRenderRegistrationBase
 {
 	virtual void beginDraw(const SceneRenderParams & params) override final
 	{
-		g_gltfComponentMgr._enableForwardShading = (params.hasDeferredLightingPass == false);
-		g_gltfComponentMgr._outputLinearColorSpace = params.outputToLinearColorSpace;
+		g_gltfComponentMgr.enableForwardShading = (params.hasDeferredLightingPass == false);
+		g_gltfComponentMgr.outputLinearColorSpace = params.outputToLinearColorSpace;
 	}
 	
 	virtual void setup() override final

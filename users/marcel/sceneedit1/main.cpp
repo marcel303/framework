@@ -249,7 +249,7 @@ int main(int argc, char * argv[])
 	editor.init(&typeDB);
 	
 	const bool useFlatRenderingModeExclusively = framework.isStereoVr();
-	const bool exposeDeferredRenderModes = false;//framework.isStereoVr() == false;
+	const bool exposeDeferredRenderModes = framework.isStereoVr() == false;
 	
 	MyRenderOptions myRenderOptions(exposeDeferredRenderModes);
 	

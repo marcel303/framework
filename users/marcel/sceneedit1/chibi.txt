@@ -155,6 +155,7 @@ app marcel-sceneedit-410-sceneFiles
 	resource_path data
 
 app marcel-sceneedit-700-templateEditor
+	depend_library ecs-component-framework
 	depend_library marcel-sceneedit
 	add_files tests/700-templateEditor.cpp
 	resource_path data

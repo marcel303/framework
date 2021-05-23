@@ -40,8 +40,6 @@
 
 // note : when saving we will want to distinguish between templates which define (new) components, and those that merely override component properties. component definitions that are merely there because of component property overrides have a minus sign (-transform) to signify it's not a new definition
 
-// todo : avoid creating a component instance just to aid in editing templates
-
 #define VIEW_SX 1200
 #define VIEW_SY 480
 
@@ -69,15 +67,13 @@ static bool doComponentTypeMenu(const ComponentTypeDB & componentTypeDB, std::st
 	return result;
 }
 
-static void createFallbackTemplateForComponent(const TypeDB & typeDB, const ComponentTypeDB & componentTypeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
+static bool createFallbackTemplateForComponent(const TypeDB & typeDB, const ComponentTypeDB & componentTypeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
 {
 	template_component.typeName = componentTypeName;
 	template_component.id = componentId;
 	
-	int componentSetId = allocComponentSetId();
-	
 	auto * componentType = componentTypeDB.findComponentType(componentTypeName);
-	auto * component = componentType->componentMgr->createComponent(componentSetId);
+	auto * component = componentType->defaultComponent;
 	
 	for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 	{
@@ -88,9 +84,9 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const Comp
 		LineWriter line_writer;
 		if (!member_tolines_recursive(typeDB, member, component, line_writer, 0))
 		{
-		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
 			LOG_ERR("failed to serialize component property to text");
-			continue;
+			template_component = TemplateComponent();
+			return false;
 		}
 		
 		template_property.value_lines = line_writer.to_lines(); // todo : optimize
@@ -98,9 +94,7 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const Comp
 		template_component.properties.push_back(template_property);
 	}
 	
-	componentType->componentMgr->destroyComponent(componentSetId);
-	
-	freeComponentSetId(componentSetId);
+	return true;
 }
 
 struct ComponentTypeWithId
@@ -303,7 +297,12 @@ struct TemplateInstance
 		
 		if (isFallback)
 		{
-			createFallbackTemplateForComponent(typeDB, componentTypeDB, typeName, "", template_component);
+			if (createFallbackTemplateForComponent(typeDB, componentTypeDB, typeName, "", template_component) == false)
+			{
+				LOG_ERR("failed to create fallback template for component type: %s", typeName);
+				components.pop_back();
+				return false;
+			}
 		}
 		
 		if (componentType == nullptr)
@@ -482,14 +481,19 @@ int main(int argc, char * argv[])
 		{
 			TemplateComponent template_component;
 			
-			createFallbackTemplateForComponent(
+			if (createFallbackTemplateForComponent(
 				typeDB,
 				componentTypeDB,
 				componentTypeWithId.typeName.c_str(),
 				componentTypeWithId.id.c_str(),
-				template_component);
-			
-			fallback_template.components.emplace_back(std::move(template_component));
+				template_component) == false)
+			{
+				logError("failed to create fallback template for component");
+			}
+			else
+			{
+				fallback_template.components.emplace_back(std::move(template_component));
+			}
 		}
 		
 		templates.emplace_back(std::move(fallback_template));
