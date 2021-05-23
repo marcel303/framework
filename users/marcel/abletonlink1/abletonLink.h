@@ -30,14 +30,14 @@ struct AbletonLink
 		SessionState();
 		~SessionState();
 		
-		double beatAtTick(const uint64_t tick, const double quantum) const;
-		double phaseAtTick(const uint64_t tick, const double quantum) const;
+		double beatAtTime(const uint64_t timeUs, const double quantum) const;
+		double phaseAtTime(const uint64_t timeUs, const double quantum) const;
 		
 		bool isPlaying() const;
 		double tempo() const;
 		
-		void setIsPlayingAtTick(const bool isPlaying, const uint64_t tick);
-		void setTempoAtTick(const double tempo, const uint64_t tick);
+		void setIsPlayingAtTime(const bool isPlaying, const uint64_t timeUs);
+		void setTempoAtTime(const double tempo, const uint64_t timeUs);
 		
 		void commitApp() const;
 		void commitAudio() const;
@@ -63,8 +63,7 @@ struct AbletonLink
 	
 	int numPeers() const;
 
-	uint64_t getClockTick() const;
-	uint64_t getClockTicksPerSecond() const;
+	uint64_t getClockTimeUs() const;
 	
 	SessionState captureAppSessionState() const;
 	SessionState captureAudioSessionState() const;

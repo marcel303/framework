@@ -13,20 +13,20 @@ AbletonLink::SessionState::~SessionState()
 	sessionState->~SessionState();
 }
 
-double AbletonLink::SessionState::beatAtTick(const uint64_t tick, const double quantum) const
+double AbletonLink::SessionState::beatAtTime(const uint64_t timeUs, const double quantum) const
 {
 	ableton::Link::SessionState * sessionState = (ableton::Link::SessionState*)data;
 	
-	const auto micros = link->clock().ticksToMicros(tick);
+	const auto micros = std::chrono::microseconds(timeUs);
 	
 	return sessionState->beatAtTime(micros, quantum);
 }
 
-double AbletonLink::SessionState::phaseAtTick(const uint64_t tick, const double quantum) const
+double AbletonLink::SessionState::phaseAtTime(const uint64_t timeUs, const double quantum) const
 {
 	ableton::Link::SessionState * sessionState = (ableton::Link::SessionState*)data;
 	
-	const auto micros = link->clock().ticksToMicros(tick);
+	const auto micros = std::chrono::microseconds(timeUs);
 	
 	return sessionState->phaseAtTime(micros, quantum);
 }
@@ -45,18 +45,22 @@ double AbletonLink::SessionState::tempo() const
 	return sessionState->tempo();
 }
 
-void AbletonLink::SessionState::setIsPlayingAtTick(const bool isPlaying, const uint64_t tick)
+void AbletonLink::SessionState::setIsPlayingAtTime(const bool isPlaying, const uint64_t timeUs)
 {
 	ableton::Link::SessionState * sessionState = (ableton::Link::SessionState*)data;
 	
-	sessionState->setIsPlaying(isPlaying, link->clock().ticksToMicros(tick));
+	const auto micros = std::chrono::microseconds(timeUs);
+	
+	sessionState->setIsPlaying(isPlaying, micros);
 }
 
-void AbletonLink::SessionState::setTempoAtTick(const double tempo, const uint64_t tick)
+void AbletonLink::SessionState::setTempoAtTime(const double tempo, const uint64_t timeUs)
 {
 	ableton::Link::SessionState * sessionState = (ableton::Link::SessionState*)data;
 	
-	sessionState->setTempo(tempo, link->clock().ticksToMicros(tick));
+	const auto micros = std::chrono::microseconds(timeUs);
+	
+	sessionState->setTempo(tempo, micros);
 }
 
 void AbletonLink::SessionState::commitApp() const
@@ -119,14 +123,9 @@ int AbletonLink::numPeers() const
 	return (int)link->numPeers();
 }
 
-uint64_t AbletonLink::getClockTick() const
+uint64_t AbletonLink::getClockTimeUs() const
 {
-	return link->clock().ticks();
-}
-
-uint64_t AbletonLink::getClockTicksPerSecond() const
-{
-	return link->clock().microsToTicks(ableton::Link::Clock::Micros(1000000));
+	return link->clock().micros().count();
 }
 
 AbletonLink::SessionState AbletonLink::captureAppSessionState() const
