@@ -42,7 +42,7 @@ library audiooutput
 	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 	with_platform android  compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 
-	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
 	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
