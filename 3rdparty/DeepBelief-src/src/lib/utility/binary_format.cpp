@@ -8,12 +8,21 @@
 
 #include "binary_format.h"
 
+#if __APPLE__
+#define HAS_MMAP 1
+#else
+#define HAS_MMAP 0
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#if HAS_MMAP
+#include <sys/mman.h>
+#endif
 
 SBinaryTag* read_tag_from_file(const char* filename, bool useMemoryMap) {
 
@@ -23,12 +32,16 @@ SBinaryTag* read_tag_from_file(const char* filename, bool useMemoryMap) {
   }
 
   SBinaryTag* result;
+#if HAS_MMAP
   if (useMemoryMap) {
     const int fileHandle = open(filename, O_RDONLY);
     struct stat statBuffer;
     fstat(fileHandle, &statBuffer);
     const size_t bytesInFile = (size_t)(statBuffer.st_size);
     result = (SBinaryTag*)(mmap(NULL, bytesInFile, PROT_READ, MAP_SHARED, fileHandle, 0));
+#else
+  if (false) {
+#endif
   } else {
     FILE* file = fopen(filename, "rb");
     if (file == NULL) {
@@ -53,12 +66,16 @@ SBinaryTag* read_tag_from_file(const char* filename, bool useMemoryMap) {
 }
 
 void deallocate_file_tag(SBinaryTag* fileTag, bool useMemoryMap) {
+#if HAS_MMAP
   if (useMemoryMap) {
     // This assumes that there's only a single root tag in a binary file, so we can
     // calculate the file length based on the tag length.
     const size_t tagTotalBytes = get_total_sizeof_tag(fileTag);
     munmap(fileTag, tagTotalBytes);
   } else {
+#else
+  if (false) {
+#endif
     free(fileTag);
   }
 }

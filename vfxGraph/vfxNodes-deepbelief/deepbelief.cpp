@@ -30,6 +30,7 @@
 #include "Debugging.h"
 #include "deepbelief.h"
 #include "Log.h"
+#include <algorithm>
 #include <DeepBelief/DeepBelief.h>
 #include <SDL2/SDL.h>
 

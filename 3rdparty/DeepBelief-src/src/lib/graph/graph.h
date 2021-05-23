@@ -18,7 +18,7 @@ class Buffer;
 class Graph {
 public:
 
-  Graph();
+  Graph(int x);
   virtual ~Graph();
 
   Buffer* run(Buffer* input, int layerOffset = 0);

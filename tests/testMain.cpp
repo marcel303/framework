@@ -59,9 +59,7 @@ extern void testAudiochannels();
 extern void testThreading();
 extern void testStbTruetype();
 extern void testMsdfgen();
-#ifdef MACOS
 extern void testDeepbelief();
-#endif
 extern void testImageCpuDelayLine();
 #ifndef WIN32
 extern void testXmm();
@@ -483,9 +481,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	
 	doButton("KOAS", "Chaos Game", testChaosGame);
 	doButton("DaGu", "DatGUI", testDatGui);
-#ifdef MACOS
 	doButton("DdBe", "Deep Belief SDK", testDeepbelief);
-#endif
 	doButton("DtDt", "Dot Detector", testDotDetector);
 	doButton("DtTr", "Dot Tracker", testDotTracker);
 	doButton("DTAtl", "Dynamic Texture Atlas", testDynamicTextureAtlas);

@@ -4,6 +4,8 @@ library FreeImage shared
 
 	with_platform windows compile_definition FREEIMAGE_EXPORTS *
 
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+
 	header_path ../FreeImage/Source/zlib
 
 	license_file ../FreeImage/license-fi.txt

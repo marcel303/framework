@@ -11,7 +11,10 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifdef DO_LOG_OPERATIONS
 #include <sys/time.h>
+#endif
 
 #include "buffer.h"
 #include "binary_format.h"
@@ -37,7 +40,7 @@
 #define DUMP_FILE_PATH ("data/libccv_blobs/")
 #endif // CHECK_RESULTS || SAVE_RESULTS
 
-Graph::Graph() :
+Graph::Graph(int x) :
   _useMemoryMap(false),
   _isHomebrewed(false),
   _isLibCCV(false),
@@ -190,7 +193,7 @@ Graph* new_graph_from_file(const char* filename, int useMemoryMap, int isHomebre
     return NULL;
   }
 
-  Graph* result = new Graph();
+  Graph* result = new Graph(0);
 
   result->_useMemoryMap = useMemoryMap;
   result->_isHomebrewed = isHomebrewed;
