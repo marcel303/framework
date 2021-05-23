@@ -289,6 +289,13 @@ public:
 		
 		//
 		
+	#if defined(IPHONEOS) || defined(ANDROID)
+		// note : on touch based devices, we want to avoid dx/dy being set on 'mouse press'
+		//        when a finger first touches the screen, we really don't know how far it
+		//        traveled, so best to set dx/dy to zero when that happens
+		hasOldMousePosition = (mouseDown[BUTTON_LEFT] && !mouseChange[BUTTON_LEFT]);
+	#endif
+	
 		if (hasOldMousePosition)
 		{
 			mouseDx = mouseX - oldMouseX;
@@ -296,14 +303,19 @@ public:
 		}
 		else
 		{
-			if (mouseX != oldMouseX || mouseY != oldMouseY)
-			{
-				hasOldMousePosition = true;
-			}
-			
 			mouseDx = 0;
 			mouseDy = 0;
 		}
+		
+	#if !defined(IPHONEOS) && !defined(ANDROID)
+		// note : on desktop systems, SDL may report a wacky x/y position for the mouse
+		//        before it first enters the window area. if this is the case, we want
+		//        to set dx/dy to zero
+		if (mouseX != oldMouseX || mouseY != oldMouseY)
+		{
+			hasOldMousePosition = true;
+		}
+	#endif
 	}
 };
 
