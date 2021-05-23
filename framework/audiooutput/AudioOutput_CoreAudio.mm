@@ -28,11 +28,15 @@
 #if FRAMEWORK_USE_COREAUDIO
 
 #include "AudioOutput_CoreAudio.h"
-#include "framework.h"
+
+#include "Debugging.h"
+#include "Log.h"
 
 #if defined(IPHONEOS)
 	#include "AVFoundation/AVAudioSession.h"
 #endif
+
+#include <mach/mach_time.h> // mach_timebase_info
 
 /*
 
@@ -78,7 +82,7 @@ static bool checkStatus(OSStatus status)
 {
 	if (status != noErr)
 	{
-		logError("error: %d | %x", (int)status, (int)status);
+		LOG_ERR("error: %d | %x", (int)status, (int)status);
 		return false;
 	}
 	else
@@ -89,12 +93,12 @@ static bool checkStatus(OSStatus status)
 
 void AudioOutput_CoreAudio::lock()
 {
-	Verify(SDL_LockMutex(m_mutex) == 0);
+	m_mutex.lock();
 }
 
 void AudioOutput_CoreAudio::unlock()
 {
-	Verify(SDL_UnlockMutex(m_mutex) == 0);
+	m_mutex.unlock();
 }
 
 bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampleRate, const int bufferSize)
@@ -158,7 +162,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		if (checkStatus(status) == false)
 			return false;
 		
-		//logDebug("stream format is writable: %d", writable);
+		//LOG_DBG("stream format is writable: %d", writable);
 	
 		if (writable)
 		{
@@ -186,7 +190,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		if (checkStatus(status) == false)
 			return false;
 		
-		//logDebug("stream format is writable: %d", writable);
+		//LOG_DBG("stream format is writable: %d", writable);
 		
 		if (writable)
 		{
@@ -400,26 +404,20 @@ AudioOutput_CoreAudio::AudioOutput_CoreAudio()
 	, m_position(0)
 	, m_isDone(false)
 {
-	m_mutex = SDL_CreateMutex();
-	Assert(m_mutex != nullptr);
 }
 
 AudioOutput_CoreAudio::~AudioOutput_CoreAudio()
 {
 	Shutdown();
-	
-	Assert(m_mutex != nullptr);
-	SDL_DestroyMutex(m_mutex);
-	m_mutex = nullptr;
 }
 
 bool AudioOutput_CoreAudio::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
 {
-	fassert(numChannels == 1 || numChannels == 2);
+	Assert(numChannels == 1 || numChannels == 2);
 
 	if (numChannels != 1 && numChannels != 2)
 	{
-		logError("portaudio: invalid number of channels");
+		LOG_ERR("portaudio: invalid number of channels");
 		return false;
 	}
 
@@ -455,7 +453,7 @@ void AudioOutput_CoreAudio::Play(AudioStream * stream)
 	if (m_audioUnit != nullptr)
 	{
 		if (checkStatus(AudioOutputUnitStart(m_audioUnit)) == false)
-			logError("failed to start audio unit");
+			LOG_ERR("failed to start audio unit");
 	}
 }
 
@@ -464,7 +462,7 @@ void AudioOutput_CoreAudio::Stop()
 	if (m_audioUnit != nullptr)
 	{
 		if (checkStatus(AudioOutputUnitStop(m_audioUnit)) == false)
-			logError("failed to stop audio unit");
+			LOG_ERR("failed to stop audio unit");
 	}
 		
 	lock();
@@ -505,13 +503,18 @@ double AudioOutput_CoreAudio::PlaybackPosition_get()
 	return m_position / double(m_sampleRate);
 }
 
-uint64_t AudioOutput_CoreAudio::getBufferPresentTime(const bool addOutputLatency) const
+uint64_t AudioOutput_CoreAudio::getBufferPresentTimeUs(const bool addOutputLatency) const
 {
 	uint64_t result = m_bufferPresentTime;
 	
+	// convert form ticks to microseconds
+	mach_timebase_info_data_t timeInfo;
+	mach_timebase_info(&timeInfo);
+	result = uint64_t(result * double(timeInfo.numer / (timeInfo.denom * 1000.0)));
+	
 #if defined(IPHONEOS)
 	if (addOutputLatency)
-		result += [AVAudioSession sharedInstance].outputLatency;
+		result += uint64_t([AVAudioSession sharedInstance].outputLatency * 1e6);
 #endif
 
 	return result;

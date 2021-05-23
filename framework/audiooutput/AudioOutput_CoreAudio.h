@@ -32,14 +32,13 @@
 #include "AudioOutput.h"
 #include <atomic>
 #include <AudioToolbox/AudioToolbox.h>
-
-struct SDL_mutex;
+#include <mutex>
 
 class AudioOutput_CoreAudio : public AudioOutput
 {
 	AudioComponent __nullable m_audioComponent = nullptr;
 	AudioComponentInstance __nullable m_audioUnit = nullptr;
-	SDL_mutex * __nullable m_mutex = nullptr;
+	std::mutex m_mutex;
 	AudioStream * __nullable m_stream = nullptr;
 	int m_numChannels = 0;
 	int m_sampleRate;
@@ -79,7 +78,7 @@ public:
 	virtual bool HasFinished_get() override;
 	virtual double PlaybackPosition_get() override;
 	
-	uint64_t getBufferPresentTime(const bool addOutputLatency) const;
+	uint64_t getBufferPresentTimeUs(const bool addOutputLatency) const;
 	
 	AudioComponentInstance __nullable getAudioUnit() const { return m_audioUnit; }
 };
