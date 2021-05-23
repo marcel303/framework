@@ -78,6 +78,8 @@ add screenDoorTranslucency
 add serial-to-osc
 add shadowmap1
 add signedDistance1
+add spatialAudioSystem
+add spatialAudioSystem-binaural
 add speakerpanner1
 add speakwithus
 with_platform macos add sRGB

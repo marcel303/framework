@@ -1,5 +1,7 @@
 library deepbelief shared
 
+	compile_definition LOAD_BUFFERS_AS_FLOAT *
+	
 	# todo : raspberry-pi: USE_GEMM, USE_QPU_GEMM/USE_MKL_GEMM/USE_EIGEN_GEMM/USE_ATLAS_GEMM .. ?
 
 	with_platform macos|iphoneos compile_definition USE_OS_IMAGE *
