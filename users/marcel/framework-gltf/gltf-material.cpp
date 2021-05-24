@@ -298,10 +298,12 @@ namespace gltf
 		const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
 
 		shader.setTexture("diffuseTexture", nextTextureUnit++, diffuseTextureId, true, false);
-		shader.setImmediate(diffuseTextureCoord, diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
+		if (diffuseTextureCoord != -1)
+			shader.setImmediate(diffuseTextureCoord, diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
 		
 		shader.setTexture("specularGlossinessTexture", nextTextureUnit++, specularGlossinessTextureId, true, false);
-		shader.setImmediate(specularGlossinessTextureCoord, specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
+		if (specularGlossinessTextureCoord != -1)
+			shader.setImmediate(specularGlossinessTextureCoord, specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
 		
 		shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
 		if (normalTextureCoord != -1)

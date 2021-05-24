@@ -153,6 +153,41 @@ namespace gltf
 				else
 				{
 					// draw mesh, without the use of vertex and index buffers
+
+					if (drawOptions.enableMaterialSetup && shader != nullptr)
+					{
+						// note : we turn off the textures that rely on texcoord1 (rather than texcoord0). we cannot set texcoord1 using the basic GX api,
+						//        so to avoid artifacts related to incorrect texture sampling, we just disable these textures
+
+						if (material.pbrSpecularGlossiness.isSet)
+						{
+							if (material.pbrSpecularGlossiness.diffuseTexture.texCoord != 0 && materialShaders.specularGlossinessParams.diffuseTextureCoord != -1)
+								shader->setImmediate(materialShaders.specularGlossinessParams.diffuseTextureCoord, -1.f);
+							if (material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord != 0 && materialShaders.specularGlossinessParams.specularGlossinessTextureCoord != -1)
+								shader->setImmediate(materialShaders.specularGlossinessParams.specularGlossinessTextureCoord, -1.f);
+
+							if (material.normalTexture.texCoord != 0 && materialShaders.specularGlossinessParams.normalTextureCoord != -1)
+								shader->setImmediate(materialShaders.specularGlossinessParams.normalTextureCoord, -1.f);
+							if (material.occlusionTexture.texCoord != 0 && materialShaders.specularGlossinessParams.occlusionTextureCoord != -1)
+								shader->setImmediate(materialShaders.specularGlossinessParams.occlusionTextureCoord, -1.f);
+							if (material.emissiveTexture.texCoord != 0 && materialShaders.specularGlossinessParams.emissiveTextureCoord != -1)
+								shader->setImmediate(materialShaders.specularGlossinessParams.emissiveTextureCoord, -1.f);
+						}
+						else
+						{
+							if (material.pbrMetallicRoughness.baseColorTexture.texCoord != 0 && materialShaders.metallicRoughnessParams.baseColorTextureCoord != -1)
+								shader->setImmediate(materialShaders.metallicRoughnessParams.baseColorTextureCoord, -1.f);
+							if (material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord != 0 && materialShaders.metallicRoughnessParams.metallicRoughnessTextureCoord != -1)
+								shader->setImmediate(materialShaders.metallicRoughnessParams.metallicRoughnessTextureCoord, -1.f);
+
+							if (material.normalTexture.texCoord != 0 && materialShaders.metallicRoughnessParams.normalTextureCoord != -1)
+								shader->setImmediate(materialShaders.metallicRoughnessParams.normalTextureCoord, -1.f);
+							if (material.occlusionTexture.texCoord != 0 && materialShaders.metallicRoughnessParams.occlusionTextureCoord != -1)
+								shader->setImmediate(materialShaders.metallicRoughnessParams.occlusionTextureCoord, -1.f);
+							if (material.emissiveTexture.texCoord != 0 && materialShaders.metallicRoughnessParams.emissiveTextureCoord != -1)
+								shader->setImmediate(materialShaders.metallicRoughnessParams.emissiveTextureCoord, -1.f);
+						}
+					}
 					
 					const Accessor * indexAccessor;
 					const BufferView * indexBufferView;
@@ -277,13 +312,6 @@ namespace gltf
 							logWarning("normal element type not supported");
 							normalAccessor = nullptr;
 						}
-					}
-					
-					if (drawOptions.enableMaterialSetup && shader != nullptr)
-					{
-						// note : we turn off the occlusion texture here, as it depends on texcoord1, rather than texcoord0. we cannot set texcoord1 using the basic GX api, so to avoid artifacts we just disable the occlusion texture altogether
-						// fixme : check the actual texture coord index
-						shader->setImmediate("occlusionTextureCoord", -1.f);
 					}
 					
 					gxBegin(gxPrimitiveType);
