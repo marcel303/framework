@@ -81,7 +81,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 			
 			if (ImGui::CollapsingHeader("Visibility"))
 			{
-				ImGui::Checkbox("Show bounding box", &showBoundingBox);
+				ImGui::Checkbox("Show bounding boxes", &showBoundingBox);
 				ImGui::Checkbox("Show axis", &showAxis);
 			}
 			

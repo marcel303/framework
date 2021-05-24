@@ -221,6 +221,7 @@ int main(int argc, char * argv[])
 			extension == "js" || // Javascript
 			extension == "maxpat" || // max/msp patch
 			extension == "yml" || // yaml
+			extension == "gradle" || // Gradle
 			extension == "lua" ||
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch
@@ -328,9 +329,13 @@ int main(int argc, char * argv[])
 			{
 				editor = new FileEditor_AudioGraph(filename.c_str());
 			}
-			else
+			else if (type == 'v')
 			{
 				editor = new FileEditor_VfxGraph(filename.c_str());
+			}
+			else
+			{
+				editor = new FileEditor_Text(filename.c_str());
 			}
 		}
 		
@@ -483,7 +488,7 @@ int main(int argc, char * argv[])
 						{
 						// todo : add option to generate Xcode project (OSX) or Visual Studio 2015, 2017 solution file (Windows)
 						
-							if (ImGui::Button("Generate CMakeLists.txt"))
+							auto handleGenerate = [&](const char * platform)
 							{
 								nfdchar_t * filename = nullptr;
 								
@@ -499,7 +504,7 @@ int main(int argc, char * argv[])
 									for (auto & target : chibi.selected_targets)
 										targets[index++] = target.c_str();
 									
-									if (chibi_generate(nullptr, ".", dst_path.c_str(), targets, num_targets) == false)
+									if (chibi_generate(nullptr, ".", dst_path.c_str(), targets, num_targets, platform) == false)
 									{
 										showErrorMessage("Failed", "Failed to generate CMakeLists.txt");
 									}
@@ -510,7 +515,25 @@ int main(int argc, char * argv[])
 									free(filename);
 									filename = nullptr;
 								}
-							}
+							};
+
+							if (ImGui::MenuItem("Generate CMakeLists.txt"))
+								handleGenerate(nullptr);
+							if (ImGui::MenuItem("Generate CMakeLists.txt (macOS)"))
+								handleGenerate("macos");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (iphoneOS)"))
+								handleGenerate("iphoneos");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (Android)"))
+								handleGenerate("android");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (Android - OculusVR mobile)"))
+								handleGenerate("android.ovr-mobile");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (Linux)"))
+								handleGenerate("linux");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (Linux - Raspberry Pi)"))
+								handleGenerate("linux.raspberry-pi");
+							if (ImGui::MenuItem("Generate CMakeLists.txt (Windows)"))
+								handleGenerate("windows");
+							ImGui::NewLine();
 							
 							ImGui::InputText("Filter", chibi.filter, sizeof(chibi.filter));
 							ImGui::Text("%d/%d selected",
@@ -521,6 +544,7 @@ int main(int argc, char * argv[])
 								ImGui::Text("(Generate all)");
 							else if (ImGui::Button("Clear selection"))
 								chibi.selected_targets.clear();
+							ImGui::NewLine();
 							
 							for (auto & app : chibi.apps)
 							{
