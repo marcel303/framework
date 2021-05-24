@@ -1,6 +1,6 @@
 #pragma once
 
-#if AUDIOOUTPUT_HD_USE_COREAUDIO
+#if defined(IPHONEOS)
 	#include "AudioOutputHD_CoreAudio.h"
 	typedef AudioOutputHD_CoreAudio AudioOutputHD_Native;
 #elif AUDIOOUTPUT_HD_USE_OPENSL

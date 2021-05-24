@@ -30,11 +30,12 @@
 #if AUDIOOUTPUT_HD_USE_COREAUDIO
 
 #include "AudioOutputHD.h"
-#include <atomic>
-#include <mutex>
+
 #include <AudioToolbox/AudioToolbox.h>
 
-struct SDL_mutex;
+#include <atomic>
+#include <mutex>
+#include <stdint.h>
 
 class AudioOutputHD_CoreAudio : public AudioOutputHD
 {
@@ -54,6 +55,8 @@ class AudioOutputHD_CoreAudio : public AudioOutputHD
 	std::atomic<bool> m_isPlaying;
 	std::atomic<float> m_volume;
 	std::atomic<int64_t> m_framesSincePlay;
+	
+	uint64_t m_bufferPresentTime = 0; // time stamp provided by CoreAudio, to indicate the time at which the audio will become audible. use this for very accurate timing
 	
 	bool initCoreAudio(const int numInputChannels, const int numOutputChannels, const int frameRate, const int bufferSize);
 	bool shutCoreAudio();
@@ -83,6 +86,8 @@ public:
 	
 	virtual int BufferSize_get() const override;
 	virtual int FrameRate_get() const override;
+	
+	uint64_t getBufferPresentTimeUs(const bool addOutputLatency) const;
 	
 	AudioComponentInstance __nullable getAudioUnit() const { return m_audioUnit; }
 };

@@ -81,7 +81,7 @@ library audiooutput-hd
 	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 0 expose
 	with_platform android  compile_definition AUDIOOUTPUT_HD_USE_PORTAUDIO 0 expose
 
-	with_platform macos    compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
+	with_platform macos    compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 1 expose
 	with_platform linux    compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
 	with_platform windows  compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 0 expose
 	with_platform iphoneos compile_definition AUDIOOUTPUT_HD_USE_COREAUDIO 1 expose

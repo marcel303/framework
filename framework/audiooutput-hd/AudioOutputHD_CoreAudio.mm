@@ -36,6 +36,8 @@
 	#include "AVFoundation/AVAudioSession.h"
 #endif
 
+#include <mach/mach_time.h> // mach_timebase_info
+
 /*
 
 from : https://developer.apple.com/library/archive/documentation/MusicAudio/Conceptual/AudioUnitHostingGuide_iOS/AudioUnitHostingFundamentals/AudioUnitHostingFundamentals.html#//apple_ref/doc/uid/TP40009492-CH3-SW11,
@@ -365,6 +367,8 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 	
 	Assert(ioData->mNumberBuffers == self->m_numOutputChannels);
 	
+	self->m_bufferPresentTime = inTimeStamp->mHostTime;
+	
 #if defined(IPHONEOS)
 	self->m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
 #else
@@ -526,6 +530,23 @@ int AudioOutputHD_CoreAudio::BufferSize_get() const
 int AudioOutputHD_CoreAudio::FrameRate_get() const
 {
 	return m_frameRate;
+}
+
+uint64_t AudioOutputHD_CoreAudio::getBufferPresentTimeUs(const bool addOutputLatency) const
+{
+	uint64_t result = m_bufferPresentTime;
+	
+	// convert form ticks to microseconds
+	mach_timebase_info_data_t timeInfo;
+	mach_timebase_info(&timeInfo);
+	result = uint64_t(result * double(timeInfo.numer / (timeInfo.denom * 1000.0)));
+	
+#if defined(IPHONEOS)
+	if (addOutputLatency)
+		result += uint64_t(m_streamInfo.outputLatency * 1e6);
+#endif
+
+	return result;
 }
 
 #endif
