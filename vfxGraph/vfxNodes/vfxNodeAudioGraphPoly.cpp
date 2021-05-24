@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
-#include "soundmix.h" // AudioSource
+#include "soundmix.h" // AudioSource, audioBufferSetZero
 #include "StringEx.h"
 #include "vfxChannelZipper.h"
 #include "vfxNodeAudioGraphPoly.h"
@@ -35,6 +35,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "framework.h"
 
 #include "Timer.h"
+
+void VoiceMgr_VoiceGroup::NullSource::generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples)
+{
+	audioBufferSetZero(samples, numSamples);
+}
 
 bool VoiceMgr_VoiceGroup::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {

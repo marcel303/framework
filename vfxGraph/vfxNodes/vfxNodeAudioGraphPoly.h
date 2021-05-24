@@ -38,17 +38,12 @@ struct AudioGraphInstance;
 #include "audioVoiceManager.h"
 #include <atomic>
 
-#include "soundmix.h" // todo : move to cpp // audioBufferSetZero
-
 // todo : share VoiceMgr_VoiceGroup with vfxNodeAudioGraph, so it can have 'muted' mode too
 struct VoiceMgr_VoiceGroup : AudioVoiceManager
 {
 	struct NullSource : AudioSource
 	{
-		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override
-		{
-			audioBufferSetZero(samples, numSamples);
-		}
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override final;
 	};
 	
 	struct VoiceInfo
