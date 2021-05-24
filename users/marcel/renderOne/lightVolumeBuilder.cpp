@@ -196,52 +196,106 @@ namespace rOne
 			const Vec3 lightMin = lightMin_world * worldToVolumeScale;
 			const Vec3 lightMax = lightMax_world * worldToVolumeScale;
 
-			const int lightMinX = (int)floorf(lightMin[0]);
-			const int lightMinY = (int)floorf(lightMin[1]);
-			const int lightMinZ = (int)floorf(lightMin[2]);
-
-			const int lightMaxX = (int)ceilf(lightMax[0]);
-			const int lightMaxY = (int)ceilf(lightMax[1]);
-			const int lightMaxZ = (int)ceilf(lightMax[2]);
-
-			for (int x = lightMinX; x < lightMaxX; ++x)
+			if (infiniteSpaceMode)
 			{
-				for (int y = lightMinY; y < lightMaxY; ++y)
+				int lightMinX = (int)floorf(lightMin[0]);
+				int lightMinY = (int)floorf(lightMin[1]);
+				int lightMinZ = (int)floorf(lightMin[2]);
+
+				int lightMaxX = (int)ceilf(lightMax[0]);
+				int lightMaxY = (int)ceilf(lightMax[1]);
+				int lightMaxZ = (int)ceilf(lightMax[2]);
+				
+				// deal with light size > than the light volume size. this is necessary to
+				// avoid adding a light multiple times into the same voxel
+				
+				const int lightSizeX = std::min(sx, lightMaxX - lightMinX);
+				const int lightSizeY = std::min(sy, lightMaxY - lightMinY);
+				const int lightSizeZ = std::min(sz, lightMaxZ - lightMinZ);
+				
+				lightMinX += extX;
+				lightMinY += extY;
+				lightMinZ += extZ;
+				
+				lightMinX %= sx; if (lightMinX < 0) lightMinX += sx;
+				lightMinY %= sy; if (lightMinY < 0) lightMinY += sy;
+				lightMinZ %= sz; if (lightMinZ < 0) lightMinZ += sz;
+				
+				Assert(lightMinX >= 0 && lightMinX < sx);
+				Assert(lightMinY >= 0 && lightMinY < sy);
+				Assert(lightMinZ >= 0 && lightMinZ < sz);
+				
+				lightMaxX = lightMinX + lightSizeX;
+				lightMaxY = lightMinY + lightSizeY;
+				lightMaxZ = lightMinZ + lightSizeZ;
+				
+				for (int x = lightMinX; x < lightMaxX; ++x)
 				{
-					for (int z = lightMinZ; z < lightMaxZ; ++z)
+					for (int y = lightMinY; y < lightMaxY; ++y)
 					{
-						int indexX = x + extX;
-						int indexY = y + extY;
-						int indexZ = z + extZ;
-						
-						if (infiniteSpaceMode)
+						for (int z = lightMinZ; z < lightMaxZ; ++z)
 						{
-							indexX = indexX % sx; if (indexX < 0) indexX += sx;
-							indexY = indexY % sy; if (indexY < 0) indexY += sy;
-							indexZ = indexZ % sz; if (indexZ < 0) indexZ += sz;
+							int indexX = x; if (indexX >= sx) indexX -= sx;
+							int indexY = y; if (indexY >= sy) indexY -= sy;
+							int indexZ = z; if (indexZ >= sz) indexZ -= sz;
+							
+							Assert(indexX >= 0 && indexX < sx);
+							Assert(indexY >= 0 && indexY < sy);
+							Assert(indexZ >= 0 && indexZ < sz);
+							
+							// optimize : intersect aabb of voxel with the volume of the light. skip non-intersecting voxels
+
+							const int index = indexX + indexY * sx + indexZ * sx * sy;
+
+						#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+							Record * record = record_allocator.alloc();
+							record->next = records[index];
+							record->lightId = light.id;
+							records[index] = record;
+						#else
+							records[index].insert(light.id);
+						#endif
 						}
-						else
+					}
+				}
+			}
+			else
+			{
+				const int lightMinX = std::max(-extX, (int)floorf(lightMin[0]));
+				const int lightMinY = std::max(-extY, (int)floorf(lightMin[1]));
+				const int lightMinZ = std::max(-extZ, (int)floorf(lightMin[2]));
+
+				const int lightMaxX = std::min(+extX, (int)ceilf(lightMax[0]));
+				const int lightMaxY = std::min(+extY, (int)ceilf(lightMax[1]));
+				const int lightMaxZ = std::min(+extZ, (int)ceilf(lightMax[2]));
+				
+				for (int x = lightMinX; x < lightMaxX; ++x)
+				{
+					for (int y = lightMinY; y < lightMaxY; ++y)
+					{
+						for (int z = lightMinZ; z < lightMaxZ; ++z)
 						{
-							if (indexX < 0 || indexX >= sx ||
-								indexY < 0 || indexY >= sy ||
-								indexZ < 0 || indexZ >= sz)
-							{
-								continue;
-							}
+							const int indexX = x + extX;
+							const int indexY = y + extY;
+							const int indexZ = z + extZ;
+							
+							Assert(indexX >= 0 && indexX < sx);
+							Assert(indexY >= 0 && indexY < sy);
+							Assert(indexZ >= 0 && indexZ < sz);
+
+							// optimize : intersect aabb of voxel with the volume of the light. skip non-intersecting voxels
+
+							const int index = indexX + indexY * sx + indexZ * sx * sy;
+
+						#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+							Record * record = record_allocator.alloc();
+							record->next = records[index];
+							record->lightId = light.id;
+							records[index] = record;
+						#else
+							records[index].insert(light.id);
+						#endif
 						}
-						
-						// optimize : intersect aabb of voxel with the volume of the light. skip non-intersecting voxels
-
-						const int index = indexX + indexY * sx + indexZ * sx * sy;
-
-					#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
-						Record * record = record_allocator.alloc();
-						record->next = records[index];
-						record->lightId = light.id;
-						records[index] = record;
-					#else
-						records[index].insert(light.id);
-					#endif
 					}
 				}
 			}
