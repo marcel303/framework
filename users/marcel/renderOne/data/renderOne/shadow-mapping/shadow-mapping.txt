@@ -36,15 +36,32 @@ vec3 viewToShadowLight(int id, vec3 position_view)
 	return position_light.xyz;
 }
 
+bool isOutsideShadowMapExtents(vec2 position_texture)
+{
+#if 0
+	if (any(bvec4(
+		   lessThanEqual(position_texture, vec2(0.0)),
+		greaterThanEqual(position_texture, vec2(1.0)))))
+	{
+		return true;
+	}
+#else
+	if (any(   lessThanEqual(position_texture, vec2(0.0))) ||
+		any(greaterThanEqual(position_texture, vec2(1.0))))
+	{
+		return true;
+	}
+#endif
+
+	return false;
+}
+
 vec2 shadowTextureToShadowAtlas(int id, vec2 position_texture)
 {
 	vec2 atlas_min = vec2(1.0 / numShadowMaps * float(id + 0), 0.0);
 	vec2 atlas_max = vec2(1.0 / numShadowMaps * float(id + 1), 1.0);
 
 	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
-
-// todo : remove min/max when any test above works
-	position_atlas = max(atlas_min, min(atlas_max, position_atlas));
 
 	return position_atlas;
 }
@@ -85,23 +102,12 @@ vec3 lookupShadow_Nearest(int id, vec3 position_view)
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
-#if 0
-	if (any(
-		bool4(
-			position_texture <= vec2(0.0),
-			position_texture >= vec2(1.0))))
+	// check if the shadow map covers the location
+
+	if (isOutsideShadowMapExtents(position_texture))
 	{
-		return vec3(0.0);
+		return vec3(1.0);
 	}
-#elif 0
-	if (any(
-		bvec4(
-			lessThanEqual(position_texture, vec2(0.0)),
-			greaterThanEqual(position_texture, vec2(1.0)))))
-	{
-		return vec3(0.0);
-	}
-#endif
 
 	// perform texture sampling inside the atlas texture
 
@@ -199,23 +205,12 @@ vec3 lookupShadow_PCF_3x3(int id, vec3 position_view)
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
-#if 0
-	if (any(
-		bool4(
-			position_texture <= vec2(0.0),
-			position_texture >= vec2(1.0))))
+	// check if the shadow map covers the location
+
+	if (isOutsideShadowMapExtents(position_texture))
 	{
-		return vec3(0.0);
+		return vec3(1.0);
 	}
-#elif 0
-	if (any(
-		bvec4(
-			lessThanEqual(position_texture, vec2(0.0)),
-			greaterThanEqual(position_texture, vec2(1.0)))))
-	{
-		return vec3(0.0);
-	}
-#endif
 
 	// perform texture sampling inside the atlas texture
 
@@ -303,23 +298,12 @@ vec3 lookupShadow_PCF_7x7(int id, vec3 position_view)
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
-#if 0
-	if (any(
-		bool4(
-			position_texture <= vec2(0.0),
-			position_texture >= vec2(1.0))))
+	// check if the shadow map covers the location
+
+	if (isOutsideShadowMapExtents(position_texture))
 	{
-		return vec3(0.0);
+		return vec3(1.0);
 	}
-#elif 0
-	if (any(
-		bvec4(
-			lessThanEqual(position_texture, vec2(0.0)),
-			greaterThanEqual(position_texture, vec2(1.0)))))
-	{
-		return vec3(0.0);
-	}
-#endif
 
 	// perform texture sampling inside the atlas texture
 
@@ -422,23 +406,12 @@ vec3 lookupShadow_Variance(int id, vec3 position_view)
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
-#if 0
-	if (any(
-		bool4(
-			position_texture <= vec2(0.0),
-			position_texture >= vec2(1.0))))
+	// check if the shadow map covers the location
+
+	if (isOutsideShadowMapExtents(position_texture))
 	{
-		return vec3(0.0);
+		return vec3(1.0);
 	}
-#elif 0
-	if (any(
-		bvec4(
-			lessThanEqual(position_texture, vec2(0.0)),
-			greaterThanEqual(position_texture, vec2(1.0)))))
-	{
-		return vec3(0.0);
-	}
-#endif
 
 	// perform texture sampling inside the atlas texture
 
@@ -549,7 +522,7 @@ vec3 lookupShadowPosition(int id, vec3 position_view)
 
 	// perform texture sampling inside the atlas texture
 
-// todo : optimize : store shadow atlas min/max inside a uniform array
+// todo : optimize : store shadow atlas min/max inside a uniform array. allows for differently sized shadow maps per light
 	vec2 atlas_min = vec2(1.0 / numShadowMaps * float(id + 0), 0.0);
 	vec2 atlas_max = vec2(1.0 / numShadowMaps * float(id + 1), 1.0);
 
