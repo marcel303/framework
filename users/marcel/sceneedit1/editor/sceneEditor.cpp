@@ -3599,7 +3599,8 @@ static void drawEditorGrid(const Camera & camera, const float opacity)
 			Mat4x4 worldToView;
 			gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 			const Mat4x4 viewToWorld = worldToView.CalcInv();
-			const Vec3 viewOrigin = viewToWorld.GetTranslation();
+			
+			origin = viewToWorld.GetTranslation();
 		}
 		else
 		{
