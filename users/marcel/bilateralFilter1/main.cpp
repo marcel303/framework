@@ -9,6 +9,13 @@
 #include <math.h>
 #include <stdint.h>
 
+#ifdef WIN32
+	#include <direct.h> // _mkdir
+#else
+	#include <sys/stat.h> // mkdir
+	#include <sys/types.h>
+#endif
+
 struct Mat
 {
 	int sx = 0;
@@ -609,7 +616,7 @@ static bool testBf2()
 {
 	// load the source image
 	
-    ImageData * image = loadImage("lenna.png");
+    ImageData * image = loadImage("lenna.jpg");
 	
     if (image == nullptr)
     {
@@ -658,7 +665,7 @@ static bool testBf2()
 		}
 	}
 	
-	saveImage(image, "lenna-filtered-o1.png");
+	saveImage(image, "output/lenna-filtered-o1.png");
 	
 	delete image;
 	image = nullptr;
@@ -673,7 +680,7 @@ static bool testRecursiveBf_1ch()
 {
 	// load the source image
 	
-	ImageData * image = loadImage("lenna.png");
+	ImageData * image = loadImage("lenna.jpg");
 	
     if (image == nullptr)
     {
@@ -735,7 +742,7 @@ static bool testRecursiveBf_1ch()
 	
 	// convert and save the filtered image
 	
-	saveImage(&filteredImage, "lenna-filtered-recursive-bf-grays.png");
+	saveImage(&filteredImage, "output/lenna-filtered-recursive-bf-grays.png");
 	
 	delete image;
 	image = nullptr;
@@ -747,7 +754,7 @@ static bool testRecursiveBf_4ch()
 {
 	// load the source image
 	
-	ImageData * image = loadImage("lenna-color.png");
+	ImageData * image = loadImage("lenna-color.jpg");
 	
     if (image == nullptr)
     {
@@ -811,7 +818,7 @@ static bool testRecursiveBf_4ch()
 	
 	// save the filtered image
 	
-	saveImage(&filteredImage, "lenna-filtered-recursive-bf-color.png");
+	saveImage(&filteredImage, "output/lenna-filtered-recursive-bf-color.png");
 	
 	delete image;
 	image = nullptr;
@@ -823,6 +830,12 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
+#ifdef WIN32
+	_mkdir("output");
+#else
+	mkdir("output", 0700);
+#endif
+	
 	testBf2();
 	
 	testRecursiveBf_1ch();
@@ -830,7 +843,7 @@ int main(int argc, char * argv[])
 	
 	// load the source image
 	
-    ImageData * image = loadImage("lenna.png");
+    ImageData * image = loadImage("lenna.jpg");
 	
     if (image == nullptr)
     {
@@ -883,7 +896,7 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	saveImage(image, "lenna-filtered.png");
+	saveImage(image, "output/lenna-filtered.png");
 	
 	delete image;
 	image = nullptr;
