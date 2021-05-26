@@ -1,0 +1,10 @@
+library syphon shared
+	with_platform macos depend_library Cocoa find
+	with_platform macos depend_library IOSurface find
+	with_platform macos depend_library OpenGL find
+	with_platform macos compile_definition SYPHON_CORE_SHARE *
+	with_platform macos scan_files c path ../syphon
+	with_platform macos scan_files h path ../syphon
+	with_platform macos scan_files m path ../syphon
+	add_files dummy.c
+	header_path ../syphon expose alias_through_copy Syphon

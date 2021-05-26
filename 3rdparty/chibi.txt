@@ -32,7 +32,7 @@ add remotery
 add rgbe
 add rtmidi-support
 add sse2neon
-add syphon
+add syphon-support
 add tinyxml2
 add turbojpeg
 add utf8rewind

@@ -1,3 +1,0 @@
-library syphon
-	with_platform macos depend_library Syphon.framework local embed_framework
-	add_files dummy.cpp

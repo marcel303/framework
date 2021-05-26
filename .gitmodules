@@ -31,3 +31,6 @@ url=https://github.com/marcel303/SDL-mirror.git
 [submodule "3rdparty/oscpack"]
 	path = 3rdparty/oscpack
 	url = https://github.com/marcel303/oscpack.git
+[submodule "3rdparty/syphon"]
+	path = 3rdparty/syphon
+	url = https://github.com/marcel303/Syphon-Framework.git
