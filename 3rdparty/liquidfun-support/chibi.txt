@@ -1,0 +1,15 @@
+library box2d-liquidfun
+	scan_files cpp path ../liquidfun-fixed/Box2D traverse
+	scan_files h   path ../liquidfun-fixed/Box2D traverse
+	license_file ../liquidfun-fixed/NOTICE
+	header_path ../liquidfun-fixed expose
+
+app box2d-liquidfun-testbed-framework
+	depend_library box2d-liquidfun
+	depend_library framework
+	depend_library imgui-framework
+	scan_files cpp path Testbed/Framework traverse
+	scan_files h   path Testbed/Framework traverse
+	scan_files cpp path Testbed/Tests traverse group Tests
+	scan_files h   path Testbed/Tests traverse group Tests
+	resource_path Testbed
