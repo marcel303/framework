@@ -184,6 +184,7 @@ void VfxNodeSurface::beforeDraw() const
 	oldSurface = g_currentVfxSurface;
 	g_currentVfxSurface = surface;
 	
+// todo : use separate color/depth target, and specify clear flags during pushRenderPass. avoid the separate clears as done below (optimize)
 	pushSurface(surface);
 	
 	if (clear)

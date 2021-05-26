@@ -12,6 +12,11 @@
 #include "videoSyncClient.h"
 #include "videoSyncServer.h"
 
+// todo : add tcpToVideo capability to discovery process
+// todo : add a new app, which integrates with the discovery process
+// todo : update discovery process test app to include a video sync service + test implementation
+// todo : test video sync capability on the raspberry pi 3b
+
 const int VIEW_SX = 1200;
 const int VIEW_SY = 600;
 

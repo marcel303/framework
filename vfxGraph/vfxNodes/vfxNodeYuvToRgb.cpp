@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "vfxNodeYuvToRgb.h"
 
-// todo : get YUV to RGB constants from avcodec, pass them to this node from video node
-
 VFX_ENUM_TYPE(yuvToRgbColorSpace)
 {
 	elem("NTSC");
@@ -63,7 +61,7 @@ static const char * s_yuvToRgbVs = R"SHADER(
 	}
 )SHADER";
 
-static const char * s_yuvToRgbNtscPs = R"SHADER(
+static const char * s_yuvToRgb_ntscPs = R"SHADER(
 	include engine/ShaderPS.txt
 
 	shader_in vec2 texcoord;
@@ -92,7 +90,8 @@ static const char * s_yuvToRgbNtscPs = R"SHADER(
 	}
 )SHADER";
 
-static const char * s_yuvToRgbBt601Ps = R"SHADER(
+// https://en.wikipedia.org/wiki/Rec._601
+static const char * s_yuvToRgb_bt601Ps = R"SHADER(
 	include engine/ShaderPS.txt
 
 	shader_in vec2 texcoord;
@@ -121,7 +120,7 @@ static const char * s_yuvToRgbBt601Ps = R"SHADER(
 	}
 )SHADER";
 
-static const char * s_yuvToRgbBt709Ps = R"SHADER(
+static const char * s_yuvToRgb_bt709Ps = R"SHADER(
 	include engine/ShaderPS.txt
 
 	shader_in vec2 texcoord;
@@ -169,9 +168,9 @@ VfxNodeYuvToRgb::VfxNodeYuvToRgb()
 
 		shaderSource("yuvToRgb.vs", s_yuvToRgbVs);
 		
-		shaderSource("yuvToRgbNtsc.ps", s_yuvToRgbNtscPs);
-		shaderSource("yuvToRgbBt601.ps", s_yuvToRgbBt601Ps);
-		shaderSource("yuvToRgbBt709.ps", s_yuvToRgbBt709Ps);
+		shaderSource("yuvToRgbNtsc.ps", s_yuvToRgb_ntscPs);
+		shaderSource("yuvToRgbBt601.ps", s_yuvToRgb_bt601Ps);
+		shaderSource("yuvToRgbBt709.ps", s_yuvToRgb_bt709Ps);
 	}
 }
 
