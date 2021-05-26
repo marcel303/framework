@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_WIIMOTE
+#if VFXGRAPH_ENABLE_WIIMOTE
 
 #import "Debugging.h"
 #import "Log.h"

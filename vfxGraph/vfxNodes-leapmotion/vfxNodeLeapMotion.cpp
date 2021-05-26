@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_LEAPMOTION
+#if VFXGRAPH_ENABLE_LEAPMOTION
 
 #include "vfxNodeLeapMotion.h"
 #include "leap/Leap.h"

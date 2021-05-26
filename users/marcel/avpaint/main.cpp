@@ -9,7 +9,7 @@
 #include <cmath>
 #include <math.h>
 
-#if ENABLE_LEAPMOTION
+#if VFXGRAPH_ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
 #endif
 
@@ -728,7 +728,7 @@ int main(int argc, char * argv[])
 	
 		framework.fillCaches(true);
 
-	#if ENABLE_LEAPMOTION
+	#if VFXGRAPH_ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
 
 		Leap::Controller leapController;
@@ -784,7 +784,7 @@ int main(int argc, char * argv[])
 			if (framework.quitRequested)
 				break;
 			
-		#if ENABLE_LEAPMOTION
+		#if VFXGRAPH_ENABLE_LEAPMOTION
 			// process LeapMotion input
 
 			leapListener->tick();
@@ -803,7 +803,7 @@ int main(int argc, char * argv[])
 			
 			glitchLoop->tick(dt);
 			
-		#if ENABLE_LEAPMOTION
+		#if VFXGRAPH_ENABLE_LEAPMOTION
 			{
 				static float speed = 1.f;
 				
@@ -980,7 +980,7 @@ int main(int argc, char * argv[])
 				
 				//logDebug("presentTime: %g", presentTime);
 
-			#if ENABLE_LEAPMOTION
+			#if VFXGRAPH_ENABLE_LEAPMOTION
 				int y = 10;
 				
 				setFont("calibri.ttf");
@@ -1059,7 +1059,7 @@ int main(int argc, char * argv[])
 		delete glitchLoop;
 		glitchLoop = nullptr;
 		
-	#if ENABLE_LEAPMOTION
+	#if VFXGRAPH_ENABLE_LEAPMOTION
 		leapController.removeListener(*leapListener);
 
 		delete leapListener;

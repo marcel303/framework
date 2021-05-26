@@ -6,7 +6,7 @@
 #include "videoloop.h"
 #include <math.h>
 
-#if ENABLE_LEAPMOTION
+#if VFXGRAPH_ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
 #endif
 
@@ -118,7 +118,7 @@ int main(int argc, char * argv[])
 
 	if (framework.init(GFX_SX, GFX_SY))
 	{
-	#if ENABLE_LEAPMOTION
+	#if VFXGRAPH_ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
 
 		Leap::Controller leapController;
@@ -204,7 +204,7 @@ int main(int argc, char * argv[])
 			if (framework.quitRequested)
 				break;
 
-		#if ENABLE_LEAPMOTION
+		#if VFXGRAPH_ENABLE_LEAPMOTION
 			// process LeapMotion input
 
 			leapListener->tick();
@@ -567,7 +567,7 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 					
-				#if ENABLE_LEAPMOTION
+				#if VFXGRAPH_ENABLE_LEAPMOTION
 					if (leapController.isConnected() && leapController.hasFocus())
 					{
 						if (g_leapState.hands[0].active)
@@ -696,7 +696,7 @@ int main(int argc, char * argv[])
 			layerColors[i] = nullptr;
 		}
 
-	#if ENABLE_LEAPMOTION
+	#if VFXGRAPH_ENABLE_LEAPMOTION
 		leapController.removeListener(*leapListener);
 
 		delete leapListener;

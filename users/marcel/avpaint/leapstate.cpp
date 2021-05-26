@@ -1,4 +1,4 @@
-#if ENABLE_LEAPMOTION
+#if VFXGRAPH_ENABLE_LEAPMOTION
 
 #include "leapstate.h"
 #include <SDL2/SDL.h>

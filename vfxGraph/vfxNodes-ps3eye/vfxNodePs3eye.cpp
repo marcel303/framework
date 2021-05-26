@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_PS3EYE
+#if VFXGRAPH_ENABLE_PS3EYE
 
 #include "vfxNodePs3eye.h"
 

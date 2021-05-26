@@ -63,7 +63,7 @@ library vfxgraph-nodes
 	with_platform macos scan_files mm path objects group objects
 	with_platform macos scan_files mm path vfxNodes group vfxNodes conglomerate vfxNodes_all-mac.h
 
-	compile_definition ENABLE_TURBOJPEG 1 expose
+	compile_definition VFXGRAPH_ENABLE_TURBOJPEG 1 expose
 
 	with_platform macos compile_definition __MACOSX_CORE__   *
 
@@ -85,7 +85,7 @@ library vfxgraph-deepbelief
 	depend_library deepbelief
 	depend_library vfxgraph
 
-	compile_definition ENABLE_DEEPBELIEF 1 expose
+	compile_definition VFXGRAPH_ENABLE_DEEPBELIEF 1 expose
 
 	header_path vfxNodes-deepbelief expose
 
@@ -119,11 +119,11 @@ library vfxgraph-kinect
 
 	add_files vfxNodes-kinect/kinect_all.cpp
 
-	compile_definition ENABLE_KINECT1 0 expose
+	compile_definition VFXGRAPH_ENABLE_KINECT1 0 expose
 
-	with_platform macos   compile_definition ENABLE_KINECT2 1 expose
-	with_platform linux   compile_definition ENABLE_KINECT2 0 expose
-	with_platform windows compile_definition ENABLE_KINECT2 0 expose
+	with_platform macos   compile_definition VFXGRAPH_ENABLE_KINECT2 1 expose
+	with_platform linux   compile_definition VFXGRAPH_ENABLE_KINECT2 0 expose
+	with_platform windows compile_definition VFXGRAPH_ENABLE_KINECT2 0 expose
 
 	link_translation_unit_using_function_call linkVfxNodes_Kinect
 
@@ -136,9 +136,9 @@ library vfxgraph-leapmotion
 	scan_files cpp path vfxNodes-leapmotion
 	scan_files h   path vfxNodes-leapmotion
 
-	with_platform macos   compile_definition ENABLE_LEAPMOTION 1 expose
-	with_platform linux   compile_definition ENABLE_LEAPMOTION 0 expose
-	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
+	with_platform macos   compile_definition VFXGRAPH_ENABLE_LEAPMOTION 1 expose
+	with_platform linux   compile_definition VFXGRAPH_ENABLE_LEAPMOTION 0 expose
+	with_platform windows compile_definition VFXGRAPH_ENABLE_LEAPMOTION 1 expose
 
 	depend_library leapmotion
 
@@ -155,7 +155,7 @@ library vfxgraph-ps3eye
 	scan_files cpp path vfxNodes-ps3eye
 	scan_files h   path vfxNodes-ps3eye
 
-	compile_definition ENABLE_PS3EYE 1 expose
+	compile_definition VFXGRAPH_ENABLE_PS3EYE 1 expose
 
 	link_translation_unit_using_function_call linkVfxNodes_Ps3eye
 
@@ -168,9 +168,9 @@ library vfxgraph-syphon
 	scan_files mm path vfxNodes-syphon
 	scan_files h  path vfxNodes-syphon
 
-	with_platform macos   compile_definition ENABLE_SYPHON 1 expose
-	with_platform linux   compile_definition ENABLE_SYPHON 0 expose
-	with_platform windows compile_definition ENABLE_SYPHON 0 expose
+	with_platform macos   compile_definition VFXGRAPH_ENABLE_SYPHON 1 expose
+	with_platform linux   compile_definition VFXGRAPH_ENABLE_SYPHON 0 expose
+	with_platform windows compile_definition VFXGRAPH_ENABLE_SYPHON 0 expose
 
 	with_platform macos depend_library syphon
 
@@ -186,9 +186,9 @@ library vfxgraph-wiimote
 	scan_files h   path vfxNodes-wiimote
 	scan_files mm  path vfxNodes-wiimote
 
-	with_platform macos   compile_definition ENABLE_WIIMOTE 0 expose
-	with_platform linux   compile_definition ENABLE_WIIMOTE 0 expose
-	with_platform windows compile_definition ENABLE_WIIMOTE 0 expose
+	with_platform macos   compile_definition VFXGRAPH_ENABLE_WIIMOTE 0 expose
+	with_platform linux   compile_definition VFXGRAPH_ENABLE_WIIMOTE 0 expose
+	with_platform windows compile_definition VFXGRAPH_ENABLE_WIIMOTE 0 expose
 
 	with_platform macos depend_library IOBluetooth find
 

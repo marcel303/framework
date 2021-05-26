@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_TURBOJPEG
+#if VFXGRAPH_ENABLE_TURBOJPEG
 
 #include "imageCpuDelayLine.h"
 #include "vfxNodeImageCpuDelayLine.h"

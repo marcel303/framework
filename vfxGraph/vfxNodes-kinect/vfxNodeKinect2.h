@@ -29,7 +29,7 @@
 
 #include "kinect2.h"
 
-#if ENABLE_KINECT2
+#if VFXGRAPH_ENABLE_KINECT2
 
 #include "vfxNodeBase.h"
 

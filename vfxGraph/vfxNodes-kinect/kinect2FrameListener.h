@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_KINECT2
+#if VFXGRAPH_ENABLE_KINECT2
 
 #include <libfreenect2/frame_listener_impl.h> // FrameListener
 

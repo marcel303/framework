@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_TURBOJPEG
+#if VFXGRAPH_ENABLE_TURBOJPEG
 
 #include "vfxNodeBase.h"
 

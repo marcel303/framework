@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_KINECT2
+#if VFXGRAPH_ENABLE_KINECT2
 
 #include "framework.h"
 #include "kinect2.h"

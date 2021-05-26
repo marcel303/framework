@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_PS3EYE
+#if VFXGRAPH_ENABLE_PS3EYE
 
 #include "gx_texture.h"
 #include "ps3eye.h"

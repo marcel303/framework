@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_WIIMOTE
+#if VFXGRAPH_ENABLE_WIIMOTE
 
 #include "vfxNodeBase.h"
 

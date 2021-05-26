@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_DEEPBELIEF
+#if VFXGRAPH_ENABLE_DEEPBELIEF
 
 #include "deepbelief.h"
 #include "vfxNodeBase.h"

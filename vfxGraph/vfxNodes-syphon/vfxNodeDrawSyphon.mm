@@ -25,11 +25,15 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_SYPHON
+#if VFXGRAPH_ENABLE_SYPHON
 
 #import "framework.h"
 #import "vfxGraph.h"
 #import "vfxNodeDrawSyphon.h"
+
+#if ENABLE_OPENGL
+#import <SDL2/SDL_opengl.h>
+#endif
 
 VFX_NODE_TYPE(VfxNodeDrawSyphon)
 {
@@ -107,6 +111,7 @@ void VfxNodeDrawSyphon::draw() const
 		const int sx = image->getSx();
 		const int sy = image->getSy();
 		
+	#if ENABLE_OPENGL
 	#if 1 // note : take the inefficient code path here as it's the only one which seems to work on OpenGL 4.1+
 		pushSurface(g_currentVfxSurface);
 		{
@@ -138,6 +143,7 @@ void VfxNodeDrawSyphon::draw() const
 		// note : this would be the preferred method, but sadly it doesn't work with OpenGL 4.1+ we're using
 		[server publishFrameTexture:image->getTexture() textureTarget:GL_TEXTURE_RECTANGLE_EXT imageRegion:NSMakeRect(0, 0, sx, sy) textureDimensions:NSMakeSize(sx, sy) flipped:NO];
 		checkErrorGL();
+	#endif
 	#endif
 	}
 }

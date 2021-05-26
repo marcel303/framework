@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_KINECT1
+#if VFXGRAPH_ENABLE_KINECT1
 
 #include "libfreenect.h"
 #include "Vec3.h"

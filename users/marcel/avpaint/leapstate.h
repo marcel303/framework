@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_LEAPMOTION
+#if VFXGRAPH_ENABLE_LEAPMOTION
 
 #include "leap/Leap.h"
 #include "Vec3.h"

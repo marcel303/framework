@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_SYPHON
+#if VFXGRAPH_ENABLE_SYPHON
 
 #include "vfxNodeBase.h"
 #import <Syphon/Syphon.h>

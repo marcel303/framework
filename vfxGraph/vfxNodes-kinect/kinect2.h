@@ -27,7 +27,7 @@
 
 #pragma once
 
-#if ENABLE_KINECT2
+#if VFXGRAPH_ENABLE_KINECT2
 
 struct SDL_mutex;
 struct SDL_Thread;

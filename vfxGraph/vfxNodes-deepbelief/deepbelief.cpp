@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_DEEPBELIEF
+#if VFXGRAPH_ENABLE_DEEPBELIEF
 
 #include "Debugging.h"
 #include "deepbelief.h"

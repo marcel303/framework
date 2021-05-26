@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if ENABLE_KINECT1
+#if VFXGRAPH_ENABLE_KINECT1
 
 #include "framework.h"
 #include "freenect_internal.h" // for access to freenect_device.registration.zero_plane_info
