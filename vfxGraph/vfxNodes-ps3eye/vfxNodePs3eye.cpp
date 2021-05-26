@@ -33,10 +33,8 @@
 #include "Multicore/ThreadName.h"
 
 #include <algorithm>
-#include <SDL2/SDL.h>
 
 // todo : add mutex and copy captured frame data
-// todo : use std mutex, thread. remove SDL2 dependency
 
 using namespace ps3eye;
 
@@ -75,8 +73,8 @@ VfxNodePs3eye::VfxNodePs3eye()
 	, currentResolution(0)
 	, currentFramerate(0)
 	, currentEnableColor(false)
-	, captureThread(nullptr)
-	, mutex(nullptr)
+	, captureThread()
+	, mutex()
 	, stopCaptureThread(false)
 	, ps3eye()
 	, frameData(nullptr)
@@ -101,10 +99,6 @@ VfxNodePs3eye::VfxNodePs3eye()
 	addInput(kInput_WhiteBalanceB, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
-	
-	Assert(mutex == nullptr);
-	mutex = SDL_CreateMutex();
-	Assert(mutex != nullptr);
 }
 
 VfxNodePs3eye::~VfxNodePs3eye()
@@ -114,12 +108,6 @@ VfxNodePs3eye::~VfxNodePs3eye()
 	stopCapture();
 	
 	Assert(ps3eye == nullptr);
-	
-	if (mutex != nullptr)
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
-	}
 }
 
 void VfxNodePs3eye::tick(const float dt)
@@ -150,7 +138,7 @@ void VfxNodePs3eye::tick(const float dt)
 		getInputInt(kInput_Framerate, 100));
 	const bool enableColor = getInputBool(kInput_ColorEnabled, true);
 	
-	Verify(SDL_LockMutex(mutex) == 0);
+	mutex.lock();
 	{
 		eyeParams.autoGain = getInputBool(kInput_AutoGain, true);
 		eyeParams.gain = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_Gain, .32f) * 63.f)));
@@ -159,7 +147,7 @@ void VfxNodePs3eye::tick(const float dt)
 		eyeParams.balanceG = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceG, .5f) * 255.f)));
 		eyeParams.balanceB = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceB, .5f) * 255.f)));
 	}
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	mutex.unlock();
 	
 	if (deviceIndex != currentDeviceIndex ||
 		resolution != currentResolution ||
@@ -216,8 +204,7 @@ void VfxNodePs3eye::tick(const float dt)
 				frameData = new uint8_t[numBytes];
 				Assert(hasFrameData == false);
 				
-				Assert(captureThread == nullptr);
-				captureThread = SDL_CreateThread(captureThreadProc, "PS3EYE Capture Thread", this);
+				captureThread = std::thread(captureThreadProc, this);
 			}
 		}
 	}
@@ -299,10 +286,8 @@ void VfxNodePs3eye::allocateImage(const int sx, const int sy, const GX_TEXTURE_F
 	imageOutput.texture = texture.id;
 }
 
-int VfxNodePs3eye::captureThreadProc(void * obj)
+void VfxNodePs3eye::captureThreadProc(VfxNodePs3eye * self)
 {
-	VfxNodePs3eye * self = (VfxNodePs3eye*)obj;
-	
 	SetCurrentThreadName("VfxNodePs3eye");
 	
 	auto ps3eye = self->ps3eye.get();
@@ -317,11 +302,11 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 	{
 		EyeParams eyeParams;
 		
-		Verify(SDL_LockMutex(self->mutex) == 0);
+		self->mutex.lock();
 		{
 			eyeParams = self->eyeParams;
 		}
-		Verify(SDL_UnlockMutex(self->mutex) == 0);
+		self->mutex.unlock();
 		
 		if (eyeParams.autoGain != currentEyeParams.autoGain || !currentEyeParams.isValid)
 			ps3eye->setAutogain(eyeParams.autoGain);
@@ -352,19 +337,16 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 	currentEyeParams = EyeParams();
 	
 	ps3eye->stop();
-	
-	return 0;
 }
 
 void VfxNodePs3eye::stopCapture()
 {
-	if (captureThread != nullptr)
+	if (captureThread.joinable())
 	{
 		stopCaptureThread = true;
-		
-		SDL_WaitThread(captureThread, nullptr);
-		captureThread = nullptr;
-		
+		{
+			captureThread.join();
+		}
 		stopCaptureThread = false;
 	}
 	

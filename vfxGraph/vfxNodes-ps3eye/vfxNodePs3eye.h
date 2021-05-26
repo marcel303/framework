@@ -33,9 +33,8 @@
 #include "ps3eye.h"
 #include "vfxNodeBase.h"
 #include <atomic>
-
-struct SDL_mutex;
-struct SDL_Thread;
+#include <mutex>
+#include <thread>
 
 struct VfxNodePs3eye : VfxNodeBase
 {
@@ -86,8 +85,8 @@ struct VfxNodePs3eye : VfxNodeBase
 	int currentFramerate;
 	bool currentEnableColor;
 	
-	SDL_Thread * captureThread;
-	SDL_mutex * mutex;
+	std::thread captureThread;
+	std::mutex mutex;
 	std::atomic<bool> stopCaptureThread;
 	ps3eye::PS3EYECam::PS3EYERef ps3eye;
 	uint8_t * frameData;
@@ -112,7 +111,7 @@ struct VfxNodePs3eye : VfxNodeBase
 	void freeImage();
 	void allocateImage(const int sx, const int sy, const GX_TEXTURE_FORMAT format);
 	
-	static int captureThreadProc(void * obj);
+	static void captureThreadProc(VfxNodePs3eye * self);
 	void stopCapture();
 };
 
