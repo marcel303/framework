@@ -1,0 +1,169 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			1.356677532196045 0.0 0.0
+		angleAxis
+			angle
+				17.574310302734376
+			axis
+				1.000001311302185 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 10.0 10.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Area Box Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.306726336479187 0.00025023712078109384 0.13633620738983155
+		angleAxis
+			angle
+				218.08108520507813
+			axis
+				0.09311243146657944 0.9920774698257446 0.08433481305837631
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			areaBox
+		intensity
+			2.5329999923706056
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+
+entity 4
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Area Box Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.0660021305084229 0.6443583369255066 -4.179931163787842
+		angleAxis
+			angle
+				268.4403076171875
+			axis
+				-0.04971594735980034 0.9578314423561096 0.2829970419406891
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			areaBox
+		intensity
+			2.5329999923706056
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+
+scene
+	nodes
+		2
+		3
+		4

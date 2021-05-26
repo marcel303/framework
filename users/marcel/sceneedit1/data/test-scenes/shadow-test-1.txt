@@ -1,0 +1,173 @@
+entity 1
+	scene-node
+		enabled
+			true
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		name
+			Node 1
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-3.249379873275757 1.8421599864959717 -0.045127443969249728
+		angleAxis
+			angle
+				92.00513458251953
+			axis
+				0.9999059438705444 -0.009529906325042248 -0.009869223460555077
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		type
+			spot
+		intensity
+			87.0479965209961
+		color
+			1.0 0.0 0.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.12000274658203
+		castShadows
+			true
+
+entity 3
+	scene-node
+		enabled
+			true
+		name
+			Node 2
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-0.28919124603271487 -1.6866264343261719 -1.1563611030578614
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			8.0 1.0 8.0
+	gltf
+		enabled
+			true
+		filename
+			smooth-cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 4
+	scene-node
+		enabled
+			true
+		name
+			Node 3
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-1.5587272644042969 0.12710726261138917 -0.20789384841918946
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		filename
+			smooth-cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 5
+	scene-node
+		enabled
+			true
+		name
+			Node 1
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-0.4219861626625061 2.6259918212890627 0.8825225234031677
+		angleAxis
+			angle
+				92.00513458251953
+			axis
+				0.9999059438705444 -0.009529906325042248 -0.009869223460555077
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		type
+			spot
+		intensity
+			87.0479965209961
+		color
+			0.7540920376777649 0.7990195751190186 0.03525085002183914
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			72.71099853515625
+		castShadows
+			false
+
+scene
+	nodes
+		2
+		3
+		4
+		5

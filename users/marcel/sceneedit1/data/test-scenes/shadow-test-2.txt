@@ -1,0 +1,211 @@
+entity 1
+	scene-node
+		enabled
+			true
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		name
+			Node 1
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-3.1406915187835695 1.600022792816162 0.9136118292808533
+		angleAxis
+			angle
+				177.8625946044922
+			axis
+				0.04201927036046982 0.6395444869995117 -0.7676047682762146
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		type
+			areaBox
+		intensity
+			5.432000160217285
+		color
+			0.0 0.7941176891326904 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.12000274658203
+		castShadows
+			true
+
+entity 3
+	scene-node
+		enabled
+			true
+		name
+			Node 2
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-0.28919124603271487 -1.6866264343261719 -1.1563611030578614
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			8.0 1.0 8.0
+	gltf
+		enabled
+			true
+		filename
+			smooth-cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 4
+	scene-node
+		enabled
+			true
+		name
+			Node 3
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-1.5587272644042969 0.12710726261138917 -0.20789384841918946
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		filename
+			smooth-cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 5
+	scene-node
+		enabled
+			true
+		name
+			Node 1
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-1.825190544128418 2.0703201293945314 -2.9758219718933107
+		angleAxis
+			angle
+				92.00513458251953
+			axis
+				0.9999059438705444 -0.009529906325042248 -0.009869223460555077
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		type
+			spot
+		intensity
+			87.0479965209961
+		color
+			0.7540920376777649 0.7990195751190186 0.03525085002183914
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			112.6510009765625
+		castShadows
+			true
+
+entity 6
+	scene-node
+		enabled
+			true
+		name
+			Node 6
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		position
+			-0.284267783164978 -1.1912574768066407 -2.5556507110595705
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		filename
+			../../gltf1/data/scenes/nara_the_desert_dancer/scene.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+scene
+	nodes
+		2
+		3
+		4
+		5
+		6

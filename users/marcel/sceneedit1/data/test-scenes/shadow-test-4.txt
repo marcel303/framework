@@ -1,0 +1,259 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.48565715551376345 0.3786800801753998 -0.16544003784656526
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			20.0 1.0 20.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Point Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			2.3401598930358888 7.566258907318115 -4.2042436599731449
+		angleAxis
+			angle
+				144.617919921875
+			axis
+				0.05225202068686485 -0.6056677103042603 0.7940003275871277
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			spot
+		intensity
+			46.63100051879883
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			40.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			true
+
+entity 4
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 3.1368274688720705 0.0
+		angleAxis
+			angle
+				334.9266662597656
+			axis
+				0.11082129925489426 -0.9930327534675598 0.04005748778581619
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			20.0
+
+entity 5
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.4657387733459473 2.755993366241455 -2.8292171955108644
+		angleAxis
+			angle
+				334.9268493652344
+			axis
+				0.11082079261541367 -0.9930327534675598 0.04005993530154228
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			20.0
+
+entity 6
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.9525389671325685 3.004748821258545 2.347352981567383
+		angleAxis
+			angle
+				288.8935241699219
+			axis
+				-0.11082308739423752 0.9930324554443359 -0.04005901515483856
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			20.0
+
+scene
+	nodes
+		2
+		3
+		4
+		5
+		6

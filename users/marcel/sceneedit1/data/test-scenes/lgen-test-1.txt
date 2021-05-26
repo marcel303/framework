@@ -1,0 +1,175 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Node 1
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 0.0 0.0
+		angleAxis
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	lgen
+		enabled
+			true
+		editorFlags
+			0
+		type
+			simplexNoise
+		resolution
+			8
+		seed
+			2
+		scale
+			1.0
+		height
+			32.0
+		filters
+			-
+				enabled
+					false
+				type
+					mean
+				radius
+					6
+				numLevels
+					3
+			-
+				enabled
+					true
+				type
+					quantize
+				radius
+					1
+				numLevels
+					3
+			-
+				enabled
+					true
+				type
+					mean
+				radius
+					6
+				numLevels
+					2
+		blocky
+			true
+		castShadows
+			false
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Point Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			50.57072830200195 -10.0963773727417 69.51980590820313
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			point
+		intensity
+			1.0
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			80.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Point Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-59.62114334106445 14.607340812683106 70.97450256347656
+		angleAxis
+			angle
+				9.190503120422364
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 0.9999992847442627 0.9999992847442627
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			point
+		intensity
+			1.0
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			80.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+
+scene
+	nodes
+		1
+		2
+		3

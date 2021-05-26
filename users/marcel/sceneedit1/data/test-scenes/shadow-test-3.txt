@@ -1,0 +1,766 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 0.0 0.0
+		angleAxis
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		scale3
+			5.0 1.0 5.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Spot Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.4995523691177369 3.411163568496704 -0.3697371780872345
+		angleAxis
+			angle
+				138.39059448242188
+			axis
+				0.9868481159210205 0.05808285251259804 0.1508546620607376
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			spot
+		intensity
+			3.3429999351501467
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			true
+
+entity 4
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 1.5334831476211548 0.0
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.2750000059604645
+		centimetersToMeters
+			false
+
+entity 5
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.9434841871261597 1.5334831476211548 -0.36049556732177737
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.2750000059604645
+		centimetersToMeters
+			false
+
+entity 6
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.7355363368988037 1.5334831476211548 -1.4601211547851563
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.2750000059604645
+		centimetersToMeters
+			false
+
+entity 7
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.13955354690551759 1.5334831476211548 -2.0610618591308595
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.15800000727176667
+		centimetersToMeters
+			false
+
+entity 8
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.7412477731704712 1.5334831476211548 -2.6537702083587648
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.15800000727176667
+		centimetersToMeters
+			false
+
+entity 9
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.2211606502532959 1.5334831476211548 -2.9598052501678469
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.15800000727176667
+		centimetersToMeters
+			false
+
+entity 10
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.43956470489501955 1.5334831476211548 -2.8125171661376955
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.07400000095367432
+		centimetersToMeters
+			false
+
+entity 11
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.12350130081176758 1.5334831476211548 -3.377751350402832
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.07400000095367432
+		centimetersToMeters
+			false
+
+entity 12
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.2989635467529297 1.5334831476211548 -3.8267617225646974
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.07400000095367432
+		centimetersToMeters
+			false
+
+entity 13
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.09497332572937012 1.5334831476211548 -3.9125428199768068
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.07400000095367432
+		centimetersToMeters
+			false
+
+entity 14
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-0.4057631492614746 1.5334831476211548 -4.394298553466797
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.03200000151991844
+		centimetersToMeters
+			false
+
+entity 15
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.3677369356155396 1.5334831476211548 -3.0127224922180177
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.03200000151991844
+		centimetersToMeters
+			false
+
+entity 16
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.427741527557373 1.5334831476211548 -3.4491679668426515
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.03200000151991844
+		centimetersToMeters
+			false
+
+entity 17
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.6965043544769288 1.5334831476211548 -3.4407923221588136
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.03200000151991844
+		centimetersToMeters
+			false
+
+entity 18
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Uv Sphere
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-1.7175228595733643 1.5334831476211548 -3.7238986492156984
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/sphere (uv).gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			0.03200000151991844
+		centimetersToMeters
+			false
+
+scene
+	nodes
+		2
+		3
+		4
+		5
+		6
+		7
+		8
+		9
+		10
+		11
+		12
+		13
+		14
+		15
+		16
+		17
+		18

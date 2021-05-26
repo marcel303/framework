@@ -1,0 +1,713 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 0.0 0.0
+		angleAxis
+			angle
+				127.9129409790039
+			axis
+				0.3912871479988098 0.8755285143852234 0.28345075249671938
+		scale
+			1.0
+		scale3
+			1.000004529953003 0.9999997615814209 1.0000057220458985
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.953000009059906 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+	reverb-zone
+		enabled
+			true
+		editorFlags
+			0
+		preDelay
+			0.03999999910593033
+		t60Low
+			8.0
+		t60Mid
+			8.0
+		t60CrossoverFrequency
+			200.0
+		dampingFrequency
+			22915.662109375
+		eq1Gain
+			13.373000144958496
+		eq2Gain
+			13.373000144958496
+
+entity 4
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			4.286037445068359 0.0 -1.6308423280715943
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.4040625989437103 0.43650558590888979 0.47658342123031618
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Point Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.792398691177368 6.678504943847656 -1.0543550252914429
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			point
+		intensity
+			20.288000106811525
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			40.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+
+entity 5
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.0864391326904299 5.960464477539063e-8 -2.758549213409424
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.43651083111763 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 6
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.877697467803955 -3.8743019104003908e-7 3.2659897804260256
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.4365140199661255 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 7
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			3.2229108810424806 2.899240732192993 1.3883801698684693
+		angleAxis
+			angle
+				127.9129409790039
+			axis
+				-0.25600001215934756 0.5809999704360962 -0.4090000092983246
+		scale
+			1.0
+		scale3
+			1.000004529953003 0.9999997019767761 1.0000057220458985
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.25600001215934756 -0.023000000044703485 0.5
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+	reverb-zone
+		enabled
+			true
+		editorFlags
+			0
+		preDelay
+			0.03999999910593033
+		t60Low
+			8.0
+		t60Mid
+			8.0
+		t60CrossoverFrequency
+			200.0
+		dampingFrequency
+			22915.662109375
+		eq1Gain
+			13.373000144958496
+		eq2Gain
+			13.373000144958496
+
+entity 8
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			4.286037445068359 0.0 -1.6308423280715943
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.4040625989437103 0.43650558590888979 0.47658342123031618
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 9
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.0864391326904299 5.960464477539063e-8 -2.758549213409424
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.43651083111763 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 10
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.877697467803955 -3.8743019104003908e-7 3.2659897804260256
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.4365140199661255 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 11
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-4.412247657775879 1.0383573770523072 -5.490499019622803
+		angleAxis
+			angle
+				127.9129409790039
+			axis
+				-0.07000000029802323 -0.16300000250339509 -0.5
+		scale
+			1.0
+		scale3
+			1.000004529953003 0.9999997019767761 1.0000057220458985
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				-0.6740000247955322 -0.3019999861717224 0.5
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+	reverb-zone
+		enabled
+			true
+		editorFlags
+			0
+		preDelay
+			0.03999999910593033
+		t60Low
+			8.0
+		t60Mid
+			8.0
+		t60CrossoverFrequency
+			200.0
+		dampingFrequency
+			22915.662109375
+		eq1Gain
+			13.373000144958496
+		eq2Gain
+			13.373000144958496
+
+entity 12
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			4.286037445068359 0.0 -1.6308423280715943
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.4040625989437103 0.43650558590888979 0.47658342123031618
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 13
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.0864391326904299 5.960464477539063e-8 -2.758549213409424
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.43651083111763 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+entity 14
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.877697467803955 -3.8743019104003908e-7 3.2659897804260256
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.404062420129776 0.4365140199661255 0.4765838384628296
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			../editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+scene
+	nodes
+		2
+			4
+			5
+			6
+		3
+		7
+			8
+			9
+			10
+		11
+			12
+			13
+			14

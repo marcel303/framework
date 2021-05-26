@@ -1,0 +1,162 @@
+entity 1
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			root
+		attachedFromScene
+			
+
+entity 2
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			0.0 0.0 0.0
+		angleAxis
+			angle
+				237.55081176757813
+			axis
+				0.3912871479988098 0.8755285143852234 0.28345075249671938
+		scale
+			1.0
+		scale3
+			1.000004529953003 0.9999997615814209 1.0000057220458985
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.953000009059906 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	rotate-transform
+		enabled
+			true
+		editorFlags
+			0
+		speed
+			100.0
+
+entity 3
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Point Light
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			-2.792398691177368 2.792145252227783 -1.0543550252914429
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			1.0 1.0 1.0
+	light
+		enabled
+			true
+		editorFlags
+			0
+		type
+			point
+		intensity
+			20.288000106811525
+		color
+			1.0 1.0 1.0
+		secondaryColor
+			0.0 0.0 0.0
+		farDistance
+			10.0
+		attenuationBegin
+			0.0
+		spotAngle
+			90.0
+		castShadows
+			false
+
+entity 4
+	scene-node
+		enabled
+			true
+		editorFlags
+			0
+		name
+			Cube
+		attachedFromScene
+			
+	transform
+		enabled
+			true
+		editorFlags
+			0
+		position
+			4.286037445068359 0.0 -1.6308423280715943
+		angleAxis
+			angle
+				0.0
+			axis
+				1.0 0.0 0.0
+		scale
+			1.0
+		scale3
+			0.4040625989437103 0.43650558590888979 0.47658342123031618
+	gltf
+		enabled
+			true
+		editorFlags
+			0
+		filename
+			/Users/thecat/framework/users/marcel/sceneedit1/editor/data/templates/models/cube.gltf
+		rotation
+			angle
+				0.0
+			axis
+				0.0 1.0 0.0
+		scale
+			1.0
+		centimetersToMeters
+			false
+	audio-emitter
+		enabled
+			true
+		editorFlags
+			0
+
+scene
+	nodes
+		2
+			4
+		3
