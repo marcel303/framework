@@ -75,6 +75,9 @@ public:
 	virtual void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) = 0;
 
 	/// Draw a solid closed polygon provided in CCW order.
+	virtual void DrawFlatPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) = 0;
+	
+	/// Draw a solid closed polygon provided in CCW order.
 	virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) = 0;
 
 	/// Draw a circle.

@@ -619,7 +619,7 @@ void Test::InitializeParticleParameters(const uint32 filterMask)
 	}
 	m_particleParameterDef.values = m_particleParameters;
 	m_particleParameterDef.numValues = numValues;
-	//todo : TestMain::SetParticleParameters(&m_particleParameterDef, 1);
+	TestMain::SetParticleParameters(&m_particleParameterDef, 1);
 }
 
 // Restore default particle parameters.
@@ -627,8 +627,8 @@ void Test::RestoreParticleParameters()
 {
 	if (m_particleParameters)
 	{
-		//todo : TestMain::SetParticleParameters(
-		//todo :	ParticleParameter::k_defaultDefinition, 1);
+		TestMain::SetParticleParameters(
+			ParticleParameter::k_defaultDefinition, 1);
 		delete [] m_particleParameters;
 		m_particleParameters = NULL;
 	}

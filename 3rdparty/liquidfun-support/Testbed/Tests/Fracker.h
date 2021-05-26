@@ -792,7 +792,7 @@ public:
 		verts[3].Set(maxX, maxY);
 		if (fill)
 		{
-			//todo : m_debugDraw.DrawFlatPolygon(verts, 4, color);
+			m_debugDraw.DrawFlatPolygon(verts, 4, color);
 		}
 		else
 		{

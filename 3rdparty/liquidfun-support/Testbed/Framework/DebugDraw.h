@@ -41,6 +41,17 @@ struct DebugDraw : public b2Draw
 		popTransform();
 	}
 
+	virtual void DrawFlatPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
+	{
+		setColor(color.r, color.g, color.b, color.a);
+		gxBegin(GX_TRIANGLE_FAN);
+		{
+			for (int i = 0; i < vertexCount; ++i)
+				gxVertex2f(vertices[i].x, vertices[i].y);
+		}
+		gxEnd();
+	}
+
 	virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
 	{
 		pushTransform();
@@ -142,13 +153,33 @@ struct DebugDraw : public b2Draw
 	{
 		setColor(colorWhite);
 		
-		gxBegin(GX_POINTS);
+		radius /= 1.6f; // we get less overlapping circles when we make the radius a little smaller
+		
+		// pre-calculate offsets for drawing circles with the desired radius
+		
+		const int kNumSegments = 8;
+		float circle[kNumSegments + 1][2];
+		for (int s = 0; s < kNumSegments + 1; ++s)
+		{
+			const float angle = float(2.0 * M_PI) * s / float(kNumSegments);
+			circle[s][0] = cosf(angle) * radius;
+			circle[s][1] = sinf(angle) * radius;
+		}
+		
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i < particleCount; ++i)
 			{
 				if (colorBuffer != nullptr)
 					gxColor3ub(colorBuffer[i].r, colorBuffer[i].g, colorBuffer[i].b);
-				gxVertex2f(positionBuffer[i].x, positionBuffer[i].y);
+				
+				const b2Vec2& position = positionBuffer[i];
+				
+				for (int s = 0; s < kNumSegments; ++s)
+				{
+					gxVertex2f(position.x + circle[s + 0][0], position.y + circle[s + 0][1]);
+					gxVertex2f(position.x + circle[s + 1][0], position.y + circle[s + 1][1]);
+				}
 			}
 		}
 		gxEnd();

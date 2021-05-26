@@ -181,7 +181,7 @@ struct Settings
 	float32 stepTimeOut;
 };
 
-struct TestMain // todo : remove
+struct TestMain
 {
 	static void SetRestartOnParticleParameterChange(bool value);
 	static void SetParticleParameters(const ParticleParameter::Definition * params, uint32 count);
