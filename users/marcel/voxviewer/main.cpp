@@ -22,6 +22,8 @@
 
 #define USE_OPTIMIZED_SHADOW_SHADER 1
 
+#define ENABLE_IBL 1
+
 using namespace rOne;
 
 static void drawSky(Vec3Arg viewOrigin, Vec3Arg sunDirection, const bool equirectMode);
@@ -44,8 +46,7 @@ int main(int argc, char * argv[])
 	Renderer::registerShaderOutputs();
 	
 	MagicaWorld world;
-	//readMagicaWorld("marcel-01.vox", world);
-	//readMagicaWorld("monu7.vox", world);
+	//readMagicaWorld("marcel-02.vox", world);
 	readMagicaWorld("room.vox", world);
 
 	Camera3d camera;
@@ -93,7 +94,7 @@ int main(int argc, char * argv[])
 	
 	renderOptions.fxaa.enabled = true;
 	
-	renderOptions.colorGrading.enabled = false;
+	renderOptions.colorGrading.enabled = true;
 	
 	Renderer renderer;
 	
@@ -307,9 +308,11 @@ int main(int argc, char * argv[])
 					helper.setShaderData(shader, nextTextureUnit);
 					shadowMapDrawer.setShaderData(shader, nextTextureUnit, camera.getViewMatrix());
 				
-				// todo : make IBL part of the forward lighting helper
+				#if ENABLE_IBL
+				// todo : make IBL part of the forward lighting helper, or add IBL helper
 					shader.setTexture("ibl", nextTextureUnit++, skyTarget.getTexture(), true, false);
 					shader.setImmediateMatrix4x4("viewToWorld", camera.getViewMatrix().CalcInv().m_v);
+				#endif
 					
 					gxPushMatrix();
 					{
@@ -407,6 +410,11 @@ int main(int argc, char * argv[])
 							helper.setShaderData(shader, nextTextureUnit);
 							shadowMapDrawer.setShaderData(shader, nextTextureUnit, camera.getViewMatrix());
 							
+						#if ENABLE_IBL
+							shader.setTexture("ibl", nextTextureUnit++, skyTarget.getTexture(), true, false);
+							shader.setImmediateMatrix4x4("viewToWorld", camera.getViewMatrix().CalcInv().m_v);
+						#endif
+						
 							const int kNumCubes = 1000;
 							Vec3 positions[kNumCubes];
 							

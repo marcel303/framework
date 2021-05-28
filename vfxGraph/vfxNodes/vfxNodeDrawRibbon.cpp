@@ -110,7 +110,7 @@ void VfxNodeDrawRibbon::draw() const
 			gxColor4f(a1, a1, a1, 1.f); gxVertex3f(ribbon.x1[index1], ribbon.y1[index1], ribbon.z1[index1]);
 			gxColor4f(a2, a2, a2, 1.f); gxVertex3f(ribbon.x1[index2], ribbon.y1[index2], ribbon.z1[index2]);
 			gxColor4f(a2, a2, a2, 1.f); gxVertex3f(ribbon.x2[index2], ribbon.y2[index2], ribbon.z2[index2]);
-			gxColor4f(a2, a2, a2, 1.f); gxVertex3f(ribbon.x2[index1], ribbon.y2[index1], ribbon.z2[index1]);
+			gxColor4f(a1, a1, a1, 1.f); gxVertex3f(ribbon.x2[index1], ribbon.y2[index1], ribbon.z2[index1]);
 		}
 	}
 	gxEnd();

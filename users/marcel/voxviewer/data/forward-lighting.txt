@@ -3,6 +3,18 @@ include renderOne/forward-lighting/light-volume.txt
 include renderOne/light-attenuation-functions.txt
 include renderOne/shadow-mapping/shadow-mapping.txt
 
+#define ENABLE_IBL 1
+
+#if ENABLE_IBL
+include renderOne/equirect-functions.txt
+#endif
+
+#if ENABLE_IBL
+uniform sampler2D ibl;
+
+uniform mat4x4 viewToWorld;
+#endif
+
 vec3 s_position;
 vec3 s_normal;
 vec3 s_color;
@@ -67,6 +79,15 @@ void forEachLightId(int id)
 
 		if (shadowMapId != -1)
 			attenuation *= lookupShadow(shadowMapId, s_position).x;
+
+	#if ENABLE_IBL
+		vec3 direction = (viewToWorld * vec4(-s_normal, 0.0)).xyz;
+		vec2 uv = equirectDirectionToUv(direction);
+		uv.y = 1.0 - uv.y;
+		params.color = texture(ibl, uv).rgb;
+
+		//factor = 1.0;
+	#endif
 
 		s_color += (factor * attenuation) * params.color;
 	}
