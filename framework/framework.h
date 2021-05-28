@@ -76,11 +76,12 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 0
-	#define ENABLE_METAL 1
-	#define ENABLE_HQ_PRIMITIVES 1
-#elif !defined(ENABLE_OPENGL)
-	#define ENABLE_OPENGL 1
+#if !defined(ENABLE_OPENGL) && !defined(ENABLE_METAL)
+	#if (defined(MACOS) || defined(IPHONEOS)) && 0
+		#define ENABLE_METAL 1
+	#else
+		#define ENABLE_OPENGL 1
+	#endif
 #endif
 
 #if defined(IPHONEOS)
@@ -1024,6 +1025,8 @@ class ShaderBuffer
 public:
 	ShaderBuffer();
 	~ShaderBuffer();
+	
+	ShaderBuffer(const ShaderBuffer & other) = delete; // copying shader buffers by value is not allowed
 
 	void alloc(int numBytes);
 	void free();
