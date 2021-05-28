@@ -1,0 +1,5 @@
+in float a
+in float b
+out float result
+
+result = a + b;

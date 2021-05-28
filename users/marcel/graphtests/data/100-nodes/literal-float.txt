@@ -1,0 +1,4 @@
+in float value
+out float result
+
+result = value;

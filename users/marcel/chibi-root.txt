@@ -38,7 +38,7 @@ add gltf2
 add gpuParticles1
 add gpupath1
 add gradlegen1
-#add graphtests
+add graphtests
 push_group thegrooop
 	add grooop-cocompose
 	add grooop-thetribe

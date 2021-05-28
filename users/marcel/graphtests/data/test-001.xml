@@ -1,0 +1,39 @@
+<graph nextNodeId="7" nextLinkId="10">
+    <node id="1" typeName="io.output">
+        <input socket="name" value="color"/>
+        <input socket="w" value="1.000000"/>
+    </node>
+    <node id="2" typeName="io.input.float">
+        <input socket="name" value="time"/>
+    </node>
+    <node id="3" typeName="math.sine.float"/>
+    <node id="4" typeName="math.map.float">
+        <input socket="result_min" value="0.100000"/>
+        <input socket="value_min" value="-1.000000"/>
+    </node>
+    <node id="6" typeName="math.multiply.float">
+        <input socket="b" value="10.000000"/>
+    </node>
+    <link id="3" srcNodeId="1" srcNodeSocketName="x" dstNodeId="4" dstNodeSocketName="result"/>
+    <link id="7" srcNodeId="6" srcNodeSocketName="a" dstNodeId="2" dstNodeSocketName="result"/>
+    <link id="8" srcNodeId="3" srcNodeSocketName="angle" dstNodeId="6" dstNodeSocketName="result"/>
+    <link id="9" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="_cos"/>
+    <editor nextZKey="18">
+        <dragAndZoom x="75.975975036621094" y="7.8388032913208008" zoom="1.1000000238418579"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="430.59683227539062" y="6" zKey="11"/>
+            <nodeData nodeId="2" x="-276.05364990234375" y="-32" zKey="12"/>
+            <nodeData nodeId="3" x="114.19041442871094" y="27" zKey="7"/>
+            <nodeData nodeId="4" x="273.01089477539062" y="26" zKey="17"/>
+            <nodeData nodeId="6" x="-110.364013671875" y="26.472808837890625" zKey="16"/>
+        </nodeDatas>
+        <visualizers/>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" showSocketNames="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="1" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="0" b="0" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

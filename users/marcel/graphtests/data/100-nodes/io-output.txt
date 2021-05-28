@@ -1,0 +1,8 @@
+in string name
+in float x
+in float y
+in float z
+in float w
+out vec4 result
+
+result = vec4(x, y, z, w);

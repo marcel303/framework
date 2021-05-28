@@ -1,0 +1,16 @@
+in float value
+in float value_min
+in float value_max 1.0
+in float result_min
+in float result_max 1.0
+in bool clamp_result
+out float result
+
+--
+
+float value_range = value_max - value_min;
+float t = (value - value_min) / value_range;
+if (clamp_result)
+	t = clamp(t, 0.0, 1.0);
+float result_range = result_max - result_min;
+result = result_min + result_range * t;

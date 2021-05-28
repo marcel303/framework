@@ -1,0 +1,9 @@
+app graphtests-100-shaderGraph
+	depend_library libavgraph
+	depend_library framework
+	add_files 100-shaderGraph.cpp
+	resource_path data
+
+app graphtests-700-flowers
+	depend_library framework
+	add_files 700-flowers.cpp

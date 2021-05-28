@@ -1,0 +1,4 @@
+in string name
+out float result
+
+/* shader generation will detect this type and generate the uniform for us */

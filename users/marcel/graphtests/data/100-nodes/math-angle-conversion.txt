@@ -1,0 +1,7 @@
+in float radians
+in float degrees
+out float degrees
+out float radians
+
+degrees = radians / 3.14 * 180.0
+radians = degrees * 3.14 / 180.0
