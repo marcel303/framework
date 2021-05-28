@@ -30,7 +30,8 @@
 #include "AudioOutput_PortAudio.h"
 #include "Debugging.h"
 #include "Log.h"
-#include <algorithm>
+#include <algorithm> // std::min, max
+#include <math.h> // roundf
 #include <string.h>
 
 #if LINUX

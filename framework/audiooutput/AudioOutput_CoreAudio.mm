@@ -38,6 +38,9 @@
 
 #include <mach/mach_time.h> // mach_timebase_info
 
+#include <algorithm> // std::min, max
+#include <math.h> // roundf
+
 /*
 
 from : https://developer.apple.com/library/archive/documentation/MusicAudio/Conceptual/AudioUnitHostingGuide_iOS/AudioUnitHostingFundamentals/AudioUnitHostingFundamentals.html#//apple_ref/doc/uid/TP40009492-CH3-SW11,
