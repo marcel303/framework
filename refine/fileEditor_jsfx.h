@@ -14,6 +14,8 @@ struct SDL_mutex;
 
 class RtMidiIn;
 
+class SoundData;
+
 struct MidiBuffer
 {
 	static const int kMaxBytes = 1000 * 3;
@@ -121,7 +123,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		kAudioSource_Sine,
 		kAudioSource_Tent,
 		kAudioSource_AudioInterface,
-		kAudioSource_Sample // todo : add sample-based audio source
+		kAudioSource_Sample
 	};
 	
 	JsusFx_Framework jsusFx;
@@ -159,6 +161,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	int volume = 25;
 	int frequency = 440;
 	int sharpness = 0;
+	std::string samplePath;
 	
 	struct Synthesis
 	{
@@ -178,6 +181,8 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		RNG::PinkNumber pinkNumber;
 		float sinePhase = 0.f;
 		float tentPhase = 0.f;
+		SoundData * sampleData = nullptr;
+		int64_t samplePosition = 0;
 	} synthesis;
 
 	MidiBuffer midiBuffer;

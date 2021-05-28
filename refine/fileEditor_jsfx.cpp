@@ -4,6 +4,7 @@
 #include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 
+#include "audio.h"
 #include "fileEditor_jsfx.h"
 #include "framework.h"
 #include "imgui.h"
@@ -16,12 +17,14 @@
 	#include "rtmidi/RtMidi.h"
 #endif
 
+#include "nfd.h"
+
 #define MIDI_OFF 0x80
 #define MIDI_ON 0x90
 
 static const bool kShowHiddenSliders = true;
 
-void doMidiKeyboard(
+static void doMidiKeyboard(
 	MidiKeyboard & kb,
 	const int mouseX,
 	const int mouseY,
@@ -31,6 +34,7 @@ void doMidiKeyboard(
 	const bool isFocused,
 	const int sx,
 	const int sy,
+	SDL_mutex * mutex,
 	bool & inputIsCaptured)
 {
 	const int kOctavePadding = 4;
@@ -84,13 +88,21 @@ void doMidiKeyboard(
 
 					const uint8_t message[3] = { MIDI_ON, (uint8_t)kb.getNote(i), uint8_t(velocity * 127) };
 					
-					midiBuffer.append(message, 3);
+					Verify(SDL_LockMutex(mutex) == 0);
+					{
+						midiBuffer.append(message, 3);
+					}
+					Verify(SDL_UnlockMutex(mutex) == 0);
 				}
 				else
 				{
 					const uint8_t message[3] = { MIDI_OFF, (uint8_t)kb.getNote(i), uint8_t(velocity * 127) };
 
-					midiBuffer.append(message, 3);
+					Verify(SDL_LockMutex(mutex) == 0);
+					{
+						midiBuffer.append(message, 3);
+					}
+					Verify(SDL_UnlockMutex(mutex) == 0);
 
 					key.isDown = false;
 				}
@@ -368,11 +380,10 @@ void FileEditor_JsusFx::portAudioCallback(
 	else if (audioSource == kAudioSource_PinkNoise)
 	{
 		const float scale1 = 1.f / (1 << 16);
-		const float scale2 = 2.f * volume;
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			const float value = (synthesis.pinkNumber.next() * scale1 - .5f) * scale2;
+			const float value = (synthesis.pinkNumber.next() * scale1 - .5f) * 2.f;
 			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
@@ -382,7 +393,7 @@ void FileEditor_JsusFx::portAudioCallback(
 	{
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			const float value = random(-1.f, +1.f) * volume;
+			const float value = random(-1.f, +1.f);
 			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
@@ -397,7 +408,7 @@ void FileEditor_JsusFx::portAudioCallback(
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			const float value = sinf(synthesis.sinePhase) * volume;
+			const float value = sinf(synthesis.sinePhase);
 			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
@@ -427,8 +438,6 @@ void FileEditor_JsusFx::portAudioCallback(
 			// clamp : -1.0 --> +1.0 --> -1.0 (with sharpness applied)
 			value = value < -1.f ? -1.f : value > +1.f ? +1.f : value;
 			
-			value *= volume;
-			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
 			
@@ -447,6 +456,67 @@ void FileEditor_JsusFx::portAudioCallback(
 			inputSamples[1][i] = numInputChannels >= 2 ? input[i * numInputChannels + 1] : inputSamples[0][i];
 		}
 	}
+	else if (audioSource == kAudioSource_Sample)
+	{
+		Verify(SDL_LockMutex(mutex) == 0);
+		{
+			auto * sample = synthesis.sampleData;
+			
+			if (sample != nullptr &&
+				sample->sampleCount > 0 &&
+				sample->channelSize == 2 &&
+				(sample->channelCount == 1 || sample->channelCount == 2))
+			{
+				const int16_t * __restrict samples = (int16_t*)sample->sampleData;
+				
+				const int64_t positionIncrement = (int64_t(sample->sampleRate) << 32) / 44100;
+				
+				const float scale = 1.f / (1 << 15);
+				
+				if (sample->channelCount == 1)
+				{
+					for (int i = 0; i < framesPerBuffer; ++i)
+					{
+						const int index = (synthesis.samplePosition >> 32) % sample->sampleCount;
+						
+						inputSamples[0][i] = samples[index] * scale;
+						inputSamples[1][i] = samples[index] * scale;
+						
+						synthesis.samplePosition += positionIncrement;
+					}
+				}
+				else
+				{
+					for (int i = 0; i < framesPerBuffer; ++i)
+					{
+						const int index = (synthesis.samplePosition >> 32) % sample->sampleCount;
+						
+						inputSamples[0][i] = samples[index * 2 + 0] * scale;
+						inputSamples[1][i] = samples[index * 2 + 1] * scale;
+						
+						synthesis.samplePosition += positionIncrement;
+					}
+				}
+			}
+			else
+			{
+				for (int i = 0; i < framesPerBuffer; ++i)
+				{
+					inputSamples[0][i] = 0;
+					inputSamples[1][i] = 0;
+				}
+			}
+		}
+		Verify(SDL_UnlockMutex(mutex) == 0);
+	}
+	
+	// apply volume
+	
+	for (int i = 0; i < framesPerBuffer; ++i)
+	{
+		inputSamples[0][i] *= volume;
+		inputSamples[1][i] *= volume;
+	}
 	
 	float outputSamples[2][256];
 	
@@ -455,13 +525,13 @@ void FileEditor_JsusFx::portAudioCallback(
 	
 	MidiBuffer midiBufferCopy;
 
-	SDL_LockMutex(mutex);
+	Verify(SDL_LockMutex(mutex) == 0);
 	{
 		midiBufferCopy = midiBuffer;
 
 		midiBuffer.numBytes = 0;
 	}
-	SDL_UnlockMutex(mutex);
+	Verify(SDL_UnlockMutex(mutex) == 0);
 
 	jsusFx.setMidi(midiBufferCopy.bytes, midiBufferCopy.numBytes);
 	
@@ -490,7 +560,8 @@ void FileEditor_JsusFx::doButtonBar()
 		"White noise",
 		"Sine wave",
 		"Tent wave",
-		"Audio Interface"
+		"Audio Interface",
+		"File"
 	};
 	
 	if (ImGui::BeginMenu("Audio source"))
@@ -504,12 +575,65 @@ void FileEditor_JsusFx::doButtonBar()
 		
 		if (ImGui::SliderInt("Volume", &volume, 0, 100))
 			updateSynthesisParams();
+				
+		if (this->audioSource == kAudioSource_Sine ||
+			this->audioSource == kAudioSource_Tent)
+		{
+			if (ImGui::SliderInt("Hz", &frequency, 0, 4000))
+				updateSynthesisParams();
+		}
 		
-		if (ImGui::SliderInt("Hz", &frequency, 0, 4000))
-			updateSynthesisParams();
+		if (this->audioSource == kAudioSource_Tent)
+		{
+			if (ImGui::SliderInt("Sharpness", &sharpness, 0, 100))
+				updateSynthesisParams();
+		}
 		
-		if (ImGui::SliderInt("Sharpness", &sharpness, 0, 100))
-			updateSynthesisParams();
+		if (this->audioSource == kAudioSource_Sample)
+		{
+			char path[1024];
+			strcpy_s(path, sizeof(path), samplePath.c_str());
+			
+			ImGui::InputText("Path", path, sizeof(path));
+			
+			ImGui::SameLine();
+			if (ImGui::Button(".."))
+			{
+				nfdchar_t * nfd_path = 0;
+				nfdresult_t result = NFD_OpenDialog("", path, &nfd_path);
+
+				if (result == NFD_OKAY)
+				{
+					strcpy_s(path, sizeof(path), nfd_path);
+				}
+				
+				if (nfd_path != nullptr)
+				{
+					free(nfd_path);
+					nfd_path = nullptr;
+				}
+			}
+			
+			if (path != samplePath)
+			{
+				SoundData * newSampleData = loadSound(path);
+				
+				if (newSampleData != nullptr)
+				{
+					samplePath = path;
+					
+					Verify(SDL_LockMutex(mutex) == 0);
+					{
+						std::swap(synthesis.sampleData, newSampleData);
+						synthesis.samplePosition = 0;
+					}
+					Verify(SDL_UnlockMutex(mutex) == 0);
+					
+					delete newSampleData;
+					newSampleData = nullptr;
+				}
+			}
+		}
 		
 		ImGui::EndMenu();
 	}
@@ -608,6 +732,7 @@ bool FileEditor_JsusFx::reflect(TypeDB & typeDB, StructuredType & type)
 	type.add("volume", &FileEditor_JsusFx::volume);
 	type.add("frequency", &FileEditor_JsusFx::frequency);
 	type.add("sharpness", &FileEditor_JsusFx::sharpness);
+	type.add("samplePath", &FileEditor_JsusFx::samplePath);
 	
 	return true;
 }
@@ -633,6 +758,11 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 		if (isValid)
 		{
 			mutex = SDL_CreateMutex();
+			
+			if (samplePath.empty() == false)
+			{
+				synthesis.sampleData = loadSound(samplePath.c_str());
+			}
 
 			jsusFx.prepare(44100, 256);
 			
@@ -684,6 +814,7 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 			midiKeyboardWindow.isFocused,
 			sx,
 			sy,
+			mutex,
 			inputIsCaptured);
 	}
 
@@ -796,6 +927,7 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 				midiKeyboardWindow.isFocused,
 				sx,
 				sy,
+				mutex,
 				inputIsCaptured);
 		}
 		gxPopMatrix();
