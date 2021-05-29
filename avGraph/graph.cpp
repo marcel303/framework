@@ -285,6 +285,16 @@ GraphLink * Graph::tryGetLink(const GraphLinkId linkId)
 		return &linkItr->second;
 }
 
+const GraphNode * Graph::tryGetNode(const GraphNodeId nodeId) const
+{
+	return const_cast<Graph*>(this)->tryGetNode(nodeId);
+}
+
+const GraphLink * Graph::tryGetLink(const GraphLinkId linkId) const
+{
+	return const_cast<Graph*>(this)->tryGetLink(linkId);
+}
+
 bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	Assert(nodes.empty());

@@ -175,6 +175,9 @@ struct Graph
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
 	GraphLink * tryGetLink(const GraphLinkId linkId);
 	
+	const GraphNode * tryGetNode(const GraphNodeId nodeId) const;
+	const GraphLink * tryGetLink(const GraphLinkId linkId) const;
+	
 	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
 	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary) const;
 	
