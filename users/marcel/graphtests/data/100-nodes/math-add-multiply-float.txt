@@ -1,6 +1,6 @@
 in float value
 in float add
-in float mul
+in float mul 1.0
 out float result
 
 if (isPassthrough)

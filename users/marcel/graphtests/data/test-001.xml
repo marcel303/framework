@@ -12,7 +12,7 @@
         <input socket="value_min" value="-1.000000"/>
     </node>
     <node id="6" typeName="math.multiply.float">
-        <input socket="b" value="10.000000"/>
+        <input socket="mul" value="10.000000"/>
     </node>
     <node id="7" typeName="ps.input">
         <input socket="name" value="bam"/>
@@ -52,27 +52,27 @@
         <input socket="name" value="time"/>
     </node>
     <node id="26" typeName="math.multiply.float">
-        <input socket="b" value="13.000000"/>
+        <input socket="mul" value="13.000000"/>
     </node>
     <node id="27" typeName="math.multiply.float">
-        <input socket="b" value="0.300000"/>
+        <input socket="mul" value="0.300000"/>
     </node>
     <node id="28" typeName="math.multiply.float">
-        <input socket="b" value="5.000000"/>
+        <input socket="mul" value="5.000000"/>
     </node>
     <node id="29" typeName="math.add.float"/>
     <node id="30" typeName="math.sine.float"/>
     <node id="31" typeName="math.multiply.float">
-        <input socket="b" value="1.000000"/>
+        <input socket="mul" value="1.000000"/>
     </node>
     <node id="32" typeName="math.add.float"/>
     <node id="33" typeName="immediate.float">
         <input socket="name" value="time"/>
     </node>
     <node id="34" typeName="math.multiply.float">
-        <input socket="b" value="10.000000"/>
+        <input socket="mul" value="10.000000"/>
     </node>
-    <link id="7" srcNodeId="6" srcNodeSocketName="a" dstNodeId="2" dstNodeSocketName="result"/>
+    <link id="7" srcNodeId="6" srcNodeSocketName="value" dstNodeId="2" dstNodeSocketName="result"/>
     <link id="8" srcNodeId="3" srcNodeSocketName="angle" dstNodeId="6" dstNodeSocketName="result"/>
     <link id="9" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="_cos"/>
     <link id="10" srcNodeId="9" srcNodeSocketName="xyzw" dstNodeId="8" dstNodeSocketName="result"/>
@@ -93,19 +93,19 @@
     <link id="36" srcNodeId="23" srcNodeSocketName="y" dstNodeId="22" dstNodeSocketName="y"/>
     <link id="37" srcNodeId="23" srcNodeSocketName="z" dstNodeId="22" dstNodeSocketName="z"/>
     <link id="38" srcNodeId="23" srcNodeSocketName="w" dstNodeId="22" dstNodeSocketName="w"/>
-    <link id="46" srcNodeId="26" srcNodeSocketName="a" dstNodeId="22" dstNodeSocketName="z"/>
-    <link id="47" srcNodeId="27" srcNodeSocketName="a" dstNodeId="20" dstNodeSocketName="_cos"/>
+    <link id="46" srcNodeId="26" srcNodeSocketName="value" dstNodeId="22" dstNodeSocketName="z"/>
+    <link id="47" srcNodeId="27" srcNodeSocketName="value" dstNodeId="20" dstNodeSocketName="_cos"/>
     <link id="48" srcNodeId="21" srcNodeSocketName="add" dstNodeId="27" dstNodeSocketName="result"/>
-    <link id="50" srcNodeId="28" srcNodeSocketName="a" dstNodeId="24" dstNodeSocketName="result"/>
+    <link id="50" srcNodeId="28" srcNodeSocketName="value" dstNodeId="24" dstNodeSocketName="result"/>
     <link id="51" srcNodeId="29" srcNodeSocketName="value" dstNodeId="28" dstNodeSocketName="result"/>
     <link id="52" srcNodeId="20" srcNodeSocketName="angle" dstNodeId="29" dstNodeSocketName="result"/>
     <link id="53" srcNodeId="29" srcNodeSocketName="add" dstNodeId="26" dstNodeSocketName="result"/>
     <link id="54" srcNodeId="17" srcNodeSocketName="xyzw" dstNodeId="23" dstNodeSocketName="xyzw"/>
     <link id="56" srcNodeId="32" srcNodeSocketName="value" dstNodeId="31" dstNodeSocketName="result"/>
     <link id="57" srcNodeId="30" srcNodeSocketName="angle" dstNodeId="32" dstNodeSocketName="result"/>
-    <link id="60" srcNodeId="31" srcNodeSocketName="a" dstNodeId="33" dstNodeSocketName="result"/>
-    <link id="61" srcNodeId="26" srcNodeSocketName="b" dstNodeId="34" dstNodeSocketName="result"/>
-    <link id="62" srcNodeId="34" srcNodeSocketName="a" dstNodeId="30" dstNodeSocketName="_cos"/>
+    <link id="60" srcNodeId="31" srcNodeSocketName="value" dstNodeId="33" dstNodeSocketName="result"/>
+    <link id="61" srcNodeId="26" srcNodeSocketName="mul" dstNodeId="34" dstNodeSocketName="result"/>
+    <link id="62" srcNodeId="34" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="_cos"/>
     <editor nextZKey="231">
         <dragAndZoom x="-571.667724609375" y="465.14239501953125" zoom="1"/>
         <nodeDatas>

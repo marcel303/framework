@@ -8,7 +8,7 @@ include renderOne/forward-lighting.txt
 
 vec3 renderOne_lighting()
 {
-
+	return vec3(0.0);
 }
 
 --

@@ -188,19 +188,23 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 			{
 				// -- [options..]
 				
+				std::vector<std::string> parts;
+				splitString(line, parts);
+				
 				// todo : handle options
 				
-				if (false)
+				for (size_t i = 1; i < parts.size(); ++i)
 				{
-					// todo : handle options here
+					if (false)
+					{
+						// todo : handle options here
+					}
+					else
+					{
+						logError("unknown option(s): %s", parts[i].c_str());
+						failed = true;
+					}
 				}
-				else
-				{
-					logError("unknown option(s): %s", line.c_str());
-					failed = true;
-				}
-				
-				continue;
 			}
 			else
 			{
@@ -209,7 +213,7 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 			}
 		}
 		
-		logDebug("shaderText: %s", shaderText.c_str());
+		//logDebug("shaderText: %s", shaderText.c_str());
 		
 		// set description for specific nodes
 		
@@ -393,10 +397,19 @@ static bool generateShaderText_traverse(
 			{
 				auto & name = name_itr->second;
 				
-				shaderText.AppendFormat("%s%s = %s;\n",
-					srcScopeName.c_str(),
-					"result",
-					name.c_str());
+				if (srcNode->isPassthrough)
+				{
+					shaderText.AppendFormat("%s%s = 0.0;\n",
+						srcScopeName.c_str(),
+						"result");
+				}
+				else
+				{
+					shaderText.AppendFormat("%s%s = %s;\n",
+						srcScopeName.c_str(),
+						"result",
+						name.c_str());
+				}
 			}
 		}
 		else if (srcType->typeName == "vs.input")
@@ -787,7 +800,8 @@ static bool generatePsShaderText(
 		{
 			auto & node = node_itr.second;
 			
-			// todo : we don't skip for passthrough nodes here. maybe we should, but in that case we should define a global vec4 set to zero
+			if (node.isPassthrough)
+				continue;
 			
 			if (node.typeName == "immediate.float")
 			{
