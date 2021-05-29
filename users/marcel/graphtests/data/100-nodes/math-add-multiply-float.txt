@@ -1,7 +1,9 @@
 in float value
+in float add
+in float mul
 out float result
 
 if (isPassthrough)
-	result = 0.0;
-else
 	result = value;
+else
+	result = (value + add) * mul;

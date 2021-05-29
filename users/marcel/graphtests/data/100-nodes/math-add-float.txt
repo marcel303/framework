@@ -1,5 +1,8 @@
-in float a
-in float b
+in float value
+in float add
 out float result
 
-result = a + b;
+if (isPassthrough)
+	result = value;
+else
+	result = value + add;

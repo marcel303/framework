@@ -1,7 +1,15 @@
-in float radians
-in float degrees
+in float _radians
+in float _degrees
 out float degrees
 out float radians
 
-degrees = radians / 3.14 * 180.0
-radians = degrees * 3.14 / 180.0
+if (isPassthrough)
+{
+	degrees = _radians;
+	radians = _degrees;
+}
+else
+{
+	degrees = _radians / 3.14 * 180.0;
+	radians = _degrees * 3.14 / 180.0;
+}

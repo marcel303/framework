@@ -1,0 +1,7 @@
+in vec4 xyzw
+out vec4 result
+
+if (isPassthrough)
+	result = xyzw;
+else
+	result = objectToProjection(xyzw);

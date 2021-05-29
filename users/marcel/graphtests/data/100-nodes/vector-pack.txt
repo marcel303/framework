@@ -2,9 +2,9 @@ in float x
 in float y
 in float z
 in float w
-out vec4 result
+out vec4 xyzw
 
 if (isPassthrough)
-	result = vec4(0.0);
+	xyzw = vec4(0.0);
 else
-	result = vec4(x, y, z, w);
+	xyzw = vec4(x, y, z, w);

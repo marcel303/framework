@@ -1,0 +1,3 @@
+in string name
+in bool _normalize
+out vec4 result

@@ -1,0 +1,3 @@
+in float value
+in enum mode 0:"[-1, +1] to [0, 1]" 1:"[0, 1] to [-1, +1]"
+out float result

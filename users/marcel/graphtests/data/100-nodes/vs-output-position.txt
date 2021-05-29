@@ -1,0 +1,10 @@
+in vec4 xyzw
+in bool _objectToProjection true
+
+if (isPassthrough == false)
+{
+	if (_objectToProjection)
+		gl_Position = objectToProjection(xyzw);
+	else
+		gl_Position = xyzw;
+}

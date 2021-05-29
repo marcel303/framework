@@ -2,5 +2,13 @@ in float angle
 out float _cos
 out float _sin
 
-_cos = cos(angle);
-_sin = sin(angle);
+if (isPassthrough)
+{
+	_cos = 0.0;
+	_sin = 0.0;
+}
+else
+{
+	_cos = cos(angle);
+	_sin = sin(angle);
+}

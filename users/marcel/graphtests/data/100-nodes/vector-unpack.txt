@@ -1,0 +1,15 @@
+in vec4 xyzw
+out float x
+out float y
+out float z
+out float w
+
+if (isPassthrough)
+	x = y = z = w = 0.0;
+else
+{
+	x = xyzw.x;
+	y = xyzw.y;
+	z = xyzw.z;
+	w = xyzw.w;
+}
