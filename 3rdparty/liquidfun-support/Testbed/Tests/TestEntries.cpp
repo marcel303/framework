@@ -19,14 +19,7 @@
 
 #include "../Framework/Test.h"
 #include "../Framework/DebugDraw.h"
-//#include "../Framework/Main.h"
 #include "../Framework/ParticleParameter.h"
-
-#if defined(__APPLE__) && !defined(__IOS__)
-	#include <GLUT/glut.h>
-#else
-	#include "GL/freeglut.h"
-#endif
 
 #include "AddPair.h"
 #include "ApplyForce.h"
