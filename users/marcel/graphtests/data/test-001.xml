@@ -1,4 +1,4 @@
-<graph nextNodeId="35" nextLinkId="63">
+<graph nextNodeId="39" nextLinkId="70">
     <node id="1" typeName="ps.output">
         <input socket="name" value="color"/>
         <input socket="w" value="1.000000"/>
@@ -72,13 +72,18 @@
     <node id="34" typeName="math.multiply.float">
         <input socket="mul" value="10.000000"/>
     </node>
+    <node id="35" typeName="math.add.float"/>
+    <node id="36" typeName="math.multiply.float">
+        <input socket="mul" value="0.300000"/>
+    </node>
+    <node id="37" typeName="literal.color"/>
+    <node id="38" typeName="vector.unpack"/>
     <link id="7" srcNodeId="6" srcNodeSocketName="value" dstNodeId="2" dstNodeSocketName="result"/>
     <link id="8" srcNodeId="3" srcNodeSocketName="angle" dstNodeId="6" dstNodeSocketName="result"/>
     <link id="9" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="_cos"/>
     <link id="10" srcNodeId="9" srcNodeSocketName="xyzw" dstNodeId="8" dstNodeSocketName="result"/>
     <link id="11" srcNodeId="10" srcNodeSocketName="xyzw" dstNodeId="7" dstNodeSocketName="result"/>
     <link id="14" srcNodeId="11" srcNodeSocketName="value" dstNodeId="10" dstNodeSocketName="x"/>
-    <link id="19" srcNodeId="1" srcNodeSocketName="x" dstNodeId="11" dstNodeSocketName="result"/>
     <link id="20" srcNodeId="1" srcNodeSocketName="y" dstNodeId="13" dstNodeSocketName="result"/>
     <link id="21" srcNodeId="1" srcNodeSocketName="z" dstNodeId="12" dstNodeSocketName="result"/>
     <link id="22" srcNodeId="11" srcNodeSocketName="add" dstNodeId="4" dstNodeSocketName="result"/>
@@ -90,7 +95,6 @@
     <link id="33" srcNodeId="22" srcNodeSocketName="xyzw" dstNodeId="18" dstNodeSocketName="result"/>
     <link id="34" srcNodeId="21" srcNodeSocketName="value" dstNodeId="22" dstNodeSocketName="x"/>
     <link id="35" srcNodeId="23" srcNodeSocketName="x" dstNodeId="21" dstNodeSocketName="result"/>
-    <link id="36" srcNodeId="23" srcNodeSocketName="y" dstNodeId="22" dstNodeSocketName="y"/>
     <link id="37" srcNodeId="23" srcNodeSocketName="z" dstNodeId="22" dstNodeSocketName="z"/>
     <link id="38" srcNodeId="23" srcNodeSocketName="w" dstNodeId="22" dstNodeSocketName="w"/>
     <link id="46" srcNodeId="26" srcNodeSocketName="value" dstNodeId="22" dstNodeSocketName="z"/>
@@ -106,8 +110,14 @@
     <link id="60" srcNodeId="31" srcNodeSocketName="value" dstNodeId="33" dstNodeSocketName="result"/>
     <link id="61" srcNodeId="26" srcNodeSocketName="mul" dstNodeId="34" dstNodeSocketName="result"/>
     <link id="62" srcNodeId="34" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="_cos"/>
-    <editor nextZKey="231">
-        <dragAndZoom x="-571.667724609375" y="465.14239501953125" zoom="1"/>
+    <link id="63" srcNodeId="35" srcNodeSocketName="value" dstNodeId="22" dstNodeSocketName="y"/>
+    <link id="64" srcNodeId="23" srcNodeSocketName="y" dstNodeId="35" dstNodeSocketName="result"/>
+    <link id="66" srcNodeId="36" srcNodeSocketName="value" dstNodeId="20" dstNodeSocketName="_cos"/>
+    <link id="67" srcNodeId="35" srcNodeSocketName="add" dstNodeId="36" dstNodeSocketName="result"/>
+    <link id="68" srcNodeId="38" srcNodeSocketName="xyzw" dstNodeId="37" dstNodeSocketName="result"/>
+    <link id="69" srcNodeId="1" srcNodeSocketName="x" dstNodeId="38" dstNodeSocketName="x"/>
+    <editor nextZKey="244">
+        <dragAndZoom x="611.4677734375" y="104.61128997802734" zoom="0.87823706865310669"/>
         <nodeDatas>
             <nodeData nodeId="1" x="800" y="48" zKey="117"/>
             <nodeData nodeId="2" x="-272" y="-32" zKey="167"/>
@@ -117,7 +127,7 @@
             <nodeData nodeId="7" x="272" y="224" zKey="113"/>
             <nodeData nodeId="8" x="16" y="224" zKey="133"/>
             <nodeData nodeId="9" x="144" y="224" zKey="118"/>
-            <nodeData nodeId="10" x="400" y="224" zKey="112"/>
+            <nodeData nodeId="10" x="400" y="224" zKey="241"/>
             <nodeData nodeId="11" x="576" y="192" zKey="67" folded="1"/>
             <nodeData nodeId="12" x="576" y="256" zKey="115" folded="1"/>
             <nodeData nodeId="13" x="576" y="224" zKey="114" folded="1"/>
@@ -126,19 +136,23 @@
             <nodeData nodeId="17" x="224" y="560" zKey="218"/>
             <nodeData nodeId="18" x="-784" y="400" zKey="145"/>
             <nodeData nodeId="20" x="-256" y="240" zKey="189"/>
-            <nodeData nodeId="21" x="-64" y="400" zKey="188"/>
+            <nodeData nodeId="21" x="-64" y="400" zKey="231"/>
             <nodeData nodeId="22" x="-656" y="400" zKey="157"/>
             <nodeData nodeId="23" x="80" y="560" zKey="154"/>
             <nodeData nodeId="24" x="-656" y="208" zKey="225"/>
             <nodeData nodeId="26" x="-512" y="304" zKey="219"/>
-            <nodeData nodeId="27" x="-224" y="336" zKey="192"/>
+            <nodeData nodeId="27" x="-224" y="336" zKey="239"/>
             <nodeData nodeId="28" x="-511.15399169921875" y="208" zKey="212"/>
-            <nodeData nodeId="29" x="-383.626953125" y="229.68217468261719" zKey="205"/>
+            <nodeData nodeId="29" x="-384" y="224" zKey="233"/>
             <nodeData nodeId="30" x="-816" y="288" zKey="220"/>
             <nodeData nodeId="31" x="-1072" y="256" zKey="230"/>
             <nodeData nodeId="32" x="-944" y="272" zKey="224"/>
             <nodeData nodeId="33" x="-1200" y="240" zKey="227"/>
             <nodeData nodeId="34" x="-672" y="304" zKey="229"/>
+            <nodeData nodeId="35" x="-80" y="496" zKey="232"/>
+            <nodeData nodeId="36" x="-224" y="416" zKey="238"/>
+            <nodeData nodeId="37" x="432" y="-0" zKey="243"/>
+            <nodeData nodeId="38" x="576" y="16" zKey="242"/>
         </nodeDatas>
         <visualizers/>
         <comments/>

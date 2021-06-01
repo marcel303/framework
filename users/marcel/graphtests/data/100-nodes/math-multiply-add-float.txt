@@ -1,5 +1,5 @@
 in float value
-in float mul
+in float mul 1.0
 in float add
 out float result
 

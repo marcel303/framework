@@ -12,7 +12,13 @@
 #include <string>
 #include <string.h> // strcmp
 
+#include "data/engine/ShaderCommon.txt" // VS_ constants
+
 // todo : add support for true literal inputs : generate static branching, don't allow inputs to be connected
+
+// todo : regenerate shader text when a file dependency changes
+	// - keep track of all file dependencies
+	// - handle file changes. dependencies in a set for fast dirty check
 
 /*
 
@@ -28,7 +34,15 @@ VS/PS nodes
 	immediate.float -- uniform
 	
 */
-static std::map<std::string, std::string> s_shaderNodeToShaderText;
+
+struct ShaderText
+{
+	std::vector<std::string> lines;
+};
+
+static std::map<std::string, ShaderText> s_shaderNodeToShaderText;
+
+static std::map<std::string, std::string> s_shaderNodeFileToShaderNodeName;
 
 /**
  * Scan shader nodes using a given path.
@@ -93,7 +107,7 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 		Graph_TypeDefinition typeDefinition;
 		typeDefinition.typeName = String::Replace(Path::GetBaseName(file), '-', '.');
 		
-		std::string shaderText;
+		ShaderText shaderText;
 		
 		for (auto & line : lines)
 		{
@@ -208,9 +222,23 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 			}
 			else
 			{
-				shaderText.append(line);
-				shaderText.push_back('\n');
+				if (shaderText.lines.empty() && line.empty())
+				{
+					// ignore the first empty line(s) to make the generated text more pretty
+				}
+				else
+				{
+					shaderText.lines.push_back(line);
+					shaderText.lines.back().push_back('\n');
+				}
 			}
+		}
+		
+		// remove trailing empty line(s) to make the generated text more pretty
+		
+		while (shaderText.lines.empty() == false && shaderText.lines.back().empty())
+		{
+			shaderText.lines.pop_back();
 		}
 		
 		//logDebug("shaderText: %s", shaderText.c_str());
@@ -251,9 +279,70 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 			s_shaderNodeToShaderText[typeDefinition.typeName] = shaderText;
 			
 			types.typeDefinitions[typeDefinition.typeName] = typeDefinition;
+			
+			s_shaderNodeFileToShaderNodeName[file] = typeDefinition.typeName;
 		}
 	}
 }
+
+class ShaderTextWriter
+{
+	static const int kStringBufferSize = 1 << 12;
+	
+	std::string m_text;
+	
+	int m_indent = 0;
+	
+public:
+	ShaderTextWriter()
+	{
+		m_text.reserve(1 << 16);
+	}
+	
+	void Indent()
+	{
+		m_indent++;
+	}
+	
+	void Unindent()
+	{
+		Assert(m_indent > 0);
+		
+		m_indent--;
+	}
+	
+	void Append(const char * text)
+	{
+		for (int i = 0; i < m_indent; ++i)
+			m_text.push_back('\t');
+			
+		m_text.append(text);
+	}
+	
+	void AppendFormat(const char * format, ...)
+	{
+		va_list va;
+		va_start(va, format);
+		char text[kStringBufferSize];
+		vsprintf_s(text, sizeof(text), format, va);
+		va_end(va);
+		
+		Append(text);
+	}
+	
+	void AppendLine()
+	{
+		for (int i = 0; i < m_indent; ++i)
+			m_text.push_back('\t');
+			
+		m_text.push_back('\n');
+	}
+	
+	const char * ToString() const
+	{
+		return m_text.c_str();
+	}
+};
 
 static std::string generateScopeName(const GraphNodeId nodeId)
 {
@@ -263,14 +352,53 @@ static std::string generateScopeName(const GraphNodeId nodeId)
 	return name;
 }
 
+static size_t calculateTypeNameLength(const std::string & typeName)
+{
+	// type names may be specialized to for instance include a semantic
+	// interpretation of the type. an example of a specialized type name
+	// is "vec4.color". for shader compilation, however, we need the
+	// non-specialized name to generate valid code. so in the case of
+	// "vec4.color" we want to generate "vec4" as a type. in order to
+	// do so, we write the type name using "%.*s" as a formatting
+	// string. with the length of the type name to write calculated by
+	// this function
+	
+	const char * end = strchr(typeName.c_str(), '.'); // look for where the specialization part begins by looking for the first '.' character
+	
+	return
+		end == nullptr
+		? typeName.size()         // no specialization
+		: end - typeName.c_str(); // return length up to the '.' character
+}
+
+static std::string makeColorString(const char * hex)
+{
+	const Color color = Color::fromHex(hex);
+	
+	char text[256];
+	sprintf_s(text, sizeof(text), "%f, %f, %f, %f",
+		color.r,
+		color.g,
+		color.b,
+		color.a);
+		
+	return text;
+}
+
 static bool generateShaderText_traverse(
 	const Graph & graph,
 	const GraphNode & node,
 	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
-	StringBuilder & shaderText,
-	std::set<GraphNodeId> & traversedNodes)
+	ShaderTextWriter & shaderText,
+	std::set<GraphNodeId> & traversedNodes,
+	std::set<std::string> & nodeDependencies,
+	std::map<int, int> * usedVsInputsByNode)
 {
 	auto * srcNode = &node;
+	
+	// register node dependency
+	
+	nodeDependencies.insert(srcNode->typeName);
 	
 	// generate shader text for dependencies
 	
@@ -291,7 +419,14 @@ static bool generateShaderText_traverse(
 					*dstNode,
 					typeDefinitionLibrary,
 					shaderText,
-					traversedNodes);
+					traversedNodes,
+					nodeDependencies,
+					usedVsInputsByNode);
+				
+				if (usedVsInputsByNode != nullptr)
+				{
+					(*usedVsInputsByNode)[srcNode->id] |= (*usedVsInputsByNode)[dstNode->id];
+				}
 			}
 		}
 	}
@@ -308,13 +443,15 @@ static bool generateShaderText_traverse(
 	
 	for (auto & output : srcType->outputSockets)
 	{
-		shaderText.AppendFormat("%s %s%s;\n",
+		shaderText.AppendFormat("%.*s %s%s;\n",
+			calculateTypeNameLength(output.typeName),
 			output.typeName.c_str(),
 			srcScopeName.c_str(),
 			output.name.c_str());
 	}
 		
 	shaderText.Append("{\n");
+	shaderText.Indent();
 	{
 		// generate inputs
 		
@@ -329,14 +466,27 @@ static bool generateShaderText_traverse(
 			if (inputValue_itr != srcNode->inputValues.end())
 				inputValue = &inputValue_itr->second;
 				
-			shaderText.AppendFormat("%s %s = %s(%s);\n",
+			shaderText.AppendFormat("%.*s %s = %.*s(%s);\n",
+				calculateTypeNameLength(input.typeName),
 				input.typeName.c_str(),
 				input.name.c_str(),
+				calculateTypeNameLength(input.typeName),
 				input.typeName.c_str(),
-				inputValue->empty() ? "0" : inputValue->c_str());
+				inputValue->empty()
+				? "0"
+				: input.typeName == "vec4.color"
+				? makeColorString(inputValue->c_str()).c_str()
+				: inputValue->c_str());
+		}
+		
+		if (!srcType->inputSockets.empty())
+		{
+			shaderText.AppendLine();
 		}
 		
 		// assign inputs
+		
+		bool hasInputAssignments = false;
 		
 		for (auto & link_itr : graph.links)
 		{
@@ -356,8 +506,23 @@ static bool generateShaderText_traverse(
 					srcSocket.name.c_str(),
 					dstScopeName.c_str(),
 					dstSocket.name.c_str());
+					
+				hasInputAssignments = true;
 			}
 		}
+		
+		if (hasInputAssignments)
+		{
+			shaderText.AppendLine();
+		}
+		
+		// generate flags
+		
+		shaderText.AppendFormat("bool isPassthrough = %s;\n",
+			node.isPassthrough ? "true" : "false");
+		shaderText.Append("(void)isPassthrough; // suppress unused variable warning\n");
+		
+		shaderText.AppendLine();
 		
 		// generate outputs (local scope)
 		
@@ -365,16 +530,17 @@ static bool generateShaderText_traverse(
 		
 		for (auto & output : srcType->outputSockets)
 		{
-			shaderText.AppendFormat("%s %s;\n",
+			shaderText.AppendFormat("%.*s %s;\n",
+				calculateTypeNameLength(output.typeName),
 				output.typeName.c_str(),
 				output.name.c_str());
 		}
 		
-		// generate flags
+		if (!srcType->outputSockets.empty())
+		{
+			shaderText.AppendLine();
+		}
 		
-		shaderText.AppendFormat("bool isPassthrough = %s;\n",
-			node.isPassthrough ? "true" : "false");
-			
 		// emit node shader text
 		
 		auto text_itr = s_shaderNodeToShaderText.find(srcNode->typeName);
@@ -383,7 +549,15 @@ static bool generateShaderText_traverse(
 	
 		const auto & text = text_itr->second;
 		
-		shaderText.Append(text.c_str());
+		for (auto & line : text.lines)
+		{
+			shaderText.Append(line.c_str());
+		}
+		
+		if (!text.lines.empty())
+		{
+			shaderText.AppendLine();
+		}
 		
 		// assign outputs
 		
@@ -399,17 +573,17 @@ static bool generateShaderText_traverse(
 				
 				if (srcNode->isPassthrough)
 				{
-					shaderText.AppendFormat("%s%s = 0.0;\n",
-						srcScopeName.c_str(),
-						"result");
+					shaderText.Append("result = 0.0;\n");
 				}
 				else
 				{
-					shaderText.AppendFormat("%s%s = %s;\n",
-						srcScopeName.c_str(),
-						"result",
+					shaderText.AppendFormat("result = %s;\n",
 						name.c_str());
 				}
+				
+				shaderText.AppendFormat("%s%s = result;\n",
+					srcScopeName.c_str(),
+					"result");
 			}
 		}
 		else if (srcType->typeName == "vs.input")
@@ -422,34 +596,49 @@ static bool generateShaderText_traverse(
 			{
 				auto & name = name_itr->second;
 				
+				shaderText.Append("(void)viewSpace;\n");
+				shaderText.AppendLine();
+				
 				if (srcNode->isPassthrough)
 				{
-					shaderText.AppendFormat("%s%s = vec4(0.0);\n",
-						srcScopeName.c_str(),
-						"result");
+					shaderText.Append("result = vec4(0.0);\n");
 				}
 				else
 				{
 					std::string loadCode;
+					int vsInput = 0;
 					
 					if (name == "position")
+					{
 						loadCode = "unpackPosition()";
+						vsInput = VS_POSITION;
+					}
 					else if (name == "normal")
+					{
 						loadCode = "unpackNormal()";
+						vsInput = VS_NORMAL;
+					}
 					else if (name == "color")
+					{
 						loadCode = "unpackColor()";
+						vsInput = VS_COLOR;
+					}
 					else if (name == "texcoord1")
+					{
 						loadCode = "vec4(unpackTexcoord(0), 0.0, 0.0)";
+						vsInput = VS_TEXCOORD0;
+					}
 					else if (name == "texcoord2")
+					{
 						loadCode = "vec4(unpackTexcoord(1), 0.0, 0.0)";
+						vsInput = VS_TEXCOORD1;
+					}
 					
 					if (!loadCode.empty())
 					{
-						shaderText.AppendFormat("%s%s = %s;\n",
-							srcScopeName.c_str(),
-							"result",
+						shaderText.AppendFormat("result = %s;\n",
 							loadCode.c_str());
-						
+							
 						const auto viewSpace_itr = node.inputValues.find("viewSpace");
 				
 						const bool viewSpace =
@@ -458,14 +647,21 @@ static bool generateShaderText_traverse(
 							
 						if (viewSpace)
 						{
-							shaderText.AppendFormat("%s%s = objectToView(%s%s);\n",
-								srcScopeName.c_str(),
-								"result",
-								srcScopeName.c_str(),
-								"result");
+							shaderText.Append("result = objectToView(result);\n");
+						}
+						
+						if (usedVsInputsByNode != nullptr)
+						{
+							(*usedVsInputsByNode)[srcNode->id] |= 1 << vsInput;
 						}
 					}
 				}
+				
+				shaderText.AppendLine();
+				
+				shaderText.AppendFormat("%s%s = result;\n",
+					srcScopeName.c_str(),
+					"result");
 			}
 		}
 		else if (srcType->typeName == "vs.output")
@@ -501,17 +697,16 @@ static bool generateShaderText_traverse(
 			{
 				auto & name = name_itr->second;
 				
+				shaderText.Append("(void)_normalize;\n");
+				shaderText.AppendLine();
+				
 				if (srcNode->isPassthrough)
 				{
-					shaderText.AppendFormat("%s%s = vec4(0.0);\n",
-						srcScopeName.c_str(),
-						"result");
+					shaderText.Append("result = vec4(0.0);\n");
 				}
 				else
 				{
-					shaderText.AppendFormat("%s%s = v_%s;\n",
-						srcScopeName.c_str(),
-						"result",
+					shaderText.AppendFormat("result = v_%s;\n",
 						name.c_str());
 						
 					const auto normalize_itr = node.inputValues.find("_normalize");
@@ -522,13 +717,15 @@ static bool generateShaderText_traverse(
 						
 					if (normalize)
 					{
-						shaderText.AppendFormat("%s%s = normalize(%s%s);\n",
-							srcScopeName.c_str(),
-							"result",
-							srcScopeName.c_str(),
-							"result");
+						shaderText.Append("result = normalize(result);\n");
 					}
 				}
+				
+				shaderText.AppendLine();
+				
+				shaderText.AppendFormat("%s%s = result;\n",
+					srcScopeName.c_str(),
+					"result");
 			}
 		}
 		else
@@ -544,7 +741,8 @@ static bool generateShaderText_traverse(
 			}
 		}
 	}
-	shaderText.Append("}\n");
+	shaderText.Unindent();
+	shaderText.Append("}\n\n");
 	
 	return true;
 }
@@ -552,8 +750,11 @@ static bool generateShaderText_traverse(
 static bool generateVsShaderText(
 	const Graph & graph,
 	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
-	const std::set<std::string> & usedVaryings,
-	StringBuilder & shaderText)
+	const std::set<std::string> & usedVsOutputs,
+	const bool generateNodePreviewMode,
+	ShaderTextWriter & shaderText,
+	std::set<std::string> & nodeDepenencies,
+	std::map<int, int> * usedVsInputsByNode)
 {
 	bool result = true;
 	
@@ -591,6 +792,12 @@ static bool generateVsShaderText(
 		}
 	}
 	
+	if (generateNodePreviewMode)
+	{
+		shaderText.Append("uniform float u_nodePreview_nodeId;\n");
+		shaderText.Append("uniform float u_nodePreview_socketIndex;\n");
+	}
+	
 	// generate vertex outputs (unused -> local variable)
 	
 	std::set<std::string> generatedVsOutputs;
@@ -612,7 +819,7 @@ static bool generateVsShaderText(
 
 		auto & name = name_itr->second;
 		
-		if (usedVaryings.count(name) != 0)
+		if (usedVsOutputs.count(name) != 0)
 			continue;
 		
 		if (generatedVsOutputs.count(name) != 0)
@@ -626,7 +833,7 @@ static bool generateVsShaderText(
 	
 	// generate vertex outputs (used -> shader_out)
 	
-	for (auto & varying : usedVaryings)
+	for (auto & varying : usedVsOutputs)
 	{
 		if (generatedVsOutputs.count(varying) != 0)
 			continue;
@@ -637,9 +844,15 @@ static bool generateVsShaderText(
 			varying.c_str());
 	}
 	
+	if (generateNodePreviewMode)
+	{
+		shaderText.Append("shader_out vec4 v_nodePreview;\n");
+	}
+	
 	// generate main function
 	
 	shaderText.Append("void main() {\n"); // main : begin
+	shaderText.Indent();
 	{
 		// generate code for vertex outputs
 		
@@ -672,7 +885,9 @@ static bool generateVsShaderText(
 					node,
 					typeDefinitionLibrary,
 					shaderText,
-					traversedNodes);
+					traversedNodes,
+					nodeDepenencies,
+					usedVsInputsByNode);
 			}
 			
 			if (node.typeName == "vs.output.position")
@@ -690,13 +905,15 @@ static bool generateVsShaderText(
 					node,
 					typeDefinitionLibrary,
 					shaderText,
-					traversedNodes);
+					traversedNodes,
+					nodeDepenencies,
+					usedVsInputsByNode);
 			}
 		}
 		
 		// generated code for vertex outputs (referenced but not generated by graph)
 		
-		for (auto & varying : usedVaryings)
+		for (auto & varying : usedVsOutputs)
 		{
 			if (generatedVaryings.count(varying) != 0)
 				continue;
@@ -747,7 +964,64 @@ static bool generateVsShaderText(
 		{
 			shaderText.Append("gl_Position = objectToProjection(unpackPosition());\n");
 		}
+		
+		// emit node preview value
+		
+		if (generateNodePreviewMode)
+		{
+			shaderText.Append("v_nodePreview = vec4(0.0);\n");
+				
+			// generate node/socket switch
+			
+			shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
+			shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
+			
+			shaderText.Append("if (nodePreview_nodeId != 0)\n");
+			shaderText.Append("{\n");
+			shaderText.Indent();
+			{
+				shaderText.Append("switch (nodePreview_nodeId)\n");
+				shaderText.Append("{\n");
+				shaderText.Indent();
+				{
+					for (auto nodeId : traversedNodes)
+					{
+						auto * node = graph.tryGetNode(nodeId);
+						auto * nodeType = typeDefinitionLibrary.tryGetTypeDefinition(node->typeName);
+						
+						shaderText.AppendFormat("case %d:\n", nodeId);
+						shaderText.Indent();
+						{
+							for (int i = 0; i < (int)nodeType->outputSockets.size(); ++i)
+							{
+								if (nodeType->outputSockets[i].typeName == "float")
+								{
+									shaderText.AppendFormat("if (nodePreview_socketIndex == %d) v_nodePreview = vec4(vec3(%s%s), 1.0);\n",
+										i,
+										generateScopeName(node->id).c_str(),
+										nodeType->outputSockets[i].name.c_str());
+								}
+								else
+								{
+									shaderText.AppendFormat("if (nodePreview_socketIndex == %d) v_nodePreview = vec4(%s%s);\n",
+										i,
+										generateScopeName(node->id).c_str(),
+										nodeType->outputSockets[i].name.c_str());
+								}
+							}
+							shaderText.Append("break;\n");
+						}
+						shaderText.Unindent();
+					}
+				}
+				shaderText.Unindent();
+				shaderText.Append("}\n");
+			}
+			shaderText.Unindent();
+			shaderText.Append("}\n");
+		}
 	}
+	shaderText.Unindent();
 	shaderText.Append("}\n"); // main : end
 
 	return result;
@@ -758,7 +1032,9 @@ static bool generatePsShaderText(
 	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 	const char * forOutput,
 	const char * toInput,
-	StringBuilder & shaderText)
+	const bool generateNodePreviewMode,
+	ShaderTextWriter & shaderText,
+	std::set<std::string> & nodeDependencies)
 {
 	bool result = true;
 	
@@ -822,6 +1098,12 @@ static bool generatePsShaderText(
 			}
 		}
 		
+		if (generateNodePreviewMode)
+		{
+			shaderText.Append("uniform float u_nodePreview_nodeId;\n");
+			shaderText.Append("uniform float u_nodePreview_socketIndex;\n");
+		}
+		
 		// generate varyings
 		
 		std::set<std::string> generatedPsInputs;
@@ -852,9 +1134,15 @@ static bool generatePsShaderText(
 			}
 		}
 		
+		if (generateNodePreviewMode)
+		{
+			shaderText.Append("shader_in vec4 v_nodePreview;\n");
+		}
+		
 		// generate main function
 	
 		shaderText.Append("void main() {\n"); // main : begin
+		shaderText.Indent();
 		{
 			std::set<GraphNodeId> traversedNodes;
 			
@@ -863,18 +1151,201 @@ static bool generatePsShaderText(
 				*outputNode,
 				typeDefinitionLibrary,
 				shaderText,
-				traversedNodes);
+				traversedNodes,
+				nodeDependencies,
+				nullptr);
 
-			shaderText.AppendFormat("%s = %s%s;\n",
-				toInput,
-				generateScopeName(outputNode->id).c_str(),
-				"result");
+			if (generateNodePreviewMode)
+			{
+				shaderText.AppendFormat("vec4 nodePreview_result = %s%s;\n",
+					generateScopeName(outputNode->id).c_str(),
+					"result");
+					
+				// generate node/socket switch
+				
+				shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
+				shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
+				
+				shaderText.Append("if (nodePreview_nodeId != 0)\n");
+				shaderText.Append("{\n");
+				shaderText.Indent();
+				{
+					shaderText.Append("nodePreview_result = v_nodePreview;\n");
+					
+					shaderText.Append("switch (nodePreview_nodeId)\n");
+					shaderText.Append("{\n");
+					shaderText.Indent();
+					{
+						for (auto nodeId : traversedNodes)
+						{
+							auto * node = graph.tryGetNode(nodeId);
+							auto * nodeType = typeDefinitionLibrary.tryGetTypeDefinition(node->typeName);
+							
+							shaderText.AppendFormat("case %d:\n", nodeId);
+							shaderText.Indent();
+							{
+								for (int i = 0; i < (int)nodeType->outputSockets.size(); ++i)
+								{
+									if (nodeType->outputSockets[i].typeName == "float")
+									{
+										shaderText.AppendFormat("if (nodePreview_socketIndex == %d) nodePreview_result = vec4(vec3(%s%s), 1.0);\n",
+											i,
+											generateScopeName(node->id).c_str(),
+											nodeType->outputSockets[i].name.c_str());
+									}
+									else
+									{
+										shaderText.AppendFormat("if (nodePreview_socketIndex == %d) nodePreview_result = vec4(%s%s);\n",
+											i,
+											generateScopeName(node->id).c_str(),
+											nodeType->outputSockets[i].name.c_str());
+									}
+								}
+								shaderText.Append("break;\n");
+							}
+							shaderText.Unindent();
+						}
+					}
+					shaderText.Unindent();
+					shaderText.Append("}\n");
+				}
+				shaderText.Unindent();
+				shaderText.Append("}\n");
+				
+				shaderText.AppendFormat("%s = nodePreview_result;\n",
+					toInput);
+			}
+			else
+			{
+				shaderText.AppendFormat("%s = %s%s;\n",
+					toInput,
+					generateScopeName(outputNode->id).c_str(),
+					"result");
+			}
 		}
+		shaderText.Unindent();
 		shaderText.Append("}\n"); // main : end
 	}
 	
 	return result;
 }
+
+static void scanUsedPsVaryings(const Graph & graph, std::set<std::string> & usedVaryings)
+{
+	for (auto & node_itr : graph.nodes)
+	{
+		auto & node = node_itr.second;
+		
+		if (node.isPassthrough)
+			continue;
+			
+		if (node.typeName == "ps.input")
+		{
+			auto name_itr = node.inputValues.find("name");
+		
+			if (name_itr != node.inputValues.end())
+			{
+				auto & name = name_itr->second;
+				
+				usedVaryings.insert(name);
+			}
+		}
+	}
+}
+
+struct ShaderGraphCache : ResourceCacheBase
+{
+	struct ShaderGraphElem
+	{
+		const std::string name;
+		const Graph * graph = nullptr;
+		const Graph_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+		
+		std::set<std::string> nodeDepenencies;
+		
+		ShaderGraphElem(
+			const char * in_name,
+			const Graph * in_graph,
+			const Graph_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+			: name(in_name)
+			, graph(in_graph)
+			, typeDefinitionLibrary(in_typeDefinitionLibrary)
+		{
+		}
+		
+		void load()
+		{
+			std::set<std::string> usedVaryings;
+			scanUsedPsVaryings(*graph, usedVaryings);
+			
+			ShaderTextWriter vsWriter;
+			ShaderTextWriter psWriter;
+			
+			generateVsShaderText(*graph, *typeDefinitionLibrary, usedVaryings, false, vsWriter, nodeDepenencies, nullptr);
+			generatePsShaderText(*graph, *typeDefinitionLibrary, "color", "shader_fragColor", false, psWriter, nodeDepenencies);
+			
+			const std::string nameVs = String::FormatC("%s.vs", name.c_str());
+			const std::string namePs = String::FormatC("%s.ps", name.c_str());
+			
+			const char * textVs = vsWriter.ToString();
+			const char * textPs = psWriter.ToString();
+			
+			framework.registerShaderSource(nameVs.c_str(), textVs);
+			framework.registerShaderSource(namePs.c_str(), textPs);
+		}
+		
+		void free()
+		{
+			const std::string nameVs = String::FormatC("%s.vs", name.c_str());
+			const std::string namePs = String::FormatC("%s.ps", name.c_str());
+			
+			framework.unregisterShaderSource(nameVs.c_str());
+			framework.unregisterShaderSource(namePs.c_str());
+		}
+		
+		void reload()
+		{
+			free();
+			
+			load();
+		}
+	};
+	
+	std::map<std::string, ShaderGraphElem*> m_map;
+	
+	virtual void clear() override
+	{
+		// todo : implement
+	}
+	
+	virtual void reload() override
+	{
+		for (auto & shaderGraphCacheItr : m_map)
+		{
+			ShaderGraphElem * cacheElem = shaderGraphCacheItr.second;
+			
+			cacheElem->reload();
+		}
+	}
+	
+	virtual void handleFileChange(const std::string & filename, const std::string & extension) override
+	{
+		if (s_shaderNodeFileToShaderNodeName.count(filename) != 0)
+		{
+			auto & nodeName = s_shaderNodeFileToShaderNodeName[filename];
+			
+			for (auto & shaderGraphCacheItr : m_map)
+			{
+				ShaderGraphElem * cacheElem = shaderGraphCacheItr.second;
+				
+				if (cacheElem->nodeDepenencies.count(nodeName) != 0)
+				{
+					cacheElem->reload();
+				}
+			}
+		}
+	}
+};
 
 int main(int argc, char * argv[])
 {
@@ -898,6 +1369,10 @@ int main(int argc, char * argv[])
 		auto & stringType = typeDefinitionLibrary.valueTypeDefinitions["string"];
 		stringType.typeName = "string";
 		stringType.editor = "textbox";
+		
+		auto & colorType = typeDefinitionLibrary.valueTypeDefinitions["vec4.color"];
+		colorType.typeName = "vec4.color";
+		colorType.editor = "colorpicker";
 	}
 	
 	scanShaderNodes("100-nodes", typeDefinitionLibrary);
@@ -915,6 +1390,15 @@ int main(int argc, char * argv[])
 	
 	graphEdit.load("test-001.xml");
 	
+	ShaderGraphCache shaderGraphCache;
+	framework.registerResourceCache(&shaderGraphCache);
+	
+	std::set<std::string> nodeDependencies;
+	std::map<int, int> usedVsInputsByNode;
+	
+	Surface previewSurface(256, 256, false, true);
+	previewSurface.setClearColor(0, 0, 0, 0);
+	
 	for (;;)
 	{
 		framework.process();
@@ -924,6 +1408,92 @@ int main(int argc, char * argv[])
 		
 		graphEdit.tick(framework.timeStep, false);
 		
+		// draw node preview for the hovered over node (if any)
+		
+		bool hasNodePreview = false;
+		int previewNodeId = 0;
+		int previewSocketIndex = -1;
+		
+		GraphEdit::HitTestResult hitTestResult;
+		if (graphEdit.hitTest(graphEdit.mousePosition.x, graphEdit.mousePosition.y, hitTestResult))
+		{
+			if (hitTestResult.hasNode && hitTestResult.nodeHitTestResult.outputSocket != nullptr)
+			{
+				hasNodePreview = true;
+				
+				previewNodeId = hitTestResult.node->id;
+				previewSocketIndex = hitTestResult.nodeHitTestResult.outputSocket->index;
+				
+				const int vsInputs = usedVsInputsByNode[previewNodeId];
+				
+				pushSurface(&previewSurface, true);
+				{
+					Shader shader("shader");
+					setShader(shader);
+					shader.setImmediate("time", framework.time);
+					shader.setImmediate("u_nodePreview_nodeId", previewNodeId);
+					shader.setImmediate("u_nodePreview_socketIndex", previewSocketIndex);
+					
+					setColor(colorWhite);
+					
+					if ((vsInputs & (1 << VS_NORMAL)) != 0)
+					{
+						// using normals. draw as a 3d surface
+						
+						projectPerspective3d(60.f, .01f, 100.f);
+						pushDepthTest(true, DEPTH_LESS);
+						gxPushMatrix();
+						{
+							gxTranslatef(0, 0, 10);
+							
+						// todo : we need to provide texcoords also. draw a UV sphere ?
+							//fillCube(Vec3(), Vec3(1.f));
+							fillCylinder(Vec3(), 1.f, 1.f, 100);
+						}
+						gxPopMatrix();
+						popDepthTest();
+					}
+					else if ((vsInputs & (1 << VS_POSITION)) != 0)
+					{
+						// using position. draw as a 3d surface
+						
+						projectPerspective3d(60.f, .01f, 100.f);
+						pushDepthTest(true, DEPTH_LESS);
+						gxPushMatrix();
+						{
+							gxTranslatef(0, 0, 10);
+							
+						// todo : we need to provide texcoords also. draw a UV sphere ?
+							//fillCube(Vec3(), Vec3(1.f));
+							fillCylinder(Vec3(), 1.f, 1.f, 100);
+						}
+						gxPopMatrix();
+						popDepthTest();
+					}
+					else if ((vsInputs & (1 << VS_TEXCOORD0)) != 0)
+					{
+						// using texcoord. draw as 2d plane
+						
+						projectScreen2d();
+						drawRect(0, 0, previewSurface.getWidth(), previewSurface.getHeight());
+					}
+					else
+					{
+						// not using any vertex data or vertex data we don't currently provide. draw as a single color quad
+						
+						projectScreen2d();
+						drawRect(0, 0, previewSurface.getWidth(), previewSurface.getHeight());
+					}
+					
+					shader.setImmediate("u_nodePreview_nodeId", 0);
+					shader.setImmediate("u_nodePreview_socketIndex", -1);
+					
+					clearShader();
+				}
+				popSurface();
+			}
+		}
+			
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
@@ -940,6 +1510,11 @@ int main(int argc, char * argv[])
 				{
 					setShader(shader);
 					shader.setImmediate("time", framework.time);
+					if (hasNodePreview)
+					{
+						shader.setImmediate("u_nodePreview_nodeId", previewNodeId);
+						shader.setImmediate("u_nodePreview_socketIndex", previewSocketIndex);
+					}
 					
 					setColor(colorWhite);
 				}
@@ -950,6 +1525,12 @@ int main(int argc, char * argv[])
 				
 				fillCylinder(Vec3(), 1.f, 1.f, 100);
 				//fillCube(Vec3(), Vec3(1.f));
+				
+				if (hasNodePreview)
+				{
+					shader.setImmediate("u_nodePreview_nodeId", 0);
+					shader.setImmediate("u_nodePreview_socketIndex", -1);
+				}
 			}
 			gxPopMatrix();
 			
@@ -959,38 +1540,28 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
+			if (hasNodePreview)
+			{
+				gxSetTexture(previewSurface.getTexture());
+				setColor(colorWhite);
+				drawRect(0, 0, previewSurface.getWidth(), previewSurface.getHeight());
+				gxSetTexture(0);
+			}
+			
 			graphEdit.draw();
 		}
 		framework.endDraw();
 		
 		std::set<std::string> usedVaryings;
-		for (auto & node_itr : graphEdit.graph->nodes)
-		{
-			auto & node = node_itr.second;
-			
-			if (node.isPassthrough)
-				continue;
-				
-			if (node.typeName == "ps.input")
-			{
-				auto name_itr = node.inputValues.find("name");
-			
-				if (name_itr != node.inputValues.end())
-				{
-					auto & name = name_itr->second;
-					
-					usedVaryings.insert(name);
-				}
-			}
-		}
+		scanUsedPsVaryings(*graphEdit.graph, usedVaryings);
 		
-		StringBuilder shaderVsBuilder;
-		StringBuilder shaderPsBuilder;
+		ShaderTextWriter shaderVsBuilder;
+		ShaderTextWriter shaderPsBuilder;
 		
-		//if (generateVsShaderText(*graphEdit.graph, typeDefinitionLibrary, usedVaryings, shaderVsBuilder) &&
-		//	generatePsShaderText(*graphEdit.graph, typeDefinitionLibrary, "color", "shader_fragColor", shaderPsBuilder))
-		generateVsShaderText(*graphEdit.graph, typeDefinitionLibrary, usedVaryings, shaderVsBuilder);
-		generatePsShaderText(*graphEdit.graph, typeDefinitionLibrary, "color", "shader_fragColor", shaderPsBuilder);
+		nodeDependencies.clear();
+		usedVsInputsByNode.clear();
+		generateVsShaderText(*graphEdit.graph, typeDefinitionLibrary, usedVaryings, true, shaderVsBuilder, nodeDependencies, &usedVsInputsByNode);
+		generatePsShaderText(*graphEdit.graph, typeDefinitionLibrary, "color", "shader_fragColor", true, shaderPsBuilder, nodeDependencies);
 		{
 			const char * shaderVs = shaderVsBuilder.ToString();
 			const char * shaderPs = shaderPsBuilder.ToString();
@@ -1018,6 +1589,18 @@ int main(int argc, char * argv[])
 				
 				}
 				clearShader();
+			}
+		}
+		
+		for (auto & changedFile : framework.changedFiles)
+		{
+			logDebug("file changed: %s", changedFile.c_str());
+			
+			if (s_shaderNodeFileToShaderNodeName.count(changedFile) != 0)
+			{
+				auto & shaderNodeName = s_shaderNodeFileToShaderNodeName[changedFile];
+				
+				logDebug("node changed: %s", shaderNodeName.c_str());
 			}
 		}
 	}
