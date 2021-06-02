@@ -1,8 +1,12 @@
 in string name
+in vec4 xyzw
 in float x
 in float y
 in float z
 in float w
 out vec4 result
 
-result = vec4(x, y, z, w);
+if (xyzw_isReferenced)
+	result = xyzw;
+else
+	result = vec4(x, y, z, w);

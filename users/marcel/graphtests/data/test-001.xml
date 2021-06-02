@@ -1,4 +1,4 @@
-<graph nextNodeId="39" nextLinkId="70">
+<graph nextNodeId="47" nextLinkId="80">
     <node id="1" typeName="ps.output">
         <input socket="name" value="color"/>
         <input socket="w" value="1.000000"/>
@@ -78,6 +78,13 @@
     </node>
     <node id="37" typeName="literal.color"/>
     <node id="38" typeName="vector.unpack"/>
+    <node id="39" typeName="ps.output">
+        <input socket="name" value="normal"/>
+        <input socket="w" value="1.000000"/>
+    </node>
+    <node id="40" typeName="ps.input">
+        <input socket="name" value="normal"/>
+    </node>
     <link id="7" srcNodeId="6" srcNodeSocketName="value" dstNodeId="2" dstNodeSocketName="result"/>
     <link id="8" srcNodeId="3" srcNodeSocketName="angle" dstNodeId="6" dstNodeSocketName="result"/>
     <link id="9" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="_cos"/>
@@ -116,46 +123,56 @@
     <link id="67" srcNodeId="35" srcNodeSocketName="add" dstNodeId="36" dstNodeSocketName="result"/>
     <link id="68" srcNodeId="38" srcNodeSocketName="xyzw" dstNodeId="37" dstNodeSocketName="result"/>
     <link id="69" srcNodeId="1" srcNodeSocketName="x" dstNodeId="38" dstNodeSocketName="x"/>
-    <editor nextZKey="244">
-        <dragAndZoom x="611.4677734375" y="104.61128997802734" zoom="0.87823706865310669"/>
+    <link id="79" srcNodeId="39" srcNodeSocketName="xyzw" dstNodeId="40" dstNodeSocketName="result"/>
+    <editor nextZKey="276">
+        <dragAndZoom x="642.49072265625" y="480.300537109375" zoom="1"/>
         <nodeDatas>
-            <nodeData nodeId="1" x="800" y="48" zKey="117"/>
-            <nodeData nodeId="2" x="-272" y="-32" zKey="167"/>
-            <nodeData nodeId="3" x="112" y="32" zKey="81"/>
-            <nodeData nodeId="4" x="272" y="32" zKey="87"/>
-            <nodeData nodeId="6" x="-112" y="32" zKey="85"/>
-            <nodeData nodeId="7" x="272" y="224" zKey="113"/>
-            <nodeData nodeId="8" x="16" y="224" zKey="133"/>
-            <nodeData nodeId="9" x="144" y="224" zKey="118"/>
-            <nodeData nodeId="10" x="400" y="224" zKey="241"/>
-            <nodeData nodeId="11" x="576" y="192" zKey="67" folded="1"/>
-            <nodeData nodeId="12" x="576" y="256" zKey="115" folded="1"/>
-            <nodeData nodeId="13" x="576" y="224" zKey="114" folded="1"/>
-            <nodeData nodeId="14" x="288" y="400" zKey="116"/>
-            <nodeData nodeId="15" x="416" y="368" zKey="107"/>
-            <nodeData nodeId="17" x="224" y="560" zKey="218"/>
-            <nodeData nodeId="18" x="-784" y="400" zKey="145"/>
-            <nodeData nodeId="20" x="-256" y="240" zKey="189"/>
-            <nodeData nodeId="21" x="-64" y="400" zKey="231"/>
-            <nodeData nodeId="22" x="-656" y="400" zKey="157"/>
-            <nodeData nodeId="23" x="80" y="560" zKey="154"/>
-            <nodeData nodeId="24" x="-656" y="208" zKey="225"/>
-            <nodeData nodeId="26" x="-512" y="304" zKey="219"/>
-            <nodeData nodeId="27" x="-224" y="336" zKey="239"/>
-            <nodeData nodeId="28" x="-511.15399169921875" y="208" zKey="212"/>
-            <nodeData nodeId="29" x="-384" y="224" zKey="233"/>
-            <nodeData nodeId="30" x="-816" y="288" zKey="220"/>
-            <nodeData nodeId="31" x="-1072" y="256" zKey="230"/>
-            <nodeData nodeId="32" x="-944" y="272" zKey="224"/>
-            <nodeData nodeId="33" x="-1200" y="240" zKey="227"/>
-            <nodeData nodeId="34" x="-672" y="304" zKey="229"/>
-            <nodeData nodeId="35" x="-80" y="496" zKey="232"/>
-            <nodeData nodeId="36" x="-224" y="416" zKey="238"/>
-            <nodeData nodeId="37" x="432" y="-0" zKey="243"/>
-            <nodeData nodeId="38" x="576" y="16" zKey="242"/>
+            <nodeData nodeId="1" x="736" y="-288" zKey="248"/>
+            <nodeData nodeId="2" x="-336" y="-368" zKey="167"/>
+            <nodeData nodeId="3" x="48" y="-304" zKey="81"/>
+            <nodeData nodeId="4" x="208" y="-304" zKey="87"/>
+            <nodeData nodeId="6" x="-176" y="-304" zKey="85"/>
+            <nodeData nodeId="7" x="208" y="-112" zKey="113"/>
+            <nodeData nodeId="8" x="256" y="368" zKey="133"/>
+            <nodeData nodeId="9" x="384" y="368" zKey="275"/>
+            <nodeData nodeId="10" x="336" y="-112" zKey="241"/>
+            <nodeData nodeId="11" x="512" y="-144" zKey="251" folded="1"/>
+            <nodeData nodeId="12" x="512" y="-80" zKey="254" folded="1"/>
+            <nodeData nodeId="13" x="512" y="-112" zKey="252" folded="1"/>
+            <nodeData nodeId="14" x="224" y="64" zKey="255"/>
+            <nodeData nodeId="15" x="352" y="32" zKey="107"/>
+            <nodeData nodeId="17" x="384" y="704" zKey="218"/>
+            <nodeData nodeId="18" x="-624" y="544" zKey="145"/>
+            <nodeData nodeId="20" x="-96" y="384" zKey="189"/>
+            <nodeData nodeId="21" x="96" y="544" zKey="231"/>
+            <nodeData nodeId="22" x="-496" y="544" zKey="157"/>
+            <nodeData nodeId="23" x="240" y="704" zKey="154"/>
+            <nodeData nodeId="24" x="-496" y="352" zKey="273"/>
+            <nodeData nodeId="26" x="-352" y="448" zKey="219"/>
+            <nodeData nodeId="27" x="-64" y="480" zKey="239"/>
+            <nodeData nodeId="28" x="-352" y="352" zKey="212"/>
+            <nodeData nodeId="29" x="-224" y="368" zKey="233"/>
+            <nodeData nodeId="30" x="-656" y="432" zKey="220"/>
+            <nodeData nodeId="31" x="-912" y="400" zKey="230"/>
+            <nodeData nodeId="32" x="-784" y="416" zKey="224"/>
+            <nodeData nodeId="33" x="-1040" y="384" zKey="227"/>
+            <nodeData nodeId="34" x="-512" y="448" zKey="229"/>
+            <nodeData nodeId="35" x="80" y="640" zKey="232"/>
+            <nodeData nodeId="36" x="-64" y="560" zKey="238"/>
+            <nodeData nodeId="37" x="368" y="-336" zKey="243"/>
+            <nodeData nodeId="38" x="512" y="-320" zKey="257"/>
+            <nodeData nodeId="39" x="752" y="368" zKey="269"/>
+            <nodeData nodeId="40" x="624" y="368" zKey="274"/>
         </nodeDatas>
-        <visualizers/>
-        <comments/>
+        <visualizers>
+            <visualizer id="42" x="880" y="336" zKey="270" nodeId="39" dstSocketName="result" sx="216" sy="248"/>
+            <visualizer id="43" x="864" y="-320" zKey="271" nodeId="1" dstSocketName="result" sx="216" sy="248"/>
+        </visualizers>
+        <comments>
+            <comment id="44" x="576" y="304" caption="Normal" sx="542.02508544921875" sy="291.29232788085938" color.r="1" color.g="1" color.b="1" color.a="0.38499999046325684"/>
+            <comment id="45" x="-368" y="-432" caption="Color" sx="1484.943115234375" sy="596.22613525390625" color.r="1" color.g="1" color.b="1" color.a="0.28499999642372131"/>
+            <comment id="46" x="-1088" y="288" caption="Vertex" sx="1637.845703125" sy="581.5008544921875" color.r="0.78867506980895996" color.g="0.78867506980895996" color.b="0.78867506980895996" color.a="0.31999999284744263"/>
+        </comments>
         <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="1" g="0" b="0" a="0"/>
