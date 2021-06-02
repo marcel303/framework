@@ -1301,36 +1301,121 @@ static void scanUsedPsVaryings(const Graph & graph, std::set<std::string> & used
 	}
 }
 
+static void drawDstSocketPreview(const GraphNodeId nodeId, const int dstSocketIndex, const int referencedVsInputs)
+{
+#if false // todo : determine referenced vs inputs at call site
+	const int referencedVsInputs =
+		usedVsInputsByNode.count(previewNodeId) != 0
+		? usedVsInputsByNode[previewNodeId]
+		: allUsedVsInputs; // todo : make this more accurate, by including vs input flags indirectly referenced by ps.input nodes and its deps
+#endif
+
+	int viewSx;
+	int viewSy;
+	framework.getCurrentViewportSize(viewSx, viewSy);
+	
+	// draw background
+	
+	setColor(colorWhite);
+	drawUiRectCheckered(0, 0, viewSx, viewSy, 16.f);
+	
+	// draw preview shape
+	
+	Shader shader("shader");
+	
+	setShader(shader);
+	{
+		shader.setImmediate("time", framework.time);
+		shader.setImmediate("u_nodePreview_nodeId", nodeId);
+		shader.setImmediate("u_nodePreview_socketIndex", dstSocketIndex);
+		
+		setColor(colorWhite);
+		
+		const float kDistance = 4.f;
+		
+		if ((referencedVsInputs & (1 << VS_NORMAL)) != 0)
+		{
+			// using normals. draw as a 3d surface
+			
+			projectPerspective3d(60.f, .01f, 100.f);
+			pushDepthTest(true, DEPTH_LESS);
+			gxPushMatrix();
+			{
+				gxTranslatef(0, 0, kDistance);
+				
+			// todo : we need to provide texcoords also. draw a UV sphere ?
+				fillCylinder(Vec3(), 1.f, 1.f, 100);
+			}
+			gxPopMatrix();
+			popDepthTest();
+			projectScreen2d();
+		}
+		else if ((referencedVsInputs & (1 << VS_POSITION)) != 0)
+		{
+			// using position. draw as a 3d surface
+			
+			projectPerspective3d(60.f, .01f, 100.f);
+			pushDepthTest(true, DEPTH_LESS);
+			gxPushMatrix();
+			{
+				gxTranslatef(0, 0, kDistance);
+				
+			// todo : we need to provide texcoords also. draw a UV sphere ?
+				fillCylinder(Vec3(), 1.f, 1.f, 100);
+			}
+			gxPopMatrix();
+			popDepthTest();
+			projectScreen2d();
+		}
+		else if ((referencedVsInputs & (1 << VS_TEXCOORD0)) != 0)
+		{
+			// using texcoord. draw as 2d plane
+			
+			projectScreen2d();
+			drawRect(0, 0, viewSx, viewSy);
+		}
+		else
+		{
+			// not using any vertex data or vertex data we don't currently provide. draw as a single color quad
+			
+			projectScreen2d();
+			drawRect(0, 0, viewSx, viewSy);
+		}
+		
+		shader.setImmediate("u_nodePreview_nodeId", kGraphNodeIdInvalid);
+		shader.setImmediate("u_nodePreview_socketIndex", -1);
+	}
+	clearShader();
+}
+
 struct ShaderGraphCache : ResourceCacheBase
 {
 	struct ShaderGraphElem
 	{
-		const std::string name;
-		const Graph * graph = nullptr;
-		const Graph_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+		std::string name;
 		
 		std::set<std::string> nodeDepenencies;
 		
-		ShaderGraphElem(
-			const char * in_name,
-			const Graph * in_graph,
-			const Graph_TypeDefinitionLibrary * in_typeDefinitionLibrary)
+		ShaderGraphElem(const char * in_name)
 			: name(in_name)
-			, graph(in_graph)
-			, typeDefinitionLibrary(in_typeDefinitionLibrary)
 		{
 		}
 		
-		void load(const ShaderTextLibrary & shaderTextLibrary)
+		void load(const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const ShaderTextLibrary & shaderTextLibrary)
 		{
+			const char * resolved_filename = framework.resolveResourcePath(name.c_str());
+			
+			Graph graph;
+			graph.load(resolved_filename, &typeDefinitionLibrary);
+			
 			std::set<std::string> usedVaryings;
-			scanUsedPsVaryings(*graph, usedVaryings);
+			scanUsedPsVaryings(graph, usedVaryings);
 			
 			ShaderTextWriter vsWriter;
 			ShaderTextWriter psWriter;
 			
-			generateVsShaderText(*graph, *typeDefinitionLibrary, shaderTextLibrary, usedVaryings, false, vsWriter, nodeDepenencies, nullptr);
-			generatePsShaderText(*graph, *typeDefinitionLibrary, shaderTextLibrary, "color", "shader_fragColor", false, psWriter, nodeDepenencies);
+			generateVsShaderText(graph, typeDefinitionLibrary, shaderTextLibrary, usedVaryings, false, vsWriter, nodeDepenencies, nullptr);
+			generatePsShaderText(graph, typeDefinitionLibrary, shaderTextLibrary, "color", "shader_fragColor", false, psWriter, nodeDepenencies);
 			
 			const std::string nameVs = String::FormatC("%s.vs", name.c_str());
 			const std::string namePs = String::FormatC("%s.ps", name.c_str());
@@ -1351,30 +1436,45 @@ struct ShaderGraphCache : ResourceCacheBase
 			framework.unregisterShaderSource(namePs.c_str());
 		}
 		
-		void reload(const ShaderTextLibrary & shaderTextLibrary)
+		void reload(const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const ShaderTextLibrary & shaderTextLibrary)
 		{
 			free();
 			
-			load(shaderTextLibrary);
+			load(typeDefinitionLibrary, shaderTextLibrary);
 		}
 	};
 	
-	std::map<std::string, ShaderGraphElem*> m_map;
+	typedef std::map<std::string, ShaderGraphElem*> Map;
 	
+	Graph_TypeDefinitionLibrary m_typeDefinitionLibrary;
+
 	ShaderTextLibrary m_shaderTextLibrary;
+	
+	Map m_map;
+	
+	void addShaderNodePath(const char * path)
+	{
+		scanShaderNodes(path, m_typeDefinitionLibrary, m_shaderTextLibrary);
+	}
 	
 	virtual void clear() override
 	{
-		// todo : implement
+		for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+		{
+			i->second->free();
+			
+			delete i->second;
+			i->second = nullptr;
+		}
+		
+		m_map.clear();
 	}
 	
 	virtual void reload() override
 	{
-		for (auto & shaderGraphCacheItr : m_map)
+		for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 		{
-			ShaderGraphElem * cacheElem = shaderGraphCacheItr.second;
-			
-			cacheElem->reload(m_shaderTextLibrary);
+			i->second->reload(m_typeDefinitionLibrary, m_shaderTextLibrary);
 		}
 	}
 	
@@ -1384,38 +1484,123 @@ struct ShaderGraphCache : ResourceCacheBase
 		{
 			auto & shaderNode = m_shaderTextLibrary.fileToShaderNode[filename];
 			
-			for (auto & shaderGraphCacheItr : m_map)
+			for (auto & i : m_map)
 			{
-				ShaderGraphElem * cacheElem = shaderGraphCacheItr.second;
+				ShaderGraphElem * cacheElem = i.second;
 				
 				if (cacheElem->nodeDepenencies.count(shaderNode) != 0)
 				{
-					cacheElem->reload(m_shaderTextLibrary);
+					cacheElem->reload(m_typeDefinitionLibrary, m_shaderTextLibrary);
 				}
 			}
+		}
+	}
+	
+	ShaderGraphElem & findOrCreate(const char * name)
+	{
+		Map::iterator i = m_map.find(name);
+		
+		if (i != m_map.end())
+		{
+			return *i->second;
+		}
+		else
+		{
+			ShaderGraphElem * elem = new ShaderGraphElem(name);
+			
+			elem->load(m_typeDefinitionLibrary, m_shaderTextLibrary);
+			
+			i = m_map.insert(Map::value_type(name, elem)).first;
+			
+			return *i->second;
 		}
 	}
 };
 
 struct ShaderGraph_RealTimeConnection : GraphEdit_RealTimeConnection
 {
-	bool hasNodePreview = false;
-	int nodePreviewNodeId = 0;
-	int nodePreviewNodeDstSocketIndex = -1;
-	GxTextureId nodePreviewTextureId = 0;
+	struct SocketPreview
+	{
+		GraphNodeId nodeId = kGraphNodeIdInvalid;
+		int dstSocketIndex = -1;
+		
+		float timeLastReferenced = 0.f;
+		
+		Surface surface;
+	};
+	
+	std::list<SocketPreview> socketPreviews;
+	
+	void previewDstSocket(const GraphNodeId nodeId, const int dstSocketIndex)
+	{
+		for (auto & socketPreview : socketPreviews)
+		{
+			if (socketPreview.nodeId == nodeId &&
+				socketPreview.dstSocketIndex == dstSocketIndex)
+			{
+				socketPreview.timeLastReferenced = framework.time;
+				return;
+			}
+		}
+		
+		socketPreviews.emplace_back(SocketPreview());
+		auto & socketPreview = socketPreviews.back();
+		socketPreview.nodeId = nodeId;
+		socketPreview.dstSocketIndex = dstSocketIndex;
+		socketPreview.timeLastReferenced = framework.time;
+		socketPreview.surface.init(256, 256, SURFACE_RGBA8, true, false);
+		
+		pushSurface(&socketPreview.surface, true);
+		{
+			drawDstSocketPreview(socketPreview.nodeId, socketPreview.dstSocketIndex, 0xff);
+		}
+		popSurface();
+	}
+	
+	void tickVisualizers()
+	{
+		const float kTimeout = 1.f;
+		
+		for (auto socketPreview_itr = socketPreviews.begin(); socketPreview_itr != socketPreviews.end(); )
+		{
+			auto & socketPreview = *socketPreview_itr;
+			
+			if (socketPreview.timeLastReferenced + kTimeout < framework.time)
+			{
+				socketPreview.surface.free();
+				
+				socketPreview_itr = socketPreviews.erase(socketPreview_itr);
+			}
+			else
+			{
+				pushSurface(&socketPreview.surface, true);
+				{
+					drawDstSocketPreview(socketPreview.nodeId, socketPreview.dstSocketIndex, 0xff);
+				}
+				popSurface();
+				
+				++socketPreview_itr;
+			}
+		}
+	}
+	
+	//
 	
 	virtual bool getDstSocketValue(const GraphNodeId nodeId, const int dstSocketIndex, const std::string & dstSocketName, std::string & value) override
 	{
-		if (hasNodePreview && nodeId == nodePreviewNodeId && dstSocketIndex == nodePreviewNodeDstSocketIndex)
+		previewDstSocket(nodeId, dstSocketIndex);
+		
+		for (auto & socketPreview : socketPreviews)
 		{
-			Assert(nodePreviewTextureId != 0);
-			value = String::FormatC("%d", nodePreviewTextureId);
-			return true;
+			if (socketPreview.nodeId == nodeId &&
+				socketPreview.dstSocketIndex == dstSocketIndex)
+			{
+				value = String::FormatC("%d", socketPreview.surface.getTexture());
+				return true;
+			}
 		}
-		else
-		{
-			return false;
-		}
+		
+		return false;
 	}
 };
 
@@ -1474,13 +1659,12 @@ int main(int argc, char * argv[])
 	
 	ShaderGraphCache shaderGraphCache;
 	framework.registerResourceCache(&shaderGraphCache);
+	shaderGraphCache.addShaderNodePath("100-nodes");
+	auto & shaderGraphElem = shaderGraphCache.findOrCreate("test-001.xml");
 	
 	std::set<std::string> nodeDependencies;
 	std::map<int, int> usedVsInputsByNode;
 	int allUsedVsInputs = 0;
-	
-	Surface previewSurface(256, 256, false, true);
-	previewSurface.setClearColor(0, 0, 0, 0);
 	
 	for (;;)
 	{
@@ -1496,117 +1680,7 @@ int main(int argc, char * argv[])
 		
 		graphEdit.tickVisualizers(framework.timeStep);
 		
-		// draw node preview for the hovered over node (if any)
-		
-		bool hasNodePreview = false;
-		int previewNodeId = 0;
-		int previewSocketIndex = -1;
-		
-		GraphEdit::HitTestResult hitTestResult;
-		if (graphEdit.state != GraphEdit::kState_Hidden &&
-			graphEdit.hitTest(graphEdit.mousePosition.x, graphEdit.mousePosition.y, hitTestResult))
-		{
-			if (hitTestResult.hasNode && hitTestResult.nodeHitTestResult.outputSocket != nullptr)
-			{
-				hasNodePreview = true;
-				previewNodeId = hitTestResult.node->id;
-				previewSocketIndex = hitTestResult.nodeHitTestResult.outputSocket->index;
-			}
-			else if (hitTestResult.hasLink)
-			{
-				hasNodePreview = true;
-				previewNodeId = hitTestResult.link->dstNodeId;
-				previewSocketIndex = hitTestResult.link->dstNodeSocketIndex;
-			}
-			
-			if (hasNodePreview)
-			{
-				const int vsInputs =
-					usedVsInputsByNode.count(previewNodeId) != 0
-					? usedVsInputsByNode[previewNodeId]
-					: allUsedVsInputs; // todo : make this more accurate, by including vs input flags indirectly referenced by ps.input nodes and its deps
-				
-				pushSurface(&previewSurface, true);
-				pushBlend(BLEND_OPAQUE);
-				{
-					// draw background
-					
-					setColor(colorWhite);
-					drawUiRectCheckered(0, 0, previewSurface.getWidth(), previewSurface.getHeight(), 16.f);
-					
-					// draw preview shape
-					
-					Shader shader("shader");
-					setShader(shader);
-					shader.setImmediate("time", framework.time);
-					shader.setImmediate("u_nodePreview_nodeId", previewNodeId);
-					shader.setImmediate("u_nodePreview_socketIndex", previewSocketIndex);
-					
-					setColor(colorWhite);
-					
-					const float kDistance = 4.f;
-					
-					if ((vsInputs & (1 << VS_NORMAL)) != 0)
-					{
-						// using normals. draw as a 3d surface
-						
-						projectPerspective3d(60.f, .01f, 100.f);
-						pushDepthTest(true, DEPTH_LESS);
-						gxPushMatrix();
-						{
-							gxTranslatef(0, 0, kDistance);
-							
-						// todo : we need to provide texcoords also. draw a UV sphere ?
-							fillCylinder(Vec3(), 1.f, 1.f, 100);
-						}
-						gxPopMatrix();
-						popDepthTest();
-					}
-					else if ((vsInputs & (1 << VS_POSITION)) != 0)
-					{
-						// using position. draw as a 3d surface
-						
-						projectPerspective3d(60.f, .01f, 100.f);
-						pushDepthTest(true, DEPTH_LESS);
-						gxPushMatrix();
-						{
-							gxTranslatef(0, 0, kDistance);
-							
-						// todo : we need to provide texcoords also. draw a UV sphere ?
-							fillCylinder(Vec3(), 1.f, 1.f, 100);
-						}
-						gxPopMatrix();
-						popDepthTest();
-					}
-					else if ((vsInputs & (1 << VS_TEXCOORD0)) != 0)
-					{
-						// using texcoord. draw as 2d plane
-						
-						projectScreen2d();
-						drawRect(0, 0, previewSurface.getWidth(), previewSurface.getHeight());
-					}
-					else
-					{
-						// not using any vertex data or vertex data we don't currently provide. draw as a single color quad
-						
-						projectScreen2d();
-						drawRect(0, 0, previewSurface.getWidth(), previewSurface.getHeight());
-					}
-					
-					shader.setImmediate("u_nodePreview_nodeId", 0);
-					shader.setImmediate("u_nodePreview_socketIndex", -1);
-					
-					clearShader();
-				}
-				popBlend();
-				popSurface();
-			}
-		}
-		
-		realTimeConnection.hasNodePreview = hasNodePreview;
-		realTimeConnection.nodePreviewNodeId = previewNodeId;
-		realTimeConnection.nodePreviewNodeDstSocketIndex = previewSocketIndex;
-		realTimeConnection.nodePreviewTextureId = previewSurface.getTexture();
+		realTimeConnection.tickVisualizers();
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -1678,7 +1752,7 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 					popBlend();
 					
-					shader.setImmediate("u_nodePreview_nodeId", 0);
+					shader.setImmediate("u_nodePreview_nodeId", kGraphNodeIdInvalid);
 					shader.setImmediate("u_nodePreview_socketIndex", -1);
 				}
 			}
