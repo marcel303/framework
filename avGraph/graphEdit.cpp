@@ -398,7 +398,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 				history.add(valueAsFloat);
 			}
 			
-			if (valueTypeDefinition->visualizer == "opengl-texture")
+			if (valueTypeDefinition->visualizer == "opengl-texture" || valueTypeDefinition->visualizer == "gx-texture")
 			{
 				texture = Parse::Int32(value);
 			}
@@ -444,7 +444,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 				history.add(valueAsFloat);
 			}
 			
-			if (valueTypeDefinition->visualizer == "opengl-texture")
+			if (valueTypeDefinition->visualizer == "opengl-texture" || valueTypeDefinition->visualizer == "gx-texture")
 			{
 				texture = Parse::Int32(value);
 			}
