@@ -1,3 +1,11 @@
+enum mode 0:"[-1, +1] to [0, 1]" 1:"[0, 1] to [-1, +1]"
 in float value
-in enum mode 0:"[-1, +1] to [0, 1]" 1:"[0, 1] to [-1, +1]"
+in enum mode mode
 out float result
+
+if (isPassthrough)
+	result = value;
+else if (mode == 0)
+	result = (value + 1.0) * 0.5;
+else
+	result = value * 2.0 - 1.0;

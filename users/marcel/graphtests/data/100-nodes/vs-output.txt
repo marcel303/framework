@@ -1,2 +1,6 @@
 in string name
 in vec4 xyzw
+
+-- vs
+
+// (auto-generated)

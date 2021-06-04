@@ -1,0 +1,19 @@
+enum range 0:"[min, max]" 1:"[0, 1]" 2:"[-1, +1]"
+
+in enum range range
+in float value
+in float min
+in float max 1.0
+
+out float result
+
+--
+
+if (isPassthrough)
+	result = value;
+else if (range == 0)
+	result = clamp(value, min, max);
+else if (range == 1)
+	result = clamp(value, 0.0, 1.0);
+else
+	result = clamp(value, -1.0, +1.0);

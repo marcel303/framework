@@ -3,8 +3,10 @@ in vec4 xyzw
 in float x
 in float y
 in float z
-in float w
+in float w 1.0
 out vec4 result
+
+-- ps
 
 if (xyzw_isReferenced)
 	result = xyzw;

@@ -1,6 +1,8 @@
 in vec4 xyzw
 in bool _objectToProjection true
 
+-- vs
+
 if (isPassthrough == false)
 {
 	if (_objectToProjection)

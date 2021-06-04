@@ -1,4 +1,9 @@
-// todo : replace name with enum for builtin VS inputs (position, normal, color, texcoord)
 in string name
 in bool viewSpace
 out vec4 result
+
+-- vs
+
+// todo : replace name with enum for builtin VS inputs (position, normal, color, texcoord)
+
+// (auto-generated)

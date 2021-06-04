@@ -2,7 +2,7 @@ in vec3 viewPosition
 in vec3 viewNormal
 out vec3 result
 
--- once
+-- ps once
 
 include renderOne/forward-lighting.txt
 
@@ -11,6 +11,6 @@ vec3 renderOne_lighting()
 	return vec3(0.0);
 }
 
---
+-- ps
 
 result = renderOne_lighting();
