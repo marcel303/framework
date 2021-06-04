@@ -14,11 +14,8 @@
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
 
-// todo : add support for true literal inputs : generate static branching, don't allow inputs to be connected
-
-// todo : regenerate shader text when a file dependency changes
-	// - keep track of all file dependencies
-	// - handle file changes. dependencies in a set for fast dirty check
+// todo : add min/max range for shader node inputs
+// todo : add support for socket min/max to graph edit
 
 /*
 
@@ -37,7 +34,16 @@ VS/PS nodes
 
 struct ShaderText
 {
-	std::vector<std::string> lines;
+	enum Stage
+	{
+		kStage_VS,
+		kStage_PS,
+		kStage_GlobalVS,
+		kStage_GlobalPS,
+		kStage_COUNT
+	};
+	
+	std::vector<std::string> lines[kStage_COUNT];
 };
 
 struct ShaderTextLibrary
@@ -112,6 +118,19 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 		
 		ShaderText shaderText;
 		
+		struct Options
+		{
+			bool emitStage[ShaderText::kStage_COUNT] = { };
+			
+			Options()
+			{
+			}
+		};
+		
+		Options options;
+		options.emitStage[ShaderText::kStage_VS] = true;
+		options.emitStage[ShaderText::kStage_PS] = true;
+		
 		for (auto & line : lines)
 		{
 			if (String::StartsWithC(line.c_str(), "in "))
@@ -137,6 +156,12 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 					inputSocket.name = name;
 					if (name[0] == '_')
 						inputSocket.displayName = name.c_str() + 1;
+						
+					if (typeName == "enum")
+					{
+						inputSocket.typeName = "int";
+						inputSocket.enumName = String::FormatC("%s:%s", typeDefinition.typeName.c_str(), name.c_str());
+					}
 					
 					if (parts.size() >= 4)
 					{
@@ -144,12 +169,12 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 						
 						inputSocket.defaultValue = defaultValue;
 					}
-					
+							
 					for (size_t i = 4; i < parts.size(); ++i)
 					{
 						if (false)
 						{
-							// todo : handle additional options here
+							// handle additional options here
 						}
 						else
 						{
@@ -189,7 +214,7 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 					{
 						if (false)
 						{
-							// todo : handle additional options here
+							// handle additional options here
 						}
 						else
 						{
@@ -201,6 +226,117 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 					typeDefinition.outputSockets.push_back(outputSocket);
 				}
 			}
+			else if (String::StartsWithC(line.c_str(), "enum "))
+			{
+				const char * begin = line.c_str() + strlen("enum ");
+				
+				while (begin[0] != 0 && isspace(begin[0]))
+					begin++;
+				
+				const char * end = begin;
+				
+				while (end[0] != 0 && !isspace(end[0]))
+					end++;
+				
+				const std::string name(begin, end);
+				
+				if (name.empty())
+				{
+					logError("missing enum name");
+					failed = true;
+				}
+				else
+				{
+				#if 1
+					Graph_EnumDefinition enumDefinition;
+					enumDefinition.enumName = String::FormatC("%s:%s", typeDefinition.typeName.c_str(), name.c_str());
+				
+					for (;;)
+					{
+						const char * value_begin = end;
+						
+						while (value_begin[0] != 0 && isspace(value_begin[0]))
+							value_begin++;
+						
+						if (value_begin[0] == 0)
+							break;
+							
+						const char * value_end = value_begin;
+						
+						while (value_end[0] != 0 && value_end[0] != ':')
+							value_end++;
+						
+						if (value_end[0] != ':')
+						{
+							logError("missing ':' after enum value");
+							failed = true;
+							break;
+						}
+						
+						const std::string value(value_begin, value_end);
+						
+						if (value.empty())
+						{
+							logError("missing enum value");
+							failed = true;
+							break;
+						}
+						
+						const char * key_begin = value_end + 1;
+						
+						std::string key;
+						
+						if (key_begin[0] == '"')
+						{
+							key_begin++;
+							
+							const char * key_end = key_begin;
+							
+							while (key_end[0] != 0 && key_end[0] != '"')
+								key_end++;
+							
+							if (key_end[0] != '"')
+							{
+								logError("missing trailing '\"' to terminate enum key");
+								failed = true;
+								break;
+							}
+							
+							key = std::string(key_begin, key_end);
+							
+							key_end++;
+							
+							end = key_end;
+						}
+						else
+						{
+							const char * key_end = key_begin;
+							
+							while (key_end[0] != 0 && !isspace(key_end[0]))
+								key_end++;
+							
+							key = std::string(key_begin, key_end);
+							
+							end = key_end;
+						}
+						
+						if (key.empty())
+						{
+							logError("missing enum key");
+							failed = true;
+							break;
+						}
+						
+						Graph_EnumDefinition::Elem elem;
+						elem.name = key;
+						elem.valueText = value;
+						enumDefinition.enumElems.push_back(elem);
+					}
+				#endif
+				
+					types.enumDefinitions[enumDefinition.enumName] = enumDefinition;
+				}
+			}
 			else if (String::StartsWithC(line.c_str(), "--"))
 			{
 				// -- [options..]
@@ -208,43 +344,81 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 				std::vector<std::string> parts;
 				splitString(line, parts);
 				
-				// todo : handle options
+				// reset options
+				
+				options = Options();
+				
+				// handle options
+				
+				bool emitVs = false;
+				bool emitPs = false;
+				bool emitGlobal = false;
 				
 				for (size_t i = 1; i < parts.size(); ++i)
 				{
-					if (false)
-					{
-						// todo : handle options here
-					}
+					if (parts[i] == "vs")
+						emitVs = true;
+					else if (parts[i] == "ps")
+						emitPs = true;
+					else if (parts[i] == "once")
+						emitGlobal = true;
 					else
 					{
 						logError("unknown option(s): %s", parts[i].c_str());
 						failed = true;
 					}
 				}
-			}
-			else
-			{
-				if (shaderText.lines.empty() && line.empty())
+				
+				if (emitVs == false && emitPs == false)
 				{
-					// ignore the first empty line(s) to make the generated text more pretty
+					emitVs = true;
+					emitPs = true;
+				}
+				
+				if (emitGlobal)
+				{
+					options.emitStage[ShaderText::kStage_GlobalVS] = emitVs;
+					options.emitStage[ShaderText::kStage_GlobalPS] = emitPs;
 				}
 				else
 				{
-					shaderText.lines.push_back(line);
-					shaderText.lines.back().push_back('\n');
+					options.emitStage[ShaderText::kStage_VS] = emitVs;
+					options.emitStage[ShaderText::kStage_PS] = emitPs;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < ShaderText::kStage_COUNT; ++i)
+				{
+					if (options.emitStage[i])
+					{
+						if (shaderText.lines[i].empty() && line.empty())
+						{
+							// ignore the first empty line(s) to make the generated text more pretty
+						}
+						else
+						{
+							shaderText.lines[i].push_back(line);
+							shaderText.lines[i].back().push_back('\n');
+						}
+					}
 				}
 			}
 		}
 		
 		// remove trailing empty line(s) to make the generated text more pretty
 		
-		while (shaderText.lines.empty() == false && shaderText.lines.back().empty())
+		for (int i = 0; i < ShaderText::kStage_COUNT; ++i)
 		{
-			shaderText.lines.pop_back();
-		}
+			auto & lines = shaderText.lines[i];
+			
+			while (lines.empty() == false && lines.back().size() == 1 && lines.back()[0] == '\n')
+			{
+				lines.pop_back();
+			}
 		
-		//logDebug("shaderText: %s", shaderText.c_str());
+			//logDebug("shaderText[%d]: %s", shaderText.lines[i]c_str());
+		}
 		
 		// set description for specific nodes
 		
@@ -388,16 +562,149 @@ static std::string makeColorString(const char * hex)
 	return text;
 }
 
+static std::string applyTextSubstitutions(const char * text, const GraphNode & node)
+{
+	std::string result;
+	
+	while (text[0] != 0)
+	{
+		const char c = text[0];
+		
+		if (c == '#')
+		{
+			result.append(generateScopeName(node.id));
+			
+			text++;
+		}
+	#if 0
+		else if (c == '$')
+		{
+			const char * name_begin = text + 1;
+			
+			const char * name_end = name_begin;
+			
+			while (name_end[0] != 0 && isalnum(name_end[0]))
+				name_end++;
+			
+			const std::string name(name_begin, name_end);
+			
+			auto value_itr = node.inputValues.find(name);
+			
+			if (value_itr != node.inputValues.end())
+			{
+				auto & value = value_itr->second;
+				
+				result.append(value);
+			}
+			
+			text = name_end;
+		}
+	#endif
+		else
+		{
+			result.push_back(c);
+			
+			text++;
+		}
+	}
+	
+	return result;
+}
+
+/**
+ * Check if the graph is valid and whether it references any unknown node types. When this check passes, it's safe to assume node and node type lookups will always succeed,
+ * and links are pointing to valid nodes and sockets.
+ * Performing graph verification prior to translating the graph into shader text means we don't need any safety checks performed on the results of various tryGet*** methods on
+ * the graph and the type definition library.
+ */
+static bool verifyShaderGraph(const Graph & graph, const Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
+{
+	bool result = true;
+	
+	for (auto & node_itr : graph.nodes)
+	{
+		auto & node = node_itr.second;
+		
+		auto * nodeType = typeDefinitionLibrary.tryGetTypeDefinition(node.typeName);
+		
+		if (nodeType == nullptr)
+		{
+			logError("failed to find node type: %s", node.typeName.c_str());
+			result = false;
+		}
+	}
+	
+	for (auto & link_itr : graph.links)
+	{
+		auto & link = link_itr.second;
+		
+		auto * srcNode = graph.tryGetNode(link.srcNodeId);
+		auto * dstNode = graph.tryGetNode(link.dstNodeId);
+		
+		if (srcNode == nullptr)
+		{
+			logError("failed to find link src node. nodeId=%d", link.srcNodeId);
+			result = false;
+		}
+		
+		if (dstNode == nullptr)
+		{
+			logError("failed to find link dst node. nodeId=%d", link.dstNodeId);
+			result = false;
+		}
+		
+		if (srcNode != nullptr)
+		{
+			auto * srcType = typeDefinitionLibrary.tryGetTypeDefinition(srcNode->typeName);
+			
+			if (srcType != nullptr)
+			{
+				if (link.srcNodeSocketIndex < 0 || link.srcNodeSocketIndex >= srcType->inputSockets.size())
+				{
+					logError("link src socket index is out of range. linkId=%d", link.id);
+					result = false;
+				}
+			}
+		}
+		
+		if (dstNode != nullptr)
+		{
+			auto * dstType = typeDefinitionLibrary.tryGetTypeDefinition(dstNode->typeName);
+			
+			if (dstType != nullptr)
+			{
+				if (link.dstNodeSocketIndex < 0 || link.dstNodeSocketIndex >= dstType->outputSockets.size())
+				{
+					logError("link dst socket index is out of range. linkId=%d", link.id);
+					result = false;
+				}
+			}
+		}
+	}
+	
+	return result;
+}
+
 static bool generateShaderText_traverse(
 	const Graph & graph,
 	const GraphNode & node,
 	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 	const ShaderTextLibrary & shaderTextLibrary,
+	const char shaderStage, // 'v' or 'p' for vs or ps
 	ShaderTextWriter & shaderText,
 	std::set<GraphNodeId> & traversedNodes,
 	std::set<std::string> & nodeDependencies,
 	std::map<int, int> * usedVsInputsByNode)
 {
+	bool result = true;
+	
+	if (shaderStage != 'v' &&
+		shaderStage != 'p')
+	{
+		logError("invalid shader stage: %c", shaderStage);
+		return false;
+	}
+	
 	auto * srcNode = &node;
 	
 	// register node traversal
@@ -427,6 +734,7 @@ static bool generateShaderText_traverse(
 					*dstNode,
 					typeDefinitionLibrary,
 					shaderTextLibrary,
+					shaderStage,
 					shaderText,
 					traversedNodes,
 					nodeDependencies,
@@ -444,8 +752,6 @@ static bool generateShaderText_traverse(
 	
 	auto * srcType = typeDefinitionLibrary.tryGetTypeDefinition(srcNode->typeName);
 	
-	Assert(srcType != nullptr);
-	
 	// generate outputs (global scope)
 	
 	auto srcScopeName = generateScopeName(srcNode->id);
@@ -458,17 +764,21 @@ static bool generateShaderText_traverse(
 			srcScopeName.c_str(),
 			output.name.c_str());
 	}
-		
-	shaderText.Append("{\n");
+	
+	shaderText.Append("{\n"); // local scope : begin
 	shaderText.Indent();
 	{
 		// generate inputs
+		
+		bool generatedInputs = false;
 		
 		for (auto & input : srcType->inputSockets)
 		{
 			if (input.typeName == "string")
 				continue;
 				
+			generatedInputs = true;
+			
 			const std::string * inputValue = &input.defaultValue;
 			
 			auto inputValue_itr = srcNode->inputValues.find(input.name);
@@ -488,23 +798,16 @@ static bool generateShaderText_traverse(
 				: input.typeName == "vec4.color"
 				? makeColorString(inputValue->c_str()).c_str()
 				: inputValue->c_str());
-
-			// is referenced
-			
-			shaderText.AppendFormat("bool %s_isReferenced = false;\n",
-				input.name.c_str());
-			shaderText.AppendFormat("(void)%s_isReferenced;\n",
-				input.name.c_str());
 		}
 		
-		if (!srcType->inputSockets.empty())
+		if (generatedInputs)
 		{
 			shaderText.AppendLine();
 		}
 		
 		// assign inputs
 		
-		bool hasInputAssignments = false;
+		std::set<std::string> assignedInputs;
 		
 		for (auto & link_itr : graph.links)
 		{
@@ -524,15 +827,42 @@ static bool generateShaderText_traverse(
 					srcSocket.name.c_str(),
 					dstScopeName.c_str(),
 					dstSocket.name.c_str());
-				
-				shaderText.AppendFormat("%s_isReferenced = true;\n",
-					srcSocket.name.c_str());
 					
-				hasInputAssignments = true;
+				assignedInputs.insert(srcSocket.name);
 			}
 		}
 		
-		if (hasInputAssignments)
+		if (!assignedInputs.empty())
+		{
+			shaderText.AppendLine();
+		}
+		
+		for (auto & input : srcType->inputSockets)
+		{
+			if (input.typeName == "string")
+				continue;
+			
+			shaderText.AppendFormat("bool %s_isReferenced = %s;\n",
+				input.name.c_str(),
+				assignedInputs.count(input.name) == 0 ? "false" : "true");
+		}
+		
+		if (generatedInputs)
+		{
+			shaderText.AppendLine();
+			shaderText.Append("// suppress unused variable warning\n");
+		}
+		
+		for (auto & input : srcType->inputSockets)
+		{
+			if (input.typeName == "string")
+				continue;
+			
+			shaderText.AppendFormat("(void)%s_isReferenced;\n",
+				input.name.c_str());
+		}
+		
+		if (generatedInputs)
 		{
 			shaderText.AppendLine();
 		}
@@ -570,13 +900,23 @@ static bool generateShaderText_traverse(
 	
 		const auto & text = text_itr->second;
 		
-		for (auto & line : text.lines)
-		{
-			shaderText.Append(line.c_str());
-		}
+		const int stage =
+			shaderStage == 'v' ? ShaderText::kStage_VS :
+			shaderStage == 'p' ? ShaderText::kStage_PS :
+			-1;
 		
-		if (!text.lines.empty())
+		if (text.lines[stage].empty())
 		{
+			logError("missing shader node text for node %s, stage %cs", node.typeName.c_str(), shaderStage);
+			result = false;
+		}
+		else
+		{
+			for (auto & line : text.lines[stage])
+			{
+				shaderText.Append(applyTextSubstitutions(line.c_str(), node).c_str());
+			}
+			
 			shaderText.AppendLine();
 		}
 		
@@ -586,45 +926,45 @@ static bool generateShaderText_traverse(
 		{
 			// uniform -> global scope output
 			
+			bool assignedResult = false;
+			
 			auto name_itr = node.inputValues.find("name");
 			
 			if (name_itr != node.inputValues.end())
 			{
 				auto & name = name_itr->second;
 				
-				if (srcNode->isPassthrough)
-				{
-					shaderText.Append("result = 0.0;\n");
-				}
-				else
+				if (srcNode->isPassthrough == false)
 				{
 					shaderText.AppendFormat("result = %s;\n",
 						name.c_str());
+						
+					assignedResult = true;
 				}
-				
-				shaderText.AppendFormat("%s%s = result;\n",
-					srcScopeName.c_str(),
-					"result");
 			}
+			
+			if (assignedResult == false)
+			{
+				shaderText.Append("result = 0.0;\n");
+			}
+			
+			shaderText.AppendFormat("%s%s = result;\n",
+				srcScopeName.c_str(),
+				"result");
 		}
 		else if (srcType->typeName == "vs.input")
 		{
 			// buffer -> global scope output
 			
+			bool assignedResult = false;
+			
 			auto name_itr = node.inputValues.find("name");
 			
 			if (name_itr != node.inputValues.end())
 			{
 				auto & name = name_itr->second;
 				
-				shaderText.Append("(void)viewSpace;\n");
-				shaderText.AppendLine();
-				
-				if (srcNode->isPassthrough)
-				{
-					shaderText.Append("result = vec4(0.0);\n");
-				}
-				else
+				if (srcNode->isPassthrough == false)
 				{
 					std::string loadCode;
 					int vsInput = 0;
@@ -659,7 +999,9 @@ static bool generateShaderText_traverse(
 					{
 						shaderText.AppendFormat("result = %s;\n",
 							loadCode.c_str());
-							
+						
+						assignedResult = true;
+						
 						const auto viewSpace_itr = node.inputValues.find("viewSpace");
 				
 						const bool viewSpace =
@@ -677,13 +1019,21 @@ static bool generateShaderText_traverse(
 						}
 					}
 				}
-				
-				shaderText.AppendLine();
-				
-				shaderText.AppendFormat("%s%s = result;\n",
-					srcScopeName.c_str(),
-					"result");
 			}
+			
+			if (assignedResult == false)
+			{
+				shaderText.Append("result = vec4(0.0);\n");
+			}
+
+			shaderText.AppendLine();
+			
+			shaderText.Append("(void)viewSpace;\n");
+			shaderText.AppendLine();
+			
+			shaderText.AppendFormat("%s%s = result;\n",
+				srcScopeName.c_str(),
+				"result");
 		}
 		else if (srcType->typeName == "vs.output")
 		{
@@ -712,24 +1062,21 @@ static bool generateShaderText_traverse(
 		{
 			// varying -> global scope output
 			
+			bool assignedResult = false;
+			
 			auto name_itr = node.inputValues.find("name");
 			
 			if (name_itr != node.inputValues.end())
 			{
 				auto & name = name_itr->second;
 				
-				shaderText.Append("(void)_normalize;\n");
-				shaderText.AppendLine();
-				
-				if (srcNode->isPassthrough)
-				{
-					shaderText.Append("result = vec4(0.0);\n");
-				}
-				else
+				if (srcNode->isPassthrough == false)
 				{
 					shaderText.AppendFormat("result = v_%s;\n",
 						name.c_str());
-						
+					
+					assignedResult = true;
+					
 					const auto normalize_itr = node.inputValues.find("_normalize");
 			
 					const bool normalize =
@@ -741,13 +1088,21 @@ static bool generateShaderText_traverse(
 						shaderText.Append("result = normalize(result);\n");
 					}
 				}
-				
-				shaderText.AppendLine();
-				
-				shaderText.AppendFormat("%s%s = result;\n",
-					srcScopeName.c_str(),
-					"result");
 			}
+			
+			if (assignedResult == false)
+			{
+				shaderText.Append("result = vec4(0.0);\n");
+			}
+			
+			shaderText.AppendLine();
+			
+			shaderText.Append("(void)_normalize;\n");
+			shaderText.AppendLine();
+				
+			shaderText.AppendFormat("%s%s = result;\n",
+				srcScopeName.c_str(),
+				"result");
 		}
 		else
 		{
@@ -763,9 +1118,9 @@ static bool generateShaderText_traverse(
 		}
 	}
 	shaderText.Unindent();
-	shaderText.Append("}\n\n");
+	shaderText.Append("}\n\n"); // local scope : end
 	
-	return true;
+	return result;
 }
 
 static bool generateVsShaderText(
@@ -779,6 +1134,11 @@ static bool generateVsShaderText(
 	std::map<int, int> * usedVsInputsByNode)
 {
 	bool result = true;
+	
+	if (verifyShaderGraph(graph, typeDefinitionLibrary) == false)
+	{
+		return false;
+	}
 	
 	// generate header
 	
@@ -887,6 +1247,39 @@ static bool generateVsShaderText(
 		shaderText.AppendLine();
 	}
 	
+	// generate once text
+	
+	std::set<std::string> generatedOnceNodes;
+	
+	for (auto & node_itr : graph.nodes)
+	{
+		auto & node = node_itr.second;
+		
+		if (generatedOnceNodes.count(node.typeName) != 0)
+			continue;
+		
+		generatedOnceNodes.insert(node.typeName);
+		
+		auto text_itr = shaderTextLibrary.shaderNodeToShaderText.find(node.typeName);
+		
+		if (text_itr != shaderTextLibrary.shaderNodeToShaderText.end())
+		{
+			auto & text = text_itr->second;
+			
+			auto & lines = text.lines[ShaderText::kStage_GlobalVS];
+			
+			if (!lines.empty())
+			{
+				for (auto & line : lines)
+				{
+					shaderText.Append(applyTextSubstitutions(line.c_str(), node).c_str());
+				}
+				
+				shaderText.AppendLine();
+			}
+		}
+	}
+	
 	// generate main function
 	
 	shaderText.Append("void main()\n"); // main : begin
@@ -924,6 +1317,7 @@ static bool generateVsShaderText(
 					node,
 					typeDefinitionLibrary,
 					shaderTextLibrary,
+					'v',
 					shaderText,
 					traversedNodes,
 					nodeDepenencies,
@@ -945,6 +1339,7 @@ static bool generateVsShaderText(
 					node,
 					typeDefinitionLibrary,
 					shaderTextLibrary,
+					'v',
 					shaderText,
 					traversedNodes,
 					nodeDepenencies,
@@ -993,7 +1388,7 @@ static bool generateVsShaderText(
 				shaderText.AppendFormat("v_%s = vec4(0.0);\n",
 					varying.c_str());
 			#else
-				logError("unknown varying: %s", varying.c_str());
+				logError("vs output '%s' is not generated by shader graph and isn't supported through built-in synthesis", varying.c_str());
 				result = false;
 			#endif
 			}
@@ -1010,10 +1405,12 @@ static bool generateVsShaderText(
 		
 		if (generateNodePreviewMode)
 		{
+			shaderText.AppendLine();
 			shaderText.Append("v_nodePreview = vec4(0.0);\n");
 				
 			// generate node/socket switch
 			
+			shaderText.AppendLine();
 			shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
 			shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
 			
@@ -1104,6 +1501,11 @@ static bool generatePsShaderText(
 	std::set<std::string> & nodeDependencies)
 {
 	bool result = true;
+	
+	if (verifyShaderGraph(graph, typeDefinitionLibrary) == false)
+	{
+		return false;
+	}
 	
 	// generate header
 
@@ -1196,6 +1598,39 @@ static bool generatePsShaderText(
 		shaderText.AppendLine();
 	}
 	
+	// generate once text
+	
+	std::set<std::string> generatedOnceNodes;
+	
+	for (auto & node_itr : graph.nodes)
+	{
+		auto & node = node_itr.second;
+		
+		if (generatedOnceNodes.count(node.typeName) != 0)
+			continue;
+		
+		generatedOnceNodes.insert(node.typeName);
+		
+		auto text_itr = shaderTextLibrary.shaderNodeToShaderText.find(node.typeName);
+		
+		if (text_itr != shaderTextLibrary.shaderNodeToShaderText.end())
+		{
+			auto & text = text_itr->second;
+			
+			auto & lines = text.lines[ShaderText::kStage_GlobalPS];
+			
+			if (!lines.empty())
+			{
+				for (auto & line : lines)
+				{
+					shaderText.Append(applyTextSubstitutions(line.c_str(), node).c_str());
+				}
+				
+				shaderText.AppendLine();
+			}
+		}
+	}
+	
 	// generate main function
 
 	shaderText.Append("void main()\n"); // main : begin
@@ -1227,6 +1662,7 @@ static bool generatePsShaderText(
 				*outputNode,
 				typeDefinitionLibrary,
 				shaderTextLibrary,
+				'p',
 				shaderText,
 				traversedNodes,
 				nodeDependencies,
@@ -1242,6 +1678,7 @@ static bool generatePsShaderText(
 		{
 			// generate node/socket switch
 			
+			shaderText.AppendLine();
 			shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
 			shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
 			
@@ -1250,6 +1687,7 @@ static bool generatePsShaderText(
 			shaderText.Indent();
 			{
 				shaderText.Append("vec4 nodePreview_result = v_nodePreview;\n");
+				shaderText.AppendLine();
 				
 				shaderText.Append("switch (nodePreview_nodeId)\n");
 				shaderText.Append("{\n");
@@ -1421,6 +1859,8 @@ public:
 	
 	std::set<std::string> nodeDepenencies;
 	
+	Shader shader;
+	
 	ShaderGraphElem(const char * in_name, const char * in_outputs)
 		: name(in_name)
 		, outputs(in_outputs)
@@ -1435,11 +1875,13 @@ public:
 		
 		// collect shader outputs
 		
+		const char * shaderOutputNames = globals.shaderOutputs;
+		
 		std::vector<const ShaderOutput*> shaderOutputs;
 		
-		for (int i = 0; globals.shaderOutputs[i] != 0; ++i)
+		for (int i = 0; shaderOutputNames[i] != 0; ++i)
 		{
-			auto name = globals.shaderOutputs[i];
+			auto name = shaderOutputNames[i];
 			auto * shaderOutput = findShaderOutput(name);
 			shaderOutputs.push_back(shaderOutput);
 		}
@@ -1470,6 +1912,8 @@ public:
 		
 		framework.registerShaderSource(nameVs.c_str(), textVs);
 		framework.registerShaderSource(namePs.c_str(), textPs);
+		
+		shader = Shader(name.c_str(), shaderOutputNames);
 	}
 	
 	void free()
@@ -1684,6 +2128,10 @@ static void registerBuiltinTypes(Graph_TypeDefinitionLibrary & typeDefinitionLib
 	boolType.typeName = "bool";
 	boolType.editor = "checkbox";
 	
+	auto & intType = typeDefinitionLibrary.valueTypeDefinitions["int"];
+	intType.typeName = "int";
+	intType.editor = "textbox_int";
+	
 	auto & floatType = typeDefinitionLibrary.valueTypeDefinitions["float"];
 	floatType.typeName = "float";
 	floatType.editor = "textbox_float";
@@ -1703,6 +2151,24 @@ static void registerBuiltinTypes(Graph_TypeDefinitionLibrary & typeDefinitionLib
 	colorType.editor = "colorpicker";
 	colorType.visualizer = "gx-texture";
 }
+
+static ShaderGraphCache g_shaderGraphCache;
+
+class ShaderGraph
+{
+	ShaderGraphElem & m_cacheElem;
+	
+public:
+	ShaderGraph(const char * name)
+		: m_cacheElem(g_shaderGraphCache.findOrCreate(name))
+	{
+	}
+	
+	Shader & getShader() const
+	{
+		return m_cacheElem.shader;
+	}
+};
 
 int main(int argc, char * argv[])
 {
@@ -1733,10 +2199,17 @@ int main(int argc, char * argv[])
 	
 	graphEdit.load("test-001.xml");
 	
-	ShaderGraphCache shaderGraphCache;
-	framework.registerResourceCache(&shaderGraphCache);
-	shaderGraphCache.addShaderNodePath("100-nodes");
-	auto & shaderGraphElem = shaderGraphCache.findOrCreate("test-001.xml");
+	framework.registerResourceCache(&g_shaderGraphCache);
+	g_shaderGraphCache.addShaderNodePath("100-nodes");
+	
+	{
+		auto & shaderGraphElem = g_shaderGraphCache.findOrCreate("test-001.xml");
+		ShaderGraph shaderGraph("test-001.xml");
+		auto & shader = shaderGraph.getShader();
+		setShader(shader);
+		shader.setImmediate("time", 0.f);
+		clearShader();
+	}
 	
 	std::set<std::string> nodeDependencies;
 	std::map<int, int> usedVsInputsByNode;
@@ -1820,7 +2293,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-			if (true)
+			if (false)
 			{
 				// draw per-node preview for the first output socket
 				
