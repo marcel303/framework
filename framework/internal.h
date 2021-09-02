@@ -561,6 +561,14 @@ public:
 	FT_Library freeType;
 #endif
 	int resourceVersion;
+	struct
+	{
+		bool isSet;
+		int x;
+		int y;
+		int sx;
+		int sy;
+	} drawRect;
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
 	COLOR_POST colorPost;
