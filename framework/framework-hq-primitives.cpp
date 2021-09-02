@@ -409,6 +409,26 @@ void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Colo
 	globals.hqGradientScale = scale;
 }
 
+void hqSetGradient(GRADIENT_TYPE gradientType, Vec2Arg from, Vec2Arg to, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias, const float scale)
+{
+	const Vec2 delta = to - from;
+	const float angle = atan2f(delta[1], delta[0]);
+	const float distance = delta.CalcSize();
+	
+	hqSetGradient(
+		gradientType,
+		Mat4x4(true)
+			//.Scale(1.f / distance, 1.f / distance, 1)
+			.RotateZ(angle)
+			.Scale(1.f / distance, 1.f / distance, 1)
+			.Translate(-from[0], -from[1], 0),
+		color1,
+		color2,
+		colorMode,
+		bias,
+		scale);
+}
+
 void hqClearGradient()
 {
 	globals.hqGradientType = GRADIENT_NONE;

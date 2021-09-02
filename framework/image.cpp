@@ -187,6 +187,18 @@ ImageData *  imagePremultiplyAlpha(const ImageData * image)
 	return result;
 }
 
+void imagePremultiplyAlpha_inPlace(const ImageData * image)
+{
+	const int numPixels = image->sx * image->sy;
+	
+	for (int i = 0; i < numPixels; ++i)
+	{
+		image->imageData[i].r = image->imageData[i].r * image->imageData[i].a / 255;
+		image->imageData[i].g = image->imageData[i].g * image->imageData[i].a / 255;
+		image->imageData[i].b = image->imageData[i].b * image->imageData[i].a / 255;
+	}
+}
+
 static bool getPixel(const ImageData * image, const int x, const int y, ImageData::Pixel & pixel)
 {
 	if (x < 0 || y < 0 || x >= image->sx || y >= image->sy)

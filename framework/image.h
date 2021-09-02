@@ -59,6 +59,7 @@ public:
 
 ImageData * loadImage(const char * filename);
 ImageData * imagePremultiplyAlpha(const ImageData * image);
+void        imagePremultiplyAlpha_inPlace(const ImageData * image);
 ImageData * imageFixAlphaFilter(const ImageData * image);
 
 bool saveImage(const ImageData * image, const char * filename);

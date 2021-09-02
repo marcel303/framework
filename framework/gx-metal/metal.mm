@@ -393,14 +393,8 @@ void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const in
 
 void metal_clear_scissor()
 {
-	const NSUInteger sx =
-		s_activeRenderPass->renderdesc.depthAttachment != nil
-			? s_activeRenderPass->renderdesc.depthAttachment.texture.width
-			: s_activeRenderPass->renderdesc.colorAttachments[0].texture.width;
-	const NSUInteger sy =
-		s_activeRenderPass->renderdesc.depthAttachment != nil
-			? s_activeRenderPass->renderdesc.depthAttachment.texture.height
-			: s_activeRenderPass->renderdesc.colorAttachments[0].texture.height;
+	const NSUInteger sx = s_activeRenderPass->viewportSx;
+	const NSUInteger sy = s_activeRenderPass->viewportSy;
 	
 	const MTLScissorRect rect = { 0, 0, sx, sy };
 	

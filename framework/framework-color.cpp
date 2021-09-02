@@ -315,3 +315,8 @@ Color Color::mulRGB(float t) const
 {
 	return Color(r * t, g * t, b * t, a);
 }
+
+Color Color::mulA(float t) const
+{
+	return Color(r, g, b, a * t);
+}

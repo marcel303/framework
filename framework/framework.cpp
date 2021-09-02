@@ -451,18 +451,6 @@ bool Framework::init(int sx, int sy)
 	windowSy = sy;
 
 #if ENABLE_OPENGL
-	int drawableSx;
-	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
-	if (s_backingScale < 1)
-		s_backingScale = 1;
-	
-#if defined(IPHONEOS)
-	// fixme : the backing scale is incorrect on iOS. SDL_GL_GetDrawableSize returns an invalid size
-	s_backingScale = 1;
-#endif
-	
 	fassert(globals.glContext == nullptr);
 	globals.glContext = SDL_GL_CreateContext(globals.mainWindow->m_window);
 	checkErrorGL();
@@ -474,6 +462,13 @@ bool Framework::init(int sx, int sy)
 			initErrorHandler(INIT_ERROR_OPENGL);
 		return false;
 	}
+	
+	int drawableSx;
+	int drawableSy;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
+	if (s_backingScale < 1)
+		s_backingScale = 1;
 	
 	{
 		const char * renderer = (char*)glGetString(GL_RENDERER);
@@ -3845,8 +3840,25 @@ void popSurface()
 	popRenderPass();
 }
 
+struct DrawRectState
+{
+	bool isSet;
+	int x;
+	int y;
+	int sx;
+	int sy;
+};
+
+static Stack<DrawRectState, 32> s_drawRectStack;
+
 void setDrawRect(int x, int y, int sx, int sy)
 {
+	globals.drawRect.isSet = true;
+	globals.drawRect.x = x;
+	globals.drawRect.y = y;
+	globals.drawRect.sx = sx;
+	globals.drawRect.sy = sy;
+	
 	int surfaceSx;
 	int surfaceSy;
 	getCurrentViewportSize(surfaceSx, surfaceSy);
@@ -3883,6 +3895,8 @@ void setDrawRect(int x, int y, int sx, int sy)
 
 void clearDrawRect()
 {
+	globals.drawRect.isSet = false;
+	
 #if ENABLE_METAL
 	metal_clear_scissor();
 #endif
@@ -3890,6 +3904,50 @@ void clearDrawRect()
 #if ENABLE_OPENGL
 	glDisable(GL_SCISSOR_TEST);
 #endif
+}
+
+void pushDrawRect(int x, int y, int sx, int sy)
+{
+	DrawRectState drawRect;
+	drawRect.isSet = globals.drawRect.isSet;
+	drawRect.x = globals.drawRect.x;
+	drawRect.y = globals.drawRect.y;
+	drawRect.sx = globals.drawRect.sx;
+	drawRect.sy = globals.drawRect.sy;
+	s_drawRectStack.push(drawRect);
+	
+	setDrawRect(x, y, sx, sy);
+}
+
+void pushDrawRect()
+{
+	DrawRectState drawRect;
+	drawRect.isSet = globals.drawRect.isSet;
+	drawRect.x = globals.drawRect.x;
+	drawRect.y = globals.drawRect.y;
+	drawRect.sx = globals.drawRect.sx;
+	drawRect.sy = globals.drawRect.sy;
+	s_drawRectStack.push(drawRect);
+	
+	clearDrawRect();
+}
+
+void popDrawRect()
+{
+	const DrawRectState drawRect = s_drawRectStack.popValue();
+	
+	if (drawRect.isSet)
+	{
+		setDrawRect(
+			drawRect.x,
+			drawRect.y,
+			drawRect.sx,
+			drawRect.sy);
+	}
+	else
+	{
+		clearDrawRect();
+	}
 }
 
 //
