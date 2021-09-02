@@ -20,6 +20,7 @@
 
 #include "zita-rev1-pareq.h"
 
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <string.h>
 
