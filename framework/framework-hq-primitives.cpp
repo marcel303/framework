@@ -296,6 +296,14 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	{
 		s_hqScale = 1.f;
 	}
+
+	//
+
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		pushColor();
+		setColor(globals.hqGradientColor1);
+	}
 	
 	//
 	
@@ -393,6 +401,13 @@ void hqEnd()
 	default:
 		fassert(false);
 		break;
+	}
+
+	//
+
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		popColor();
 	}
 }
 
