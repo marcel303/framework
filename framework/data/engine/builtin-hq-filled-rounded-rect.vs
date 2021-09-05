@@ -25,7 +25,7 @@ vec3 calculatePlane(vec2 p1, vec2 p2)
 void main()
 {
 	vec4 params1 = in_position4;
-	vec4 params2 = unpackNormal();
+	vec2 params2 = unpackTexcoord(0);
 	
 	// unpack
 	

@@ -158,50 +158,61 @@ static void applyHqShaderConstants()
 
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
+	globals.hqUseScreenSize = useScreenSize;
+
 	switch (type)
 	{
 	case HQ_LINES:
 		setShader_HqLines();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
 		setShader_HqFilledTriangles();
+		applyHqShaderConstants();
 		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
 		setShader_HqFilledCircles();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
 		setShader_HqFilledRects();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
 		setShader_HqFilledRoundedRects();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
 		setShader_HqStrokedTriangles();
+		applyHqShaderConstants();
 		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
 		setShader_HqStrokedCircles();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
 		setShader_HqStrokedRects();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
 		setShader_HqStrokedRoundedRects();
+		applyHqShaderConstants();
 		gxBegin(GX_QUADS);
 		break;
 
@@ -209,16 +220,16 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		fassert(false);
 		break;
 	}
-	
-	globals.hqUseScreenSize = useScreenSize;
-	
-	applyHqShaderConstants();
 }
 
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 {
 	setShader(shader);
 	
+	globals.hqUseScreenSize = useScreenSize;
+
+	applyHqShaderConstants();
+
 	switch (type)
 	{
 	case HQ_LINES:
@@ -261,10 +272,6 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 		fassert(false);
 		break;
 	}
-	
-	globals.hqUseScreenSize = useScreenSize;
-	
-	applyHqShaderConstants();
 }
 
 void hqEnd()
@@ -295,6 +302,14 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	else
 	{
 		s_hqScale = 1.f;
+	}
+
+	//
+
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		pushColor();
+		setColor(globals.hqGradientColor1);
 	}
 	
 	//
@@ -394,6 +409,13 @@ void hqEnd()
 		fassert(false);
 		break;
 	}
+
+	//
+
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		popColor();
+	}
 }
 
 #endif
@@ -461,21 +483,21 @@ void hqClearTexture()
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2)
 {
-	gxNormal3f(strokeSize1, strokeSize2, 0.f);
+	gxTexCoord2f(strokeSize1, strokeSize2);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
 void hqFillTriangle(float x1, float y1, float x2, float y2, float x3, float y3)
 {
-	gxNormal3f(x3, y3, 0.f);
+	gxTexCoord2f(x3, y3);
 	for (int i = 0; i < 3; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
 void hqFillCircle(float x, float y, float radius)
 {
-	gxNormal3f(radius, 0.f, 0.f);
+	gxTexCoord2f(radius, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex2f(x, y);
 }
@@ -488,35 +510,35 @@ void hqFillRect(float x1, float y1, float x2, float y2)
 
 void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
 {
-	gxNormal3f(radius, 0.f, 0.f);
+	gxTexCoord2f(radius, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
 void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke)
 {
-	gxNormal3f(x3, y3, stroke);
+	gxNormal3f(x3, y3, stroke); // todo : use color ?
 	for (int i = 0; i < 3; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
 void hqStrokeCircle(float x, float y, float radius, float stroke)
 {
-	gxNormal3f(radius, stroke, 0.f);
+	gxTexCoord2f(radius, stroke);
 	for (int i = 0; i < 4; ++i)
 		gxVertex2f(x, y);
 }
 
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke)
 {
-	gxNormal3f(stroke, 0.f, 0.f);
+	gxTexCoord2f(stroke, 0.f);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
 
 void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, float stroke)
 {
-	gxNormal3f(radius, stroke, 0.f);
+	gxTexCoord2f(radius, stroke);
 	for (int i = 0; i < 4; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }
