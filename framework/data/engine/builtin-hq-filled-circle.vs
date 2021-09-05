@@ -9,7 +9,7 @@ shader_out vec4 v_color;
 
 void main()
 {
-	vec4 params = unpackNormal();
+	vec2 params = unpackTexcoord(0);
 	vec4 positions = in_position4;
 	
 	// unpack
