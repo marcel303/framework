@@ -122,7 +122,7 @@
     #if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
         #define ENABLE_HQ_PRIMITIVES 1
     #else
-        #define ENABLE_HQ_PRIMITIVES 0
+        #define ENABLE_HQ_PRIMITIVES 0 // do not alter
     #endif
 #endif
 
