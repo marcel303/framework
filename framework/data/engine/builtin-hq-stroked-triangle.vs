@@ -28,6 +28,17 @@ void main()
 	vec2 p2 = params1.zw;
 	vec2 p3 = params2.xy;
 	float strokeSize = params2.z * 0.5;
+
+	if (useScreenSize == 1.0)
+	{
+		// todo ?
+	}
+	else
+	{
+		float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
+		
+		strokeSize *= scale;
+	}
 	
 	// transform
 	

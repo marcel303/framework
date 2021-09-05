@@ -29,14 +29,18 @@ void main()
 	vec2 p12 = params1.zw;
 	float strokeSize = params2.x * 0.5;
 	
+	float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
+	
 	if (useScreenSize == 1.0)
 	{
-		float scale = length(ModelViewMatrix[0].xyz);
-		
 		vec2 s = (p12 - p11) * 0.5;
 		vec2 m = (p11 + p12) * 0.5;
 		p11 = m - s / scale;
 		p12 = m + s / scale;
+	}
+	else
+	{
+		strokeSize *= scale;
 	}
 	
 	vec2 p1 = vec2(p11.x, p11.y);

@@ -27,9 +27,11 @@ void main()
 	
 	if (useScreenSize == 0.0)
 	{
-		float scale = length(ModelViewMatrix[0].xyz);
+		float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
 		
 		scaledRadius = radius * scale;
+
+		strokeSize *= scale;
 	}
 	
 	// determine vertex coord, stroke offset and stroke size based on vertex ID
