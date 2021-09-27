@@ -2598,7 +2598,9 @@ const char * Framework::resolveResourcePath(const char * path) const
 		}
 	}
 	
-	return path;
+	strcpy_s(s_resourcePath, sizeof(s_resourcePath), path);
+	
+	return s_resourcePath;
 }
 
 void Framework::registerResourceCache(class ResourceCacheBase * resourceCache)
@@ -3872,11 +3874,6 @@ void setDrawRect(int x, int y, int sx, int sy)
 	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
 	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
 	
-#if ENABLE_OPENGL
-	if (s_renderPassIsBackbufferPass)
-		y = surfaceSy - y - sy;
-#endif
-
 	ScaleX(x);
 	ScaleY(y);
 	ScaleX(sx);
@@ -3887,6 +3884,9 @@ void setDrawRect(int x, int y, int sx, int sy)
 #endif
 
 #if ENABLE_OPENGL
+	if (s_renderPassIsBackbufferPass)
+		y = backingSy - y - sy;
+	
 	glScissor(x, y, sx, sy);
 	checkErrorGL();
 
