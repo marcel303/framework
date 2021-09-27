@@ -1167,11 +1167,13 @@ public:
 struct ShaderOutput
 {
 	char name;
+	std::string longName;
 	std::string outputType;
 	std::string outputName;
 };
 
 const ShaderOutput * findShaderOutput(const char name);
+const ShaderOutput * findShaderOutput(const char * longName);
 
 //
 

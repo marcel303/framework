@@ -2301,3 +2301,12 @@ const ShaderOutput * findShaderOutput(const char name)
 	
 	return nullptr;
 }
+
+const ShaderOutput * findShaderOutput(const char * longName)
+{
+	for (auto & output : g_shaderOutputs)
+		if (output.longName == longName)
+			return &output;
+	
+	return nullptr;
+}
