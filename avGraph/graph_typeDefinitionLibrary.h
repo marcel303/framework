@@ -189,6 +189,7 @@ struct Graph_TypeDefinition
 	// ui
 	
 	std::string displayName;
+	std::string description;
 	
 	std::string mainResourceType; // the type and name of the main node resource
 	std::string mainResourceName; // GraphEdit will edit this resource by default
@@ -199,6 +200,7 @@ struct Graph_TypeDefinition
 		, outputSockets()
 		, resourceEditor()
 		, displayName()
+		, description()
 		, mainResourceType()
 		, mainResourceName()
 	{
