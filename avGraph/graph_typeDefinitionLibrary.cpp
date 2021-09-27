@@ -42,6 +42,23 @@ static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, co
 	if (srcTypeName == dstTypeName)
 		return true;
 	
+	const char * end1 = strchr(srcTypeName.c_str(), '.');
+	const char * end2 = strchr(dstTypeName.c_str(), '.');
+	
+	if (end1 != nullptr || end2 != nullptr)
+	{
+		const size_t length1 = end1 == nullptr ? srcTypeName.size() : (end1 - srcTypeName.c_str());
+		const size_t length2 = end2 == nullptr ? dstTypeName.size() : (end2 - dstTypeName.c_str());
+		
+		if (length1 == length2)
+		{
+			const size_t length = length1;
+			
+			if (memcmp(srcTypeName.c_str(), dstTypeName.c_str(), length) == 0)
+				return true;
+		}
+	}
+	
 	return false;
 }
 
