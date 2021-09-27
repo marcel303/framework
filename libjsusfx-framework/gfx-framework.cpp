@@ -285,11 +285,11 @@ void JsusFxGfx_Framework::beginDraw()
 		
 		if (surface != nullptr)
 		{
-			surface->clear(r, g, b, 0);
+			surface->clear(r, g, b, 255);
 		}
 		else
 		{
-			setColorf(r, g, b, 0.f);
+			setColorf(r, g, b, 1.f);
 			pushBlend(BLEND_OPAQUE);
 			drawRect(0, 0, *m_gfx_w, *m_gfx_h);
 			popBlend();
