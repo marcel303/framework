@@ -34,5 +34,5 @@ struct MetalWindowData
 {
 	MetalView * metalview = nullptr;
 	
-	id <CAMetalDrawable> current_drawable;
+	id <CAMetalDrawable> current_drawable = nil;
 };

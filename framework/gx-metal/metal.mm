@@ -297,8 +297,6 @@ void metal_acquire_drawable()
 		Always release a drawable as soon as possible; preferably, immediately after finalizing a frame’s CPU work. It is highly advisable to contain your rendering loop within an autorelease pool block to avoid possible deadlock situations with multiple drawables."
 	*/
 	
-	poolhack_begin();
-	
 	Assert(activeWindowData->current_drawable == nullptr);
 	
 	for (;;)
@@ -315,18 +313,52 @@ void metal_acquire_drawable()
 
 void metal_present()
 {
+	@autoreleasepool
+	{
 	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
 	
+		/*
 	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
 	
-	[cmdbuf presentDrawable:activeWindowData->current_drawable];
+		//[cmdbuf presentDrawable:activeWindowData->current_drawable];
+		
+		//activeWindowData->current_drawable = nullptr;
+		*/
+		
+		// note : instead of presentDrawable, we manually present the drawables, so we can
+		//        present the drawables for all windows at once
+		
+		NSMutableArray * drawablesToPresent = [NSMutableArray new];
+		
+		for (auto & windowData_itr : windowDatas)
+		{
+			auto * windowData = windowData_itr.second;
+			
+			if (windowData->current_drawable != nullptr)
+			{
+				[drawablesToPresent addObject:windowData->current_drawable];
+				windowData->current_drawable = nullptr;
+			}
+		}
+		
+		[cmdbuf addScheduledHandler:^(id <MTLCommandBuffer> cmdbuf)
+			{
+				@autoreleasepool
+				{
+					for (int i = 0; i < drawablesToPresent.count; ++i)
+					{
+						id <CAMetalDrawable> drawable = [drawablesToPresent objectAtIndex:i];
+						
+						[drawable present];
+					}
 	
-	activeWindowData->current_drawable = nullptr;
+					[drawablesToPresent removeAllObjects];
+				}
+			}];
 	
 	[cmdbuf commit];
 	cmdbuf = nil;
-	
-	poolhack_end();
+	}
 }
 
 void metal_set_viewport(const int sx, const int sy)
