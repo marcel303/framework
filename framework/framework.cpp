@@ -466,7 +466,9 @@ bool Framework::init(int sx, int sy)
 	int drawableSx;
 	int drawableSy;
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
+	const float backingScaleX = drawableSx / float(globals.currentWindow->getWidth());
+	const float backingScaleY = drawableSy / float(globals.currentWindow->getHeight());
+	s_backingScale = (int)roundf(fmaxf(backingScaleX, backingScaleY));
 	if (s_backingScale < 1)
 		s_backingScale = 1;
 	
