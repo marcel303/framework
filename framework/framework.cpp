@@ -574,6 +574,10 @@ bool Framework::init(int sx, int sy)
 	
 	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable, mainWindowWantsSurface);
 
+#if FRAMEWORK_IS_NATIVE_VR
+	globals.mainWindow->hide();
+#endif
+
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
 
