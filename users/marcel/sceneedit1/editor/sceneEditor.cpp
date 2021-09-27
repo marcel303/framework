@@ -2275,8 +2275,6 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	
 	{
 		orientationGizmo.tick(dt);
-		
-		camera.firstPersonQuat.orientation = orientationGizmo.orientation.calcInverse();
 	}
 	
 	// -- mouse picking
@@ -3546,14 +3544,6 @@ void SceneEditor::performAction_focus(const int nodeId)
 			camera.firstPerson.yaw = -atan2f(delta[0], delta[2]) * radToDeg;
 			camera.firstPerson.pitch = atan2f(delta[1], hypotf(delta[0], delta[2])) * radToDeg;
 			camera.firstPerson.roll = 0.f;
-		}
-		break;
-	case Camera::kMode_FirstPersonQuat:
-		{
-			Mat4x4 lookatMatrix;
-			lookatMatrix.MakeLookat(camera.firstPersonQuat.position, sceneNodeComponent->objectToWorld.GetTranslation(), Vec3(0, 1, 0));
-			
-			camera.firstPersonQuat.orientation.fromMatrix(lookatMatrix);
 		}
 		break;
 	}

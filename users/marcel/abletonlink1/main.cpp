@@ -36,13 +36,13 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_SPACE))
 			{
 				sessionStateIsDirty = true;
-				sessionState.setIsPlayingAtTick(!sessionState.isPlaying(), link.getClockTick());
+				sessionState.setIsPlayingAtTime(!sessionState.isPlaying(), link.getClockTimeUs());
 			}
 			
 			if (keyboard.wentDown(SDLK_t))
 			{
 				sessionStateIsDirty = true;
-				sessionState.setTempoAtTick(random<float>(60.f, 180.f), link.getClockTick());
+				sessionState.setTempoAtTime(random<float>(60.f, 180.f), link.getClockTimeUs());
 			}
 			
 			if (sessionStateIsDirty)
@@ -67,12 +67,12 @@ int main(int argc, char * argv[])
 		
 		auto sessionState = link.captureAppSessionState();
 		
-		const auto tick = link.getClockTick();
+		const auto timeUs = link.getClockTimeUs();
 		
 		const double quantum = 4.0;
 		
-		double beat = sessionState.beatAtTick(tick, quantum);
-		double phase = sessionState.phaseAtTick(tick, quantum);
+		double beat = sessionState.beatAtTime(timeUs, quantum);
+		double phase = sessionState.phaseAtTime(timeUs, quantum);
 		
 		framework.beginDraw(100, 100, 100, 255);
 		{

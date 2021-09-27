@@ -33,6 +33,7 @@
 #include "Multicore/ThreadName.h"
 
 #include <algorithm>
+#include <math.h>
 
 // todo : add mutex and copy captured frame data
 
