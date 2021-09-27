@@ -552,11 +552,18 @@ bool Framework::init(int sx, int sy)
 #if FRAMEWORK_USE_OVR_MOBILE
 	globals.egl.createContext();
 	
-	if (vrMode)
+	if (!frameworkOvr.init())
 	{
-		sx = 0;
-		sy = 0;
+		logError("failed to initialize ovr mobile");
+		return false;
 	}
+
+	// process once (to ensure we are in vr mode) and show a loading screen
+	frameworkOvr.process();
+	frameworkOvr.showLoadingScreen();
+	
+	sx = frameworkOvr.FrameBuffer[0].Width;
+	sy = frameworkOvr.FrameBuffer[0].Height;
 #endif
 
 	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
@@ -600,18 +607,6 @@ bool Framework::init(int sx, int sy)
 			return false;
 		rmt_BindOpenGL();
 	}
-#endif
-	
-#if FRAMEWORK_USE_OVR_MOBILE
-	if (!frameworkOvr.init())
-	{
-		logError("failed to initialize ovr mobile");
-		return false;
-	}
-
-	// process once (to ensure we are in vr mode) and show a loading screen
-	frameworkOvr.process();
-	frameworkOvr.showLoadingScreen();
 #endif
 	
 #if defined(ANDROID)
@@ -1223,6 +1218,10 @@ void Framework::process()
 			processAction("filedrop", args);
 		}
 		else if (e.type == SDL_QUIT)
+		{
+			quitRequested = true;
+		}
+		else if (e.type == SDL_APP_TERMINATING)
 		{
 			quitRequested = true;
 		}
@@ -1912,21 +1911,36 @@ void Framework::endDraw()
 	
 	if (globals.currentWindow->hasSurface() == false)
 	{
+		globals.currentWindow->getWindowData()->needsPresent = true;
+		
+	#if defined(MACOS) && ENABLE_OPENGL
+		// fixme : SDL's OpenGL implementation, at least on macOS, is broken and doesn't present properly
+		present();
+	#else
 		// for vr mode, the user is responsible for calling present() themselves
 		if (vrMode == false)
 			present();
+	#endif
 	}
 }
 
 void Framework::present()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	if (vrMode)
+	if (vrMode) // todo : only if the current window is the main window
 		frameworkOvr.submitFrameAndPresent();
 #elif FRAMEWORK_USE_SDL
 	// schedule the back buffer for presentation
 #if ENABLE_OPENGL
-	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
+	for (Window * window = framework.m_windows; window != nullptr; window = window->m_next)
+	{
+		if (window->getWindowData()->needsPresent)
+		{
+			SDL_GL_SwapWindow(window->getWindow());
+			window->getWindowData()->needsPresent = false;
+		}
+	}
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 #elif ENABLE_METAL
 	metal_present();
 #endif
@@ -3465,11 +3479,15 @@ static void getCurrentBackingSize(int & sx, int & sy)
 		return;
 	else
 	{
+	#if defined(ENABLE_OPENGL)
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &sx, &sy);
+	#else
 		sx = globals.currentWindow->getWidth();
 		sy = globals.currentWindow->getHeight();
 		
 		sx *= s_backingScale;
 		sy *= s_backingScale;
+	#endif
 	}
 }
 

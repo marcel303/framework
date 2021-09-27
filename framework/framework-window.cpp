@@ -85,6 +85,8 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 #else
 	, m_title()
+	, m_width(0)
+	, m_height(0)
 	, m_isVisible(true)
 	, m_hasFocus(false)
 #endif
@@ -119,6 +121,8 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 #endif
 #else
 	m_title = title;
+	m_width = sx;
+	m_height = sy;
 #endif
 
 #if WINDOW_IS_3D
@@ -314,9 +318,11 @@ int Window::getWidth() const
 		
 		return sx;
 	}
-#endif
-
+	
 	return 0;
+#else
+	return m_width;
+#endif
 }
 
 int Window::getHeight() const
@@ -336,9 +342,11 @@ int Window::getHeight() const
 		
 		return sy;
 	}
-#endif
-
+	
 	return 0;
+#else
+	return m_height;
+#endif
 }
 
 const char * Window::getTitle() const

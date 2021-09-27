@@ -662,6 +662,8 @@ private:
 #else
 	// these properties are normally managed by SDL
 	std::string m_title;
+	int m_width;
+	int m_height;
 	bool m_isVisible;
 	bool m_hasFocus;
 #endif
