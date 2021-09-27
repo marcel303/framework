@@ -566,7 +566,13 @@ bool Framework::init(int sx, int sy)
 	sy = frameworkOvr.FrameBuffer[0].Height;
 #endif
 
-	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
+	// don't allocate a surface for the main windows when running in native
+	// VR mode. it would just be a waste of resources, as drawing to the main
+	// window won't occur in native VR mode. instead, drawing will go to the
+	// (stereo) back buffers
+	const bool mainWindowWantsSurface = !FRAMEWORK_IS_NATIVE_VR;
+	
+	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable, mainWindowWantsSurface);
 
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;

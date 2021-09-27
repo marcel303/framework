@@ -74,7 +74,7 @@ Window::Window(SDL_Window * window)
 
 #endif
 
-Window::Window(const char * title, const int sx, const int sy, const bool resizable)
+Window::Window(const char * title, const int sx, const int sy, const bool resizable, const bool wantsSurface)
 	: m_prev(nullptr)
 	, m_next(nullptr)
 #if WINDOW_HAS_A_SURFACE
@@ -98,7 +98,7 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_windowData(nullptr)
 {
 #if WINDOW_HAS_A_SURFACE
-	if (sx > 0 && sy > 0)
+	if (sx > 0 && sy > 0 && wantsSurface)
 	{
 		m_colorTarget = new ColorTarget();
 		m_depthTarget = new DepthTarget();

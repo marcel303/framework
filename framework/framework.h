@@ -594,7 +594,7 @@ private:
 #endif
 	
 public:
-	Window(const char * title, const int sx, const int sy, const bool resizable = false);
+	Window(const char * title, const int sx, const int sy, const bool resizable = false, const bool wantsSurface = true);
 	~Window();
 	
 	void setPosition(const int x, const int y);
