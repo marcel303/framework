@@ -79,6 +79,10 @@ static const char * s_yuvToRgb_ntscPs = R"SHADER(
 		u = u - 0.5;
 		v = v - 0.5;
 		
+		// see here for a similar conversion (YCbCr case)
+		// https://www.vocal.com/video/rgb-and-yuv-color-space-conversion/
+		// not quite the same coefficients, but explains about
+		// the 0..255 range for PCs and how it affects the color transform
 		float r = +1.16406 * y +0.00000 * u +1.59766 * v;
 		float g = +1.16406 * y -0.39063 * u -0.81250 * v;
 		float b = +1.16406 * y +2.01563 * u +0.00000 * v;
@@ -93,6 +97,7 @@ static const char * s_yuvToRgb_ntscPs = R"SHADER(
 // https://en.wikipedia.org/wiki/Rec._601
 static const char * s_yuvToRgb_bt601Ps = R"SHADER(
 	include engine/ShaderPS.txt
+	include engine/ShaderUtil.txt
 
 	shader_in vec2 texcoord;
 	uniform sampler2D yTex;
@@ -105,16 +110,17 @@ static const char * s_yuvToRgb_bt601Ps = R"SHADER(
 		float u = texture(uTex, texcoord).x;
 		float v = texture(vTex, texcoord).x;
 		
-		//y = y - 16/255.0;
 		u = u - 0.5;
 		v = v - 0.5;
 		
+		// see https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
 		float r = +1.00000 * y +0.00000 * u +1.13983 * v;
 		float g = +1.00000 * y -0.39465 * u -0.58060 * v;
 		float b = +1.00000 * y +2.03211 * u +0.00000 * v;
 		
 		vec4 color = vec4(r, g, b, 1.0);
 		color.rgb = clamp(color.rgb, vec3(0.0), vec3(1.0));
+		color.rgb = linearToSrgb(color.rgb);
 		
 		shader_fragColor = color;
 	}
@@ -122,6 +128,7 @@ static const char * s_yuvToRgb_bt601Ps = R"SHADER(
 
 static const char * s_yuvToRgb_bt709Ps = R"SHADER(
 	include engine/ShaderPS.txt
+	include engine/ShaderUtil.txt
 
 	shader_in vec2 texcoord;
 	uniform sampler2D yTex;
@@ -138,12 +145,14 @@ static const char * s_yuvToRgb_bt709Ps = R"SHADER(
 		u = u - 0.5;
 		v = v - 0.5;
 		
+		// see https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
 		float r = +1.00000 * y +0.00000 * u +1.28033 * v;
 		float g = +1.00000 * y -0.21482 * u -0.38059 * v;
 		float b = +1.00000 * y +2.12798 * u +0.00000 * v;
 		
 		vec4 color = vec4(r, g, b, 1.0);
 		color.rgb = clamp(color.rgb, vec3(0.0), vec3(1.0));
+		color.rgb = linearToSrgb(color.rgb);
 		
 		shader_fragColor = color;
 	}
