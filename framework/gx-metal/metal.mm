@@ -2565,8 +2565,8 @@ static void gxEndDraw()
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
 	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
-	static id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
-	static id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
+	static const id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
+	static const id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
 	[s_activeRenderPass->encoder setVertexTextures:vsTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxVsTextures)];
 	[s_activeRenderPass->encoder setFragmentTextures:psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
 
@@ -3227,7 +3227,7 @@ static void gxValidateShaderResources(const bool useGenericShader)
 		}
 	}
 #else
-	NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
+	static const NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
 	[s_activeRenderPass->encoder
 		setFragmentBuffers:cacheElem.psBuffers
 		offsets:offsets
