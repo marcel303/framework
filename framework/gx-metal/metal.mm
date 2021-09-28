@@ -3123,6 +3123,10 @@ static void gxValidateShaderResources(const bool useGenericShader)
 				[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			}
 		}
+		else
+		{
+			[s_activeRenderPass->encoder setFragmentTexture:nil atIndex:0];
+		}
 		
 		__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
 		[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
