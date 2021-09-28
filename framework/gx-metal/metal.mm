@@ -2573,6 +2573,10 @@ static void gxEndDraw()
 	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
 	s_currentRenderPipelineState = nullptr;
+	
+	// mark the shader as dirty, to ensure we set all shader state when recording the next command buffer
+	
+	globals.gxShaderIsDirty = true;
 }
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
