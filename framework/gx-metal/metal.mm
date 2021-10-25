@@ -315,11 +315,11 @@ void metal_present()
 {
 	@autoreleasepool
 	{
-	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
-	
+		id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+		
 		/*
-	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
-	
+		// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
+		
 		//[cmdbuf presentDrawable:activeWindowData->current_drawable];
 		
 		//activeWindowData->current_drawable = nullptr;
@@ -351,13 +351,13 @@ void metal_present()
 						
 						[drawable present];
 					}
-	
+					
 					[drawablesToPresent removeAllObjects];
 				}
 			}];
-	
-	[cmdbuf commit];
-	cmdbuf = nil;
+		
+		[cmdbuf commit];
+		cmdbuf = nil;
 	}
 }
 
@@ -722,6 +722,10 @@ void beginRenderPass(
 	metal_set_viewport(viewportSx, viewportSy);
 	
 	applyTransform();
+	
+	// clear draw rect
+	
+	pushDrawRect();
 }
 
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
@@ -744,6 +748,10 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 void endRenderPass()
 {
 	Assert(s_activeRenderPass != nullptr);
+	
+	// restore draw rect
+	
+	popDrawRect();
 	
 	gxEndDraw();
 	
