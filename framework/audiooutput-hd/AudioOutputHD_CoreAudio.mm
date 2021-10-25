@@ -330,6 +330,13 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 	m_frameRate = frameRate;
 	m_bufferSize = bufferSize;
 
+#if defined(IPHONEOS)
+	// todo : should respond to AVAudioSession changes to update output latency
+	m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
+#else
+	m_streamInfo.outputLatency = 0.f;
+#endif
+
 	return true;
 }
 
@@ -368,12 +375,6 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 	Assert(ioData->mNumberBuffers == self->m_numOutputChannels);
 	
 	self->m_bufferPresentTime = inTimeStamp->mHostTime;
-	
-#if defined(IPHONEOS)
-	self->m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
-#else
-	self->m_streamInfo.outputLatency = 0.f;
-#endif
 
 	AudioStreamHD::ProvideInfo provideInfo;
 	provideInfo.inputSamples = nullptr;
