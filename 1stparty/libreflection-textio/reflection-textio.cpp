@@ -149,7 +149,10 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 			auto * enum_type = static_cast<const EnumType*>(plain_type);
 			
 			if (enum_type->set(object, text) == false)
+			{
+				LOG_ERR("failed to deserialize plain type enum key: %s", text);
 				return false;
+			}
 			
 			return true;
 		}
