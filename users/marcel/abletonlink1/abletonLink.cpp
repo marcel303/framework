@@ -118,6 +118,11 @@ bool AbletonLink::isEnabled() const
 	return link->isEnabled();
 }
 
+bool AbletonLink::isStartStopSyncEnabled() const
+{
+	return link->isStartStopSyncEnabled();
+}
+
 int AbletonLink::numPeers() const
 {
 	return (int)link->numPeers();
