@@ -33,7 +33,6 @@ namespace ZitaRev1
 
 		float process(float x)
 		{
-		// todo : avoid denormals ?
 			const float z = _line[_i];
 			
 			x -= _c * z;
