@@ -24,6 +24,8 @@ public:
 	static std::string MakeRelative(const std::string& base, const std::string& path);
 	static std::string MakeRelative(const std::string& base, const std::string& path1, const std::string& path2);
 	
+	static bool IsExtension(const char* path, const char * extension, const bool toLower);
+	
 private:
 	static std::string NormalizeSlashes(const std::string& path);
 	static std::string Sanitize(const std::string& path);

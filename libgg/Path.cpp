@@ -177,6 +177,21 @@ std::string Path::MakeRelative(const std::string& base, const std::string& _path
 	return Path::FlattenPathComponents(components);
 }
 
+bool Path::IsExtension(const char* path, const char * extension, const bool toLower)
+{
+	const char * pos = strrchr(path, '.');
+	
+	if (pos == nullptr)
+		return false;
+	else
+		pos++;
+	
+	if (toLower)
+		return strcasecmp(pos, extension) == 0;
+	else
+		return strcmp(pos, extension) == 0;
+}
+
 std::string Path::NormalizeSlashes(const std::string& path)
 {
 	return String::Replace(path, '\\', '/');
