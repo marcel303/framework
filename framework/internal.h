@@ -604,9 +604,9 @@ public:
 	Mat4x4 hqTextureMatrix;
 	bool hqUseScreenSize;
 	FontCacheElem * font;
-	bool isInTextBatch;
+	int isInTextBatchCounter;
 	MsdfFontCacheElem * fontMSDF;
-	bool isInTextBatchMSDF;
+	int isInTextBatchMSDFCounter;
 	int xinputGamepadIdx;
 #if FRAMEWORK_USE_SDL
 	SDL_Joystick * joystick[GAMEPAD_MAX];
