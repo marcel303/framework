@@ -2596,7 +2596,7 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 	return result;
 }
 
-static char s_resourcePath[PATH_MAX];
+static thread_local char s_resourcePath[PATH_MAX];
 
 const char * Framework::resolveResourcePath(const char * path) const
 {
