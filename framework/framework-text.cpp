@@ -901,11 +901,15 @@ void drawTextArea(float x, float y, float sx, float sy, float size, float alignX
 	x += (sx      ) * (-alignX + 1.f) / 2.f;
 	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
 
-	for (int i = 0; i < data.numLines; ++i)
+	beginTextBatch();
 	{
-		// note : we add 'size / 2' to y because we set alignY to 1, to avoid the drawText function from performing additional alignment
-	// todo : should set fonts to use regular baseline for text.. pushFontBase(FONTBASE_TEXT_CENTER | FONTBASE_FONT)
-		drawText(x, y + size / 4.f, size, alignX, 1, "%s", data.lines[i]);
-		y += size;
+		for (int i = 0; i < data.numLines; ++i)
+		{
+			// note : we add 'size / 2' to y because we set alignY to 1, to avoid the drawText function from performing additional alignment
+		// todo : should set fonts to use regular baseline for text.. pushFontBase(FONTBASE_TEXT_CENTER | FONTBASE_FONT)
+			drawText(x, y + size / 2.f, size, alignX, 0, "%s", data.lines[i]);
+			y += size;
+		}
 	}
+	endTextBatch();
 }
