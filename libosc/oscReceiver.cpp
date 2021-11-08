@@ -34,6 +34,7 @@
 
 #include "Debugging.h"
 #include "Log.h"
+#include "Multicore/ThreadName.h"
 
 class OscPacketListener : public osc::OscPacketListener
 {
@@ -353,6 +354,8 @@ void OscReceiver::flushMessages(OscReceiveHandler * receiveHandler)
 int OscReceiver::executeOscThread(void * data)
 {
 	OscReceiver * self = (OscReceiver*)data;
+	
+	SetCurrentThreadName("OSC Receiver");
 	
 	self->receiveSocket->Run();
 	
