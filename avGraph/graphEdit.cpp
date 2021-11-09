@@ -1851,12 +1851,12 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			
 			if (result.hasComment)
 			{
-			result.comment = const_cast<EditorComment*>(&comment);
-			result.commentHitTestResult = hitTestResult;
-			
-			return true;
+				result.comment = const_cast<EditorComment*>(&comment);
+				result.commentHitTestResult = hitTestResult;
+				
+				return true;
+			}
 		}
-	}
 	}
 
 	return false;
@@ -3748,16 +3748,11 @@ bool GraphEdit::tickTouches()
 			}
 			
 			// note : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. this is due to how touches are commonly implemented in windowing systems, where, to avoid issues with presses being confused with touch (movement) gestures, the windowing system first waits until a considerable amount of movement occurs, before sending touch movement events. so it's very likely the first touch movement event shows a very large positional delta compared to the first recorded touch position. and this would result in a 'jump' if we didn't consider this here. so to avoid these jumps, we first wait until the windowing system considers both fingers to be moving around
-		
+			
 			auto & finger =
 				event.tfinger.fingerId == touches.finger1.id
 				? touches.finger1
 				: touches.finger2;
-				
-			if (event.tfinger.firstMove)
-			{
-				continue;
-			}
 			
 			if (!touches.finger1.hasPosition ||
 				!touches.finger2.hasPosition)
