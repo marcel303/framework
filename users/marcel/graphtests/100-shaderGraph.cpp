@@ -17,6 +17,12 @@
 // todo : add min/max range for shader node inputs
 // todo : add support for socket min/max to graph edit
 
+#if !ENABLE_OPENGL
+	#define ENABLE_UNUSED_VARIABLE_VOID 1
+#else
+	#define ENABLE_UNUSED_VARIABLE_VOID 0 // do not alter : (void)var is illegal in OpenGL
+#endif
+
 /*
 
 VS nodes
@@ -354,6 +360,8 @@ static void scanShaderNodes(const char * path, Graph_TypeDefinitionLibrary & typ
 				bool emitPs = false;
 				bool emitGlobal = false;
 				
+			// todo : add deduplicate option for global sections : allows nodes to write textures, samplers and uniforms themselves
+			
 				for (size_t i = 1; i < parts.size(); ++i)
 				{
 					if (parts[i] == "vs")
@@ -847,10 +855,11 @@ static bool generateShaderText_traverse(
 				assignedInputs.count(input.name) == 0 ? "false" : "true");
 		}
 		
+	#if ENABLE_UNUSED_VARIABLE_VOID
 		if (generatedInputs)
 		{
 			shaderText.AppendLine();
-			shaderText.Append("// suppress unused variable warning\n");
+			shaderText.Append("// suppress unused variable warning(s)\n");
 		}
 		
 		for (auto & input : srcType->inputSockets)
@@ -861,6 +870,7 @@ static bool generateShaderText_traverse(
 			shaderText.AppendFormat("(void)%s_isReferenced;\n",
 				input.name.c_str());
 		}
+	#endif
 		
 		if (generatedInputs)
 		{
@@ -871,7 +881,9 @@ static bool generateShaderText_traverse(
 		
 		shaderText.AppendFormat("bool isPassthrough = %s;\n",
 			node.isPassthrough ? "true" : "false");
+	#if ENABLE_UNUSED_VARIABLE_VOID
 		shaderText.Append("(void)isPassthrough; // suppress unused variable warning\n");
+	#endif
 		
 		shaderText.AppendLine();
 		
@@ -1028,8 +1040,10 @@ static bool generateShaderText_traverse(
 
 			shaderText.AppendLine();
 			
-			shaderText.Append("(void)viewSpace;\n");
+		#if ENABLE_UNUSED_VARIABLE_VOID
+			shaderText.Append("(void)viewSpace; // suppress unused variable warning\n\n");
 			shaderText.AppendLine();
+		#endif
 			
 			shaderText.AppendFormat("%s%s = result;\n",
 				srcScopeName.c_str(),
@@ -1097,8 +1111,10 @@ static bool generateShaderText_traverse(
 			
 			shaderText.AppendLine();
 			
-			shaderText.Append("(void)_normalize;\n");
+		#if ENABLE_UNUSED_VARIABLE_VOID
+			shaderText.Append("(void)_normalize; // suppress unused variable warning\n");
 			shaderText.AppendLine();
+		#endif
 				
 			shaderText.AppendFormat("%s%s = result;\n",
 				srcScopeName.c_str(),
@@ -1411,8 +1427,8 @@ static bool generateVsShaderText(
 			// generate node/socket switch
 			
 			shaderText.AppendLine();
-			shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
-			shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
+			shaderText.Append("int nodePreview_nodeId = int(u_nodePreview_nodeId);\n");
+			shaderText.Append("int nodePreview_socketIndex = int(u_nodePreview_socketIndex);\n");
 			
 			shaderText.Append("if (nodePreview_nodeId != 0)\n");
 			shaderText.Append("{\n");
@@ -1679,8 +1695,8 @@ static bool generatePsShaderText(
 			// generate node/socket switch
 			
 			shaderText.AppendLine();
-			shaderText.Append("int nodePreview_nodeId = (int)u_nodePreview_nodeId;\n");
-			shaderText.Append("int nodePreview_socketIndex = (int)u_nodePreview_socketIndex;\n");
+			shaderText.Append("int nodePreview_nodeId = int(u_nodePreview_nodeId);\n");
+			shaderText.Append("int nodePreview_socketIndex = int(u_nodePreview_socketIndex);\n");
 			
 			shaderText.Append("if (nodePreview_nodeId != 0)\n");
 			shaderText.Append("{\n");
