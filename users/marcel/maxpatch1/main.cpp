@@ -22,6 +22,8 @@
 // live UI includes
 #include "liveUi.h"
 
+#include <SDL2/SDL.h>
+
 // ++++ : move UI generator to a separate source file
 // ++++ : refine UI generator
 // ++++ : add reflection type UI structure
@@ -548,6 +550,12 @@ int main(int arg, char * argv[])
 			liveUi.tick(framework.timeStep, inputIsCaptured);
 		}
 		popScroll();
+		
+		SDL_CaptureMouse(
+			liveUi.activeElem ||
+			layoutEditor.state != ControlSurfaceDefinition::LayoutEditor::kState_Idle
+				? SDL_TRUE
+				: SDL_FALSE);
 	
 		const int c = 160;
 		
