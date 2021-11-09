@@ -1476,6 +1476,7 @@ public:
 	void capture(const void * object);
 	bool captureContinuation(const void * object);
 	bool isCaptured(const void * object) const;
+	bool isCapturedByAnyObject() const;
 };
 
 class Keyboard

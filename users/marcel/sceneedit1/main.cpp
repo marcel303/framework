@@ -463,7 +463,7 @@ int main(int argc, char * argv[])
 		
 		bool inputIsCaptured = false;
 		
-		inputIsCaptured |= mouse.isCaptured();
+		inputIsCaptured |= mouse.isCapturedByAnyObject();
 		
 		uiCaptureBeginFrame(inputIsCaptured);
 		

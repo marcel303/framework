@@ -188,6 +188,11 @@ struct InputCaptureState // todo : move to internal ?
 	{
 		return object == in_object;
 	}
+	
+	bool isCapturedByAnyObject() const
+	{
+		return object != nullptr;
+	}
 
 	void nextFrame()
 	{
@@ -3253,6 +3258,11 @@ bool Mouse::captureContinuation(const void * object)
 bool Mouse::isCaptured(const void * object) const
 {
 	return mouseCaptureState.isCaptured(object);
+}
+
+bool Mouse::isCapturedByAnyObject() const
+{
+	return mouseCaptureState.isCapturedByAnyObject();
 }
 
 // -----
