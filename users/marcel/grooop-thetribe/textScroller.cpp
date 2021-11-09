@@ -38,7 +38,7 @@ TextScroller::TextScroller()
 
 void TextScroller::initFromText(const char * text)
 {
-	lines = String::Split(text, '\n');
+	lines = String::Split(text, '\n', true);
 	for (auto & line : lines)
 		line = String::Trim(line);
 }

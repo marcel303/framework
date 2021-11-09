@@ -8,7 +8,7 @@
 
 bool CsvRow::parse(const std::string & line, const char separator, const std::vector<std::string> & header)
 {
-	const std::vector<std::string> columns = String::Split(line, separator);
+	const std::vector<std::string> columns = String::Split(line, separator, true);
 
 	Assert(columns.size() == header.size());
 	if (columns.size() != header.size())
@@ -107,11 +107,11 @@ bool CsvDocument::parse(const std::vector<std::string> & lines, const bool hasHe
 	{
 		if (hasHeader)
 		{
-			m_header = String::Split(lines[0], separator);
+			m_header = String::Split(lines[0], separator, true);
 		}
 		else
 		{
-			std::vector<std::string> columns = String::Split(lines[0], separator);
+			std::vector<std::string> columns = String::Split(lines[0], separator, true);
 			
 			for (size_t i = 0; i < columns.size(); ++i)
 			{

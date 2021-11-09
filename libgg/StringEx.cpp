@@ -58,50 +58,58 @@ std::string String::Trim(const std::string& text)
 	return TrimRight(TrimLeft(text));
 }
 
-std::vector<std::string> String::Split(const std::string& text, char separator)
+std::vector<std::string> String::Split(const std::string& text, char separator, bool keepEmptyElements)
 {
 	char temp[] = { separator, 0 };
 
-	return Split(text, temp);
+	return Split(text, temp, keepEmptyElements);
 }
 
-std::vector<std::string> String::Split(const std::string& text, const std::string& separators)
+std::vector<std::string> String::Split(const std::string& text, const std::string& separators, bool keepEmptyElements)
 {
 	std::vector<std::string> result;
-
-	size_t index1 = 0;
-	size_t index2 = 0;
-
-	for (size_t i = 0; i < text.length(); ++i)
+	
+	if (text.empty())
 	{
-		if (Contains(separators, text[i]))
+		return result;
+	}
+	
+	if (separators.empty())
+	{
+		result.push_back(text);
+		return result;
+	}
+	
+	size_t start = -1;
+	bool foundStart = false;
+	
+	for (size_t i = 0; i <= text.size(); ++i)
+	{
+		const char c = i < text.size() ? text[i] : separators[0];
+		
+		if (foundStart == false)
 		{
-			if (!Contains(separators, text[index1]))
+			// found start
+			if (!Contains(separators, c))
 			{
-				const std::string temp = text.substr(index1, index2 - index1 + 1);
-
-				result.emplace_back(temp);
+				start = i;
+				foundStart = true;
 			}
-
-			index1 = i + 1;
-			index2 = i + 1;
+			else if (keepEmptyElements)
+			{
+				result.push_back(std::string());
+			}
 		}
-		else
+		else if (Contains(separators, c))
 		{
-			index2 = i;
+			// found end
+			result.push_back(text.substr(start, i - start));
+			
+			start = -1;
+			foundStart = false;
 		}
 	}
-
-	if (index1 != text.length())
-	{
-		if (!Contains(separators, text[index1]))
-		{
-			const std::string temp = text.substr(index1, index2 - index1 + 1);
-
-			result.emplace_back(temp);
-		}
-	}
-
+	
 	return result;
 }
 
