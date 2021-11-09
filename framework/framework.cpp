@@ -159,6 +159,50 @@ static std::map<std::string, std::string> s_shaderSources;
 
 //
 
+struct InputCaptureState // todo : move to internal ?
+{
+	const void * object = nullptr;
+	bool continueCapture = false;
+	
+	void capture(const void * in_object)
+	{
+		Assert(object == nullptr);
+		Assert(in_object != nullptr);
+		
+		object = in_object;
+		continueCapture = true;
+	}
+
+	bool captureContinuation(const void * in_object)
+	{
+		if (object != in_object)
+			return false;
+		else
+		{
+			continueCapture = true;
+			return true;
+		}
+	}
+
+	bool isCaptured(const void * in_object) const
+	{
+		return object == in_object;
+	}
+
+	void nextFrame()
+	{
+		if (continueCapture == false)
+		{
+			if (object != nullptr) // note : assigning null if not null.. only so I can put a breakpoint on the next line
+				object = nullptr;
+		}
+		
+		continueCapture = false;
+	}
+};
+
+static InputCaptureState mouseCaptureState;
+
 Framework::Framework()
 {
 	waitForEvents = false;
@@ -1101,6 +1145,8 @@ void Framework::process()
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();
+	
+	mouseCaptureState.nextFrame();
 	
 #if FRAMEWORK_USE_SDL
 	// poll SDL event queue
@@ -3194,17 +3240,19 @@ bool Mouse::isIdle() const
 		!currentWindowData->mouseData.mouseChange[1];
 }
 
-void Mouse::capture(void * object)
+void Mouse::capture(const void * object)
 {
-	Assert(mouseCaptureObject == nullptr);
-	Assert(object != nullptr);
-	mouseCaptureObject = object;
+	mouseCaptureState.capture(object);
 }
 
-void Mouse::release(void * object)
+bool Mouse::captureContinuation(const void * object)
 {
-	Assert(mouseCaptureObject == object);
-	mouseCaptureObject = nullptr;
+	mouseCaptureState.captureContinuation(object);
+}
+
+bool Mouse::isCaptured(const void * object) const
+{
+	return mouseCaptureState.isCaptured(object);
 }
 
 // -----
