@@ -3252,7 +3252,7 @@ void Mouse::capture(const void * object)
 
 bool Mouse::captureContinuation(const void * object)
 {
-	mouseCaptureState.captureContinuation(object);
+	return mouseCaptureState.captureContinuation(object);
 }
 
 bool Mouse::isCaptured(const void * object) const
