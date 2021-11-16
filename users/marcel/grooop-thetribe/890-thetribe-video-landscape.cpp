@@ -1385,8 +1385,10 @@ struct World
 	
 	float videoclipsOpacity;
 	
+#if NUM_VFXCLIPS > 0
 	Vfxclip vfxclips[NUM_VFXCLIPS];
-	
+#endif
+
 	std::vector<SpokenWord*> spokenWords;
 	
 	Faces faces;
@@ -1397,7 +1399,9 @@ struct World
 		: camera()
 		, videoclips()
 		, videoclipsOpacity(0.f)
+	#if NUM_VFXCLIPS > 0
 		, vfxclips()
+	#endif
 		, spokenWords()
 		, faces()
 		, hitTestResult()
@@ -1446,10 +1450,12 @@ struct World
 			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, videoclipsOpacity);
 		}
 		
+	#if NUM_VFXCLIPS > 0
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
 		{
 			vfxclips[i].open("groooplogo.xml");
 		}
+	#endif
 		
 		faces.init();
 	}
@@ -1541,6 +1547,7 @@ struct World
 			}
 		}
 		
+	#if NUM_VFXCLIPS > 0
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
 		{
 			auto & vfxclip = vfxclips[i];
@@ -1558,6 +1565,7 @@ struct World
 				}
 			}
 		}
+	#endif
 		
 		for (auto spokenWord : spokenWords)
 		{
@@ -1637,13 +1645,15 @@ struct World
 			videoclips[i].tick(worldToViewMatrix, cameraPosition_world, dt);
 		}
 		
+	#if NUM_VFXCLIPS > 0
 		// update vfx clips
 		
 		for (int i = 0; i < NUM_VFXCLIPS; ++i)
 		{
 			vfxclips[i].tick(dt);
 		}
-		
+	#endif
+
 		// update spoken words
 		
 		for (auto spokenWord : spokenWords)
@@ -1735,11 +1745,13 @@ struct World
 					videoclips[i].drawSolid();
 				}
 				
+			#if NUM_VFXCLIPS > 0
 				for (int i = 0; i < NUM_VFXCLIPS; ++i)
 				{
 					vfxclips[i].drawSolid();
 				}
-				
+			#endif
+
 				for (auto spokenWord : spokenWords)
 				{
 					spokenWord->drawSolid();
@@ -1756,10 +1768,12 @@ struct World
 				videoclips[i].drawTranslucent();
 			}
 		
+		#if NUM_VFXCLIPS > 0
 			for (int i = 0; i < NUM_VFXCLIPS; ++i)
 			{
 				vfxclips[i].drawTranslucent();
 			}
+		#endif
 			
 			for (auto spokenWord : spokenWords)
 			{

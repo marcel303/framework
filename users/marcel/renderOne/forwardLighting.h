@@ -34,7 +34,7 @@ namespace rOne
 		float userData;
 	};
 
-	class ForwardLightingHelper
+	struct ForwardLightingHelper
 	{
 
 	public:

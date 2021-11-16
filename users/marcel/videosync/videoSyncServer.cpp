@@ -36,10 +36,12 @@ namespace Videosync
 		
 		int set_false = 0;
 		int set_true = 1;
-		
+	
+	#if !defined(WINDOWS)
 		// disable SIGPIPE (and handle broken connections ourselves)
 		signal(SIGPIPE, SIG_IGN);
-		
+	#endif
+
 	#if defined(WINDOWS)
 		// disable nagle & linger
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));

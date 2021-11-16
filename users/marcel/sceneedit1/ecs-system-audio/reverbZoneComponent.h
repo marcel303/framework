@@ -11,7 +11,7 @@
 
 namespace ZitaRev1
 {
-	class Reverb;
+	struct Reverb;
 }
 
 //
