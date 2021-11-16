@@ -31,7 +31,7 @@
 
 void AudioOutputHD::GainDb_set(const float gainDb)
 {
-	const float volume = powf(10.f, volume / 20.f);
+	const float volume = powf(10.f, gainDb / 20.f);
 	
 	Volume_set(volume);
 }
