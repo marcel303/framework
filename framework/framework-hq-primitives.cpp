@@ -517,7 +517,7 @@ void hqFillRoundedRect(float x1, float y1, float x2, float y2, float radius)
 
 void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3, float stroke)
 {
-	gxNormal3f(x3, y3, stroke); // todo : use color ?
+	gxNormal3f(x3, y3, stroke);
 	for (int i = 0; i < 3; ++i)
 		gxVertex4f(x1, y1, x2, y2);
 }

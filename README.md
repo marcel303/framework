@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/marcel303/framework)
+[![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/github/marcel303/framework)
 [![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework)
 
 (Building a creative coding environment from scratch is a ton of work, so please consider becoming a patron!)

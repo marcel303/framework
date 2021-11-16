@@ -940,6 +940,8 @@ namespace rOne
 
 	static ColorTarget * renderModeFlat(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
 	{
+		updateCullFlip();
+		
 		pushShaderOutputs(renderOptions.drawNormals ? "n" : "c");
 		{
 			renderOpaquePass(
@@ -1646,9 +1648,9 @@ namespace rOne
 
 	void Renderer::registerShaderOutputs()
 	{
-		framework.registerShaderOutput('e', "float", "shader_fragEmissive");
-		framework.registerShaderOutput('s', "float", "shader_fragSpecularExponent");
-		framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
+		framework.registerShaderOutput('e', "emissive", "float", "shader_fragEmissive");
+		framework.registerShaderOutput('s', "specularExponent", "float", "shader_fragSpecularExponent");
+		framework.registerShaderOutput('S', "specularColor", "vec4", "shader_fragSpecularColor");
 	}
 
 	void Renderer::free()

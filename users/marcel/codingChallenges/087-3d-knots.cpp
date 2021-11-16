@@ -50,7 +50,7 @@ static void drawTube_UpAxis(const Vec3 * points, const int numPoints, const Vec3
 {
 	if (numPoints < 2)
 	{
-		return false;
+		return;
 	}
 	
 	// compute the cosine-sine table describing a full circle (with wrapped initial point)

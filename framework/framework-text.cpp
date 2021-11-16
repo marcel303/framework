@@ -169,7 +169,7 @@ static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem **
 
 static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem ** glyphs, const GlyphCode * codepoints, const size_t numGlyphs, float x, float y)
 {
-	if (globals.isInTextBatch == false)
+	if (globals.isInTextBatchCounter == 0)
 	{
 		gxSetTexture(globals.font->textureAtlas->texture);
 		
@@ -224,7 +224,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 		x += advancePixels;
 	}
 	
-	if (globals.isInTextBatch == false)
+	if (globals.isInTextBatchCounter == 0)
 	{
 		gxEnd();
 		
@@ -242,7 +242,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 	//y += size;
 	
 #if USE_GLYPH_ATLAS
-	if (globals.isInTextBatch == false)
+	if (globals.isInTextBatchCounter == 0)
 	{
 		Shader & shader = globals.builtinShaders->bitmappedText.get();
 		setShader(shader);
@@ -294,7 +294,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		y += (elem.g.advance.y / float(1 << 6));
 	}
 	
-	if (globals.isInTextBatch == false)
+	if (globals.isInTextBatchCounter == 0)
 	{
 		gxEnd();
 		
@@ -399,8 +399,15 @@ static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, 
 			}
 		}
 	
-		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
-		
+		const int advance =
+			glyph.advance +
+			stbtt_GetCodepointKernAdvance(
+				&fontInfo,
+				codepoint,
+				i + 1 < numGlyphs
+					? codepoints[i + 1]
+					: 0);
+			
 		x += advance;
 	}
 	
@@ -415,7 +422,7 @@ static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, 
 
 static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const float _y, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const size_t numGlyphs)
 {
-	if (globals.isInTextBatchMSDF == false)
+	if (globals.isInTextBatchMSDFCounter == 0)
 	{
 		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
@@ -480,12 +487,19 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 			gxTexCoord2f(u1, v2); gxVertex2f(dx1 * scale, dy2 * scale);
 		}
 	
-		const int advance = glyph.advance + stbtt_GetCodepointKernAdvance(&glyphCache.m_font.fontInfo, codepoint, i + 1 < numGlyphs ? codepoints[i + 1] : 0);
-		
+		const int advance =
+			glyph.advance +
+			stbtt_GetCodepointKernAdvance(
+				&glyphCache.m_font.fontInfo,
+				codepoint,
+				i + 1 < numGlyphs
+					? codepoints[i + 1]
+					: 0);
+			
 		x += advance;
 	}
 	
-	if (globals.isInTextBatchMSDF == false)
+	if (globals.isInTextBatchMSDFCounter == 0)
 	{
 		gxEnd();
 		
@@ -596,40 +610,41 @@ void beginTextBatch(Shader * overrideShader)
 	if (globals.fontMode == FONT_BITMAP)
 	{
 	#if USE_GLYPH_ATLAS
-		Assert(!globals.isInTextBatch);
-		globals.isInTextBatch = true;
+		globals.isInTextBatchCounter++;
 		
-		Shader & shader = overrideShader
-			? *overrideShader
-			: globals.builtinShaders->bitmappedText.get();
-		
-		// note : before we were setting the texture here. this is unsafe however,
-		//        since the texture atlas may grow while drawing text ..
-		//        so we now apply the texture during drawText (after fetching the
-		//        font cache elems, which may grow the atlas)
-		//        and before the actual drawing takes place
-		setShader(shader);
-		
-		gxBegin(GX_QUADS);
+		if (globals.isInTextBatchCounter == 1)
+		{
+			Shader & shader = overrideShader
+				? *overrideShader
+				: globals.builtinShaders->bitmappedText.get();
+			
+			// note : before we were setting the texture here. this is unsafe however,
+			//        since the texture atlas may grow while drawing text ..
+			//        so we now apply the texture during drawText (after fetching the
+			//        font cache elems, which may grow the atlas)
+			//        and before the actual drawing takes place
+			setShader(shader);
+			
+			gxBegin(GX_QUADS);
+		}
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
 	else if (globals.fontMode == FONT_SDF)
 	{
-		fassert(globals.isInTextBatchMSDF == false);
-		if (globals.isInTextBatchMSDF == true)
-			return;
+		globals.isInTextBatchMSDFCounter++;
 		
-		globals.isInTextBatchMSDF = true;
-		
-		Shader & shader = overrideShader
-			? *overrideShader
-			: globals.builtinShaders->msdfText.get();
-		
-		setShader(shader);
-		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id, true, true);
-		
-		gxBegin(GX_QUADS);
+		if (globals.isInTextBatchMSDFCounter == 1)
+		{
+			Shader & shader = overrideShader
+				? *overrideShader
+				: globals.builtinShaders->msdfText.get();
+			
+			setShader(shader);
+			shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id, true, true);
+			
+			gxBegin(GX_QUADS);
+		}
 	}
 #endif
 }
@@ -639,25 +654,28 @@ void endTextBatch()
 	if (globals.fontMode == FONT_BITMAP)
 	{
 	#if USE_GLYPH_ATLAS
-		Assert(globals.isInTextBatch);
-		globals.isInTextBatch = false;
+		fassert(globals.isInTextBatchCounter > 0);
+		globals.isInTextBatchCounter--;
 		
-		gxEnd();
-		
-		clearShader();
+		if (globals.isInTextBatchCounter == 0)
+		{
+			gxEnd();
+			
+			clearShader();
+		}
 	#endif
 	}
 	else if (globals.fontMode == FONT_SDF)
 	{
-		fassert(globals.isInTextBatchMSDF == true);
-		if (globals.isInTextBatchMSDF == false)
-			return;
+		fassert(globals.isInTextBatchMSDFCounter > 0);
+		globals.isInTextBatchMSDFCounter--;
 		
-		globals.isInTextBatchMSDF = false;
-
-		gxEnd();
-		
-		clearShader();
+		if (globals.isInTextBatchMSDFCounter == 0)
+		{
+			gxEnd();
+			
+			clearShader();
+		}
 	}
 }
 
@@ -890,11 +908,15 @@ void drawTextArea(float x, float y, float sx, float sy, float size, float alignX
 	x += (sx      ) * (-alignX + 1.f) / 2.f;
 	y += (sy - tsy) * (-alignY + 1.f) / 2.f;
 
-	for (int i = 0; i < data.numLines; ++i)
+	beginTextBatch();
 	{
-		// note : we add 'size / 2' to y because we set alignY to 1, to avoid the drawText function from performing additional alignment
-	// todo : should set fonts to use regular baseline for text.. pushFontBase(FONTBASE_TEXT_CENTER | FONTBASE_FONT)
-		drawText(x, y + size / 4.f, size, alignX, 1, "%s", data.lines[i]);
-		y += size;
+		for (int i = 0; i < data.numLines; ++i)
+		{
+			// note : we add 'size / 2' to y because we set alignY to 1, to avoid the drawText function from performing additional alignment
+		// todo : should set fonts to use regular baseline for text.. pushFontBase(FONTBASE_TEXT_CENTER | FONTBASE_FONT)
+			drawText(x, y + size / 2.f, size, alignX, 0, "%s", data.lines[i]);
+			y += size;
+		}
 	}
+	endTextBatch();
 }

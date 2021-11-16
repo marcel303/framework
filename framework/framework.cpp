@@ -159,6 +159,55 @@ static std::map<std::string, std::string> s_shaderSources;
 
 //
 
+struct InputCaptureState // todo : move to internal ?
+{
+	const void * object = nullptr;
+	bool continueCapture = false;
+	
+	void capture(const void * in_object)
+	{
+		Assert(object == nullptr);
+		Assert(in_object != nullptr);
+		
+		object = in_object;
+		continueCapture = true;
+	}
+
+	bool captureContinuation(const void * in_object)
+	{
+		if (object != in_object)
+			return false;
+		else
+		{
+			continueCapture = true;
+			return true;
+		}
+	}
+
+	bool isCaptured(const void * in_object) const
+	{
+		return object == in_object;
+	}
+	
+	bool isCapturedByAnyObject() const
+	{
+		return object != nullptr;
+	}
+
+	void nextFrame()
+	{
+		if (continueCapture == false)
+		{
+			if (object != nullptr) // note : assigning null if not null.. only so I can put a breakpoint on the next line
+				object = nullptr;
+		}
+		
+		continueCapture = false;
+	}
+};
+
+static InputCaptureState mouseCaptureState;
+
 Framework::Framework()
 {
 	waitForEvents = false;
@@ -466,7 +515,9 @@ bool Framework::init(int sx, int sy)
 	int drawableSx;
 	int drawableSy;
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
+	const float backingScaleX = drawableSx / float(globals.currentWindow->getWidth());
+	const float backingScaleY = drawableSy / float(globals.currentWindow->getHeight());
+	s_backingScale = (int)roundf(fmaxf(backingScaleX, backingScaleY));
 	if (s_backingScale < 1)
 		s_backingScale = 1;
 	
@@ -550,14 +601,31 @@ bool Framework::init(int sx, int sy)
 #if FRAMEWORK_USE_OVR_MOBILE
 	globals.egl.createContext();
 	
-	if (vrMode)
+	if (!frameworkOvr.init())
 	{
-		sx = 0;
-		sy = 0;
+		logError("failed to initialize ovr mobile");
+		return false;
 	}
+
+	// process once (to ensure we are in vr mode) and show a loading screen
+	frameworkOvr.process();
+	frameworkOvr.showLoadingScreen();
+	
+	sx = frameworkOvr.FrameBuffer[0].Width;
+	sy = frameworkOvr.FrameBuffer[0].Height;
 #endif
 
-	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
+	// don't allocate a surface for the main windows when running in native
+	// VR mode. it would just be a waste of resources, as drawing to the main
+	// window won't occur in native VR mode. instead, drawing will go to the
+	// (stereo) back buffers
+	const bool mainWindowWantsSurface = !FRAMEWORK_IS_NATIVE_VR;
+	
+	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable, mainWindowWantsSurface);
+
+#if FRAMEWORK_IS_NATIVE_VR
+	globals.mainWindow->hide();
+#endif
 
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
@@ -571,8 +639,8 @@ bool Framework::init(int sx, int sy)
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
 
-	registerShaderOutput('c', "vec4", "shader_fragColor");
-	registerShaderOutput('n', "vec4", "shader_fragNormal");
+	registerShaderOutput('c', "color", "vec4", "shader_fragColor");
+	registerShaderOutput('n', "normal", "vec4", "shader_fragNormal");
 	
 	gxInitialize();
 	
@@ -598,18 +666,6 @@ bool Framework::init(int sx, int sy)
 			return false;
 		rmt_BindOpenGL();
 	}
-#endif
-	
-#if FRAMEWORK_USE_OVR_MOBILE
-	if (!frameworkOvr.init())
-	{
-		logError("failed to initialize ovr mobile");
-		return false;
-	}
-
-	// process once (to ensure we are in vr mode) and show a loading screen
-	frameworkOvr.process();
-	frameworkOvr.showLoadingScreen();
 #endif
 	
 #if defined(ANDROID)
@@ -1095,6 +1151,8 @@ void Framework::process()
 	
 	g_soundPlayer.process();
 	
+	mouseCaptureState.nextFrame();
+	
 #if FRAMEWORK_USE_SDL
 	// poll SDL event queue
 
@@ -1221,6 +1279,10 @@ void Framework::process()
 			processAction("filedrop", args);
 		}
 		else if (e.type == SDL_QUIT)
+		{
+			quitRequested = true;
+		}
+		else if (e.type == SDL_APP_TERMINATING)
 		{
 			quitRequested = true;
 		}
@@ -1910,21 +1972,36 @@ void Framework::endDraw()
 	
 	if (globals.currentWindow->hasSurface() == false)
 	{
+		globals.currentWindow->getWindowData()->needsPresent = true;
+		
+	#if defined(MACOS) && ENABLE_OPENGL
+		// fixme : SDL's OpenGL implementation, at least on macOS, is broken and doesn't present properly
+		present();
+	#else
 		// for vr mode, the user is responsible for calling present() themselves
 		if (vrMode == false)
 			present();
+	#endif
 	}
 }
 
 void Framework::present()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	if (vrMode)
+	if (vrMode) // todo : only if the current window is the main window
 		frameworkOvr.submitFrameAndPresent();
 #elif FRAMEWORK_USE_SDL
 	// schedule the back buffer for presentation
 #if ENABLE_OPENGL
-	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
+	for (Window * window = framework.m_windows; window != nullptr; window = window->m_next)
+	{
+		if (window->getWindowData()->needsPresent)
+		{
+			SDL_GL_SwapWindow(window->getWindow());
+			window->getWindowData()->needsPresent = false;
+		}
+	}
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 #elif ENABLE_METAL
 	metal_present();
 #endif
@@ -2474,17 +2551,22 @@ bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 	}
 }
 
-void Framework::registerShaderOutput(const char name, const char * outputType, const char * outputName)
+void Framework::registerShaderOutput(const char name, const char * longName, const char * outputType, const char * outputName)
 {
 	for (auto & output : g_shaderOutputs)
 	{
 		Assert(output.name != name);
 		if (output.name == name)
 			return;
+		
+		Assert(output.longName != longName);
+		if (output.longName == longName)
+			return;
 	}
 	
 	ShaderOutput output;
 	output.name = name;
+	output.longName = longName;
 	output.outputType = outputType;
 	output.outputName = outputName;
 	g_shaderOutputs.push_back(output);
@@ -2565,7 +2647,7 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 	return result;
 }
 
-static char s_resourcePath[PATH_MAX];
+static thread_local char s_resourcePath[PATH_MAX];
 
 const char * Framework::resolveResourcePath(const char * path) const
 {
@@ -2596,7 +2678,9 @@ const char * Framework::resolveResourcePath(const char * path) const
 		}
 	}
 	
-	return path;
+	strcpy_s(s_resourcePath, sizeof(s_resourcePath), path);
+	
+	return s_resourcePath;
 }
 
 void Framework::registerResourceCache(class ResourceCacheBase * resourceCache)
@@ -3161,17 +3245,24 @@ bool Mouse::isIdle() const
 		!currentWindowData->mouseData.mouseChange[1];
 }
 
-void Mouse::capture(void * object)
+void Mouse::capture(const void * object)
 {
-	Assert(mouseCaptureObject == nullptr);
-	Assert(object != nullptr);
-	mouseCaptureObject = object;
+	mouseCaptureState.capture(object);
 }
 
-void Mouse::release(void * object)
+bool Mouse::captureContinuation(const void * object)
 {
-	Assert(mouseCaptureObject == object);
-	mouseCaptureObject = nullptr;
+	return mouseCaptureState.captureContinuation(object);
+}
+
+bool Mouse::isCaptured(const void * object) const
+{
+	return mouseCaptureState.isCaptured(object);
+}
+
+bool Mouse::isCapturedByAnyObject() const
+{
+	return mouseCaptureState.isCapturedByAnyObject();
 }
 
 // -----
@@ -3456,11 +3547,15 @@ static void getCurrentBackingSize(int & sx, int & sy)
 		return;
 	else
 	{
+	#if defined(ENABLE_OPENGL)
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &sx, &sy);
+	#else
 		sx = globals.currentWindow->getWidth();
 		sy = globals.currentWindow->getHeight();
 		
 		sx *= s_backingScale;
 		sy *= s_backingScale;
+	#endif
 	}
 }
 
@@ -3870,11 +3965,6 @@ void setDrawRect(int x, int y, int sx, int sy)
 	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
 	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
 	
-#if ENABLE_OPENGL
-	if (s_renderPassIsBackbufferPass)
-		y = surfaceSy - y - sy;
-#endif
-
 	ScaleX(x);
 	ScaleY(y);
 	ScaleX(sx);
@@ -3885,6 +3975,9 @@ void setDrawRect(int x, int y, int sx, int sy)
 #endif
 
 #if ENABLE_OPENGL
+	if (s_renderPassIsBackbufferPass)
+		y = backingSy - y - sy;
+	
 	glScissor(x, y, sx, sy);
 	checkErrorGL();
 

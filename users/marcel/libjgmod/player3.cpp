@@ -17,6 +17,7 @@
 #include "allegro2-voiceApi.h"
 
 #include <algorithm>
+#include <math.h> // pow
 
 #define speed_ratio     mi.speed_ratio / 100
 #define pitch_ratio     mi.pitch_ratio / 100
@@ -161,6 +162,13 @@ void JGMOD_PLAYER::parse_s3m_portamento_down(const int chn, const int extcommand
 
 static int linear_slide(int period, int slide)
 {
+#if 1
+	double frequency = 1.0 / period;
+	
+	frequency = frequency * pow(2.0, slide / 768.0);
+	
+	return 1.0 / frequency;
+#else
 	const double M = 512.0;
 	
 	double frequency = 1.0 / period;
@@ -170,6 +178,7 @@ static int linear_slide(int period, int slide)
 		return 0;
 	else
 		return 1.0 / frequency;
+#endif
 }
 
 void JGMOD_PLAYER::do_s3m_portamento(const int chn)

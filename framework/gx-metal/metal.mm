@@ -297,8 +297,6 @@ void metal_acquire_drawable()
 		Always release a drawable as soon as possible; preferably, immediately after finalizing a frame’s CPU work. It is highly advisable to contain your rendering loop within an autorelease pool block to avoid possible deadlock situations with multiple drawables."
 	*/
 	
-	poolhack_begin();
-	
 	Assert(activeWindowData->current_drawable == nullptr);
 	
 	for (;;)
@@ -315,18 +313,52 @@ void metal_acquire_drawable()
 
 void metal_present()
 {
-	id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
-	
-	// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
-	
-	[cmdbuf presentDrawable:activeWindowData->current_drawable];
-	
-	activeWindowData->current_drawable = nullptr;
-	
-	[cmdbuf commit];
-	cmdbuf = nil;
-	
-	poolhack_end();
+	@autoreleasepool
+	{
+		id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+		
+		/*
+		// note : presentDrawable is a convenience method that will schedule the presentation of the drawable, as soon as the command buffer is scheduled (and the drawable knows there is work pending for it). this avoids presenting the drawable too early
+		
+		//[cmdbuf presentDrawable:activeWindowData->current_drawable];
+		
+		//activeWindowData->current_drawable = nullptr;
+		*/
+		
+		// note : instead of presentDrawable, we manually present the drawables, so we can
+		//        present the drawables for all windows at once
+		
+		NSMutableArray * drawablesToPresent = [NSMutableArray new];
+		
+		for (auto & windowData_itr : windowDatas)
+		{
+			auto * windowData = windowData_itr.second;
+			
+			if (windowData->current_drawable != nullptr)
+			{
+				[drawablesToPresent addObject:windowData->current_drawable];
+				windowData->current_drawable = nullptr;
+			}
+		}
+		
+		[cmdbuf addScheduledHandler:^(id <MTLCommandBuffer> cmdbuf)
+			{
+				@autoreleasepool
+				{
+					for (int i = 0; i < drawablesToPresent.count; ++i)
+					{
+						id <CAMetalDrawable> drawable = [drawablesToPresent objectAtIndex:i];
+						
+						[drawable present];
+					}
+					
+					[drawablesToPresent removeAllObjects];
+				}
+			}];
+		
+		[cmdbuf commit];
+		cmdbuf = nil;
+	}
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -690,6 +722,10 @@ void beginRenderPass(
 	metal_set_viewport(viewportSx, viewportSy);
 	
 	applyTransform();
+	
+	// clear draw rect
+	
+	pushDrawRect();
 }
 
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
@@ -712,6 +748,10 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 void endRenderPass()
 {
 	Assert(s_activeRenderPass != nullptr);
+	
+	// restore draw rect
+	
+	popDrawRect();
 	
 	gxEndDraw();
 	
@@ -2533,14 +2573,18 @@ static void gxEndDraw()
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
 	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
-	static id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
-	static id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
+	static const id <MTLTexture> vsTextures[ShaderCacheElem_Metal::kMaxVsTextures] = { };
+	static const id <MTLTexture> psTextures[ShaderCacheElem_Metal::kMaxPsTextures] = { };
 	[s_activeRenderPass->encoder setVertexTextures:vsTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxVsTextures)];
 	[s_activeRenderPass->encoder setFragmentTextures:psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
 
 	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
 	s_currentRenderPipelineState = nullptr;
+	
+	// mark the shader as dirty, to ensure we set all shader state when recording the next command buffer
+	
+	globals.gxShaderIsDirty = true;
 }
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
@@ -3087,6 +3131,10 @@ static void gxValidateShaderResources(const bool useGenericShader)
 				[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			}
 		}
+		else
+		{
+			[s_activeRenderPass->encoder setFragmentTexture:nil atIndex:0];
+		}
 		
 		__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
 		[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
@@ -3187,7 +3235,7 @@ static void gxValidateShaderResources(const bool useGenericShader)
 		}
 	}
 #else
-	NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
+	static const NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
 	[s_activeRenderPass->encoder
 		setFragmentBuffers:cacheElem.psBuffers
 		offsets:offsets

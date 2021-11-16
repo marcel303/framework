@@ -330,6 +330,13 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 	m_frameRate = frameRate;
 	m_bufferSize = bufferSize;
 
+#if defined(IPHONEOS)
+	// todo : should respond to AVAudioSession changes to update output latency
+	m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
+#else
+	m_streamInfo.outputLatency = 0.f;
+#endif
+
 	return true;
 }
 
@@ -368,12 +375,6 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 	Assert(ioData->mNumberBuffers == self->m_numOutputChannels);
 	
 	self->m_bufferPresentTime = inTimeStamp->mHostTime;
-	
-#if defined(IPHONEOS)
-	self->m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
-#else
-	self->m_streamInfo.outputLatency = 0.f;
-#endif
 
 	AudioStreamHD::ProvideInfo provideInfo;
 	provideInfo.inputSamples = nullptr;
@@ -395,7 +396,7 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 		
 		provideInfo.outputSamples[i] = outputSamples;
 	}
-		
+	
 	int numChannelsProvided = 0;
 	
 	self->m_mutex.lock();
@@ -408,6 +409,18 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 			numChannelsProvided = self->m_stream->Provide(provideInfo, streamInfo);
 			
 			self->m_framesSincePlay.store(self->m_framesSincePlay.load() + inNumberFrames);
+			
+		#if defined(DEBUG) && 0
+			for (int i = 0; i < numChannelsProvided; ++i)
+			{
+				for (int s = 0; s < provideInfo.numFrames; ++s)
+				{
+					Assert(
+						provideInfo.outputSamples[i][s] >= -1.f &&
+						provideInfo.outputSamples[i][s] <= +1.f);
+				}
+			}
+		#endif
 		}
 	}
 	self->m_mutex.unlock();
@@ -418,10 +431,12 @@ OSStatus AudioOutputHD_CoreAudio::outputCallback(
 	{
 		memset(provideInfo.outputSamples[i], 0, provideInfo.numFrames * sizeof(float));
 	}
-		
+	
 	// apply volume
 	
 	const float volume = self->m_volume.load();
+	
+	Assert(volume >= 0.f && volume <= 1.f);
 	
 	for (int i = 0; i < self->m_numOutputChannels; ++i)
 	{

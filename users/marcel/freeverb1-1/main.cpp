@@ -293,12 +293,12 @@ struct ReverbChannel
 struct UiBinding
 {
 	UiEvent & event;
-	std::string name;
+	const char * name;
 	float min;
 	float max;
 	float init;
-	std::string text;
-	std::string unit;
+	const char * text;
+	const char * unit;
 	float step;
 	float value;
 	
@@ -308,12 +308,17 @@ struct UiBinding
 		
 		event = value;
 	}
+	
+	const char * name_get() const
+	{
+		return name == nullptr ? "" : name;
+	}
 };
 
 static void doUiBinding(UiBinding & binding)
 {
 	float value = binding.value;
-	doSlider(value, binding.min, binding.max, binding.name.c_str(), 0.f, framework.timeStep);
+	doSlider(value, binding.min, binding.max, binding.name_get(), 0.f, framework.timeStep);
 	
 	binding = value;
 }

@@ -531,8 +531,6 @@ void GraphEdit_Visualizer::measure(
 	const int kPadding = 8;
 	const int kElemPadding = 4;
 	
-	setFont("calibri.ttf");
-	
 	std::string caption;
 	
 	if (srcSocketIndex != -1)
@@ -644,8 +642,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	const int kFontSize = 12;
 	const int kPadding = 8;
 	const int kElemPadding = 4;
-	
-	setFont("calibri.ttf");
 	
 	const bool hasVisualSize = in_sx != nullptr && in_sy != nullptr;
 	
@@ -1837,17 +1833,29 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			if (hitTestResult.borderL || hitTestResult.borderR || hitTestResult.borderT || hitTestResult.borderB)
 			{
 				// border, not background
+				
+				result.hasComment = true;
 			}
-			else
+			else if (testRectOverlap(
+				x, y,
+				x, y,
+				comment.x,
+				comment.y,
+				comment.x + comment.sx,
+				comment.y + 20)) // todo : comment caption size
 			{
+				result.hasComment = true;
+				
 				hitTestResult.background = true;
 			}
 			
-			result.hasComment = true;
-			result.comment = const_cast<EditorComment*>(&comment);
-			result.commentHitTestResult = hitTestResult;
-			
-			return true;
+			if (result.hasComment)
+			{
+				result.comment = const_cast<EditorComment*>(&comment);
+				result.commentHitTestResult = hitTestResult;
+				
+				return true;
+			}
 		}
 	}
 
@@ -3740,16 +3748,11 @@ bool GraphEdit::tickTouches()
 			}
 			
 			// note : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. this is due to how touches are commonly implemented in windowing systems, where, to avoid issues with presses being confused with touch (movement) gestures, the windowing system first waits until a considerable amount of movement occurs, before sending touch movement events. so it's very likely the first touch movement event shows a very large positional delta compared to the first recorded touch position. and this would result in a 'jump' if we didn't consider this here. so to avoid these jumps, we first wait until the windowing system considers both fingers to be moving around
-		
+			
 			auto & finger =
 				event.tfinger.fingerId == touches.finger1.id
 				? touches.finger1
 				: touches.finger2;
-				
-			if (event.tfinger.firstMove)
-			{
-				continue;
-			}
 			
 			if (!touches.finger1.hasPosition ||
 				!touches.finger2.hasPosition)
@@ -5475,7 +5478,6 @@ void GraphEdit::draw() const
 			hqEnd();
 			
 			setColor(colorWhite);
-			setFont("calibri.ttf");
 			drawText(GRAPHEDIT_SX/2, kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
 			
 			gxTranslatef(0, -kSpacing, 0);
@@ -5502,8 +5504,6 @@ void GraphEdit::draw() const
 					const int kFontSize = 14;
 					const int kSpacing = 4;
 					const int kBorderSize = 8;
-					
-					setFont("calibri.ttf");
 					
 					int sx = 0;
 					int sy = 0;
@@ -5543,6 +5543,52 @@ void GraphEdit::draw() const
 								drawText(0, y, kFontSize, +1, +1, "%s", line.c_str());
 								y += kFontSize + kSpacing;
 							}
+						}
+						endTextBatch();
+					}
+					gxPopMatrix();
+				}
+			}
+			else
+			{
+				auto * nodeType = typeDefinitionLibrary->tryGetTypeDefinition(hitTestResult.node->typeName.c_str());
+				
+				if (nodeType != nullptr && nodeType->description.empty() == false)
+				{
+					const int kFontSize = 14;
+					const int kSpacing = 4;
+					const int kBorderSize = 8;
+					const int kMaxSx = 400;
+					
+					int sx = 0;
+					int sy = 0;
+					
+					{
+						float textSx;
+						float textSy;
+						
+						measureTextArea(kFontSize, kMaxSx, textSx, textSy, "%s", nodeType->description.c_str());
+						
+						sx = std::max(sx, int(std::ceil(textSx)));
+						sy = std::max(sy, int(std::ceil(textSy)));
+					}
+					
+					sx += kBorderSize * 2;
+					sy += kBorderSize * 2;
+								
+					gxPushMatrix();
+					{
+						gxTranslatef(mousePosition.uiX + 10, mousePosition.uiY + 10, 0);
+						
+						setColor(255, 255, 227);
+						drawRect(0, 0, sx, sy);
+						
+						gxTranslatef(kBorderSize, kBorderSize, 0);
+						
+						setColor(colorBlack);
+						beginTextBatch();
+						{
+							drawTextArea(0, 0, kMaxSx, kFontSize, "%s", nodeType->description.c_str());
 						}
 						endTextBatch();
 					}
@@ -5658,7 +5704,6 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		setColor(127, 127, 127, 255);
 	//drawRectLine(0.f, 0.f, sx, sy);
 	
-	setFont("calibri.ttf");
 	setColor(255, 255, 255);
 	drawText(sx/2, 12, 14, 0.f, 0.f, "%s", displayName);
 	
@@ -5810,8 +5855,6 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 void GraphEdit::drawComment(const EditorComment & comment) const
 {
 	cpuTimingBlock(drawComment);
-	
-	setFont("calibri.ttf");
 	
 	const bool isSelected = selectedComments.count(comment.id) != 0;
 	

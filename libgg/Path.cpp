@@ -14,7 +14,7 @@ void Path::Parse(const std::string& path)
 {
 	std::string temp = Sanitize(NormalizeSlashes(path));
 
-	m_Nodes = String::Split(temp, '/');
+	m_Nodes = String::Split(temp, '/', false);
 }
 
 void Path::MakeRelative(const Path& a_BaseDirectory, const Path& a_Path)
@@ -177,6 +177,21 @@ std::string Path::MakeRelative(const std::string& base, const std::string& _path
 	return Path::FlattenPathComponents(components);
 }
 
+bool Path::IsExtension(const char* path, const char * extension, const bool toLower)
+{
+	const char * pos = strrchr(path, '.');
+	
+	if (pos == nullptr)
+		return false;
+	else
+		pos++;
+	
+	if (toLower)
+		return strcasecmp(pos, extension) == 0;
+	else
+		return strcmp(pos, extension) == 0;
+}
+
 std::string Path::NormalizeSlashes(const std::string& path)
 {
 	return String::Replace(path, '\\', '/');
@@ -253,14 +268,14 @@ std::vector<std::string> Path::GetPathComponents(const std::string& _path)
 		
 		result.push_back("/");
 		
-		std::vector<std::string> elems = String::Split(path, '/');
+		std::vector<std::string> elems = String::Split(path, '/', false);
 		
 		for (auto & elem : elems)
 			result.push_back(elem);
 	}
 	else
 	{
-		result = String::Split(path, '/');
+		result = String::Split(path, '/', false);
 	}
 	
 	return result;

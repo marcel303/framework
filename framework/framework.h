@@ -473,7 +473,7 @@ public:
 	void unregisterShaderSource(const char * name);
 	bool tryGetShaderSource(const char * name, const char *& text) const;
 	
-	void registerShaderOutput(const char name, const char * outputType, const char * outputName);
+	void registerShaderOutput(const char name, const char * longName, const char * outputType, const char * outputName);
 	void unregisterShaderOutput(const char name);
 	
 	bool fileHasChanged(const char * filename) const;
@@ -594,7 +594,7 @@ private:
 #endif
 	
 public:
-	Window(const char * title, const int sx, const int sy, const bool resizable = false);
+	Window(const char * title, const int sx, const int sy, const bool resizable = false, const bool wantsSurface = true);
 	~Window();
 	
 	void setPosition(const int x, const int y);
@@ -662,6 +662,8 @@ private:
 #else
 	// these properties are normally managed by SDL
 	std::string m_title;
+	int m_width;
+	int m_height;
 	bool m_isVisible;
 	bool m_hasFocus;
 #endif
@@ -1456,14 +1458,11 @@ public:
 	
 	int scrollY;
 	
-	void * mouseCaptureObject;
-	
 	Mouse()
 	{
 		x = y = 0;
 		dx = dy = 0;
 		scrollY = 0;
-		mouseCaptureObject = 0;
 	}
 	
 	bool isDown(BUTTON button) const;
@@ -1474,8 +1473,10 @@ public:
 	
 	bool isIdle() const; // return true when there is no mouse movement and there are no buttons being pressed
 	
-	void capture(void * object);
-	void release(void * object);
+	void capture(const void * object);
+	bool captureContinuation(const void * object);
+	bool isCaptured(const void * object) const;
+	bool isCapturedByAnyObject() const;
 };
 
 class Keyboard

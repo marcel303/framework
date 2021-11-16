@@ -81,7 +81,7 @@ bool preprocessShader(
 {
 	bool result = true;
 
-	std::vector<std::string> lines = String::Split(source, '\n');
+	std::vector<std::string> lines = String::Split(source, '\n', true);
 	
 	for (size_t i = 0; i < lines.size(); ++i)
 	{

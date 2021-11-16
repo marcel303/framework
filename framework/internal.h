@@ -367,12 +367,15 @@ public:
 	std::vector<SDL_Event> keyEvents;
 	std::vector<SDL_Event> pendingKeyEvents;
 	
+	bool needsPresent;
+	
 	WindowData()
 		: isActive(false)
 		, quitRequested(false)
 		, keyDownCount(0)
 		, keyChangeCount(0)
 		, keyRepeatCount(0)
+		, needsPresent(false)
 	{
 	}
 
@@ -601,9 +604,9 @@ public:
 	Mat4x4 hqTextureMatrix;
 	bool hqUseScreenSize;
 	FontCacheElem * font;
-	bool isInTextBatch;
+	int isInTextBatchCounter;
 	MsdfFontCacheElem * fontMSDF;
-	bool isInTextBatchMSDF;
+	int isInTextBatchMSDFCounter;
 	int xinputGamepadIdx;
 #if FRAMEWORK_USE_SDL
 	SDL_Joystick * joystick[GAMEPAD_MAX];
@@ -1167,11 +1170,13 @@ public:
 struct ShaderOutput
 {
 	char name;
+	std::string longName;
 	std::string outputType;
 	std::string outputName;
 };
 
 const ShaderOutput * findShaderOutput(const char name);
+const ShaderOutput * findShaderOutput(const char * longName);
 
 //
 

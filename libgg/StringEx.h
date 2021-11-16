@@ -17,8 +17,8 @@ public:
 	static std::string TrimLeft(const std::string& text);
 	static std::string TrimRight(const std::string& text);
 	static std::string Trim(const std::string& text);
-	static std::vector<std::string> Split(const std::string& text, char separator);
-	static std::vector<std::string> Split(const std::string& text, const std::string& separators);
+	static std::vector<std::string> Split(const std::string& text, char separator, bool keepEmptyElements);
+	static std::vector<std::string> Split(const std::string& text, const std::string& separators, bool keepEmptyElements);
 	static int Find(const std::string& text, char value);
 	static bool Contains(const std::string& text, char value);
 	static bool StartsWith(const std::string& text, const std::string& substring);

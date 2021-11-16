@@ -120,7 +120,10 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 			auto * enum_type = static_cast<const EnumType*>(plain_type);
 			
 			if (enum_type->set(object, json.GetString()) == false)
+			{
+				LOG_ERR("failed to deserialize plain type enum key: %s", json.GetString());
 				return false;
+			}
 			
 			return true;
 		}

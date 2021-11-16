@@ -140,12 +140,21 @@ int main(int argc, char * argv[])
 			for (auto & cell : cells)
 				cell.move();
 		
+			hqSetGradient(GRADIENT_RADIAL, Mat4x4(true)
+				.Scale(1/600.f)
+				.Translate(-800/2, -800/2, 0),
+				colorWhite,
+				Color(100, 50, 200),
+				COLOR_MUL);
+			
 			Cell::beginShow();
 			{
 				for (auto & cell : cells)
 					cell.show();
 			}
 			Cell::endShow();
+			
+			hqClearGradient();
 		}
 		framework.endDraw();
 	}

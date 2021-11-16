@@ -60,6 +60,7 @@ struct AbletonLink
 	void enableStartStopSync(const bool enable);
 
 	bool isEnabled() const;
+	bool isStartStopSyncEnabled() const;
 	
 	int numPeers() const;
 

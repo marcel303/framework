@@ -50,7 +50,7 @@ ShaderCache g_shaderCache;
 ComputeShaderCache g_computeShaderCache;
 #endif
 
-static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std::string> & lines)
+static void getShaderInfoLog(GLuint shader, std::vector<std::string> & lines)
 {
 	GLint logSize = 0;
 
@@ -66,7 +66,7 @@ static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std
 	log = 0;
 }
 
-static void showShaderInfoLog(GLuint shader, const char * source)
+static void showShaderInfoLog(GLuint shader, const char ** sources, const int numSources)
 {
 #if FRAMEWORK_ENABLE_GL_ERROR_LOG
 	GLint logSize = 0;
@@ -83,27 +83,32 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 
 	int line = 1;
 
-	while (*source != 0)
+	for (int i = 0; i < numSources; ++i)
 	{
-		if (*source == '\n' || *source == '\r')
+		const char * source = sources[i];
+		
+		while (*source != 0)
 		{
-			text[textLength++] = 0;
-			logInfo("%04d: %s", line++, text);
-			textLength = 0;
+			if (*source == '\n' || *source == '\r')
+			{
+				text[textLength++] = 0;
+				logInfo("%04d: %s", line++, text);
+				textLength = 0;
 
-		#if defined(ANDROID)
-			// Logcat on Android uses a circular buffer, and dumping the shader source here may cause us to miss
-			// messages. Putting a sleep in here ensures the entire Logcat output appears within Android Studio.
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
-		#endif
-		}
-		else
-		{
-			if (textLength + 1 < kMaxTextLength)
-				text[textLength++] = *source;
-		}
+			#if defined(ANDROID)
+				// Logcat on Android uses a circular buffer, and dumping the shader source here may cause us to miss
+				// messages. Putting a sleep in here ensures the entire Logcat output appears within Android Studio.
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			#endif
+			}
+			else
+			{
+				if (textLength + 1 < kMaxTextLength)
+					text[textLength++] = *source;
+			}
 
-		source++;
+			source++;
+		}
 	}
 
 	if (textLength > 0)
@@ -251,7 +256,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			#endif
 			
 				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, lowpower, defines, "#line 0 0", sourceData };
+				const GLchar * sources[] = { version, debugs, lowpower, defines, sourceData };
 
 				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 				checkErrorGL();
@@ -268,9 +273,9 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				{
 					result = false;
 
-					showShaderInfoLog(shader, source.c_str());
+					showShaderInfoLog(shader, sources, sizeof(sources) / sizeof(sources[0]));
 					
-					getShaderInfoLog(shader, source.c_str(), errorMessages);
+					getShaderInfoLog(shader, errorMessages);
 				}
 			}
 		}
