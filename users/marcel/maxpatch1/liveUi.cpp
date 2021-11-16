@@ -933,6 +933,7 @@ void LiveUi::sendChangedValuesOverOsc()
 		catch (std::exception & e)
 		{
 			logError("%s", e.what());
+			(void)e;
 		}
 	};
 	

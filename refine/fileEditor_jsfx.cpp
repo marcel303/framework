@@ -329,6 +329,7 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	catch (std::exception & e)
 	{
 		logError("failed to create MIDI input: %s", e.what());
+		(void)e;
 	}
 }
 

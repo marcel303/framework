@@ -56,6 +56,7 @@ void TextScroller::initFromFile(const char * filename)
 	catch (std::exception & e)
 	{
 		logError("failed to read text: %s", e.what());
+		(void)e;
 	}
 }
 

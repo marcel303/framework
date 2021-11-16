@@ -471,6 +471,7 @@ struct AudioFile : public AudioStream
 				catch (std::exception & e)
 				{
 					logError(e.what());
+					(void)e;
 
 					gotCached = false;
 
@@ -520,6 +521,7 @@ struct AudioFile : public AudioStream
 		catch (std::exception & e)
 		{
 			logError("error: %s", e.what());
+			(void)e;
 
 			reset();
 
@@ -1894,6 +1896,7 @@ static void createAudioCache()
 					catch (std::exception & e)
 					{
 						logError(e.what());
+						(void)e;
 					}
 				}
 			}
