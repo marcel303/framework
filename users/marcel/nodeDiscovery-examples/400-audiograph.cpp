@@ -18,7 +18,7 @@ activate/inactivate notes.
 
 */
 
-int main()
+int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
