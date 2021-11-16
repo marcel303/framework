@@ -9,6 +9,8 @@ library deepbelief shared
 
 	with_platform linux.raspberry-pi compile_definition USE_NEON *
 
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+
 	# note : we don't want to use OpenGL unless we have to
 	#        compile_definition USE_OPENGL *
 
