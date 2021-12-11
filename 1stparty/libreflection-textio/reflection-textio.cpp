@@ -189,7 +189,9 @@ bool plain_type_totext(
 		
 	case kDataType_Float:
 		{
-			char * text_ptr = rapidjson::internal::dtoa(plain_type->access<float>(object), out_text);
+			auto & value = plain_type->access<float>(object);
+			
+			char * text_ptr = rapidjson::internal::dtoa(value, out_text);
 			*text_ptr++ = 0;
 		}
 		return true;

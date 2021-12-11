@@ -153,6 +153,10 @@ int AudioStreamWave::Provide(int numFrames, AudioSample* __restrict buffer)
 					dstValues[i] = value >> 16;
 				}
 			}
+			else
+			{
+				Assert(false);
+			}
 		}
 		else if (mCompressionType == WAVE_FORMAT_IEEE_FLOAT)
 		{

@@ -1958,6 +1958,7 @@ void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, f
 template <typename T>
 inline T clamp(T v, T vmin, T vmax)
 {
+	fassert(vmin <= vmax);
 	return v < vmin ? vmin : v > vmax ? vmax : v;
 }
 
@@ -1982,7 +1983,10 @@ inline T lerp(T v1, T v2, double t)
 template <typename T>
 inline float inverseLerp(T v1, T v2, T v)
 {
-	return float(v - v1) / float(v2 - v1);
+	return
+		v1 == v2
+		? 0.f
+		: float(v - v1) / float(v2 - v1);
 }
 
 template <typename T>
