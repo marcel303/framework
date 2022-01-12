@@ -34,7 +34,6 @@ Mainwin::Mainwin (
     , _reverb(reverb)
     , _dirty(false)
 {
-    char        s[256];
     int         i, x;
 
 	_ambis = force_ambis;

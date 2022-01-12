@@ -10,6 +10,8 @@
 
 #if defined(WINDOWS)
 	#include <winsock2.h>
+	#define SHUT_WR SD_SEND
+	static void sleep(int ms) { Sleep(ms); }
 #else
 	#include <netinet/in.h>
 	//#include <netinet/tcp.h>

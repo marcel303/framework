@@ -29,6 +29,8 @@ library libusb
 	with_platform windows add_files ../libusb/libusb/os/threads_windows.h
 	with_platform windows add_files ../libusb/libusb/os/windows_nt_common.c
 	with_platform windows add_files ../libusb/libusb/os/windows_nt_common.h
+	with_platform windows add_files ../libusb/libusb/os/windows_usbdk.c
+	with_platform windows add_files ../libusb/libusb/os/windows_usbdk.h
 	with_platform windows add_files ../libusb/libusb/os/windows_winusb.c
 	with_platform windows add_files ../libusb/libusb/os/windows_winusb.h
 

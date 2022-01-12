@@ -310,7 +310,8 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		if (elem.texture != 0)
 		{
 			gxSetTexture(elem.texture);
-			
+			gxSetTextureSampler(GX_SAMPLE_NEAREST, true);
+
 			gxBegin(GX_QUADS);
 			{
 				const float bsx = float(elem.g.bitmap.width);
@@ -744,6 +745,9 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 			
 			y -= yTop;
 			
+			x = floorf(x);
+			y = floorf(y);
+
 			drawText_FreeType(face, sizei, glyphs, textLength, x, y);
 		#else
 			gxMatrixMode(GX_MODELVIEW);
@@ -753,6 +757,9 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 				y += sy * (alignY - 1.f) / 2.f;
 				
 				y -= yTop;
+
+				x = floorf(x);
+				y = floorf(y);
 
 				gxTranslatef(x, y, 0.f);
 				

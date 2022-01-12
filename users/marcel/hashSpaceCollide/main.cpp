@@ -4,7 +4,7 @@
 
 static int g_allocCount = 0;
 
-int main()
+int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	

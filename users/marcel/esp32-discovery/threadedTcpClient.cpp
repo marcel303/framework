@@ -7,6 +7,8 @@
 
 #if defined(WINDOWS)
 	#include <winsock2.h>
+	#define SHUT_RDWR (SD_SEND | SD_RECEIVE)
+	static void sleep(int ms) { Sleep(ms); }
 #else
 	#include <netinet/in.h>
 	#include <netinet/tcp.h>
@@ -61,10 +63,12 @@ bool ThreadedTcpConnection::init(
 		
 		thread = std::thread([=]()
 		{
+		#if !defined(WINDOWS)
 			// avoid SIGPIPE signals from being generated. they will crash the program if left unhandled. we check error codes from send/recv and assume the user does so too, so we don't need signals to kill our app
 			
 			signal(SIGPIPE, SIG_IGN);
-			
+		#endif
+
 			LOG_DBG("connecting socket to remote endpoint");
 			
 			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)

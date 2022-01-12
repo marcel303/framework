@@ -818,8 +818,10 @@ struct RecordedFragment : AudioSource
 
 struct World
 {
+#if NUM_SPEEDERS > 0
 	Speeder speeders[NUM_SPEEDERS];
-	
+#endif
+
 	std::deque<RecordedFragment*> recordedFragments;
 	
 	Recorder recorder;
@@ -830,10 +832,12 @@ struct World
 	
 	void init()
 	{
+	#if NUM_SPEEDERS > 0
 		for (auto & speeder : speeders)
 		{
 			speeder.init();
 		}
+	#endif
 	}
 	
 	void shut()
@@ -848,10 +852,12 @@ struct World
 	
 	void tickAudio(const float dt)
 	{
+	#if NUM_SPEEDERS > 0
 		for (auto & speeder : speeders)
 		{
 			speeder.tickAudio(dt);
 		}
+	#endif
 		
 		for (auto & recordedFragment : recordedFragments)
 		{
@@ -867,10 +873,12 @@ struct World
 	
 	void tick(const float dt)
 	{
+	#if NUM_SPEEDERS > 0
 		for (auto & speeder : speeders)
 		{
 			speeder.tick(dt);
 		}
+	#endif
 	}
 };
 

@@ -5,7 +5,7 @@
 
 class Mat4x4;
 
-class SceneNodeComponent;
+struct SceneNodeComponent;
 
 struct ComponentDrawColor
 {

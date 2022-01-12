@@ -114,8 +114,13 @@ static void zippyDownload(const std::vector<std::string> & urls, const char * ta
 
 #include "miniz.h"
 #include "StringEx.h" // sprintf_s
-#include <sys/stat.h> // mkdir
-#include <sys/errno.h>
+
+#if defined(WIN32)
+	#include <direct.h>
+#else
+	#include <sys/stat.h> // mkdir
+	#include <sys/errno.h>
+#endif
 
 static void decompressZipFile(const char * filename, const char * targetPathBase)
 {
@@ -171,8 +176,12 @@ static void decompressZipFile(const char * filename, const char * targetPathBase
 					
 					*end = 0;
 					
+				#if defined(WINDOWS)
+					const int err = _mkdir(targetFilename);
+				#else
 					const int err = mkdir(targetFilename, S_IRWXU | S_IRWXG | S_IRWXO);
-					
+				#endif
+
 					if (err != 0 && errno != EEXIST)
 					{
 						success = false;

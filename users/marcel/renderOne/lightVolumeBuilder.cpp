@@ -1,9 +1,12 @@
 #include "Debugging.h"
 #include "lightVolumeBuilder.h"
+
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <algorithm>
 #include <vector>
 
 #define OPTIMIZE_LIGHT_SET_CONSTRUCTION 1

@@ -224,8 +224,8 @@ void audioEmitterToStereoOutputBuffer(
 	
 	// 3. process reverb and accumulate into left-right input buffers
 	
-	float reverbOutputBufferL[numFramesThisBlock];
-	float reverbOutputBufferR[numFramesThisBlock];
+	float * reverbOutputBufferL = (float*)alloca(numFramesThisBlock * sizeof(float));
+	float * reverbOutputBufferR = (float*)alloca(numFramesThisBlock * sizeof(float));
 	
 	memset(reverbOutputBufferL, 0, numFramesThisBlock * sizeof(float));
 	memset(reverbOutputBufferR, 0, numFramesThisBlock * sizeof(float));
@@ -245,8 +245,8 @@ void audioEmitterToStereoOutputBuffer(
 			reverbZone.inputBuffer
 		};
 		
-		float samplesL[numFramesThisBlock];
-		float samplesR[numFramesThisBlock];
+		float * samplesL = (float*)alloca(numFramesThisBlock * sizeof(float));
+		float * samplesR = (float*)alloca(numFramesThisBlock * sizeof(float));
 		
 		float * dst[2] =
 		{
@@ -275,8 +275,8 @@ void audioEmitterToStereoOutputBuffer(
 	
 	// binauralize the signal for each audio emitter and accumulate the stereo output signals
 	
-	float binauralOutputBufferL[numFramesThisBlock];
-	float binauralOutputBufferR[numFramesThisBlock];
+	float * binauralOutputBufferL = (float*)alloca(numFramesThisBlock * sizeof(float));
+	float * binauralOutputBufferR = (float*)alloca(numFramesThisBlock * sizeof(float));
 	
 	memset(binauralOutputBufferL, 0, numFramesThisBlock * sizeof(float));
 	memset(binauralOutputBufferR, 0, numFramesThisBlock * sizeof(float));
@@ -312,8 +312,8 @@ void audioEmitterToStereoOutputBuffer(
 		
 		// binauralize input signal
 		
-		float samplesL[numFramesThisBlock];
-		float samplesR[numFramesThisBlock];
+		float * samplesL = (float*)alloca(numFramesThisBlock * sizeof(float));
+		float * samplesR = (float*)alloca(numFramesThisBlock * sizeof(float));
 		
 		audioEmitter.binauralizer->generateLR(samplesL, samplesR, numFramesThisBlock);
 		

@@ -12,6 +12,9 @@
 // libgg
 #include "Path.h"
 
+// libc++
+#include <algorithm>
+
 SpatialAudioSystem_Binaural::SpatialAudioSystem_Binaural(const char * sampleSetPath)
 {
 	parameterMgr.setPrefix("spatialAudioSystem");

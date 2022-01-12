@@ -97,6 +97,7 @@ bool AudioStreamToTcp::init(
 			setsockopt(tcpConnection.sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		}
 		
+	#if !defined(WINDOWS)
 		{
 			// set TCP_SENDMOREACKS/TCP_QUICKACK for audio streamers, as this requires the other side to hold less data for (potential) retransmission
 		#if defined(MACOS)
@@ -107,6 +108,7 @@ bool AudioStreamToTcp::init(
 			const int sock_value = 1;
 			setsockopt(tcpConnection.sock, IPPROTO_TCP, sock_opt, (const char*)&sock_value, sizeof(sock_value));
 		}
+	#endif
 
 		LOG_DBG("frame size: %d", numFramesPerBuffer * numChannelsPerFrame * sizeof(int16_t));
 		

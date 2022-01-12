@@ -60,6 +60,7 @@ namespace gltf
 		catch (std::exception & e)
 		{
 			logError("failed to parse JSON: %s", e.what());
+			(void)e;
 			return false;
 		}
 		
