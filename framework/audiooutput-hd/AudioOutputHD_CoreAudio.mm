@@ -135,7 +135,7 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 			kAudioFormatFlagIsNonInterleaved;
 			//kAudioFormatFlagIsPacked |
 			//kAudioFormatFlagsNativeEndian;
-		sdesc.mFramesPerPacket = 1;
+		sdesc.mFramesPerPacket = 1; // In uncompressed audio, a Packet is one frame, (mFramesPerPacket == 1). In compressed audio, a Packet is an indivisible chunk of compressed data, for example an AAC packet will contain 1024 sample frames.
 		sdesc.mChannelsPerFrame = numOutputChannels;
 		sdesc.mBitsPerChannel = sizeof(float) * 8;
 		sdesc.mBytesPerFrame = sizeof(float);
@@ -147,9 +147,9 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 			kAudioFormatFlagIsFloat |
 			kAudioFormatFlagIsPacked |
 			kAudioFormatFlagsNativeEndian;
-		sdesc.mFramesPerPacket = 1;
+		sdesc.mFramesPerPacket = 1; // In uncompressed audio, a Packet is one frame, (mFramesPerPacket == 1). In compressed audio, a Packet is an indivisible chunk of compressed data, for example an AAC packet will contain 1024 sample frames.
 		sdesc.mChannelsPerFrame = numOutputChannels;
-		sdesc.mBitsPerChannel = 32;
+		sdesc.mBitsPerChannel = sizeof(float) * 8;
 		sdesc.mBytesPerFrame = numOutputChannels * sizeof(float);
 		sdesc.mBytesPerPacket = numOutputChannels * sizeof(float);
 	#endif
@@ -252,7 +252,7 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 	{
 		// set maximum frame count
 	
-		UInt32 maxFramesPerSlice = 4096; // macOS prefer to use a large buffer size (4096) when in power saving mode
+		UInt32 maxFramesPerSlice = 4096; // macOS prefers to use a large buffer size (4096) when in power saving mode
 		
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
@@ -312,7 +312,7 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 		kOutputBus,
 		&cbs, sizeof(cbs));
 	if (checkStatus(status) == false)
-			return false;
+		return false;
 	
 	status = AudioUnitInitialize(m_audioUnit);
 	if (checkStatus(status) == false)
@@ -331,8 +331,26 @@ bool AudioOutputHD_CoreAudio::initCoreAudio(const int numInputChannels, const in
 	m_bufferSize = bufferSize;
 
 #if defined(IPHONEOS)
-	// todo : should respond to AVAudioSession changes to update output latency
+	// set the preferred output buffer duration
+	
+	[[AVAudioSession sharedInstance] setPreferredIOBufferDuration:bufferSize / double(frameRate) error:nil];
+	
+	// capture the current output latency
+	
 	m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
+	
+	// respond to AVAudioSession changes to update the captured output latency
+	
+	[[NSNotificationCenter defaultCenter]
+		addObserverForName:AVAudioSessionRouteChangeNotification
+		object:nil
+		queue:nil
+		usingBlock:^(NSNotification * note)
+		{
+			NSLog(@"detected AVAudioSession route change");
+			
+			m_streamInfo.outputLatency = [AVAudioSession sharedInstance].outputLatency;
+		}];
 #else
 	m_streamInfo.outputLatency = 0.f;
 #endif
