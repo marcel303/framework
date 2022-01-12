@@ -133,6 +133,17 @@ uint64_t AbletonLink::getClockTimeUs() const
 	return link->clock().micros().count();
 }
 
+void AbletonLink::setTempoCallback(const std::function<void()> & callback)
+{
+	link->setTempoCallback([this](const double bpm)
+		{
+			if (tempoCallback != nullptr)
+				tempoCallback();
+		});
+	
+	tempoCallback = callback;
+}
+
 AbletonLink::SessionState AbletonLink::captureAppSessionState() const
 {
 	SessionState result;

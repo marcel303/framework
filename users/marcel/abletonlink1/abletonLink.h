@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <stdint.h>
 
 /*
@@ -48,6 +49,8 @@ struct AbletonLink
 	ableton::Link * link = nullptr;
 	bool ownsLink = false;
 	
+	std::function<void()> tempoCallback;
+	
 	// Creation and destruction of the Ableton Link object.
 
 	bool init(const double bpm);
@@ -65,6 +68,8 @@ struct AbletonLink
 	int numPeers() const;
 
 	uint64_t getClockTimeUs() const;
+	
+	void setTempoCallback(const std::function<void()> & callback);
 	
 	SessionState captureAppSessionState() const;
 	SessionState captureAudioSessionState() const;
