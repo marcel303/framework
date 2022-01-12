@@ -488,7 +488,7 @@ template <typename T> void FbxReader::skipArray(size_t & offset) const
 	else if (encoding == 1) // deflate
 		length = compressedLength;
 	else
-		FbxException("invalid array encoding");
+		throw FbxException("invalid array encoding");
 		
 	skip(offset, length);
 }
