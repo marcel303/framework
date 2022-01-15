@@ -109,10 +109,12 @@ ImageData * loadImage(const char * filename)
 				const uint8_t b = source[0];
 				const uint8_t a = 255;
 
-				*dest++ = r;
-				*dest++ = g;
-				*dest++ = b;
-				*dest++ = a;
+				dest[0] = r;
+				dest[1] = g;
+				dest[2] = b;
+				dest[3] = a;
+				
+				dest += 4;
 				
 				source += 3;
 			}
@@ -137,15 +139,17 @@ ImageData * loadImage(const char * filename)
 			
 			for (int x = 0; x < sx; ++x)
 			{
-				const int r = ((*source) >> FI_RGBA_RED_SHIFT) & 0xff;
+				const int r = ((*source) >> FI_RGBA_RED_SHIFT)   & 0xff;
 				const int g = ((*source) >> FI_RGBA_GREEN_SHIFT) & 0xff;
-				const int b = ((*source) >> FI_RGBA_BLUE_SHIFT) & 0xff;
+				const int b = ((*source) >> FI_RGBA_BLUE_SHIFT)  & 0xff;
 				const int a = ((*source) >> FI_RGBA_ALPHA_SHIFT) & 0xff;
 
-				*dest++ = r;
-				*dest++ = g;
-				*dest++ = b;
-				*dest++ = a;
+				dest[0] = r;
+				dest[1] = g;
+				dest[2] = b;
+				dest[3] = a;
+				
+				dest += 4;
 				
 				source++;
 			}
