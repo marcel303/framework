@@ -112,7 +112,7 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	}
 	
 	// texture
-	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1], false);
+	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1], true);
 	
 	m_prev = 0;
 	m_next = 0;
