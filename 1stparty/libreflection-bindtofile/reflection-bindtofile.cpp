@@ -187,29 +187,56 @@ bool saveObjectToFile(const TypeDB & typeDB, const Type * type, const void * obj
 
 static bool loadObjectFromJsonFile(const TypeDB & typeDB, const Type * type, void * object, const char * filename)
 {
+	bool result = true;
+	
 	char * text = nullptr;
 	size_t textSize = 0;
 
 	if (TextIO::loadFileContents(filename, text, textSize) == false)
 	{
 		LOG_ERR("failed to load contents from file %s", filename);
-		return false;
+		result = false;
 	}
 
 	rapidjson::Document document;
-
-	document.Parse(text, textSize);
 	
-	delete [] text;
-	text = nullptr;
-
-	if (document.HasParseError())
+	if (result)
 	{
-		LOG_ERR("failed to parse json contents for file %s", filename);
-		return false;
+		document.Parse(text, textSize);
+		
+		if (document.HasParseError())
+		{
+			int line = -1;
+			
+			if (document.GetErrorOffset() != 0)
+			{
+				line = 1;
+				
+				for (int i = 0; i < document.GetErrorOffset(); ++i)
+					if (text[i] == '\n')
+						line++;
+			}
+			
+			LOG_ERR("failed to parse json contents for file %s. line: %d, code: %d",
+				filename,
+				line,
+				document.GetParseError());
+			
+			result = false;
+		}
+		
+		delete [] text;
+		text = nullptr;
 	}
 
-	return object_fromjson_recursive(typeDB, type, object, document);
+	if (result)
+	{
+		return object_fromjson_recursive(typeDB, type, object, document);
+	}
+	else
+	{
+		return false;
+	}
 }
 
 static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, void * object, const char * filename)
