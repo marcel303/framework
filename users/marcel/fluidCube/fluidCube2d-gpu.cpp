@@ -142,10 +142,10 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
 					samp(x0, 0, 0)
 					+ a *
 						(
-							+samp(x, +1,  0)
-							+samp(x, -1,  0)
-							+samp(x,  0, +1)
-							+samp(x,  0, -1)
+							+ samp(x, +1,  0)
+							+ samp(x, -1,  0)
+							+ samp(x,  0, +1)
+							+ samp(x,  0, -1)
 						)
 				) * cRecip;
 		)SHADER",
@@ -184,10 +184,10 @@ static void lin_solve2d_xy(
 					samp(x0, 0, 0)
 					+ a *
 						(
-							+samp(x, +1,  0)
-							+samp(x, -1,  0)
-							+samp(x,  0, +1)
-							+samp(x,  0, -1)
+							+ samp(x, +1,  0)
+							+ samp(x, -1,  0)
+							+ samp(x,  0, +1)
+							+ samp(x,  0, -1)
 						)
 				) * cRecip;
 		)SHADER",
@@ -246,10 +246,10 @@ static void project2d(
 	getOrCreateShader("project2d_div",
 		R"SHADER(
 			return
-				-0.25f *
+				0.25f *
 					(
-						+ (+ samp(velocX, +1,  0) - samp(velocX, -1,  0))
-						+ (+ samp(velocY,  0, +1) - samp(velocY,  0, -1))
+						+ ( + samp(velocX, -1,  0) - samp(velocX, +1,  0) )
+						+ ( + samp(velocY,  0, -1) - samp(velocY,  0, +1) )
 					);
 		)SHADER",
 		R"SHADER(
@@ -275,13 +275,13 @@ static void project2d(
 	
 	getOrCreateShader("project2d_veloc_x",
 		R"SHADER(
-			return - ( samp(p, +1, 0) - samp(p, -1, 0) );
+			return ( + samp(p, -1, 0) - samp(p, +1, 0) );
 		)SHADER",
 		"uniform sampler2D p;");
 	
 	getOrCreateShader("project2d_veloc_y",
 		R"SHADER(
-			return - ( samp(p, 0, +1) - samp(p, 0, -1) );
+			return ( + samp(p, 0, -1) - samp(p, 0, +1) );
 		)SHADER",
 		"uniform sampler2D p;");
 	
@@ -319,10 +319,10 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 	
     getOrCreateShader("advect2d",
 		R"SHADER(
-			float tmp1 = dt * samp(velocX, 0, 0);
-			float tmp2 = dt * samp(velocY, 0, 0);
+			float tmpX = dt * samp(velocX, 0, 0);
+			float tmpY = dt * samp(velocY, 0, 0);
 			
-			return samp_filter(d0, - tmp1, - tmp2);
+			return samp_filter(d0, - tmpX, - tmpY);
 		)SHADER",
 		R"SHADER(
 			uniform sampler2D velocX;
