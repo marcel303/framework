@@ -2012,7 +2012,7 @@ inline T getAngle(T dx, T dy)
 template <typename T>
 inline T random(T min, T max)
 {
-	return static_cast<T>(min + (max - min) * ((rand() % 1000) / 999.f));
+	return static_cast<T>(min + (max - min) * ((rand() % RAND_MAX) / float(RAND_MAX - 1)));
 }
 
 template <>
