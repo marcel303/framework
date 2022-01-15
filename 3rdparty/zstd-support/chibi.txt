@@ -27,9 +27,9 @@ app libzstd-example-simple_decompression
 	depend_library libzstd
 	add_files ../zstd/examples/simple_decompression.c
 
-app libzstd-example-streaming_compression_thread_pool
-	depend_library libzstd
-	add_files ../zstd/examples/streaming_compression_thread_pool.c
+with_platform macos|linux	app libzstd-example-streaming_compression_thread_pool
+with_platform macos|linux		depend_library libzstd
+with_platform macos|linux		add_files ../zstd/examples/streaming_compression_thread_pool.c
 
 app libzstd-example-streaming_decompression
 	depend_library libzstd
