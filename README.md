@@ -1,9 +1,6 @@
 [![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/github/marcel303/framework)
 [![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework)
 
-(Building a creative coding environment from scratch is a ton of work, so please consider becoming a patron!)
-<br />[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](https://www.patreon.com/marcelsmit)
-
 # README #
 
 Hi! This is the origin of the Framework creative coding library.
@@ -247,8 +244,6 @@ This is a list of libraries made readily available through this repository.
 - **libjgmod** A relic from the past! Plays xm, mod, s3m and (many) it files,
 - **utf8rewind** Full-featured utf8 library,
 - **xmm** Use various classifiers to identify and track gestures.
-
-
 
 ## `vfxgraph` Node based visuals and control ##
 
