@@ -1,7 +1,7 @@
 #include "Benchmark.h"
 #include "Timer.h"
 
-int Benchmark::m_Indent = 0;
+static __thread int m_Indent = 0;
 
 Benchmark::Benchmark(const char* name)
 {
@@ -30,7 +30,7 @@ Benchmark::~Benchmark()
 	char indentString[10];
 	CreateIndentString(indentString);
 	
-	LOG_INF("%sBenchmark: %s: %f sec", indentString, m_Name, delta);
+	LOG_INF("%sBenchmark: %s: took %f sec", indentString, m_Name, delta);
 #endif
 }
 

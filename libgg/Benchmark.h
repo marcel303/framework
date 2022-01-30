@@ -19,5 +19,4 @@ private:
 	static void CreateIndentString(char* out_String);
 	const char* m_Name;
 	DeltaTimer m_Timer;
-	static int m_Indent;
 };
