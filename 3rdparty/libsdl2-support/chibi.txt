@@ -23,6 +23,8 @@ with_platform iphoneos library libsdl2
 	scan_files c path ../libsdl2/src/haptic group haptic
 	scan_files c path ../libsdl2/src/joystick group joystick
 	scan_files c path ../libsdl2/src/libm group libm
+	scan_files c path ../libsdl2/src/locale group locale
+	scan_files c path ../libsdl2/src/misc group misc
 	scan_files c path ../libsdl2/src/power group power
 	with_platform macos    scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
 	with_platform iphoneos scan_files c path ../libsdl2/src/render traverse group render
@@ -45,7 +47,10 @@ with_platform iphoneos library libsdl2
 	with_platform macos scan_files m path ../libsdl2/src/filesystem/cocoa group filesystem/cocoa
 	with_platform macos scan_files c path ../libsdl2/src/haptic/darwin group haptic/darwin
 	with_platform macos scan_files c path ../libsdl2/src/joystick/darwin group joystick/darwin
+	with_platform macos scan_files m path ../libsdl2/src/joystick/iphoneos group joystick/iphoneos
 	with_platform macos scan_files c path ../libsdl2/src/loadso/dlopen group loadso/dlopen
+	with_platform macos scan_files m path ../libsdl2/src/locale/macosx group locale/macosx
+	with_platform macos scan_files m path ../libsdl2/src/misc/macosx group misc/macosx
 	with_platform macos scan_files c path ../libsdl2/src/power/macosx group power/macosx
 	with_platform macos scan_files m path ../libsdl2/src/sensor/coremotion group sensor/coremotion
 	with_platform macos scan_files c path ../libsdl2/src/timer/unix group timer/unix
@@ -69,7 +74,11 @@ with_platform iphoneos library libsdl2
 	with_platform iphoneos scan_files m path ../libsdl2/src/filesystem/cocoa group filesystem/cocoa
 	with_platform iphoneos scan_files c path ../libsdl2/src/haptic/dummy group haptic/dummy
 	with_platform iphoneos scan_files m path ../libsdl2/src/joystick/iphoneos group joystick/iphoneos
+	with_platform iphoneos scan_files c path ../libsdl2/src/joystick/virtual group joystick/virtual
 	with_platform iphoneos scan_files c path ../libsdl2/src/loadso/dlopen group loadso/dlopen
+	with_platform iphoneos scan_files m path ../libsdl2/src/locale/macosx group locale/macosx
+	with_platform iphoneos scan_files c path ../libsdl2/src/main/uikit group main/uikit
+	with_platform iphoneos scan_files m path ../libsdl2/src/misc/ios group misc/ios
 	with_platform iphoneos scan_files m path ../libsdl2/src/power/uikit group power/uikit
 	with_platform iphoneos scan_files m path ../libsdl2/src/sensor/coremotion group sensor/coremotion
 	with_platform iphoneos scan_files c path ../libsdl2/src/timer/unix group timer/unix
@@ -78,6 +87,7 @@ with_platform iphoneos library libsdl2
 	with_platform iphoneos depend_library AVFoundation find
 	with_platform iphoneos depend_library CoreAudio find
 	with_platform iphoneos depend_library CoreGraphics find
+	with_platform iphoneos depend_library CoreHaptics find
 	with_platform iphoneos depend_library CoreMotion find
 	with_platform iphoneos depend_library Foundation find
 	with_platform iphoneos depend_library GameController find
