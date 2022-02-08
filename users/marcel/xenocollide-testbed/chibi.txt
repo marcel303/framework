@@ -1,0 +1,4 @@
+app xenocollide-testbed
+	depend_library framework
+	scan_files cpp traverse
+	scan_files h traverse

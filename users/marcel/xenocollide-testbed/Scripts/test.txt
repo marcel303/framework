@@ -1,0 +1,59 @@
+
+###############################################
+# Test
+###############################################
+
+###############################################
+# Add several shapes to the shape library.
+
+run box
+save box
+
+run football
+save football
+
+run cyl
+save cyl
+
+run cone
+save cone
+
+run clam
+save clam
+
+run smoothbox
+save smoothbox
+
+run coneclam
+save coneclam
+
+run truncatedcone
+save truncatedcone
+
+run wheel
+save wheel
+
+run smoothbox
+save smoothbox
+
+run ellipsoid
+save ellipsoid
+
+###############################################
+# Create a bunch of shapes
+
+clear
+
+create 10 box
+create 10 football
+create 10 cyl
+create 10 cone
+create 10 clam
+create 10 smoothbox
+create 10 coneclam
+create 10 truncatedcone
+create 10 wheel
+create 10 smoothbox
+create 10 ellipsoid
+
+drop all

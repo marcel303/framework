@@ -1,0 +1,40 @@
+
+XenoCollide Testbed Commands
+============================
+
+axis                           Add three segments in the shape of an axis indicator at the origin to the shape stack
+background <r> <g> <b>         Set the background color (default 0 0 0)
+box <length> <width> <height>  Create a box on the shape stack (default 50 50 50)
+collide                        Single-step the XenoCollide algorithm using the top two shapes on the shape stack (same as "step")
+color <r> <g> <b>              Changes the color of the top shape on the shape stack
+detail <n>                     Sets the detail level of the render mesh that is generated for each shape (1-6)
+diff                           Remove the top two shapes from the shape stack and push their Minkowski difference onto the stack
+disc <radius>                  Creates a circular disc of radius "radius" (default 50)
+disc <radiusX> <radiusY>       Creates an elliptical disc using the two radii provided
+drag <val>                     Sets linear and angular drag to "val" (typically between 0 and 1 -- default is 0)
+drag <linear> <angular>        Sets linear drag to "linear" and angular drag to "angular"
+drawmode                       Cycles to the next draw mode (points, wireframe, filled polygons)
+drop                           Drop one of the rigid bodies in the physics simulation
+drop all                       Drop all of the rigid bodies in the physics simulation
+dup                            Duplicate the top item on the shape stack
+exit                           Exit the program (same as "quit")
+friction                       Toggle friction for the physics simulation on/off
+football <length> <radius>     Create a football with half-length "length" and radius "radius"
+help                           Display this help file
+load <name>                    Loads the shape named "name" from the set of saved shapes and pushes it onto the shape stack
+mode                           Cycles to the next mode (shape stack, physics simulation, probe test)
+move <x> <y> <z>               Translates the top shape on the stack in the direction specified (default 0 0 0)
+point <x> <y> <z>              Creates a point at (x, y, z) and pushes it onto the shape stack (default 0 0 0)
+pop                            Pops the top shape off of the shape stack and discards it
+rect <length> <width>          Creates a rectangle and pushes it onto the shape stack (default 50 50)
+rot <x> <y> <z>                Rotates the top shape on the shape stack simultaneously (using a quaternion logarithm) around the x, y and z axes by the amount specified in degrees for each
+saucer <radius> <thickness>    Creates a saucer and pushes it onto the shape stack (default 30 10)
+save <name>                    Saves the top shape on the shape stack in the set of saved shapes
+segment <length>               Creates a line segment and pushes it onto the shape stack (default 50)
+sim
+sphere <radius>                Creates a sphere of radius "radius" and pushes it onto the shape stack
+sphere <radX> <radY> <radZ>    Creates an ellipsoid using the three radii and pushes it onto the shape stack (default 50 50 50)
+swap                           Swaps the top two shapes on the shape stack
+sweep                          Pops the top two shapes and pushes their Minkowski sum, which is the same as sweeping one by the other
+time                           Turns on the timing display in the physics simulation
+wrap                           Pops the top two shapes and pushes their Minkowski maximum, which is the same as shrink-wrapping the two shapes with a convex hull
