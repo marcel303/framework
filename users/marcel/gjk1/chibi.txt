@@ -1,0 +1,3 @@
+app marcel-gjk1
+	add_files main.cpp
+	depend_library framework
