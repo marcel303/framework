@@ -4415,6 +4415,13 @@ void pushColor()
 	colorStack.push(globals.color);
 }
 
+void pushColor(const Color & color)
+{
+	colorStack.push(globals.color);
+	
+	setColor(color);
+}
+
 void popColor()
 {
 	const Color color = colorStack.popValue();

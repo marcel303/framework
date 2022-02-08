@@ -1683,6 +1683,7 @@ void setAlphaf(float a);
 void setLumi(int l);
 void setLumif(float l);
 void pushColor();
+void pushColor(const Color & color);
 void popColor();
 
 void setFont(const Font & font);

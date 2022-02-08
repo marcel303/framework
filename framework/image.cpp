@@ -223,11 +223,11 @@ ImageData * imageFixAlphaFilter(const ImageData * image)
 
 	for (int y = 0; y < image->sy; ++y)
 	{
+		const ImageData::Pixel * __restrict srcLine = image->getLine(y);
+		      ImageData::Pixel * __restrict dstLine = result->getLine(y);
+				  
 		for (int x = 0; x < image->sx; ++x)
 		{
-			const ImageData::Pixel * __restrict srcLine = image->getLine(y);
-				  ImageData::Pixel * __restrict dstLine = result->getLine(y);
-			
 			if (srcLine[x].a != 0)
 			{
 				dstLine[x] = srcLine[x];
