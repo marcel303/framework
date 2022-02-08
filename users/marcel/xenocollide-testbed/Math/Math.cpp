@@ -18,9 +18,6 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "stdafx.h"
-
 #include "Math.h"
 
 Vector Quat::Rotate(const Vector& v) const
@@ -349,14 +346,14 @@ void Vector::Normalize3()
 {
 	ASSERT(CanNormalize3());	
 	__m128 xyzw2 = _mm_mul_ps(vec4, vec4);
-	*this *= InvSqrt(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z))).m128_f32[COMPONENT_X]);
+	*this *= InvSqrt(_mm_extract_ps(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z))), COMPONENT_X));
 }
 
 void Vector::Normalize4()
 {
 	ASSERT(CanNormalize4());
 	__m128 xyzw2 = _mm_mul_ps(vec4, vec4);
-	*this *= InvSqrt(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), _mm_add_ss(L_SHUF_PASS(COMPONENT_Z), L_SHUF_PASS(COMPONENT_W)))).m128_f32[COMPONENT_X]);
+	*this *= InvSqrt(_mm_extract_ps(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), _mm_add_ss(L_SHUF_PASS(COMPONENT_Z), L_SHUF_PASS(COMPONENT_W)))), COMPONENT_X));
 }
 
 Vector Vector::UnitVec3() const

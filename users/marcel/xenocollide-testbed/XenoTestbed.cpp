@@ -18,18 +18,18 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 // XenoTestbed.cpp : Defines the class behaviors for the application.
 //
 
-#include "stdafx.h"
 #include "XenoTestbed.h"
 #include "XenoTestbedWindow.h"
 #include "XenoTestbed.h"
 
 #include "TestModule.h"
 
-#include <mmsystem.h>
+#include "framework.h"
+
+#define XENO_TODO 0
 
 XenoTestbedApp::XenoTestbedApp()
 : m_mainWindow(NULL)
@@ -38,61 +38,37 @@ XenoTestbedApp::XenoTestbedApp()
 
 XenoTestbedApp theApp;
 
-BOOL XenoTestbedApp::PumpWaitingMessages()
+bool XenoTestbedApp::RunMainLoop()
 {
-	MSG msg;
-
-	//
-	// Read all of the messages in this next loop, 
-	// removing each message as we read it.
-	//
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	for (;;)
 	{
-		//
-		// If it's a quit message, we're out of here.
-		//
-		if (msg.message == WM_QUIT)
-		{
-			return FALSE;
-		}
-
-		//
-		// Otherwise, dispatch the message.
-		//
-		TranslateMessage(&msg);
-		DispatchMessage(&msg); 
-	}
-
-	return TRUE;
-}
-
-BOOL XenoTestbedApp::RunMainLoop()
-{
-	DWORD currentTime = timeGetTime();
-
-	while (PumpWaitingMessages())
-	{
-		DWORD newTime = timeGetTime();
-		float32 dt = (float32)(newTime - currentTime) / 1000.0f;
+		framework.process();
+		
+		if (framework.quitRequested)
+			break;
+		
+		// todo : xeno : integrate message proc code
+		
+		float32 dt = framework.timeStep;
+		
 		if (dt > 0)
 		{
 			m_mainWindow->Simulate(dt);
-			currentTime = newTime;
 		}
 	}
 
-	return TRUE;
+	return true;
 }
 
-BOOL XenoTestbedApp::InitInstance(HINSTANCE hInstance)
+bool XenoTestbedApp::InitInstance()
 {
-	void* mem = _aligned_malloc(sizeof(XenoTestbedWindow), 16);
+	void* mem = _mm_malloc(sizeof(XenoTestbedWindow), 16);
 
-	m_mainWindow = new(mem) XenoTestbedWindow(hInstance);
+	m_mainWindow = new(mem) XenoTestbedWindow();
 
 	if ( !m_mainWindow->Init() )
 	{
-		return FALSE;
+		return false;
 	}
 
 	return true;
@@ -102,35 +78,30 @@ int XenoTestbedApp::ExitInstance()
 {
 	// Clean up the main window
 	m_mainWindow->~XenoTestbedWindow();		// !!! TODO: MAJOR HACK TO GET AROUND ALIGNMENT ISSUES !!!
-	_aligned_free(m_mainWindow);
+	_mm_free(m_mainWindow);
 	m_mainWindow = NULL;
 
 	// Clean up any globals
 	RegisterTestModule::CleanUp();
 
-	return TRUE;
+	return true;
 }
 
-int APIENTRY wWinMain(HINSTANCE hInstance,
-                     HINSTANCE hPrevInstance,
-                     LPWSTR    lpCmdLine,
-                     int       nCmdShow)
+int main(int argc, char * argv[])
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
-	UNREFERENCED_PARAMETER(lpCmdLine);
-	UNREFERENCED_PARAMETER(nCmdShow);
-
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	// Perform application initialization:
-	if (!theApp.InitInstance(hInstance))
+	if (!theApp.InitInstance())
 	{
-		return FALSE;
+		return -1;
 	}
 
 	// Run the application
-	BOOL result = theApp.RunMainLoop();
+	bool result = theApp.RunMainLoop();
 
 	// Perform application clean up
 	theApp.ExitInstance();
 
-	return result;
+	return result ? 0 : -1;
 }

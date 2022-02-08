@@ -18,7 +18,6 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////
@@ -28,6 +27,7 @@ not be misrepresented as being the original software.
 //////////////////////////////////////////////////////////////////////////////
 
 #include "MapPtr.h"
+#include "Math/Math.h"
 
 class Body
 {

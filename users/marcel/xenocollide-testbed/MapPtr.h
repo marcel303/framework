@@ -19,7 +19,6 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////////
@@ -29,12 +28,12 @@ not be misrepresented as being the original software.
 // when the number of references drop to zero.
 
 #include <map>
-#include <hash_map>
+#include <unordered_map>
 
 class MapPtrBase
 {
 protected:
-	static stdext::hash_map<void*, int> s_refCount;
+	static std::unordered_map<void*, int> s_refCount;
 };
 
 template <class T>

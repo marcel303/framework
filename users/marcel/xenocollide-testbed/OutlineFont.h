@@ -18,15 +18,17 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
 #include <string>
-#include <gl/gl.h>
+
+#define XENOSTUB_OUTLINEFONT 1
 
 //////////////////////////////////////////////////////////////////////////////
 // OutlineFont is a helper class that supports drawing text using any
 // Windows outline (i.e., non-bitmap) font.
+
+#if XENOSTUB_OUTLINEFONT == 0
 
 class OutlineFont
 {
@@ -44,3 +46,5 @@ private:
     HDC m_hDC;
 
 };
+
+#endif

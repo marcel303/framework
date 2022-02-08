@@ -18,10 +18,9 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
-#include "Math\math.h"
+#include "Math/Math.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // TrackBall is part of the testbed framework.  It keeps track of the

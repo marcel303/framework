@@ -18,13 +18,7 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "stdafx.h"
-
 #include "Constraint.h"
-
-#include <gl/gl.h>
-
 
 extern bool gFriction;
 

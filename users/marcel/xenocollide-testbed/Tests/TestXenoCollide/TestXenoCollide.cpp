@@ -18,18 +18,13 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "stdafx.h"
-
-#include <gl/gl.h>
-#include <mmsystem.h>
 #include <stdio.h>
 
 #include <list>
 #include <map>
 #include <set>
 #include <stack>
-#include <Vector>
+#include <vector>
 
 #include "Arbiter.h"
 #include "Collide.h"
@@ -48,10 +43,16 @@ not be misrepresented as being the original software.
 #include "XenoTestbed.h"
 #include "XenoTestbedWindow.h"
 
+#include "framework.h"
+
+#include "Timer.h"
+
 using namespace std;
 
 #undef ASSERT
 #define ASSERT(a) if (a) *(int*)NULL = 0;
+
+#define XENO_TODO_FONT 0
 
 //////////////////////////////////////////////////////////////
 // Global Data
@@ -73,7 +74,7 @@ bool gSimulate = false;
 bool gDebug = false;
 int32 gCurrentDebugTick = 0;
 bool gCullFrontFace = false;
-int32 gPolygonMode = GL_FILL;
+bool gPolygonModeFill = true;
 
 //////////////////////////////////////////////////////////////
 
@@ -130,7 +131,9 @@ private:
 	bool mCommandMode;
 	float32 mFPS;
 
+#if XENO_TODO_FONT == 1
 	OutlineFont* mFont;
+#endif
 
 	string mStatusLine;
 
@@ -181,8 +184,9 @@ TestXenoCollide::TestXenoCollide()
 	gSimulate = false;
 	gCullFrontFace = false;
 
-	HDC hdc = GetDC(theApp.m_mainWindow->GetHWND());
+#if XENO_TODO_FONT == 1
 	mFont = new OutlineFont(hdc, "Comic Sans MS Bold");
+#endif
 
 	mBackgroundColor = Vector(0, 0, 0);
 
@@ -278,23 +282,27 @@ extern float32 gAvgSupportCount;
 
 void TestXenoCollide::DrawScene()
 {
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
+	setWireframe(false);
+	
+#if XENO_TODO_FONT == 1
 	glClearColor( mBackgroundColor.X(), mBackgroundColor.Y(), mBackgroundColor.Z(), 1 );
+#endif
 
 	if (mCommandMode)
 	{
-		glColor4f( 1-mBackgroundColor.X(), 1-mBackgroundColor.Y(), 1-mBackgroundColor.Z(), 1);
+		gxColor4f( 1-mBackgroundColor.X(), 1-mBackgroundColor.Y(), 1-mBackgroundColor.Z(), 1);
 
-		glPushMatrix();
-		glLoadIdentity();
-		glTranslatef(-15, -11, -50);
+		gxPushMatrix();
+		gxLoadIdentity();
+		gxTranslatef(-15, -11, -50);
+	#if XENO_TODO_FONT == 1
 		mFont->DrawString(mStatusLine.c_str());
-		glPopMatrix();
+	#endif
+		gxPopMatrix();
 
-		glPushMatrix();
-		glLoadIdentity();
-		glTranslatef(-15, -12, -50);
+		gxPushMatrix();
+		gxLoadIdentity();
+		gxTranslatef(-15, -12, -50);
 		string displayString;
 		if (gSimulate)
 			displayString = "sim";
@@ -302,15 +310,17 @@ void TestXenoCollide::DrawScene()
 			displayString = "edit";
 		
 		displayString += "> " + mCommand;
-		if (timeGetTime() & 0x200)
+		if ((g_TimerRT.TimeMS_get() / 500) % 2)
 		{
 			displayString += "_";
 		}
+	#if XENO_TODO_FONT == 1
 		mFont->DrawString(displayString.c_str());
-		glPopMatrix();
+	#endif
+		gxPopMatrix();
 	}
 
-	glPolygonMode(GL_FRONT_AND_BACK, gPolygonMode);
+	setWireframe(gPolygonModeFill ? false : true);
 
 	if (mStackMode)
 	{
@@ -340,20 +350,22 @@ void TestXenoCollide::DrawScene()
 
 		if (mDebugTime)
 		{
-			glPushMatrix();
-			glLoadIdentity();
-			glTranslatef(-15, -13, -50);
+			gxPushMatrix();
+			gxLoadIdentity();
+			gxTranslatef(-15, -13, -50);
 
 			static float32 avg = 6;
 			if (gCollisionCount > 0)
 			{
-				avg = 0.99f * avg + 0.01 * 1000.0f * gCollisionTime / gCollisionCount;
+				avg = 0.99f * avg + 0.01 * gCollisionTime / gCollisionCount;
 			}
 			char text[100];
 			sprintf(text, "FPS %2.2f  Avg = %2.2f  Count = %d  Hits = %d  AvgTime = %.2f us", mFPS, gAvgSupportCount, gCollisionCount, gCollisionHitCount, avg);
-			glColor4f(1, 1, 1, 1);
+			gxColor4f(1, 1, 1, 1);
+		#if XENO_TODO_FONT == 1
 			mFont->DrawString(text);
-			glPopMatrix();
+		#endif
+			gxPopMatrix();
 		}
 
 		return;
@@ -508,10 +520,10 @@ void TestXenoCollide::Simulate(float32 dt)
 
 			if (i < mFirstSimulatedRigidBody || (b1->body->x - b2->body->x).Len3Squared() < cullingRadius * cullingRadius)
 			{
-				uint32 startTime = timeGetTime();
+				uint32 startTime = g_TimerRT.TimeUS_get();
 				collisionCount++;
 				bool result = CollideAndFindPoint(*b1->collideModel, b1->body->q, b1->body->x - b1->body->q.Rotate(b1->body->com), *b2->collideModel, b2->body->q, b2->body->x - b2->body->q.Rotate(b2->body->com), &n, &p1, &p2);
-				uint32 stopTime = timeGetTime();
+				uint32 stopTime = g_TimerRT.TimeUS_get();
 				gCollisionTime += stopTime - startTime;
 
 				if (result)
@@ -592,8 +604,10 @@ TestXenoCollide::~TestXenoCollide()
 	mRigidBody.clear();
 	mShapeSet.clear();
 
+#if XENO_TODO_FONT == 1
 	delete mFont;
 	mFont = NULL;
+#endif
 }
 
 //////////////////////////////////////////////////////////////
@@ -786,19 +800,15 @@ void TestXenoCollide::ProcessCommand(string& cmd)
 	}
 	else if (cmd == "drawmode")
 	{
-		switch (gPolygonMode)
+		switch (gPolygonModeFill)
 		{
-			case GL_POINT:
-				gPolygonMode = GL_LINE;
-				Status("Draw mode changed to lines.");
-				break;
-			case GL_LINE:
-				gPolygonMode = GL_FILL;
+			case false:
+				gPolygonModeFill = true;
 				Status("Draw mode changed to filled polygons.");
 				break;
-			case GL_FILL:
-				gPolygonMode = GL_POINT;
-				Status("Draw mode changed to points.");
+			case true:
+				gPolygonModeFill = false;
+				Status("Draw mode changed to lines.");
 				break;
 		}
 	}
@@ -865,7 +875,8 @@ void TestXenoCollide::ProcessCommand(string& cmd)
 							break;
 						}
 					}
-					ProcessCommand( string(name) );
+					string cmd(name);
+					ProcessCommand( cmd );
 				}
 				fclose(fp);
 				Status("Execution complete.");
@@ -882,7 +893,7 @@ void TestXenoCollide::ProcessCommand(string& cmd)
 	}
 	else if (cmd == "exit" || cmd == "quit")
 	{
-		PostQuitMessage(0);
+		framework.quitRequested = true;
 	}
 	else if (cmd == "friction")
 	{

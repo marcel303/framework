@@ -18,31 +18,27 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "StdAfx.h"
+#include "Math/Math.h"
 
-#include <gl/gl.h>
-#include <gl/glu.h>
-
-#pragma comment (lib, "winmm.lib")
-#pragma comment (lib, "opengl32.lib")
-#pragma comment (lib, "glu32.lib")
+#include "framework.h"
 
 void SetTransform(const Vector& pos, const Quat& q)
 {
 	Matrix transform(q);
 	transform.SetTrans(pos);
 
-	glMultMatrixf((GLfloat*) &transform);
+	gxMultMatrixf((float*)&transform);
 }
 
 void DrawSphere(const Vector& pos, const Quat& q, float radius, const Vector& c)
 {
-	glColor3f(c.X(), c.Y(), c.Z());
-	glPushMatrix();
+	gxColor3f(c.X(), c.Y(), c.Z());
+	gxPushMatrix();
 	SetTransform(pos, q);
-	GLUquadricObj* quadric = gluNewQuadric();
-	gluSphere(quadric, radius, 10, 10);
-	gluDeleteQuadric(quadric);
-	glPopMatrix();
+// todo : xeno : draw sphere
+	//GLUquadricObj* quadric = gluNewQuadric();
+	//gluSphere(quadric, radius, 10, 10);
+	//gluDeleteQuadric(quadric);
+	gxPopMatrix();
 }
 

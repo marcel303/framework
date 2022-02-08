@@ -18,11 +18,11 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
-#include <Vector>
+#include "Math/Math.h"
 #include <string>
+#include <vector>
 
 //////////////////////////////////////////////////////////////////////////////
 // TestModule is the base class for all modules using this testbed framework.

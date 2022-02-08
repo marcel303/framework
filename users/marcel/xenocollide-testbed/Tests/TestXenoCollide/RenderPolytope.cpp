@@ -18,11 +18,7 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "StdAfx.h"
-
 #include <stdio.h>
-#include <gl/gl.h>
 #include <map>
 
 #include "DrawUtil.h"
@@ -31,6 +27,10 @@ not be misrepresented as being the original software.
 #include "MathUtil.h"
 #include "RenderPolytope.h"
 #include "ShrinkWrap.h"
+
+#include "framework.h"
+
+#define XENO_TODO_MESH 0
 
 using namespace std;
 
@@ -56,7 +56,9 @@ RenderPolytope::~RenderPolytope()
 
 	if (mListValid)
 	{
+	#if XENO_TODO_MESH == 1
 		glDeleteLists(mDrawList, 1);
+	#endif
 		mListValid = false;
 	}
 }
@@ -127,69 +129,81 @@ void RenderPolytope::Init(HullMaker& hullMaker)
 
 void RenderPolytope::Draw(const Quat& q, const Vector& x)
 {
-	glPushMatrix();
+	gxPushMatrix();
 	SetTransform(x, q);
-	glColor4f( mColor.X(), mColor.Y(), mColor.Z(), 1.0f );
+	gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 1.0f );
 
 	if (mListValid)
 	{
+	#if XENO_TODO_MESH == 1
 		glCallList(mDrawList);
+	#endif
 	}
 	else
 	{
+	#if XENO_TODO_MESH == 1
 		mDrawList = glGenLists(1);
+	#endif
 		mListValid = true;
 
+	#if XENO_TODO_MESH == 1
 		glNewList(mDrawList, GL_COMPILE_AND_EXECUTE);
+	#endif
 
 		if (gCullFrontFace)
 		{
+		#if XENO_TODO_MESH == 1
 			glCullFace(GL_FRONT);
+		#endif
 		}
 
 		for (int32 i=0; i < mFaceCount; i++)
 		{
-			glBegin(GL_POLYGON);
+			gxBegin(GX_TRIANGLE_FAN);
 
-			glNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
+			gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
 
 			for (int32 j=0; j < mFaces[i].mVertCount; j++)
 			{
 				Vector v = mVerts[mFaces[i].mVertList[j]];
-				glVertex3f(v.X(), v.Y(), v.Z());
+				gxVertex3f(v.X(), v.Y(), v.Z());
 			}
 
-			glEnd();
+			gxEnd();
 		}
 
 		if (gCullFrontFace)
 		{
+		#if XENO_TODO_MESH == 1
 			glEnable(GL_BLEND);
 			glCullFace(GL_BACK);
-			glColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
+		#endif
+			gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
 		}
 
 		for (int32 i=0; i < mFaceCount; i++)
 		{
-			glBegin(GL_POLYGON);
+			gxBegin(GX_TRIANGLE_FAN);
 
-			glNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
+			gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
 
 			for (int32 j=0; j < mFaces[i].mVertCount; j++)
 			{
 				Vector v = mVerts[mFaces[i].mVertList[j]];
-				glVertex3f(v.X(), v.Y(), v.Z());
+				gxVertex3f(v.X(), v.Y(), v.Z());
 			}
 
-			glEnd();
+			gxEnd();
 		}
 
+	#if XENO_TODO_MESH == 1
 		glDisable(GL_BLEND);
 
 		glEndList();
+	#endif
 	}
 
-	glPopMatrix();
+	gxPopMatrix();
 }
 
 void RenderPolytope::SetColor(const Vector& color)
@@ -197,7 +211,9 @@ void RenderPolytope::SetColor(const Vector& color)
 	mColor = color;
 	if (mListValid)
 	{
+	#if XENO_TODO_MESH == 1
 		glDeleteLists(mDrawList, 1);
+	#endif
 		mListValid = false;
 	}
 }

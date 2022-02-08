@@ -18,11 +18,10 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
-#include "trackball.h"
-#include "Math\math.h"
+#include "TrackBall.h"
+#include "Math/Math.h"
 
 #include "TestModule.h"
 
@@ -43,7 +42,7 @@ class XenoTestbedWindow
 
 public:
 
-	XenoTestbedWindow(HINSTANCE hInstance);
+	XenoTestbedWindow();
 	virtual ~XenoTestbedWindow();
 
 public:
@@ -59,15 +58,9 @@ public:
 
 	void WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p);
 
-	HWND GetHWND() { return m_hWnd; }
-
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-
 	static XenoTestbedWindow* s_this;
 
 protected:
-
-	HGLRC m_glContext;
 
 	TrackBall* m_rotation;
 	Vector* m_translation;
@@ -81,23 +74,20 @@ protected:
 
 	Point m_lastMousePoint;
 
-	HINSTANCE m_hInstance;
-	HWND m_hWnd;
-
 	int32 m_captureCount;
 
 public:
 
 	void OnPaint();
-	void OnLButtonDown(UINT nFlags, Point point);
-	void OnLButtonUp(UINT nFlags, Point point);
-	void OnMButtonDown(UINT nFlags, Point point);
-	void OnMButtonUp(UINT nFlags, Point point);
-	void OnRButtonDown(UINT nFlags, Point point);
-	void OnRButtonUp(UINT nFlags, Point point);
-	void OnMouseMove(UINT nFlags, Point point);
-	void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
-	void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
-	void OnSize(UINT nType, int cx, int cy);
+	void OnLButtonDown(int nFlags, Point point);
+	void OnLButtonUp(int nFlags, Point point);
+	void OnMButtonDown(int nFlags, Point point);
+	void OnMButtonUp(int nFlags, Point point);
+	void OnRButtonDown(int nFlags, Point point);
+	void OnRButtonUp(int nFlags, Point point);
+	void OnMouseMove(int nFlags, Point point);
+	void OnKeyDown(int nChar, int nRepCnt, int nFlags);
+	void OnChar(int nChar, int nRepCnt, int nFlags);
+	void OnSize(int nType, int cx, int cy);
 };
 

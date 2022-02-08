@@ -18,10 +18,10 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
 #include "MapPtr.h"
+#include "Math/Math.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // This is the base class for XenoCollide shapes.  To create a new primitive,

@@ -24,7 +24,8 @@ not be misrepresented as being the original software.
 #include "DrawUtil.h"
 #include "RenderPolytope.h"
 
-#include <gl/gl.h>
+#include "framework.h"
+
 #include <list>
 
 //////////////////////////////////////////////////////////////////////////////
@@ -85,11 +86,11 @@ public:
 
 	void Draw()
 	{
-		glBegin(GL_LINES);
-			glColor3f(1, 0, 0);
-			glVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
-			glVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z());
-		glEnd(); 
+		gxBegin(GX_LINES);
+			gxColor3f(1, 0, 0);
+			gxVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
+			gxVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z());
+		gxEnd();
 	}
 
 	Vector m_v1;
@@ -119,13 +120,13 @@ public:
 		{
 			n.Normalize3();
 
-			glBegin(GL_POLYGON);
-				glColor3f(m_color.X(), m_color.Y(), m_color.Z());
-				glNormal3f(n.X(), n.Y(), n.Z());
-				glVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
-				glVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z()); 
-				glVertex3f(m_v3.X(), m_v3.Y(), m_v3.Z());
-			glEnd();
+			gxBegin(GX_TRIANGLES);
+				gxColor3f(m_color.X(), m_color.Y(), m_color.Z());
+				gxNormal3f(n.X(), n.Y(), n.Z());
+				gxVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
+				gxVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z());
+				gxVertex3f(m_v3.X(), m_v3.Y(), m_v3.Z());
+			gxEnd();
 		}
 	}
 
@@ -181,7 +182,7 @@ inline void DebugPushPolytope(CollideGeometry& g, const Quat& q, const Vector& t
 
 //////////////////////////////////////////////////////////////////////////////
 
-inline void DebugPushPoint(Vector& p, int32 lifetime = -1)
+inline void DebugPushPoint(const Vector& p, int32 lifetime = -1)
 {
 #if ENABLE_TRACKING
 	if (gTrackingOn)

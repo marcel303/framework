@@ -18,10 +18,9 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "StdAfx.h"
-
 #include "OutlineFont.h"
+
+#if XENOSTUB_OUTLINEFONT == 0
 
 OutlineFont::OutlineFont( HDC hdc, const char* fontname)
 {
@@ -83,4 +82,4 @@ void OutlineFont::DrawString(const char* s)
 	glPopAttrib();
 }
 
-
+#endif

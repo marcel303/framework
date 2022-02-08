@@ -20,6 +20,8 @@ not be misrepresented as being the original software.
 
 #pragma once
 
+#include "Math/Math.h"
+
 // Set OpenGL's model-view transform
 void SetTransform(const Vector& pos, const Quat& q);
 

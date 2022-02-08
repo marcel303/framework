@@ -18,17 +18,12 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "StdAfx.h"
-
 #include "Collide.h"
 #include "CollideGeometry.h"
 #include "DrawUtil.h"
 #include "HullMaker.h"
 #include "ListVector.h"
 #include "ShrinkWrap.h"
-
-#include <gl/gl.h>
 
 #include <list>
 #include <set>

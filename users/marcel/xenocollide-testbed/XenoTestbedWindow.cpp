@@ -18,30 +18,26 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
-#include "stdafx.h"
-
 #include "XenoTestbed.h"
 #include "XenoTestbedWindow.h"
-#include ".\XenoTestbedwindow.h"
+#include "XenoTestbedWindow.h"
 
-#include "gl/gl.h"
-#include "gl/glu.h"
+#include "framework.h"
+
+#define XENO_TODO 0
+#define XENO_TODO_MATERIAL 0
 
 XenoTestbedWindow* XenoTestbedWindow::s_this = NULL;
 
-XenoTestbedWindow::XenoTestbedWindow(HINSTANCE hInstance)
+XenoTestbedWindow::XenoTestbedWindow()
 : m_leftButtonDown(false)
 , m_middleButtonDown(false)
 , m_rightButtonDown(false)
 , m_lastMousePoint(0,0)
 , m_module(NULL)
 , m_moduleIndex(0)
-, m_hInstance(hInstance)
 , m_captureCount(0)
 {
-	m_glContext = NULL;
-
 	m_rotation = new TrackBall;
 	m_rotation->SetMagnitudeScale(0.01f);
 
@@ -65,88 +61,13 @@ bool XenoTestbedWindow::Init(void)
 {
 	s_this = this;
 
-	WNDCLASSEX wcex;
+	framework.enableDepthBuffer = true;
+	
+	framework.init(800, 600);
 
-	wcex.cbSize = sizeof(WNDCLASSEX);
-
-	wcex.style			= CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
-	wcex.lpfnWndProc	= XenoTestbedWindow::WndProc;
-	wcex.cbClsExtra		= 0;
-	wcex.cbWndExtra		= 0;
-	wcex.hInstance		= m_hInstance;
-	wcex.hIcon			= LoadIcon(m_hInstance, MAKEINTRESOURCE(IDI_APPLICATION));
-	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= NULL;//MAKEINTRESOURCE(IDC_TEST);
-	wcex.lpszClassName	= "XenoTestbedWindow";
-	wcex.hIconSm		= NULL;//LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-	ATOM windowClass = RegisterClassEx(&wcex);
-
-	m_hWnd = CreateWindowEx
-	(
-		WS_EX_APPWINDOW,
-		_T("XenoTestbedWindow"),
-		_T("Xeno Physics"),
-		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		NULL,
-		0,
-		NULL,
-		0
-	);
-
-	if ( !m_hWnd )
-	{
-		return false;
-	}
-
-	// Obtain a DC for this window
-	HDC dc = GetDC(m_hWnd);
-
-	// Create a pixel format descriptor that is compatible with OpenGL (WGL)
-	PIXELFORMATDESCRIPTOR pfd ;
-	memset(&pfd, 0, sizeof(PIXELFORMATDESCRIPTOR));
-	pfd.nSize      = sizeof(PIXELFORMATDESCRIPTOR);
-	pfd.nVersion   = 1;
-	pfd.dwFlags    = PFD_DOUBLEBUFFER | PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW;
-	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 24;
-	pfd.cDepthBits = 32;
-	pfd.iLayerType = PFD_MAIN_PLANE;
-
-	// Find a compatible pixel format
-	int nPixelFormat = ChoosePixelFormat(dc, &pfd);
-	if (nPixelFormat == 0)
-	{
-//		TRACE( "ChoosePixelFormat Failed %d\r\n", GetLastError() );
-		ReleaseDC(m_hWnd, dc);
-		return false;
-	}
-
-	// Select this pixel format into the DC
-	BOOL success = SetPixelFormat (dc, nPixelFormat, &pfd);
-	if ( !success )
-	{
-//		TRACE( "SetPixelFormat Failed %d\r\n",GetLastError() );
-		ReleaseDC(m_hWnd, dc);
-		return false;
-	}
-
-	// Create an OpenGL (WGL) rendering context
-	m_glContext = wglCreateContext(dc);
-	if ( !m_glContext )
-	{
-//		TRACE("wglCreateContext Failed %x\r\n", GetLastError()) ;
-		ReleaseDC(m_hWnd, dc);
-		return false;
-	}
-
-	///
 	// Initiaize GL to reasonable defaults
 
-	wglMakeCurrent (dc, m_glContext);
-
+#if XENO_TODO_MATERIAL == 1
 	GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	GLfloat lightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	GLfloat lightDiffuse[] = { 0.4f, 0.4f, 0.4f, 1.0f };
@@ -192,25 +113,13 @@ bool XenoTestbedWindow::Init(void)
     glPolygonOffset(1.0, 2);
 
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
-	wglMakeCurrent(NULL, NULL);
-
-
-	// Set the initial window size
-	RECT r;
-	GetClientRect(m_hWnd, &r);
-	SetSize( r.right - r.left, r.bottom - r.top );
-
-	SetFocus(m_hWnd);
+#endif
 
 	RegisterTestModule::FactoryMethod* factoryMethod = RegisterTestModule::GetFactoryMethod( m_moduleIndex );
 	m_module = factoryMethod();
 
 	// Initialize the test module
-	success = wglMakeCurrent (dc, m_glContext);
 	m_module->Init();
-	wglMakeCurrent(NULL, NULL);
-	ReleaseDC(m_hWnd, dc);
 
 	LoadView();
 	return true;
@@ -218,65 +127,31 @@ bool XenoTestbedWindow::Init(void)
 
 void XenoTestbedWindow::SetSize(int width, int height)
 {
-	HDC dc = GetDC(m_hWnd);
-	BOOL success = wglMakeCurrent (dc, m_glContext);
-	if ( !success )
-	{
-//		TRACE( "wglMakeCurrent Failed %x\r\n", GetLastError() ) ;
-		ReleaseDC(m_hWnd, dc);
-		return;
-	}
-
 	// Set up the projection matrix and viewport to use the new size
-	GLdouble gldAspect = (GLdouble) width / (GLdouble) height;
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(30.0, gldAspect, 1.0, 1000.0);
-	glViewport(0, 0, width, height);
-
-	// Invalidate this window so it will refresh
-	RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE);
-
-	ReleaseDC(m_hWnd, dc);
+	gxMatrixMode(GX_PROJECTION);
+	gxLoadIdentity();
+	
+	projectPerspective3d(30.0f, 1.0f, 1000.0f);
 }
 
-void XenoTestbedWindow::OnSize(UINT nType, int cx, int cy)
+void XenoTestbedWindow::OnSize(int nType, int cx, int cy)
 {
-	if ( m_glContext )
-	{
-		SetSize(cx, cy);
-	}
+	SetSize(cx, cy);
 }
 
 void XenoTestbedWindow::OnPaint()
 {
 	if (!m_module) return;
 
-	PAINTSTRUCT ps;
-	HDC hdc = BeginPaint(m_hWnd, &ps);
-
-	// Select the OpenGL (WGL) context of our window
-	BOOL success = wglMakeCurrent (hdc, m_glContext);
-	if ( !success )
-	{
-//		TRACE("wglMakeCurrent Failed %x\r\n", GetLastError() );
-		return;
-	}
+// todo : xeno : beginDraw, enndDraw
 
 	// Draw the scene
 	DrawScene();
-
-	// Swap buffers
-	SwapBuffers(hdc);
-
-	// Clear the OpenGL (WGL) context [makes debugging easier with multiple OpenGL windows]
-	wglMakeCurrent(NULL, NULL);
-
-	EndPaint(m_hWnd, &ps);
 }
 
 void XenoTestbedWindow::DrawScene(void)
 {
+#if XENO_TODO_MATERIAL == 1
 	// Enable lighting calculations
 	//glEnable(GL_LIGHTING);
 	//glEnable(GL_LIGHT0);
@@ -292,19 +167,20 @@ void XenoTestbedWindow::DrawScene(void)
 	// Set the material color to follow the current color
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
+#endif
 
 	// Change to model view matrix stack.
-	glMatrixMode(GL_MODELVIEW); 
+	gxMatrixMode(GX_MODELVIEW);
 
 	// Start with an identity matrix
-	glLoadIdentity();
+	gxLoadIdentity();
 
 	// Translate the view back
-	glTranslated( m_translation->X(), m_translation->Y(), m_translation->Z() );
+	gxTranslatef( m_translation->X(), m_translation->Y(), m_translation->Z() );
 
 	// We want to start off looking down the Y axis
-	glRotatef(-90, 1, 0, 0);
-	glRotatef(90, 0, 0, 1);
+	gxRotatef(-90, 1, 0, 0);
+	gxRotatef(90, 0, 0, 1);
 
 	// Obtain the trackball rotation and convert to axis / angle
 	Quat q = m_rotation->GetRotation();
@@ -316,29 +192,27 @@ void XenoTestbedWindow::DrawScene(void)
 	angle = angle * 180.0f / PI;
 
 	// Rotate the view
-	glRotatef(angle, vec.X(), vec.Y(), vec.Z());
+	gxRotatef(angle, vec.X(), vec.Y(), vec.Z());
 
 	// Draw the scene
 	m_module->DrawScene();
 
+#if XENO_TODO_MATERIAL == 1
 	// Flush the drawing pipeline
 	glFlush();
+#endif
 }
 
 void XenoTestbedWindow::WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p)
 {
-	HDC dc = GetDC(m_hWnd);
+	float modelMatrix[16];
+	float projectionMatrix[16];
 
-	BOOL success = wglMakeCurrent (dc, m_glContext);
+	gxGetMatrixf(GX_MODELVIEW, modelMatrix);
+	gxGetMatrixf(GX_PROJECTION, projectionMatrix);
 
-	GLdouble modelMatrix[16];
-	GLdouble projectionMatrix[16];
-	GLint viewport[4];
-
-	glGetDoublev(GL_MODELVIEW_MATRIX, modelMatrix);
-	glGetDoublev(GL_PROJECTION_MATRIX, projectionMatrix);
-	glGetIntegerv(GL_VIEWPORT, viewport);
-
+#if XENO_TODO_MATERIAL == 1
+// todo : use framework function to un-project ?
 	GLenum err = glGetError();
 
 	GLdouble x0, y0, z0;
@@ -352,15 +226,13 @@ void XenoTestbedWindow::WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDire
 
 	*rayDirection = diff;
 	*rayOrigin = Vector((float32)x0, (float32)y0, (float32)z0); //*m_translation;
-
-	// Clear the OpenGL (WGL) context [makes debugging easier with multiple OpenGL windows]
-	wglMakeCurrent(NULL, NULL);
-	ReleaseDC(m_hWnd, dc);
+#endif
 }
 
-void XenoTestbedWindow::OnLButtonDown(UINT nFlags, Point point)
+void XenoTestbedWindow::OnLButtonDown(int nFlags, Point point)
 {
 	m_lastMousePoint = point;
+#if XENO_TODO == 1
 	if (GetKeyState(VK_MENU) & 0x80000000)
 	{
 		m_leftButtonDown = true;
@@ -368,6 +240,7 @@ void XenoTestbedWindow::OnLButtonDown(UINT nFlags, Point point)
 		m_captureCount++;
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -376,14 +249,17 @@ void XenoTestbedWindow::OnLButtonDown(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnLButtonUp(UINT nFlags, Point point)
+void XenoTestbedWindow::OnLButtonUp(int nFlags, Point point)
 {
+#if XENO_TODO == 1
 	if (m_leftButtonDown)
 	{
 		m_leftButtonDown = false;
-		if (--m_captureCount == 0) ReleaseCapture();
+		if (--m_captureCount == 0)
+			ReleaseCapture();
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -392,9 +268,10 @@ void XenoTestbedWindow::OnLButtonUp(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnMButtonDown(UINT nFlags, Point point)
+void XenoTestbedWindow::OnMButtonDown(int nFlags, Point point)
 {
 	m_lastMousePoint = point;
+#if XENO_TODO == 1
 	if (GetKeyState(VK_MENU) & 0x80000000)
 	{
 		m_middleButtonDown = true;
@@ -402,6 +279,7 @@ void XenoTestbedWindow::OnMButtonDown(UINT nFlags, Point point)
 		m_captureCount++;
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -410,14 +288,17 @@ void XenoTestbedWindow::OnMButtonDown(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnMButtonUp(UINT nFlags, Point point)
+void XenoTestbedWindow::OnMButtonUp(int nFlags, Point point)
 {
+#if XENO_TODO == 1
 	if (m_middleButtonDown)
 	{
 		m_middleButtonDown = false;
-		if (--m_captureCount == 0) ReleaseCapture();
+		if (--m_captureCount == 0)
+			ReleaseCapture();
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -426,9 +307,10 @@ void XenoTestbedWindow::OnMButtonUp(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnRButtonDown(UINT nFlags, Point point)
+void XenoTestbedWindow::OnRButtonDown(int nFlags, Point point)
 {
 	m_lastMousePoint = point;
+#if XENO_TODO == 1
 	if (GetKeyState(VK_MENU) & 0x80000000)
 	{
 		m_rightButtonDown = true;
@@ -436,6 +318,7 @@ void XenoTestbedWindow::OnRButtonDown(UINT nFlags, Point point)
 		m_captureCount++;
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -444,14 +327,16 @@ void XenoTestbedWindow::OnRButtonDown(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnRButtonUp(UINT nFlags, Point point)
+void XenoTestbedWindow::OnRButtonUp(int nFlags, Point point)
 {
+#if XENO_TODO == 1
 	if (m_rightButtonDown)
 	{
 		m_rightButtonDown = false;
 		if (--m_captureCount == 0) ReleaseCapture();
 	}
 	else
+#endif
 	{
 		Vector rayOrigin;
 		Vector rayDirection;
@@ -460,7 +345,7 @@ void XenoTestbedWindow::OnRButtonUp(UINT nFlags, Point point)
 	}
 }
 
-void XenoTestbedWindow::OnMouseMove(UINT nFlags, Point point)
+void XenoTestbedWindow::OnMouseMove(int nFlags, Point point)
 {
 	Vector rayOrigin;
 	Vector rayDirection;
@@ -498,18 +383,15 @@ void XenoTestbedWindow::Simulate(float32 dt)
 	// Simulate the module
 	m_module->Simulate(dt);
 
-	// Force a redraw
-	RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE);
-
 }
 
-void XenoTestbedWindow::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
+void XenoTestbedWindow::OnChar(int nChar, int nRepCnt, int nFlags)
 {
 	// Forward the keystroke to the module
 	m_module->OnChar(nChar);
 }
 
-void XenoTestbedWindow::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
 {
 	// Handle pg-up and pg-down
 	if (nChar == 33)
@@ -519,16 +401,10 @@ void XenoTestbedWindow::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if (m_moduleIndex < 0)
 			m_moduleIndex = RegisterTestModule::ModuleCount() - 1;
 
-		HDC dc = GetDC(m_hWnd);
-		BOOL success = wglMakeCurrent (dc, m_glContext);
-
 		delete m_module;
 
 		m_module = RegisterTestModule::GetFactoryMethod(m_moduleIndex)();
 		m_module->Init();
-
-		wglMakeCurrent(NULL, NULL);
-		ReleaseDC(m_hWnd, dc);
 	}
 	else if (nChar == 34)
 	{
@@ -537,35 +413,33 @@ void XenoTestbedWindow::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 		if (m_moduleIndex >= RegisterTestModule::ModuleCount())
 			m_moduleIndex = 0;
 
-		HDC dc = GetDC(m_hWnd);
-		BOOL success = wglMakeCurrent (dc, m_glContext);
-
 		delete m_module;
 		m_module = RegisterTestModule::GetFactoryMethod(m_moduleIndex)();
 
 		m_module->Init();
-
-		wglMakeCurrent(NULL, NULL);
-		ReleaseDC(m_hWnd, dc);
 	}
 	else if (nChar == 'K')
 	{
+	#if XENO_TODO == 1
 		// Control must be held
 		if ( !(GetKeyState(VK_LCONTROL) & 0x8000) && !(GetKeyState(VK_RCONTROL) & 0x8000) )
 		{
 			return;
 		}
-
+	#endif
+	
 		SaveView();
 	}
 	else if (nChar == 'L')
 	{
+	#if XENO_TODO == 1
 		// Control must be held
 		if ( !(GetKeyState(VK_LCONTROL) & 0x8000) && !(GetKeyState(VK_RCONTROL) & 0x8000) )
 		{
 			return;
 		}
-
+	#endif
+	
 		LoadView();
 	}
 	else
@@ -575,11 +449,14 @@ void XenoTestbedWindow::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 	}
 }
 
+#if XENO_TODO == 1
 static Point MakePoint(LPARAM lParam)
 {
 	return Point( (int16)LOWORD(lParam), (int16)HIWORD(lParam) );
 }
+#endif
 
+#if XENO_TODO == 1
 LRESULT CALLBACK XenoTestbedWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 //	int wmId, wmEvent;
@@ -631,6 +508,7 @@ LRESULT CALLBACK XenoTestbedWindow::WndProc(HWND hWnd, UINT message, WPARAM wPar
 	}
 	return 0;
 }
+#endif
 
 void XenoTestbedWindow::SaveView()
 {

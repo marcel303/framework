@@ -18,12 +18,10 @@ not be misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 */
 
-
 #pragma once
 
 #include <float.h>
 #include <math.h>
-#include <windows.h>
 #include <xmmintrin.h>
 
 #define ASSERT(arg)
@@ -40,16 +38,18 @@ enum ShuffleComponents
 ////////////////////////////////////////////////////////////////////////////////////////////////
 // Basic types
 
-typedef unsigned char		uint8;
-typedef unsigned short		uint16;
-typedef unsigned int		uint32;
-typedef unsigned __int64	uint64;
+#include <stdint.h>
+
+typedef uint8_t				uint8;
+typedef uint16_t			uint16;
+typedef uint32_t			uint32;
+typedef uint64_t			uint64;
 typedef __m128				uint128;
 
-typedef signed char			int8;
-typedef signed short		int16;
-typedef signed int			int32;
-typedef signed __int64  	int64;
+typedef int8_t				int8;
+typedef int16_t				int16;
+typedef int32_t				int32;
+typedef int64_t				int64;
 typedef __m128				int128;
 
 typedef float				float32;
@@ -355,10 +355,15 @@ inline Vector operator -(const Vector& a)
 
 #define MOVE_TO_X( COMPONENT ) _mm_shuffle_ps(ab, ab, _MM_SHUFFLE(COMPONENT_DONTCARE, COMPONENT_DONTCARE, COMPONENT_DONTCARE, COMPONENT))
 
+inline float32 _mm_extract_ps(const __m128& a, const int index)
+{
+	return ((float*)&a)[index];
+}
+
 inline float32 operator *(const Vector& a, const Vector& b)
 {
 	__m128 ab = _mm_mul_ps(a.Vec4(), b.Vec4());
-	return _mm_add_ss(ab, _mm_add_ss( MOVE_TO_X(COMPONENT_Y), MOVE_TO_X(COMPONENT_Z) )).m128_f32[COMPONENT_X];
+	return _mm_extract_ps(_mm_add_ss(ab, _mm_add_ss( MOVE_TO_X(COMPONENT_Y), MOVE_TO_X(COMPONENT_Z) )), COMPONENT_X);
 }
 
 inline Vector operator %(const Vector& a, const Vector& b)
@@ -406,13 +411,13 @@ inline float32 RadToDeg(float32 rad)
 inline float32 Sqrt(const float32 a)
 {
 	ASSERT(a >= 0.f);
-	return _mm_sqrt_ss(_mm_set_ps1(a)).m128_f32[0];
+	return _mm_sqrt_ss(_mm_set_ps1(a))[0];
 }
 inline float32 InvSqrt (const float32 a)
 {
 	ASSERT(a > 0.f);
 	static __m128 s_ssevec1 = _mm_set_ps1(1.f);
-	return _mm_div_ss(s_ssevec1,_mm_sqrt_ss(_mm_set_ps1(a))).m128_f32[0];
+	return _mm_div_ss(s_ssevec1,_mm_sqrt_ss(_mm_set_ps1(a)))[0];
 }
 
 inline Euler::Euler(const Matrix& m)
@@ -591,22 +596,22 @@ inline Vector::Vector(float32 x, float32 y, float32 z, float32 w)
 
 inline float32& Vector::X()
 {
-	return vec4.m128_f32[COMPONENT_X];
+	return (*this)(COMPONENT_X);
 } 
 
 inline float32& Vector::Y()
 {
-	return vec4.m128_f32[COMPONENT_Y];
+	return (*this)(COMPONENT_Y);
 } 
 
 inline float32& Vector::Z()
 {
-	return vec4.m128_f32[COMPONENT_Z];
+	return (*this)(COMPONENT_Z);
 } 
 
 inline float32& Vector::W()
 {
-	return vec4.m128_f32[COMPONENT_W];
+	return (*this)(COMPONENT_W);
 } 
 
 inline float32& Vector::operator () (int i)
@@ -616,22 +621,22 @@ inline float32& Vector::operator () (int i)
 
 inline float32 Vector::X() const
 {
-	return vec4.m128_f32[COMPONENT_X];
+	return (*this)(COMPONENT_X);
 }
 
 inline float32 Vector::Y() const
 {
-	return vec4.m128_f32[COMPONENT_Y];
+	return (*this)(COMPONENT_Y);
 }
 
 inline float32 Vector::Z() const
 {
-	return vec4.m128_f32[COMPONENT_Z];
+	return (*this)(COMPONENT_Z);
 }
 
 inline float32 Vector::W() const
 {
-	return vec4.m128_f32[COMPONENT_W];
+	return (*this)(COMPONENT_W);
 }
 
 inline float32 Vector::operator () (int i) const 
@@ -721,19 +726,19 @@ inline Vector& Vector::operator %=(const Vector& v)
 inline float Vector::Len3() const
 {
 	__m128 xyzw2 = _mm_mul_ps(vec4, vec4);
-	return _mm_sqrt_ss(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z)))).m128_f32[COMPONENT_X];
+	return _mm_extract_ps(_mm_sqrt_ss(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z)))), COMPONENT_X);
 }
 
 inline float Vector::Len3Squared() const
 {
 	__m128 xyzw2 = _mm_mul_ps(vec4, vec4);
-	return _mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z))).m128_f32[COMPONENT_X];
+	return _mm_extract_ps(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), L_SHUF_PASS(COMPONENT_Z))), COMPONENT_X);
 }
 
 inline float Vector::Len4() const
 {
 	 __m128 xyzw2 = _mm_mul_ps(vec4, vec4);
-	return _mm_sqrt_ss(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), _mm_add_ss(L_SHUF_PASS(COMPONENT_Z), L_SHUF_PASS(COMPONENT_W))))).m128_f32[COMPONENT_X];
+	return _mm_extract_ps(_mm_sqrt_ss(_mm_add_ss(xyzw2, _mm_add_ss(L_SHUF_PASS(COMPONENT_Y), _mm_add_ss(L_SHUF_PASS(COMPONENT_Z), L_SHUF_PASS(COMPONENT_W))))), COMPONENT_X);
 }
 
 inline float64 Vector64::X() const
