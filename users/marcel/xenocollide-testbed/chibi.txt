@@ -3,3 +3,4 @@ app xenocollide-testbed
 	scan_files cpp traverse
 	scan_files h traverse
 	header_path . expose
+	resource_path .

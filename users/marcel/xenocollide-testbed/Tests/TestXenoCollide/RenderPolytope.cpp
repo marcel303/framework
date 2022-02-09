@@ -54,7 +54,10 @@ RenderPolytope::~RenderPolytope()
 
 	if (mListValid)
 	{
-	// todo : free cached mesh
+		mMesh.clear();
+		mMeshVB.free();
+		mMeshIB.free();
+		
 		mListValid = false;
 	}
 }
@@ -123,17 +126,13 @@ void RenderPolytope::Init(HullMaker& hullMaker)
 //	mColor = Vector( 0.5f, 0.5f, 0.5f );
 }
 
+extern Shader shader;
 void RenderPolytope::Draw(const Quat& q, const Vector& x)
 {
 	gxPushMatrix();
 	SetTransform(x, q);
 	gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 1.0f );
 
-	if (mListValid == false)
-	{
-		// todo : cache mesh
-	}
-	
 	if (gCullFrontFace)
 	{
 		pushCullMode(CULL_FRONT, CULL_CCW);
@@ -143,36 +142,65 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	{
 		gxBegin(GX_TRIANGLE_STRIP);
 		{
-		// fixme : this is not correct :-) but at least gives us something on screen without a million draw calls
-		
+			// a more GPU friendly version would try to maximize triangle area
+			// see: http://www.humus.name/index.php?page=News&ID=228
+			// the current version is case #2 from the article
+			
 			for (int32 i=0; i < mFaceCount; i++)
 			{
 				if (mFaces[i].mVertCount >= 3)
 				{
+					{
+						// degenerate triangle connection to the previous face
+						const Vector& v = mVerts[mFaces[i].mVertList[0]];
+						gxVertex3f(v.X(), v.Y(), v.Z());
+					}
+						
 					gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
 
 					for (int32 j=0; j < mFaces[i].mVertCount; j++)
 					{
-						const Vector& v = mVerts[mFaces[i].mVertList[j]];
-						gxVertex3f(v.X(), v.Y(), v.Z());
+						const Vector& v1 = mVerts[mFaces[i].mVertList[j]];
+						gxVertex3f(v1.X(), v1.Y(), v1.Z());
+						
+						const int32 jr = mFaces[i].mVertCount - 1 - j;
+						
+						if (jr == j)
+							break;
+						assert(jr > j);
+						
+						const Vector& v2 = mVerts[mFaces[i].mVertList[jr]];
+						gxVertex3f(v2.X(), v2.Y(), v2.Z());
 					}
 					
-					const Vector& v = mVerts[mFaces[i].mVertList[mFaces[i].mVertCount - 1]];
-					gxVertex3f(v.X(), v.Y(), v.Z());
+					{
+						// degenerate triangle connection to the next face
+						const Vector& v = mVerts[mFaces[i].mVertList[mFaces[i].mVertCount/2]];
+						gxVertex3f(v.X(), v.Y(), v.Z());
+					}
 				}
 			}
 		}
 		gxEnd();
 	};
 	
-	if (mListValid)
+	if (mListValid == false)
 	{
-		// todo : draw cached mesh
+		gxPushMatrix();
+		gxLoadIdentity();
+		gxCaptureMeshBegin(mMesh, mMeshVB, mMeshIB);
+		{
+			drawFaces();
+		}
+		gxCaptureMeshEnd();
+		gxPopMatrix();
+		
+		mListValid = true;
 	}
-	else
-	{
-		drawFaces();
-	}
+	
+	setShader(shader);
+	mMesh.draw();
+	clearShader();
 
 	if (gCullFrontFace)
 	{
@@ -181,14 +209,9 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 		gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
 	}
 
-	if (mListValid)
-	{
-		// todo : draw cached mesh
-	}
-	else
-	{
-		drawFaces();
-	}
+	setShader(shader);
+	mMesh.draw();
+	clearShader();
 
 	if (gCullFrontFace)
 	{
@@ -203,8 +226,12 @@ void RenderPolytope::SetColor(const Vector& color)
 	mColor = color;
 	if (mListValid)
 	{
-		// todo : free cached mesh
-		// todo : use a shader to change color
+	// todo : use a shader to change color
+		// Free the cached mesh.
+		mMesh.clear();
+		mMeshVB.free();
+		mMeshIB.free();
+		
 		mListValid = false;
 	}
 }

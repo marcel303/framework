@@ -52,8 +52,6 @@ using namespace std;
 #undef ASSERT
 #define ASSERT(a) if (a) *(int*)NULL = 0;
 
-#define XENO_TODO_FONT 0
-
 //////////////////////////////////////////////////////////////
 // Global Data
 
@@ -274,6 +272,7 @@ void TestXenoCollide::Init()
 extern void DebugDraw();
 extern float32 gAvgSupportCount;
 
+extern Shader shader; // todo : rename and organize more nicely
 void TestXenoCollide::DrawScene()
 {
 	setWireframe(false);
@@ -861,7 +860,7 @@ void TestXenoCollide::ProcessCommand(string& cmd)
 		char name[100];
 		if (sscanf(cmd.c_str(), " execute %s", name) == 1 || sscanf(cmd.c_str(), " run %s", name) == 1)
 		{
-			string filename = string("scripts\\") + name;
+			string filename = string("Scripts/") + name;
 			FILE* fp = fopen(filename.c_str(), "rt");
 			if (!fp)
 			{
@@ -924,7 +923,11 @@ void TestXenoCollide::ProcessCommand(string& cmd)
 	}
 	else if (cmd.substr(0, 4) == "help")
 	{
+	#ifdef WIN32
 		system("notepad.exe commands.txt");
+	#else
+		system("open commands.txt");
+	#endif
 	}
 	else if (cmd.substr(0,4) == "load")
 	{

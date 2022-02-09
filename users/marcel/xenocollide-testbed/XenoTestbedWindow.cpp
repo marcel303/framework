@@ -33,7 +33,6 @@ XenoTestbedWindow::XenoTestbedWindow()
 : m_leftButtonDown(false)
 , m_middleButtonDown(false)
 , m_rightButtonDown(false)
-, m_lastMousePoint(0,0)
 , m_module(NULL)
 , m_moduleIndex(0)
 , m_captureCount(0)
@@ -57,35 +56,46 @@ XenoTestbedWindow::~XenoTestbedWindow()
 }
 
 
+Shader shader;
 bool XenoTestbedWindow::Init(void)
 {
 	s_this = this;
 
-	// Initiaize GL to reasonable defaults
+	// Initiaize material
 
-#if XENO_TODO_MATERIAL == 1
-	GLfloat black[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	GLfloat lightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-	GLfloat lightDiffuse[] = { 0.4f, 0.4f, 0.4f, 1.0f };
-	GLfloat lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-//	GLfloat lightSpecular[] = { 1, 1, 1, 1.0f };
-	GLfloat materialColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	GLfloat lightpos[] = { -8.0f, 12.0f, 10.0f, 0.0f };
-//	GLfloat lightpos[] = { -8.0f, 12.0f, -10.0f, 0.0f };
+#if XENO_TODO_MATERIAL == 0
+	float lightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	float lightDiffuse[] = { 0.4f, 0.4f, 0.4f, 1.0f };
+	float lightSpecular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+//	float lightSpecular[] = { 1, 1, 1, 1.0f };
+	float lightpos[] = { -8.0f, 12.0f, 10.0f, 0.0f };
+//	float lightpos[] = { -8.0f, 12.0f, -10.0f, 0.0f };
+	
+	float materialColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
-	glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
+	shader = Shader("Shaders/material");
+	setShader(shader);
+	{
+		shader.setImmediate("u_lightAmbient", lightAmbient[0], lightAmbient[1], lightAmbient[2]);
+		shader.setImmediate("u_lightDiffuse", lightDiffuse[0], lightDiffuse[1], lightDiffuse[2]);
+		shader.setImmediate("u_lightSpecular", lightSpecular[0], lightSpecular[1], lightSpecular[2]);
+		shader.setImmediate("u_lightpos", lightpos[0], lightpos[1], lightpos[2], lightpos[3]);
+		
+		shader.setImmediate("u_materialColor", materialColor[0], materialColor[1], materialColor[2]);
+		
+		// todo : configure second light
+		
+		// todo : separate front and back specular color for material
+		// todo : material ambient and diffuse color
+		// todo : material shininess
+	}
+	clearShader();
+#else
 	glLightfv(GL_LIGHT1, GL_AMBIENT, lightAmbient);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, lightDiffuse);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, black);
 //	glLightfv(GL_LIGHT1, GL_POSITION, lightpos);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
-	glDisable(GL_LIGHT2);
-	glDisable(GL_LIGHT3);
 
 	glMaterialfv(GL_FRONT, GL_SPECULAR, lightSpecular);
 	glMaterialfv(GL_BACK, GL_SPECULAR, black);
@@ -96,9 +106,6 @@ bool XenoTestbedWindow::Init(void)
 //	glMateriali(GL_FRONT, GL_SHININESS, 128);
 	glMateriali(GL_FRONT, GL_SHININESS, 64);
 	glMateriali(GL_BACK, GL_SHININESS, 128);
-
-	glPointSize(5);
-    glPolygonOffset(1.0, 2);
 #endif
 
 	RegisterTestModule::FactoryMethod* factoryMethod = RegisterTestModule::GetFactoryMethod( m_moduleIndex );
@@ -142,7 +149,8 @@ void XenoTestbedWindow::DrawScene(void)
 	// Enable depth calculations
 	pushBlend(BLEND_OPAQUE);
 	pushDepthTest(true, DEPTH_LEQUAL);
-	pushCullMode(CULL_NONE, CULL_CCW); // todo : default on
+	//pushCullMode(CULL_BACK, CULL_CCW);
+	pushCullMode(CULL_NONE, CULL_CCW);
 	{
 	#if XENO_TODO_MATERIAL == 1
 	// todo : use a shader for drawing polytopes etc. set some of its material parmas here
@@ -150,7 +158,6 @@ void XenoTestbedWindow::DrawScene(void)
 		glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 		glEnable(GL_COLOR_MATERIAL);
 	#endif
-
 		// Draw the scene
 		m_module->DrawScene();
 	}
@@ -261,22 +268,11 @@ void XenoTestbedWindow::Check()
 	{
 		if (e.type == SDL_KEYDOWN)
 		{
-			OnKeyDown(e.key.keysym.sym, 0, 0);
+			OnKeyDown(e.key.keysym.sym, e.key.repeat, 0);
 			
-			OnChar(e.key.keysym.sym, 0, 0);
+			OnChar(e.key.keysym.sym, e.key.repeat, 0);
 		}
-		/*
-		if (e.type == SDL_TEXTINPUT)
-		{
-			//logDebug("text input");
-			
-			const char * text = e.text.text;
-			
-			for (int i = 0; text[i] != 0; ++i)
-				OnChar(text[i], 0, 0);
-		}*/
 	}
-	// todo : xeno : OnChar(int nChar, int nRepCnt, int nFlags);
 }
 
 void XenoTestbedWindow::CheckLButtonDown()
@@ -284,7 +280,6 @@ void XenoTestbedWindow::CheckLButtonDown()
 	if (mouse.wentDown(BUTTON_LEFT))
 	{
 		Point point(mouse.x, mouse.y);
-		m_lastMousePoint = point;
 		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
 		{
 			m_leftButtonDown = true;
@@ -334,7 +329,6 @@ void XenoTestbedWindow::CheckMButtonDown()
 	if (mouse.wentDown(BUTTON_MIDDLE))
 	{
 		Point point(mouse.x, mouse.y);
-		m_lastMousePoint = point;
 		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
 		{
 			m_middleButtonDown = true;
@@ -380,7 +374,6 @@ void XenoTestbedWindow::CheckRButtonDown()
 	if (mouse.wentDown(BUTTON_RIGHT))
 	{
 		Point point(mouse.x, mouse.y);
-		m_lastMousePoint = point;
 		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
 		{
 			m_rightButtonDown = true;
@@ -435,7 +428,6 @@ void XenoTestbedWindow::CheckMouseMove()
 		m_module->OnMouseMove(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
 
 		Point delta(mouse.dx, mouse.dy);
-		m_lastMousePoint = point; // todo : xeno : get rid of m_lastMousePoint ?
 
 		if (m_middleButtonDown || (m_leftButtonDown && m_rightButtonDown))
 		{

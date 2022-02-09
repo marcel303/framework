@@ -20,6 +20,8 @@ not be misrepresented as being the original software.
 
 #pragma once
 
+#include "gx_mesh.h"
+
 class CollideGeometry;
 class HullMaker;
 
@@ -48,7 +50,9 @@ public:
 	Vector	mColor;
 
 	bool mListValid;
-	uint32 mDrawList;
+	GxMesh mMesh;
+	GxVertexBuffer mMeshVB;
+	GxIndexBuffer mMeshIB;
 
 public:
 

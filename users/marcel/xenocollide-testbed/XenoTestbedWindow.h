@@ -72,8 +72,6 @@ protected:
 	bool m_middleButtonDown;
 	bool m_rightButtonDown;
 
-	Point m_lastMousePoint;
-
 	int32 m_captureCount;
 
 public:

@@ -63,6 +63,7 @@ bool XenoTestbedApp::RunMainLoop()
 bool XenoTestbedApp::InitInstance()
 {
 	framework.enableDepthBuffer = true;
+	framework.enableRealTimeEditing = true;
 	
 	framework.init(800, 600);
 	

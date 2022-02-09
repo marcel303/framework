@@ -24,7 +24,7 @@ not be misrepresented as being the original software.
 
 //////////////////////////////////////////////////////////////////////////////
 
-inline Vector TransformSupportVert( CollideGeometry& p, const Quat& q, const Vector& t, const Vector& n )
+Vector TransformSupportVert( CollideGeometry& p, const Quat& q, const Vector& t, const Vector& n )
 {
 	Vector localNormal = (~q).Rotate(n);
 	Vector localSupport = p.GetSupportPoint(localNormal);
