@@ -93,6 +93,8 @@ public:
 	void DrawScene();
 	void OnKeyDown(uint32 nChar);
 	void OnChar(uint32 nChar);
+	
+	const Vector& GetBackgroundColor() { return mBackgroundColor; }
 
 private:
 
@@ -283,10 +285,6 @@ extern float32 gAvgSupportCount;
 void TestXenoCollide::DrawScene()
 {
 	setWireframe(false);
-	
-#if XENO_TODO_FONT == 1
-	glClearColor( mBackgroundColor.X(), mBackgroundColor.Y(), mBackgroundColor.Z(), 1 );
-#endif
 
 	if (mCommandMode)
 	{
@@ -316,6 +314,9 @@ void TestXenoCollide::DrawScene()
 		}
 	#if XENO_TODO_FONT == 1
 		mFont->DrawString(displayString.c_str());
+	#else
+		//fillCube(Vec3(), Vec3(100.0f));
+		logDebug("%s", displayString.c_str());
 	#endif
 		gxPopMatrix();
 	}
@@ -399,20 +400,20 @@ Arbiter* TestXenoCollide::CreateArbiter(RigidBody* b1, RigidBody* b2)
 
 void TestXenoCollide::OnChar(uint32 nChar)
 {
-	if (nChar == 27)
+	if (nChar == SDLK_ESCAPE)
 	{
 		mCommandMode = !mCommandMode;
 	}
 	else if (mCommandMode)
 	{
-		if (nChar == 8)
+		if (nChar == SDLK_BACKSPACE)
 		{
 			if (mCommand.size() >= 1)
 			{
 				mCommand = mCommand.substr(0, mCommand.size()-1);
 			}
 		}
-		else if (nChar == 13)
+		else if (nChar == SDLK_RETURN)
 		{
 			ProcessCommand(mCommand);
 			mCommand = "";

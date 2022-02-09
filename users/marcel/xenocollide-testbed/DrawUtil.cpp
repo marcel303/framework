@@ -36,6 +36,7 @@ void DrawSphere(const Vector& pos, const Quat& q, float radius, const Vector& c)
 	gxPushMatrix();
 	SetTransform(pos, q);
 // todo : xeno : draw sphere
+	fillCube(Vec3(), Vec3(radius));
 	//GLUquadricObj* quadric = gluNewQuadric();
 	//gluSphere(quadric, radius, 10, 10);
 	//gluDeleteQuadric(quadric);

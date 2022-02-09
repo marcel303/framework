@@ -30,8 +30,6 @@ not be misrepresented as being the original software.
 
 #include "framework.h"
 
-#define XENO_TODO_MESH 0
-
 using namespace std;
 
 extern bool gCullFrontFace;
@@ -56,9 +54,7 @@ RenderPolytope::~RenderPolytope()
 
 	if (mListValid)
 	{
-	#if XENO_TODO_MESH == 1
-		glDeleteLists(mDrawList, 1);
-	#endif
+	// todo : free cached mesh
 		mListValid = false;
 	}
 }
@@ -133,74 +129,70 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	SetTransform(x, q);
 	gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 1.0f );
 
+	if (mListValid == false)
+	{
+		// todo : cache mesh
+	}
+	
+	if (gCullFrontFace)
+	{
+		pushCullMode(CULL_FRONT, CULL_CCW);
+	}
+
 	if (mListValid)
 	{
-	#if XENO_TODO_MESH == 1
-		glCallList(mDrawList);
-	#endif
+		// todo : draw cached mesh
 	}
 	else
 	{
-	#if XENO_TODO_MESH == 1
-		mDrawList = glGenLists(1);
-	#endif
-		mListValid = true;
-
-	#if XENO_TODO_MESH == 1
-		glNewList(mDrawList, GL_COMPILE_AND_EXECUTE);
-	#endif
-
-		if (gCullFrontFace)
-		{
-		#if XENO_TODO_MESH == 1
-			glCullFace(GL_FRONT);
-		#endif
-		}
-
 		for (int32 i=0; i < mFaceCount; i++)
 		{
 			gxBegin(GX_TRIANGLE_FAN);
-
-			gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
-
-			for (int32 j=0; j < mFaces[i].mVertCount; j++)
 			{
-				Vector v = mVerts[mFaces[i].mVertList[j]];
-				gxVertex3f(v.X(), v.Y(), v.Z());
-			}
+				gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
 
+				for (int32 j=0; j < mFaces[i].mVertCount; j++)
+				{
+					const Vector& v = mVerts[mFaces[i].mVertList[j]];
+					gxVertex3f(v.X(), v.Y(), v.Z());
+				}
+			}
 			gxEnd();
 		}
+	}
 
-		if (gCullFrontFace)
-		{
-		#if XENO_TODO_MESH == 1
-			glEnable(GL_BLEND);
-			glCullFace(GL_BACK);
-		#endif
-			gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
-		}
+	if (gCullFrontFace)
+	{
+		pushBlend(BLEND_ALPHA);
+		popCullMode();
+		gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
+	}
 
+	if (mListValid)
+	{
+		// todo : draw cached mesh
+	}
+	else
+	{
 		for (int32 i=0; i < mFaceCount; i++)
 		{
 			gxBegin(GX_TRIANGLE_FAN);
-
-			gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
-
-			for (int32 j=0; j < mFaces[i].mVertCount; j++)
 			{
-				Vector v = mVerts[mFaces[i].mVertList[j]];
-				gxVertex3f(v.X(), v.Y(), v.Z());
-			}
+				gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
 
+				for (int32 j=0; j < mFaces[i].mVertCount; j++)
+				{
+					Vector v = mVerts[mFaces[i].mVertList[j]];
+					gxVertex3f(v.X(), v.Y(), v.Z());
+				}
+			}
 			gxEnd();
 		}
+	}
 
-	#if XENO_TODO_MESH == 1
-		glDisable(GL_BLEND);
-
-		glEndList();
-	#endif
+	if (gCullFrontFace)
+	{
+		popBlend();
 	}
 
 	gxPopMatrix();
@@ -211,9 +203,8 @@ void RenderPolytope::SetColor(const Vector& color)
 	mColor = color;
 	if (mListValid)
 	{
-	#if XENO_TODO_MESH == 1
-		glDeleteLists(mDrawList, 1);
-	#endif
+		// todo : free cached mesh
+		// todo : use a shader to change color
 		mListValid = false;
 	}
 }

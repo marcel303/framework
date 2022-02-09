@@ -29,8 +29,6 @@ not be misrepresented as being the original software.
 
 #include "framework.h"
 
-#define XENO_TODO 0
-
 XenoTestbedApp::XenoTestbedApp()
 : m_mainWindow(NULL)
 {
@@ -47,13 +45,15 @@ bool XenoTestbedApp::RunMainLoop()
 		if (framework.quitRequested)
 			break;
 		
-		// todo : xeno : integrate message proc code
+		m_mainWindow->Check();
 		
 		float32 dt = framework.timeStep;
 		
 		if (dt > 0)
 		{
 			m_mainWindow->Simulate(dt);
+			
+			m_mainWindow->OnPaint();
 		}
 	}
 
@@ -62,6 +62,10 @@ bool XenoTestbedApp::RunMainLoop()
 
 bool XenoTestbedApp::InitInstance()
 {
+	framework.enableDepthBuffer = true;
+	
+	framework.init(800, 600);
+	
 	void* mem = _mm_malloc(sizeof(XenoTestbedWindow), 16);
 
 	m_mainWindow = new(mem) XenoTestbedWindow();
@@ -84,6 +88,8 @@ int XenoTestbedApp::ExitInstance()
 	// Clean up any globals
 	RegisterTestModule::CleanUp();
 
+	framework.shutdown();
+	
 	return true;
 }
 

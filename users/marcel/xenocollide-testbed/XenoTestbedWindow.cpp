@@ -61,10 +61,6 @@ bool XenoTestbedWindow::Init(void)
 {
 	s_this = this;
 
-	framework.enableDepthBuffer = true;
-	
-	framework.init(800, 600);
-
 	// Initiaize GL to reasonable defaults
 
 #if XENO_TODO_MATERIAL == 1
@@ -125,28 +121,24 @@ bool XenoTestbedWindow::Init(void)
 	return true;
 }
 
-void XenoTestbedWindow::SetSize(int width, int height)
-{
-	// Set up the projection matrix and viewport to use the new size
-	gxMatrixMode(GX_PROJECTION);
-	gxLoadIdentity();
-	
-	projectPerspective3d(30.0f, 1.0f, 1000.0f);
-}
-
-void XenoTestbedWindow::OnSize(int nType, int cx, int cy)
-{
-	SetSize(cx, cy);
-}
-
 void XenoTestbedWindow::OnPaint()
 {
 	if (!m_module) return;
 
-// todo : xeno : beginDraw, enndDraw
-
-	// Draw the scene
-	DrawScene();
+	// Clear the color and depth buffers
+	const Vector backgroundColor = m_module->GetBackgroundColor();
+	framework.beginDraw(
+		backgroundColor.X() * 255.f,
+		backgroundColor.Y() * 255.f,
+		backgroundColor.Z() * 255.f,
+		backgroundColor.W() * 255.f);
+	{
+		SetModelViewProjectionMatrices();
+		
+		// Draw the scene
+		DrawScene();
+	}
+	framework.endDraw();
 }
 
 void XenoTestbedWindow::DrawScene(void)
@@ -155,19 +147,28 @@ void XenoTestbedWindow::DrawScene(void)
 	// Enable lighting calculations
 	//glEnable(GL_LIGHTING);
 	//glEnable(GL_LIGHT0);
+#endif
 
 	// Enable depth calculations
-	glEnable(GL_DEPTH_TEST);
+	pushDepthTest(true, DEPTH_LESS);
+	{
+	#if XENO_TODO_MATERIAL == 1
+	// todo : use a shader for drawing polytopes etc. set some of its material parmas here
+		// Set the material color to follow the current color
+		glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+		glEnable(GL_COLOR_MATERIAL);
+	#endif
 
-	// Clear the color and depth buffers
-	//glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-//	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// Draw the scene
+		m_module->DrawScene();
+	}
+	popDepthTest();
+}
 
-	// Set the material color to follow the current color
-	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
-	glEnable(GL_COLOR_MATERIAL);
-#endif
+void XenoTestbedWindow::SetModelViewProjectionMatrices()
+{
+	// Set up the projection matrix.
+	projectPerspective3d(30.0f, 1.0f, 1000.0f);
 
 	// Change to model view matrix stack.
 	gxMatrixMode(GX_MODELVIEW);
@@ -193,24 +194,35 @@ void XenoTestbedWindow::DrawScene(void)
 
 	// Rotate the view
 	gxRotatef(angle, vec.X(), vec.Y(), vec.Z());
-
-	// Draw the scene
-	m_module->DrawScene();
-
-#if XENO_TODO_MATERIAL == 1
-	// Flush the drawing pipeline
-	glFlush();
-#endif
 }
 
 void XenoTestbedWindow::WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p)
 {
-	float modelMatrix[16];
-	float projectionMatrix[16];
+	Mat4x4 modelMatrix;
+	Mat4x4 projectionMatrix;
 
-	gxGetMatrixf(GX_MODELVIEW, modelMatrix);
-	gxGetMatrixf(GX_PROJECTION, projectionMatrix);
+	gxGetMatrixf(GX_MODELVIEW, modelMatrix.m_v);
+	gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+	
+	auto projToObject = [&](Vec4Arg p_proj) -> Vec4
+	{
+		Vec4 p_view = projectionMatrix.CalcInv() * p_proj;
+		p_view /= p_view[3];
+		Vec4 p_object = modelMatrix.CalcInv() * p_view;
+		return p_object;
+	};
+	
+	Vec4 p_proj0(p.x, p.y, 0.f, 1.f);
+	Vec4 p_proj1(p.x, p.y, 1.f, 1.f);
+	
+	Vec4 p0 = projToObject(p_proj0);
+	Vec4 p1 = projToObject(p_proj1);
+	
+	Vec4 diff = (p1 - p0).CalcNormalized();
 
+	*rayDirection = Vector(diff[0], diff[1], diff[2]);
+	*rayOrigin = Vector(p0[0], p0[1], p0[2]); //*m_translation;
+	
 #if XENO_TODO_MATERIAL == 1
 // todo : use framework function to un-project ?
 	GLenum err = glGetError();
@@ -229,152 +241,220 @@ void XenoTestbedWindow::WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDire
 #endif
 }
 
-void XenoTestbedWindow::OnLButtonDown(int nFlags, Point point)
+void XenoTestbedWindow::Check()
 {
-	m_lastMousePoint = point;
-#if XENO_TODO == 1
-	if (GetKeyState(VK_MENU) & 0x80000000)
+	SetModelViewProjectionMatrices();
+
+	CheckLButtonDown();
+	CheckLButtonUp();
+	CheckMButtonDown();
+	CheckMButtonUp();
+	CheckRButtonDown();
+	CheckRButtonUp();
+	CheckMouseMove();
+	CheckKeyDown(0, 0, 0);
+	
+	for (auto & e : framework.windowEvents)
 	{
-		m_leftButtonDown = true;
-		SetCapture(m_hWnd);
-		m_captureCount++;
+		if (e.type == SDL_KEYDOWN)
+		{
+			OnChar(e.key.keysym.sym, 0, 0);
+		}
+		/*
+		if (e.type == SDL_TEXTINPUT)
+		{
+			//logDebug("text input");
+			
+			const char * text = e.text.text;
+			
+			for (int i = 0; text[i] != 0; ++i)
+				OnChar(text[i], 0, 0);
+		}*/
 	}
-	else
-#endif
+	// todo : xeno : OnChar(int nChar, int nRepCnt, int nFlags);
+}
+
+void XenoTestbedWindow::CheckLButtonDown()
+{
+	if (mouse.wentDown(BUTTON_LEFT))
 	{
-		Vector rayOrigin;
-		Vector rayDirection;
-		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnLeftButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		Point point(mouse.x, mouse.y);
+		m_lastMousePoint = point;
+		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+		{
+			m_leftButtonDown = true;
+		#if XENO_TODO == 1
+			SetCapture(m_hWnd);
+		#endif
+			m_captureCount++;
+		}
+		else
+		{
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnLeftButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
 	}
 }
 
-void XenoTestbedWindow::OnLButtonUp(int nFlags, Point point)
+void XenoTestbedWindow::CheckLButtonUp()
 {
-#if XENO_TODO == 1
-	if (m_leftButtonDown)
+	if (mouse.wentUp(BUTTON_LEFT))
 	{
-		m_leftButtonDown = false;
-		if (--m_captureCount == 0)
-			ReleaseCapture();
-	}
-	else
-#endif
-	{
-		Vector rayOrigin;
-		Vector rayDirection;
-		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnLeftButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		if (m_leftButtonDown)
+		{
+			m_leftButtonDown = false;
+			if (--m_captureCount == 0)
+			#if XENO_TODO == 1
+				ReleaseCapture();
+			#else
+				{ }
+			#endif
+		}
+		else
+		{
+			Point point(mouse.x, mouse.y);
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnLeftButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
 	}
 }
 
-void XenoTestbedWindow::OnMButtonDown(int nFlags, Point point)
+void XenoTestbedWindow::CheckMButtonDown()
 {
-	m_lastMousePoint = point;
 #if XENO_TODO == 1
-	if (GetKeyState(VK_MENU) & 0x80000000)
+	if (mouse.wentDown(BUTTON_MIDDLE))
 	{
-		m_middleButtonDown = true;
-		SetCapture(m_hWnd);
-		m_captureCount++;
+		Point point(mouse.x, mouse.y);
+		m_lastMousePoint = point;
+		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+		{
+			m_middleButtonDown = true;
+			SetCapture(m_hWnd);
+			m_captureCount++;
+		}
+		else
+		{
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnMiddleButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
 	}
-	else
 #endif
+}
+
+void XenoTestbedWindow::CheckMButtonUp()
+{
+#if XENO_TODO == 1
+	if (mouse.wentUp(BUTTON_MIDDLE))
 	{
-		Vector rayOrigin;
-		Vector rayDirection;
-		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnMiddleButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+	#if XENO_TODO == 1
+		if (m_middleButtonDown)
+		{
+			m_middleButtonDown = false;
+			if (--m_captureCount == 0)
+				ReleaseCapture();
+		}
+		else
+	#endif
+		{
+			Point point(mouse.x, mouse.y);
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnMiddleButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
+	}
+#endif
+}
+
+void XenoTestbedWindow::CheckRButtonDown()
+{
+	if (mouse.wentDown(BUTTON_RIGHT))
+	{
+		Point point(mouse.x, mouse.y);
+		m_lastMousePoint = point;
+		if (keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT))
+		{
+			m_rightButtonDown = true;
+		#if XENO_TODO == 1
+			SetCapture(m_hWnd);
+		#endif
+			m_captureCount++;
+		}
+		else
+		{
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnRightButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
 	}
 }
 
-void XenoTestbedWindow::OnMButtonUp(int nFlags, Point point)
+void XenoTestbedWindow::CheckRButtonUp()
 {
-#if XENO_TODO == 1
-	if (m_middleButtonDown)
+	if (mouse.wentUp(BUTTON_RIGHT))
 	{
-		m_middleButtonDown = false;
-		if (--m_captureCount == 0)
-			ReleaseCapture();
-	}
-	else
-#endif
-	{
-		Vector rayOrigin;
-		Vector rayDirection;
-		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnMiddleButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		if (m_rightButtonDown)
+		{
+			m_rightButtonDown = false;
+			if (--m_captureCount == 0)
+			#if XENO_TODO == 1
+				ReleaseCapture();
+			#else
+				{ }
+			#endif
+		}
+		else
+		{
+			Point point(mouse.x, mouse.y);
+			Vector rayOrigin;
+			Vector rayDirection;
+			WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
+			m_module->OnRightButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		}
 	}
 }
 
-void XenoTestbedWindow::OnRButtonDown(int nFlags, Point point)
+void XenoTestbedWindow::CheckMouseMove()
 {
-	m_lastMousePoint = point;
-#if XENO_TODO == 1
-	if (GetKeyState(VK_MENU) & 0x80000000)
+	if (mouse.dx || mouse.dy)
 	{
-		m_rightButtonDown = true;
-		SetCapture(m_hWnd);
-		m_captureCount++;
-	}
-	else
-#endif
-	{
+		Point point(mouse.x, mouse.y);
 		Vector rayOrigin;
 		Vector rayDirection;
 		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnRightButtonDown(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
-	}
-}
+		m_module->OnMouseMove(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
 
-void XenoTestbedWindow::OnRButtonUp(int nFlags, Point point)
-{
-#if XENO_TODO == 1
-	if (m_rightButtonDown)
-	{
-		m_rightButtonDown = false;
-		if (--m_captureCount == 0) ReleaseCapture();
-	}
-	else
-#endif
-	{
-		Vector rayOrigin;
-		Vector rayDirection;
-		WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-		m_module->OnRightButtonUp(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
-	}
-}
+		Point delta(mouse.dx, mouse.dy);
+		m_lastMousePoint = point; // todo : xeno : get rid of m_lastMousePoint ?
 
-void XenoTestbedWindow::OnMouseMove(int nFlags, Point point)
-{
-	Vector rayOrigin;
-	Vector rayDirection;
-	WindowPointToWorldRay(&rayOrigin, &rayDirection, point);
-	m_module->OnMouseMove(rayOrigin, rayDirection, Vector(point.x, point.y, 0));
+		if (m_middleButtonDown || (m_leftButtonDown && m_rightButtonDown))
+		{
+			*m_translation += Vector(delta.x * 0.2f, -delta.y * 0.2f, 0);
+		}
+		else if (m_leftButtonDown)
+		{
+			float32 yaw;
+			float32 pitch;
+			m_rotation->GetYawPitchRoll(&yaw, &pitch, NULL);
+			yaw -= delta.x * 0.01f;
+			pitch += delta.y * 0.01f;
 
-	Point delta(point.x - m_lastMousePoint.x, point.y - m_lastMousePoint.y);
-	m_lastMousePoint = point;
+			pitch = Min(pitch, PI_2 - 0.001f);
+			pitch = Max(pitch, -(PI_2 - 0.001f));
 
-	if (m_middleButtonDown || (m_leftButtonDown && m_rightButtonDown))
-	{
-		*m_translation += Vector(delta.x * 0.2f, -delta.y * 0.2f, 0);
-	}
-	else if (m_leftButtonDown)
-	{
-		float32 yaw;
-		float32 pitch;
-		m_rotation->GetYawPitchRoll(&yaw, &pitch, NULL);
-		yaw -= delta.x * 0.01f;
-		pitch += delta.y * 0.01f;
-
-		pitch = Min(pitch, PI_2 - 0.001f);
-		pitch = Max(pitch, -(PI_2 - 0.001f));
-
-		m_rotation->SetYawPitchRoll(yaw, pitch, 0);
-	}
-	else if (m_rightButtonDown)
-	{
-		*m_translation += Vector(0, 0, delta.y * 0.2f);
+			m_rotation->SetYawPitchRoll(yaw, pitch, 0);
+		}
+		else if (m_rightButtonDown)
+		{
+			*m_translation += Vector(0, 0, delta.y * 0.2f);
+		}
 	}
 }
 
@@ -391,10 +471,10 @@ void XenoTestbedWindow::OnChar(int nChar, int nRepCnt, int nFlags)
 	m_module->OnChar(nChar);
 }
 
-void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
+void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
 {
 	// Handle pg-up and pg-down
-	if (nChar == 33)
+	if (keyboard.wentDown(SDLK_PAGEUP))
 	{
 		m_moduleIndex--;
 
@@ -406,7 +486,7 @@ void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
 		m_module = RegisterTestModule::GetFactoryMethod(m_moduleIndex)();
 		m_module->Init();
 	}
-	else if (nChar == 34)
+	else if (keyboard.wentDown(SDLK_PAGEDOWN))
 	{
 		m_moduleIndex++;
 
@@ -418,27 +498,23 @@ void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
 
 		m_module->Init();
 	}
-	else if (nChar == 'K')
+	else if (keyboard.wentDown(SDLK_k))
 	{
-	#if XENO_TODO == 1
 		// Control must be held
-		if ( !(GetKeyState(VK_LCONTROL) & 0x8000) && !(GetKeyState(VK_RCONTROL) & 0x8000) )
+		if ( !keyboard.isDown(SDLK_LCTRL) && !keyboard.isDown(SDLK_RCTRL) )
 		{
 			return;
 		}
-	#endif
 	
 		SaveView();
 	}
-	else if (nChar == 'L')
+	else if (keyboard.wentDown(SDLK_l))
 	{
-	#if XENO_TODO == 1
 		// Control must be held
-		if ( !(GetKeyState(VK_LCONTROL) & 0x8000) && !(GetKeyState(VK_RCONTROL) & 0x8000) )
+		if ( !keyboard.isDown(SDLK_LCTRL) && !keyboard.isDown(SDLK_RCTRL) )
 		{
 			return;
 		}
-	#endif
 	
 		LoadView();
 	}
@@ -448,13 +524,6 @@ void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
 		m_module->OnKeyDown(nChar);
 	}
 }
-
-#if XENO_TODO == 1
-static Point MakePoint(LPARAM lParam)
-{
-	return Point( (int16)LOWORD(lParam), (int16)HIWORD(lParam) );
-}
-#endif
 
 #if XENO_TODO == 1
 LRESULT CALLBACK XenoTestbedWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -472,9 +541,6 @@ LRESULT CALLBACK XenoTestbedWindow::WndProc(HWND hWnd, UINT message, WPARAM wPar
 			break;
 		case WM_ERASEBKGND:
 			return TRUE;
-			break;
-		case WM_SIZE:
-			wnd->OnSize(wParam, (lParam & 0xffff), (lParam >> 16) & 0xfff);
 			break;
 		case WM_LBUTTONDOWN:
 			wnd->OnLButtonDown(wParam, MakePoint(lParam));
@@ -518,7 +584,7 @@ void XenoTestbedWindow::SaveView()
 	if (fp)
 	{
 		fprintf(fp, "%f %f %f %f\n", q.X(), q.Y(), q.Z(), q.W());
-		fprintf(fp, "%f %f %f %f\n", t.X(), t.Y(), t.Z());
+		fprintf(fp, "%f %f %f\n", t.X(), t.Y(), t.Z());
 		fclose(fp);
 	}
 }

@@ -46,6 +46,8 @@ public:
 	virtual void OnRightButtonDown(const Vector& rayOrigin, const Vector& rayDirection, const Vector& point) {};
 	virtual void OnRightButtonUp(const Vector& rayOrigin, const Vector& rayDirection, const Vector& point) {};
 	virtual void OnMouseMove(const Vector& rayOrigin, const Vector& rayDirection, const Vector& point) {};
+	
+	virtual const Vector& GetBackgroundColor() {};
 
 };
 

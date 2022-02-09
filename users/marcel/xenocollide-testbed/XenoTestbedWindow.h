@@ -48,7 +48,6 @@ public:
 public:
 
 	bool Init(void);
-	void SetSize(int width, int height);
 	void Simulate(float32 dt);
 	void Solve( float32* v1, float32* v2, float32 h1, float32 h2, float32 target );
 	void DrawScene(void);
@@ -56,6 +55,7 @@ public:
 	void LoadView();
 	void SaveView();
 
+	void SetModelViewProjectionMatrices();
 	void WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p);
 
 	static XenoTestbedWindow* s_this;
@@ -79,15 +79,16 @@ protected:
 public:
 
 	void OnPaint();
-	void OnLButtonDown(int nFlags, Point point);
-	void OnLButtonUp(int nFlags, Point point);
-	void OnMButtonDown(int nFlags, Point point);
-	void OnMButtonUp(int nFlags, Point point);
-	void OnRButtonDown(int nFlags, Point point);
-	void OnRButtonUp(int nFlags, Point point);
-	void OnMouseMove(int nFlags, Point point);
-	void OnKeyDown(int nChar, int nRepCnt, int nFlags);
+	
+	void Check();
+	void CheckLButtonDown();
+	void CheckLButtonUp();
+	void CheckMButtonDown();
+	void CheckMButtonUp();
+	void CheckRButtonDown();
+	void CheckRButtonUp();
+	void CheckMouseMove();
+	void CheckKeyDown(int nChar, int nRepCnt, int nFlags);
 	void OnChar(int nChar, int nRepCnt, int nFlags);
-	void OnSize(int nType, int cx, int cy);
 };
 
