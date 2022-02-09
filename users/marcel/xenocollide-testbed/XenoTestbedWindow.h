@@ -88,7 +88,7 @@ public:
 	void CheckRButtonDown();
 	void CheckRButtonUp();
 	void CheckMouseMove();
-	void CheckKeyDown(int nChar, int nRepCnt, int nFlags);
+	void OnKeyDown(int nChar, int nRepCnt, int nFlags);
 	void OnChar(int nChar, int nRepCnt, int nFlags);
 };
 

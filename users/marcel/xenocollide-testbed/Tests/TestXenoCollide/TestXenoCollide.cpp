@@ -133,10 +133,6 @@ private:
 	bool mCommandMode;
 	float32 mFPS;
 
-#if XENO_TODO_FONT == 1
-	OutlineFont* mFont;
-#endif
-
 	string mStatusLine;
 
 private:
@@ -185,10 +181,6 @@ TestXenoCollide::TestXenoCollide()
 {
 	gSimulate = false;
 	gCullFrontFace = false;
-
-#if XENO_TODO_FONT == 1
-	mFont = new OutlineFont(hdc, "Comic Sans MS Bold");
-#endif
 
 	mBackgroundColor = Vector(0, 0, 0);
 
@@ -291,33 +283,44 @@ void TestXenoCollide::DrawScene()
 		gxColor4f( 1-mBackgroundColor.X(), 1-mBackgroundColor.Y(), 1-mBackgroundColor.Z(), 1);
 
 		gxPushMatrix();
-		gxLoadIdentity();
-		gxTranslatef(-15, -11, -50);
-	#if XENO_TODO_FONT == 1
-		mFont->DrawString(mStatusLine.c_str());
-	#endif
+		{
+			gxLoadIdentity();
+			gxTranslatef(-15, -11, -50);
+			gxScalef(1, -1, 1);
+		
+			pushBlend(BLEND_ALPHA);
+			pushFontMode(FONT_SDF);
+			drawText(0, 0, 1.f, +1, 0, "%s", mStatusLine.c_str());
+			popFontMode();
+			popBlend();
+		}
 		gxPopMatrix();
 
 		gxPushMatrix();
-		gxLoadIdentity();
-		gxTranslatef(-15, -12, -50);
-		string displayString;
-		if (gSimulate)
-			displayString = "sim";
-		else
-			displayString = "edit";
-		
-		displayString += "> " + mCommand;
-		if ((g_TimerRT.TimeMS_get() / 500) % 2)
 		{
-			displayString += "_";
+			gxLoadIdentity();
+			gxTranslatef(-15, -12, -50);
+			gxScalef(1, -1, 1);
+			
+			string displayString;
+			if (gSimulate)
+				displayString = "sim";
+			else
+				displayString = "edit";
+			
+			displayString += "> " + mCommand;
+			if ((g_TimerRT.TimeMS_get() / 500) % 2)
+			{
+				displayString += "_";
+			}
+			
+			//logDebug("%s", displayString.c_str());
+			pushBlend(BLEND_ALPHA);
+			pushFontMode(FONT_SDF);
+			drawText(0, 0, 1.f, +1, 0, "%s", displayString.c_str());
+			popFontMode();
+			popBlend();
 		}
-	#if XENO_TODO_FONT == 1
-		mFont->DrawString(displayString.c_str());
-	#else
-		//fillCube(Vec3(), Vec3(100.0f));
-		logDebug("%s", displayString.c_str());
-	#endif
 		gxPopMatrix();
 	}
 
@@ -352,20 +355,26 @@ void TestXenoCollide::DrawScene()
 		if (mDebugTime)
 		{
 			gxPushMatrix();
-			gxLoadIdentity();
-			gxTranslatef(-15, -13, -50);
-
-			static float32 avg = 6;
-			if (gCollisionCount > 0)
 			{
-				avg = 0.99f * avg + 0.01 * gCollisionTime / gCollisionCount;
+				gxLoadIdentity();
+				gxTranslatef(-15, -13, -50);
+				gxScalef(1, 1, -1);
+
+				static float32 avg = 6;
+				if (gCollisionCount > 0)
+				{
+					avg = 0.99f * avg + 0.01 * gCollisionTime / gCollisionCount;
+				}
+				char text[100];
+				sprintf(text, "FPS %2.2f  Avg = %2.2f  Count = %d  Hits = %d  AvgTime = %.2f us", mFPS, gAvgSupportCount, gCollisionCount, gCollisionHitCount, avg);
+				gxColor4f(1, 1, 1, 1);
+			
+				pushBlend(BLEND_ALPHA);
+				pushFontMode(FONT_SDF);
+				drawText(0, 0, 1.f, +1, 0, "%s", mStatusLine.c_str());
+				popFontMode();
+				popBlend();
 			}
-			char text[100];
-			sprintf(text, "FPS %2.2f  Avg = %2.2f  Count = %d  Hits = %d  AvgTime = %.2f us", mFPS, gAvgSupportCount, gCollisionCount, gCollisionHitCount, avg);
-			gxColor4f(1, 1, 1, 1);
-		#if XENO_TODO_FONT == 1
-			mFont->DrawString(text);
-		#endif
 			gxPopMatrix();
 		}
 
@@ -437,7 +446,7 @@ void TestXenoCollide::OnKeyDown(uint32 nChar)
 
 	switch (nChar)
 	{
-		case 188: // ,
+		case SDLK_COMMA: // ,
 			{
 				if (gDebug)
 				{
@@ -447,7 +456,7 @@ void TestXenoCollide::OnKeyDown(uint32 nChar)
 			}
 			break;
 
-		case 190: // .
+		case SDLK_PERIOD: // .
 			{
 				if (gDebug)
 				{
@@ -604,11 +613,6 @@ TestXenoCollide::~TestXenoCollide()
 	mShapes.clear();
 	mRigidBody.clear();
 	mShapeSet.clear();
-
-#if XENO_TODO_FONT == 1
-	delete mFont;
-	mFont = NULL;
-#endif
 }
 
 //////////////////////////////////////////////////////////////

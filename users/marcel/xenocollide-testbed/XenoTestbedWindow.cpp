@@ -73,13 +73,6 @@ bool XenoTestbedWindow::Init(void)
 	GLfloat lightpos[] = { -8.0f, 12.0f, 10.0f, 0.0f };
 //	GLfloat lightpos[] = { -8.0f, 12.0f, -10.0f, 0.0f };
 
-	glShadeModel(GL_SMOOTH);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
-	glClearDepth(1.0f);
-	glEnable(GL_CULL_FACE);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);	
-	glEnable(GL_COLOR_MATERIAL);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
@@ -104,11 +97,8 @@ bool XenoTestbedWindow::Init(void)
 	glMateriali(GL_FRONT, GL_SHININESS, 64);
 	glMateriali(GL_BACK, GL_SHININESS, 128);
 
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	glPointSize(5);
     glPolygonOffset(1.0, 2);
-
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 #endif
 
 	RegisterTestModule::FactoryMethod* factoryMethod = RegisterTestModule::GetFactoryMethod( m_moduleIndex );
@@ -150,7 +140,9 @@ void XenoTestbedWindow::DrawScene(void)
 #endif
 
 	// Enable depth calculations
-	pushDepthTest(true, DEPTH_LESS);
+	pushBlend(BLEND_OPAQUE);
+	pushDepthTest(true, DEPTH_LEQUAL);
+	pushCullMode(CULL_NONE, CULL_CCW); // todo : default on
 	{
 	#if XENO_TODO_MATERIAL == 1
 	// todo : use a shader for drawing polytopes etc. set some of its material parmas here
@@ -162,13 +154,18 @@ void XenoTestbedWindow::DrawScene(void)
 		// Draw the scene
 		m_module->DrawScene();
 	}
+	popCullMode();
 	popDepthTest();
+	popBlend();
 }
 
 void XenoTestbedWindow::SetModelViewProjectionMatrices()
 {
 	// Set up the projection matrix.
 	projectPerspective3d(30.0f, 1.0f, 1000.0f);
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxScalef(1, 1, -1);
 
 	// Change to model view matrix stack.
 	gxMatrixMode(GX_MODELVIEW);
@@ -204,41 +201,48 @@ void XenoTestbedWindow::WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDire
 	gxGetMatrixf(GX_MODELVIEW, modelMatrix.m_v);
 	gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 	
-	auto projToObject = [&](Vec4Arg p_proj) -> Vec4
+	auto screenToObject = [&](Vec4Arg p_screen) -> Vec4
 	{
-		Vec4 p_view = projectionMatrix.CalcInv() * p_proj;
-		p_view /= p_view[3];
-		Vec4 p_object = modelMatrix.CalcInv() * p_view;
-		return p_object;
+		int viewSx;
+		int viewSy;
+		framework.getCurrentViewportSize(viewSx, viewSy);
+		
+		const Vec4 p_proj(
+			p_screen[0] / float(viewSx) * 2.f - 1.f,
+			p_screen[1] / float(viewSy) * 2.f - 1.f,
+			p_screen[2],
+			p_screen[3]);
+			
+		//logDebug("p_proj: %.2f, %.2f", p_proj[0], p_proj[1]);
+		
+		const Mat4x4 projToView = projectionMatrix.CalcInv();
+		
+		Vec4 v_view = projToView * p_proj;
+			
+		v_view /= v_view[3];
+		
+		const Mat4x4 viewToObject = modelMatrix.CalcInv();
+		
+		const Vec4 v_obj = viewToObject * v_view;
+		
+		return v_obj;
 	};
 	
-	Vec4 p_proj0(p.x, p.y, 0.f, 1.f);
-	Vec4 p_proj1(p.x, p.y, 1.f, 1.f);
+	const Vec4 p_screen(p.x, p.y, 1.f, 1.f);
 	
-	Vec4 p0 = projToObject(p_proj0);
-	Vec4 p1 = projToObject(p_proj1);
+	const Vec4 p0 = Vec4(m_translation->X(), m_translation->Y(), m_translation->Z(), 1.f);
+	const Vec4 p1 = screenToObject(p_screen);
 	
-	Vec4 diff = (p1 - p0).CalcNormalized();
+	const Vec4 diff = (p1 - p0).CalcNormalized();
 
 	*rayDirection = Vector(diff[0], diff[1], diff[2]);
-	*rayOrigin = Vector(p0[0], p0[1], p0[2]); //*m_translation;
+	*rayOrigin = Vector(p0[0], p0[1], p0[2]);
 	
-#if XENO_TODO_MATERIAL == 1
-// todo : use framework function to un-project ?
-	GLenum err = glGetError();
-
-	GLdouble x0, y0, z0;
-	GLdouble x1, y1, z1;
-
-	gluUnProject(p.x, viewport[3] - p.y, 0.0f, modelMatrix, projectionMatrix, viewport, &x0, &y0, &z0);
-	gluUnProject(p.x, viewport[3] - p.y, 1.0f, modelMatrix, projectionMatrix, viewport, &x1, &y1, &z1);
-
-	Vector diff = Vector( (float32) x1, (float32) y1, (float32) z1 ) - Vector( (float32) x0, (float32) y0, (float32) z0 );
-	diff.Normalize3();
-
-	*rayDirection = diff;
-	*rayOrigin = Vector((float32)x0, (float32)y0, (float32)z0); //*m_translation;
-#endif
+	/*
+	logDebug("%.2f, %.2f, %.2f",
+		rayDirection->X(),
+		rayDirection->Y(),
+		rayDirection->Z());*/
 }
 
 void XenoTestbedWindow::Check()
@@ -252,12 +256,13 @@ void XenoTestbedWindow::Check()
 	CheckRButtonDown();
 	CheckRButtonUp();
 	CheckMouseMove();
-	CheckKeyDown(0, 0, 0);
 	
 	for (auto & e : framework.windowEvents)
 	{
 		if (e.type == SDL_KEYDOWN)
 		{
+			OnKeyDown(e.key.keysym.sym, 0, 0);
+			
 			OnChar(e.key.keysym.sym, 0, 0);
 		}
 		/*
@@ -352,7 +357,6 @@ void XenoTestbedWindow::CheckMButtonUp()
 #if XENO_TODO == 1
 	if (mouse.wentUp(BUTTON_MIDDLE))
 	{
-	#if XENO_TODO == 1
 		if (m_middleButtonDown)
 		{
 			m_middleButtonDown = false;
@@ -360,7 +364,6 @@ void XenoTestbedWindow::CheckMButtonUp()
 				ReleaseCapture();
 		}
 		else
-	#endif
 		{
 			Point point(mouse.x, mouse.y);
 			Vector rayOrigin;
@@ -471,10 +474,10 @@ void XenoTestbedWindow::OnChar(int nChar, int nRepCnt, int nFlags)
 	m_module->OnChar(nChar);
 }
 
-void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
+void XenoTestbedWindow::OnKeyDown(int nChar, int nRepCnt, int nFlags)
 {
 	// Handle pg-up and pg-down
-	if (keyboard.wentDown(SDLK_PAGEUP))
+	if (nChar == SDLK_PAGEUP)
 	{
 		m_moduleIndex--;
 
@@ -486,7 +489,7 @@ void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
 		m_module = RegisterTestModule::GetFactoryMethod(m_moduleIndex)();
 		m_module->Init();
 	}
-	else if (keyboard.wentDown(SDLK_PAGEDOWN))
+	else if (nChar == SDLK_PAGEDOWN)
 	{
 		m_moduleIndex++;
 
@@ -498,7 +501,7 @@ void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
 
 		m_module->Init();
 	}
-	else if (keyboard.wentDown(SDLK_k))
+	else if (nChar == SDLK_k)
 	{
 		// Control must be held
 		if ( !keyboard.isDown(SDLK_LCTRL) && !keyboard.isDown(SDLK_RCTRL) )
@@ -508,7 +511,7 @@ void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
 	
 		SaveView();
 	}
-	else if (keyboard.wentDown(SDLK_l))
+	else if (nChar == SDLK_l)
 	{
 		// Control must be held
 		if ( !keyboard.isDown(SDLK_LCTRL) && !keyboard.isDown(SDLK_RCTRL) )
@@ -524,57 +527,6 @@ void XenoTestbedWindow::CheckKeyDown(int nChar, int nRepCnt, int nFlags)
 		m_module->OnKeyDown(nChar);
 	}
 }
-
-#if XENO_TODO == 1
-LRESULT CALLBACK XenoTestbedWindow::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-//	int wmId, wmEvent;
-	XenoTestbedWindow* wnd = s_this;
-
-	switch (message)
-	{
-		case WM_PAINT:
-			wnd->OnPaint();
-			break;
-		case WM_DESTROY:
-			PostQuitMessage(0);
-			break;
-		case WM_ERASEBKGND:
-			return TRUE;
-			break;
-		case WM_LBUTTONDOWN:
-			wnd->OnLButtonDown(wParam, MakePoint(lParam));
-			break;
-		case WM_LBUTTONUP:
-			wnd->OnLButtonUp(wParam, MakePoint(lParam));
-			break;
-		case WM_MBUTTONDOWN:
-			wnd->OnMButtonDown(wParam, MakePoint(lParam));
-			break;
-		case WM_MBUTTONUP:
-			wnd->OnMButtonUp(wParam, MakePoint(lParam));
-			break;
-		case WM_RBUTTONDOWN:
-			wnd->OnRButtonDown(wParam, MakePoint(lParam));
-			break;
-		case WM_RBUTTONUP:
-			wnd->OnRButtonUp(wParam, MakePoint(lParam));
-			break;
-		case WM_MOUSEMOVE:
-			wnd->OnMouseMove(wParam, MakePoint(lParam));
-			break;
-		case WM_KEYDOWN:
-			wnd->OnKeyDown(wParam, lParam & 0xffff, lParam);
-			break;
-		case WM_CHAR:
-			wnd->OnChar(wParam, lParam & 0xffff, lParam);
-			break;
-		default:
-			return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-	return 0;
-}
-#endif
 
 void XenoTestbedWindow::SaveView()
 {

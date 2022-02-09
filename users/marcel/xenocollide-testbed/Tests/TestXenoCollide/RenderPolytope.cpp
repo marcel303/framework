@@ -139,26 +139,39 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 		pushCullMode(CULL_FRONT, CULL_CCW);
 	}
 
+	auto drawFaces = [this]()
+	{
+		gxBegin(GX_TRIANGLE_STRIP);
+		{
+		// fixme : this is not correct :-) but at least gives us something on screen without a million draw calls
+		
+			for (int32 i=0; i < mFaceCount; i++)
+			{
+				if (mFaces[i].mVertCount >= 3)
+				{
+					gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
+
+					for (int32 j=0; j < mFaces[i].mVertCount; j++)
+					{
+						const Vector& v = mVerts[mFaces[i].mVertList[j]];
+						gxVertex3f(v.X(), v.Y(), v.Z());
+					}
+					
+					const Vector& v = mVerts[mFaces[i].mVertList[mFaces[i].mVertCount - 1]];
+					gxVertex3f(v.X(), v.Y(), v.Z());
+				}
+			}
+		}
+		gxEnd();
+	};
+	
 	if (mListValid)
 	{
 		// todo : draw cached mesh
 	}
 	else
 	{
-		for (int32 i=0; i < mFaceCount; i++)
-		{
-			gxBegin(GX_TRIANGLE_FAN);
-			{
-				gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
-
-				for (int32 j=0; j < mFaces[i].mVertCount; j++)
-				{
-					const Vector& v = mVerts[mFaces[i].mVertList[j]];
-					gxVertex3f(v.X(), v.Y(), v.Z());
-				}
-			}
-			gxEnd();
-		}
+		drawFaces();
 	}
 
 	if (gCullFrontFace)
@@ -174,20 +187,7 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	}
 	else
 	{
-		for (int32 i=0; i < mFaceCount; i++)
-		{
-			gxBegin(GX_TRIANGLE_FAN);
-			{
-				gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
-
-				for (int32 j=0; j < mFaces[i].mVertCount; j++)
-				{
-					Vector v = mVerts[mFaces[i].mVertList[j]];
-					gxVertex3f(v.X(), v.Y(), v.Z());
-				}
-			}
-			gxEnd();
-		}
+		drawFaces();
 	}
 
 	if (gCullFrontFace)
