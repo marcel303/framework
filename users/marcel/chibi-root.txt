@@ -33,6 +33,8 @@ add fluidCube
 add freeverb1-1
 add geo
 add geopart1
+add gjk1
+add gjk2
 add gltf1
 add gltf2
 add gpuParticles1

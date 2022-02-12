@@ -134,6 +134,7 @@ static void drawTriangle(
 
 static Vec2 makePerpendicularVector(Vec2Arg vector)
 {
+// todo : make sure it points toward the origin, so we can get rid of the parity stuff below
 	return Vec2(
 		+ vector[1],
 		- vector[0]);
@@ -257,7 +258,6 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 		
 		if (canIntersect)
 		{
-		#if 1
 			const Vec2 edgeVector1 = triangleVertex1 - triangleVertex3;
 			const Vec2 edgeVector2 = triangleVertex2 - triangleVertex3;
 
@@ -287,26 +287,6 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 				
 				canIntersect = false;
 			}
-		#else
-			const Vec2 perpendicularVector1 = makePerpendicularVector(triangleVertex3 - triangleVertex1);
-			const Vec2 perpendicularVector2 = makePerpendicularVector(triangleVertex3 - triangleVertex2);
-			
-			const Vec2 edgeNormal1 = perpendicularVector1.CalcNormalized();
-			const Vec2 edgeNormal2 = perpendicularVector2.CalcNormalized();
-			
-			const float edgeDistanceToNormal1 = fabsf(edgeNormal1 * triangleVertex3);
-			const float edgeDistanceToNormal2 = fabsf(edgeNormal2 * triangleVertex3);
-			
-			if (edgeDistanceToNormal1 <
-				edgeDistanceToNormal2)
-			{
-				triangleVertex2 = triangleVertex3;
-			}
-			else
-			{
-				triangleVertex1 = triangleVertex3;
-			}
-		#endif
 		}
 	}
 	
@@ -355,8 +335,8 @@ int main(int argc, char * argv[])
 			const Vec2 mousePosition_view(mouse.x, mouse.y);
 			const Vec2 mousePosition_world = viewToWorld.Mul4(mousePosition_view);
 			
-			makeShape(Vec2(mousePosition_world[0], mousePosition_world[1]), 1.f, 5, shape1);
-			makeShape(Vec2(                    +1,                      0), 1.f, 7, shape2);
+			makeShape(mousePosition_world, 1.f, 5, shape1);
+			makeShape(        Vec2(+1, 0), 1.f, 7, shape2);
 			
 			drawMinkowskiDifferenceEstimate(
 				shape1,
@@ -372,6 +352,7 @@ int main(int argc, char * argv[])
 			
 			if (isIntersecting)
 			{
+				setColor(colorWhite);
 				drawText(0, 100, 24, 0, 0, "Intersecting");
 			}
 		}
