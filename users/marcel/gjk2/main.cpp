@@ -1,8 +1,6 @@
 #include "framework.h"
 #include <vector>
 
-#define GJK_TODO 0
-
 struct Shape
 {
 	std::vector<Vec3> points;
@@ -247,11 +245,11 @@ static bool drawGjk(
 	
 	bool canIntersect = true;
 	
-	Vec3 triangleVertex1;
-	Vec3 triangleVertex2;
-	Vec3 triangleVertex3;
+	Vec3 triangleVertex1(false);
+	Vec3 triangleVertex2(false);
+	Vec3 triangleVertex3(false);
 	
-	Vec3 searchDirection;
+	Vec3 searchDirection(false);
 	
 	// find first vertex using some initial direction vector
 	
@@ -269,7 +267,7 @@ static bool drawGjk(
 	
 	if (canIntersect)
 	{
-		searchDirection = - searchDirection;
+		searchDirection = - triangleVertex1;
 		
 		triangleVertex2 = minkowskiDifferent(
 			shape1,
@@ -410,6 +408,10 @@ static bool drawGjk(
 			const Vec3 normalVector1 = edgeVector1 % edgeVector2;
 			const Vec3 normalVector2 = edgeVector2 % edgeVector3;
 			const Vec3 normalVector3 = edgeVector3 % edgeVector1;
+			
+			// note : we wouldn't have to negate triangleVertex4 if we just used
+			//        the direction away from the origin and flipped the comparisons
+			//        below. but I kept it as is for readability
 
 			const Vec3 directionTowardsOrigin = - triangleVertex4;
 			
@@ -422,7 +424,7 @@ static bool drawGjk(
 		//        conditional moves, effectively reducing the number of branches
 		//        by three. the final case (where the origin is contained inside
 		//        the simplex) could be checked last, hopefully without much
-		//        of a pipeline barrier
+		//        of a pipeline stall
 		
 			if (normalVector1 * directionTowardsOrigin > 0.f)
 			{

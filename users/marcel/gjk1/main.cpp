@@ -89,7 +89,7 @@ static void drawMinkowskiDifferenceEstimate(
 	const Shape & shape2,
 	const Color & color)
 {
-	Vec2 previousVertex;
+	Vec2 previousVertex(false);
 	
 	setColor(color);
 	gxBegin(GX_LINE_LOOP);
@@ -161,31 +161,39 @@ static bool isPointInTriangle(
     return !(has_neg && has_pos);
 }
 
-static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAtIteration)
+static bool drawGjk(
+	const Shape & shape1,
+	const Shape & shape2,
+	const int stopAtIteration,
+	Vec2 & out_triangleVertex1,
+	Vec2 & out_triangleVertex2,
+	Vec2 & out_triangleVertex3)
 {
 	bool result = false;
 	
 	bool canIntersect = true;
 	
-	Vec2 triangleVertex1;
-	Vec2 triangleVertex2;
+	Vec2 triangleVertex1(false);
+	Vec2 triangleVertex2(false);
+	
+	Vec2 searchDirection(false);
 	
 	if (canIntersect)
 	{
-		const Vec2 initialDirection = makeInitialDirectionVector();
+		searchDirection = makeInitialDirectionVector();
 		
-		triangleVertex1 = minkowskiDifferent(shape1, shape2, initialDirection);
+		triangleVertex1 = minkowskiDifferent(shape1, shape2, searchDirection);
 	}
 	
 	if (canIntersect)
 	{
-		const Vec2 directionTowardsOrigin = - triangleVertex1;
+		searchDirection = - triangleVertex1;
 		
-		triangleVertex2 = minkowskiDifferent(shape1, shape2, directionTowardsOrigin);
+		triangleVertex2 = minkowskiDifferent(shape1, shape2, searchDirection);
 		
 		// early out - is it still possible to form a k-simplex ? if not the shapes cannot be intersecting
 		
-		if (directionTowardsOrigin * triangleVertex2 < 0.f)
+		if (searchDirection * triangleVertex2 < 0.f)
 		{
 			logDebug("no k-simplex possible w/ triangleVertex2. the shapes cannot be intersecting");
 			
@@ -193,23 +201,24 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 		}
 	}
 	
-	for (int iteration = 0; iteration < stopAtIteration && canIntersect; ++iteration)
 	{
+		// set up the next search direction for the simplex loop below
+		
 		const Vec2 edgeDirection = triangleVertex2 - triangleVertex1;
 		
-		const Vec2 edgeNormal = makePerpendicularVector(edgeDirection);
-		
-		const float edgeNormalParity =
-			triangleVertex1 *
-			edgeNormal;
+		const Vec2 normalDirection = makePerpendicularVector(edgeDirection);
 			
-		const Vec2 directionTowardsOrigin =
-			edgeNormalParity < 0.f
-			?   edgeNormal
-			: - edgeNormal;
+		searchDirection =
+			normalDirection * triangleVertex1 < 0.f
+			?   normalDirection
+			: - normalDirection;
+	}
+	
+	for (int iteration = 0; iteration < stopAtIteration && canIntersect; ++iteration)
+	{
+		const Vec2 triangleVertex3 = minkowskiDifferent(shape1, shape2, searchDirection);
 		
-		const Vec2 triangleVertex3 = minkowskiDifferent(shape1, shape2, directionTowardsOrigin);
-		
+		/*
 		if (triangleVertex3 == triangleVertex1 ||
 			triangleVertex3 == triangleVertex2)
 		{
@@ -217,6 +226,7 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 			
 			canIntersect = false;
 		}
+		*/
 		
 		if (canIntersect)
 		{
@@ -230,7 +240,7 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 			
 			// early out - is it still possible to form a k-simplex ? if not the shapes cannot be intersecting
 		
-			if (directionTowardsOrigin * triangleVertex3 < 0.f)
+			if (searchDirection * triangleVertex3 < 0.f)
 			{
 				logDebug("no k-simplex possible w/ triangleVertex3. the shapes cannot be intersecting");
 				
@@ -258,24 +268,36 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 		
 		if (canIntersect)
 		{
-			const Vec2 edgeVector1 = triangleVertex1 - triangleVertex3;
-			const Vec2 edgeVector2 = triangleVertex2 - triangleVertex3;
+			const Vec2 edgeVector1 = triangleVertex3 - triangleVertex1;
+			const Vec2 edgeVector2 = triangleVertex3 - triangleVertex2;
 
 			Vec2 perpendicularVector1 = makePerpendicularVector(edgeVector1);
 			Vec2 perpendicularVector2 = makePerpendicularVector(edgeVector2);
 			
-			if (perpendicularVector1 * edgeVector2 > 0.f) perpendicularVector1 = -perpendicularVector1;
-			if (perpendicularVector2 * edgeVector1 > 0.f) perpendicularVector2 = -perpendicularVector2;
+			if (perpendicularVector1 * edgeVector2 < 0.f) perpendicularVector1 = -perpendicularVector1;
+			if (perpendicularVector2 * edgeVector1 < 0.f) perpendicularVector2 = -perpendicularVector2;
 
+			// note : we wouldn't have to negate triangleVertex3 if we just used
+			//        the direction away from the origin and flipped the comparisons
+			//        below. but I kept it as is for readability
+			
 			const Vec2 directionTowardsOrigin = - triangleVertex3;
 			
 			if (perpendicularVector1 * directionTowardsOrigin > 0.f)
 			{
+				Assert(triangleVertex2 * perpendicularVector1 <= +1/1000.f);
+				
 				triangleVertex2 = triangleVertex3;
+				
+				searchDirection = perpendicularVector1;
 			}
 			else if (perpendicularVector2 * directionTowardsOrigin > 0.f)
 			{
+				Assert(triangleVertex1 * perpendicularVector2 <= +1/1000.f);
+				
 				triangleVertex1 = triangleVertex3;
+				
+				searchDirection = perpendicularVector2;
 			}
 			else
 			{
@@ -286,6 +308,10 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 				result = true;
 				
 				canIntersect = false;
+				
+				out_triangleVertex1 = triangleVertex1;
+				out_triangleVertex2 = triangleVertex2;
+				out_triangleVertex3 = triangleVertex3;
 			}
 		}
 	}
@@ -298,12 +324,156 @@ static bool drawGjk(const Shape & shape1, const Shape & shape2, const int stopAt
 	return result;
 }
 
+#include "Vec2.h"
+#include <queue>
+
+struct Plane
+{
+	Vec2 v1;
+	Vec2 v2;
+	
+	Vec2 normal;
+	float distance;
+	
+	Plane()
+		: v1(false)
+		, v2(false)
+		, normal(false)
+	{
+	}
+	
+	bool operator<(const Plane & other) const
+	{
+		return distance > other.distance;
+	}
+};
+
+static Plane makePlane(Vec2Arg v1, Vec2Arg v2)
+{
+	Plane result;
+	
+	result.v1 = v1;
+	result.v2 = v2;
+	
+	result.normal = makePerpendicularVector(v2 - v1).CalcNormalized();
+	result.distance = result.normal * v1;
+	
+	Assert(result.distance >= -1.f / 1000.f);
+	
+	//logDebug("make plane with distance %.03f", result.distance);
+	
+	return result;
+}
+
+static Plane makePlaneWithWinding(Vec2Arg v1, Vec2Arg v2, const float winding)
+{
+	Plane result;
+	
+	result.v1 = v1;
+	result.v2 = v2;
+	
+	result.normal = makePerpendicularVector(v2 - v1).CalcNormalized();
+	result.distance = result.normal * v1;
+	
+	if (winding < 0.f)
+	{
+		std::swap(result.v1, result.v2);
+		
+		result.normal = -result.normal;
+		result.distance = -result.distance;
+	}
+
+	Assert(result.distance >= -1.f / 1000.f);
+	
+	//logDebug("make plane with distance %.03f", result.distance);
+	
+	return result;
+}
+
+static float computeWindingParity(
+	const Vec2 & triangleVertex1,
+	const Vec2 & triangleVertex2,
+	const Vec2 & triangleVertex3)
+{
+	const Vec2 edgeVector1 = triangleVertex2 - triangleVertex1;
+	const Vec2 edgeVector2 = triangleVertex3 - triangleVertex2;
+	
+	const float windingParity =
+		(
+			Vec3(edgeVector1[0], edgeVector1[1], 0.f) %
+			Vec3(edgeVector2[0], edgeVector2[1], 0.f)
+		)[2];
+	
+	return windingParity;
+}
+
+static void epa(
+	const Shape & shape1,
+	const Shape & shape2,
+	const Vec2 & triangleVertex1,
+	const Vec2 & triangleVertex2,
+	const Vec2 & triangleVertex3,
+	Vec2 & out_normal,
+	float & out_distance)
+{
+	std::priority_queue<Plane> planes;
+	
+	const float windingParity =
+		computeWindingParity(
+			triangleVertex1,
+			triangleVertex2,
+			triangleVertex3);
+	
+	planes.push(makePlaneWithWinding(triangleVertex1, triangleVertex2, windingParity));
+	planes.push(makePlaneWithWinding(triangleVertex2, triangleVertex3, windingParity));
+	planes.push(makePlaneWithWinding(triangleVertex3, triangleVertex1, windingParity));
+	
+	for (;;)
+	{
+		auto & plane = planes.top();
+		
+		logDebug("eval with plane distance: %.03f", plane.distance);
+		
+		const Vec2 vertex = minkowskiDifferent(shape1, shape2, plane.normal);
+		
+		const float distance = vertex * plane.normal;
+		
+		Assert(distance >= -1.f / 1000.f);
+		
+		if (fabsf(distance - plane.distance) <= 1.f / 1000.f)
+		{
+			// found it!
+			
+			out_normal = plane.normal;
+			out_distance = distance;
+			
+			break;
+		}
+		else
+		{
+			// construct new planes based on the found point and the (extreme) vertices used to construct the old the plane
+			
+			auto plane_v1 = plane.v1;
+			auto plane_v2 = plane.v2;
+			
+			planes.pop();
+			
+			planes.push(makePlane(plane_v1, vertex));
+			planes.push(makePlane(vertex, plane_v2));
+		}
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
+	framework.enableSound = false;
+	
 	if (!framework.init(800, 600))
 		return -1;
+	
+	Vec2 offset;
 	
 	for (;;)
 	{
@@ -319,35 +489,70 @@ int main(int argc, char * argv[])
 				framework.getCurrentWindow().getHeight() / 2.f,
 				0);
 			gxPushMatrix();
-			gxScalef(100, 100, 1);
-			
-			setColor(Color::fromHSL(0.f, 0.f, .25f));
-			drawLine(-1, 0, +1, 0);
-			drawLine(0, -1, 0, +1);
-			
-			Shape shape1;
-			Shape shape2;
-			
-			Mat4x4 worldToView;
-			gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
-			const Mat4x4 viewToWorld = worldToView.CalcInv();
-			
-			const Vec2 mousePosition_view(mouse.x, mouse.y);
-			const Vec2 mousePosition_world = viewToWorld.Mul4(mousePosition_view);
-			
-			makeShape(mousePosition_world, 1.f, 5, shape1);
-			makeShape(        Vec2(+1, 0), 1.f, 7, shape2);
-			
-			drawMinkowskiDifferenceEstimate(
-				shape1,
-				shape2,
-				Color::fromHSL(.5f, .25f, .25f));
-			
-			drawShape(shape1, Color::fromHSL(.0f, .5f, .5f));
-			drawShape(shape2, Color::fromHSL(.1f, .5f, .5f));
-			
-			const bool isIntersecting = drawGjk(shape1, shape2, 10);
-			
+			//{
+				gxScalef(100, 100, 1);
+				
+				setColor(Color::fromHSL(0.f, 0.f, .25f));
+				drawLine(-1, 0, +1, 0);
+				drawLine(0, -1, 0, +1);
+				
+				Shape shape1;
+				Shape shape2;
+				
+				Mat4x4 worldToView;
+				gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+				const Mat4x4 viewToWorld = worldToView.CalcInv();
+				
+				const Vec2 mousePosition_view(mouse.x, mouse.y);
+				const Vec2 mousePosition_world = viewToWorld.Mul4(mousePosition_view);
+				
+				makeShape(mousePosition_world,  1.f, 5, shape1);
+				makeShape(Vec2(+1, 0) - offset, 1.f, 7, shape2);
+				
+				drawMinkowskiDifferenceEstimate(
+					shape1,
+					shape2,
+					Color::fromHSL(.5f, .25f, .25f));
+				
+				drawShape(shape1, Color::fromHSL(.0f, .5f, .5f));
+				drawShape(shape2, Color::fromHSL(.1f, .5f, .5f));
+				
+				Vec2 triangleVertex1(false);
+				Vec2 triangleVertex2(false);
+				Vec2 triangleVertex3(false);
+				
+				const bool isIntersecting = drawGjk(
+					shape1,
+					shape2,
+					10,
+					triangleVertex1,
+					triangleVertex2,
+					triangleVertex3);
+				
+				if (isIntersecting)
+				{
+					Vec2 collisionNormal(false);
+					float collisionDistance;
+				
+					epa(
+						shape1,
+						shape2,
+						triangleVertex1,
+						triangleVertex2,
+						triangleVertex3,
+						collisionNormal,
+						collisionDistance);
+					
+					setColor(colorRed);
+					drawLine(
+						0.f,
+						0.f,
+						collisionNormal[0] * collisionDistance,
+						collisionNormal[1] * collisionDistance);
+						
+					offset -= collisionNormal * collisionDistance;
+				}
+			//}
 			gxPopMatrix();
 			
 			if (isIntersecting)
