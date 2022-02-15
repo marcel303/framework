@@ -13,7 +13,14 @@ public:
 	{
 		m_v[0] = m_v[1] = 0.0f;
 	}
-
+	
+	explicit
+	inline Vec2(bool initializeToZero)
+	{
+		if (initializeToZero)
+			m_v[0] = m_v[1] = 0.0f;
+	}
+	
 	inline Vec2(float x, float y)
 	{
 		m_v[0] = x;
