@@ -1,6 +1,8 @@
 include engine/ShaderVS.txt
 
-shader_out vec4 v_color;
+uniform vec3 u_geometryColor;
+
+shader_out vec3 v_color;
 
 void main()
 {
@@ -8,12 +10,13 @@ void main()
 	
 	position = objectToProjection(position);
 	
-	vec4 color = unpackColor();
 	vec4 normal = unpackNormal();
 	
 	gl_Position = position;
 
-	color.rgb += normal.rgb * 0.2;
+	vec3 color = u_geometryColor;
+
+	color += normal.rgb * 0.2;
 	
 	v_color = color;
 }

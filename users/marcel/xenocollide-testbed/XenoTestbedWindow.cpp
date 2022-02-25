@@ -83,6 +83,8 @@ bool XenoTestbedWindow::Init(void)
 		
 		shader.setImmediate("u_materialColor", materialColor[0], materialColor[1], materialColor[2]);
 		
+		shader.setImmediate("u_geometryColor", 1.f, 1.f, 1.f);
+		
 		// todo : configure second light
 		
 		// todo : separate front and back specular color for material

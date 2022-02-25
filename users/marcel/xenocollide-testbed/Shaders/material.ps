@@ -1,8 +1,10 @@
 include engine/ShaderPS.txt
 
-shader_in vec4 v_color;
+shader_in vec3 v_color;
 
 void main()
 {
-	shader_fragColor = v_color;
+	vec3 color = v_color;
+
+	shader_fragColor = vec4(color, 1.0);
 }

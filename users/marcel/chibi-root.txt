@@ -101,6 +101,7 @@ add voxelizer-test
 add voxviewer
 add voxworld1
 add vrChallenges
+add xenocollide-testbed
 add zita-rev1
 
 add ../ggj2015/game

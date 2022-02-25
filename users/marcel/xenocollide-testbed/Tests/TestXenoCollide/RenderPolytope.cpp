@@ -199,6 +199,7 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	}
 	
 	setShader(shader);
+	shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
 	mMesh.draw();
 	clearShader();
 
@@ -210,6 +211,7 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	}
 
 	setShader(shader);
+	shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
 	mMesh.draw();
 	clearShader();
 
@@ -224,14 +226,4 @@ void RenderPolytope::Draw(const Quat& q, const Vector& x)
 void RenderPolytope::SetColor(const Vector& color)
 {
 	mColor = color;
-	if (mListValid)
-	{
-	// todo : use a shader to change color
-		// Free the cached mesh.
-		mMesh.clear();
-		mMeshVB.free();
-		mMeshIB.free();
-		
-		mListValid = false;
-	}
 }
