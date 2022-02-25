@@ -232,6 +232,11 @@ public:
 		m_v[1] -= v.m_v[1];
 		m_v[2] -= v.m_v[2];
 	}
+	
+	inline void operator%=(const Vec3 & v)
+	{
+		*this = (*this) % v;
+	}
 
 	inline void operator*=(float v)
 	{

@@ -66,7 +66,7 @@ void Quat::fromAxisAngle(const Vec3 & in_axis, float angle)
 	
 	// setup 'axis'
 
-	const float sinAngle = std::sin(angle / 2.f);
+	const float sinAngle = std::sin(angle / 2.0f);
 	
 	m_xyz[0] = axis[0] * sinAngle;
 	m_xyz[1] = axis[1] * sinAngle;
@@ -387,6 +387,35 @@ Quat Quat::nlerp(const Quat & quat, float t) const
 	return result;
 }
 
+Vec3 Quat::mul(Vec3Arg v) const
+{
+	const float x = v[0];
+	const float y = v[1];
+	const float z = v[2];
+	
+	const float qx = m_xyz[0];
+	const float qy = m_xyz[1];
+	const float qz = m_xyz[2];
+	const float qw = m_w;
+
+	// calculate quat * vector
+
+	const float ix = qw * x + qy * z - qz * y;
+	const float iy = qw * y + qz * x - qx * z;
+	const float iz = qw * z + qx * y - qy * x;
+	const float iw = - qx * x - qy * y - qz * z;
+
+	// calculate result * inverse quat
+
+	Vec3 result;
+	
+	result[0] = ix * qw + iw * - qx + iy * - qz - iz * - qy;
+	result[1] = iy * qw + iw * - qy + iz * - qx - ix * - qz;
+	result[2] = iz * qw + iw * - qz + ix * - qy - iy * - qx;
+
+	return result;
+}
+
 Quat Quat::operator-() const
 {
 	Quat result;
@@ -524,6 +553,11 @@ Quat & Quat::operator*=(float v)
 	(*this)[3] *= v;
 	
 	return (*this);
+}
+
+Vec3 Quat::operator*(Vec3Arg v) const
+{
+	return mul(v);
 }
 
 Quat::operator Mat4x4() const

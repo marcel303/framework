@@ -26,13 +26,13 @@ struct Pose
 	
     void rotate(Vec3 & v) const
     {
-		v = this->q.mul(v);
+		v = this->q * v;
     }
     
     void invRotate(Vec3 & v) const
     {
         const Quat inv = q.calcConjugate();
-        v = inv.mul(v);
+        v = inv * v;
     }
     
     void transform(Vec3 & v) const
@@ -184,7 +184,7 @@ struct Body
     {
         this->vel = (this->pose.p - this->prevPose.p) / dt;
         
-	#if 1
+	#if 0
         this->prevPose.q = this->prevPose.q.calcConjugate();
         Quat dq = this->pose.q * this->prevPose.q;
 	#else
@@ -284,7 +284,6 @@ static void applyBodyPairCorrection(
     if (C == 0.f)
         return;
 
-// fixme : source calculated normalized, but gives me a glitchy result. check port for errors
 #if 0
     Vec3 normal = corr;
 #else
@@ -324,7 +323,7 @@ static void limitAngle(
 	const float maxCorr = float(M_PI))
 {
     // the key function to handle all angular joint limits
-    const Vec3 c = a % b; // todo : check cross works the same as THREE.crossVectors
+    const Vec3 c = a % b;
 
     float phi = asinf(c * n);
     if (a * b < 0.f)
@@ -343,7 +342,7 @@ static void limitAngle(
         q.fromAxisAngle(n, phi);
 
         Vec3 omega = a;
-        omega = q.mul(omega);
+        omega = q * omega;
         omega = omega % b;
 
         phi = omega.CalcSize();

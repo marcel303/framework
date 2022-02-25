@@ -32,6 +32,8 @@ public:
 
 	Quat slerp(const Quat & quat, float t) const;
 	Quat nlerp(const Quat & quat, float t) const;
+	
+	Vec3 mul(Vec3Arg v) const;
 
 	Quat operator-() const;
 	Quat& operator=(const Quat & quat);
@@ -47,6 +49,8 @@ public:
 	Quat& operator+=(const Quat & quat);
 	Quat& operator/=(float v);
 	Quat& operator*=(float v);
+	
+	Vec3 operator*(Vec3Arg v) const;
 
 	operator Mat4x4() const;
 	float &     operator[](int index);
