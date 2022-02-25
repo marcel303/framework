@@ -1,0 +1,3 @@
+app tenminutePhysics-10-softBodies
+	depend_library framework
+	add_files 10-softBodies.cpp
