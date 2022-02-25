@@ -2,61 +2,90 @@
 
 #define PHYS_TODO 0
 
+// tutorials by Matthias Müller-Fischer,
+// https://matthias-research.github.io/pages/tenMinutePhysics/index.html
+
+// this is a c++ port of the accompanying code for tutorial #10 - Soft Bodies,
+// https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/10-softBodies.html
+
+// note : this app could be accelerated massively through simd use when operating on particle vectors
+
 // ----- math on vector arrays -------------------------------------------------------------
 
-void vecSetZero(float * a, int anr) {
+void vecSetZero(float * __restrict a, int anr) {
 	anr *= 3;
 	a[anr++] = 0.f;
 	a[anr++] = 0.f;
 	a[anr]   = 0.f;
 }
 
-void vecScale(float * a, int anr, const float scale) {
+void vecScale(float * __restrict a, int anr, const float scale) {
 	anr *= 3;
 	a[anr++] *= scale;
 	a[anr++] *= scale;
 	a[anr]   *= scale;
 }
 
-void vecCopy(float * a, int anr, const float * b, int bnr) {
+void vecCopy(
+	      float * __restrict a, int anr,
+	const float * __restrict b, int bnr)
+{
 	anr *= 3; bnr *= 3;
 	a[anr++] = b[bnr++];
 	a[anr++] = b[bnr++];
 	a[anr]   = b[bnr];
 }
 
-void vecAdd(float * a, int anr, const float * b, int bnr, const float scale = 1.f) {
+void vecAdd(
+	      float * __restrict a, int anr,
+	const float * __restrict b, int bnr, const float scale = 1.f)
+{
 	anr *= 3; bnr *= 3;
 	a[anr++] += b[bnr++] * scale;
 	a[anr++] += b[bnr++] * scale;
 	a[anr]   += b[bnr] * scale;
 }
 
-void vecSetDiff(float * dst, int dnr, const float * a, int anr, const float * b, int bnr, const float scale = 1.f) {
+void vecSetDiff(
+	      float * __restrict dst, int dnr,
+	const float * __restrict a,   int anr,
+	const float * __restrict b,   int bnr, const float scale = 1.f)
+{
 	dnr *= 3; anr *= 3; bnr *= 3;
 	dst[dnr++] = (a[anr++] - b[bnr++]) * scale;
 	dst[dnr++] = (a[anr++] - b[bnr++]) * scale;
 	dst[dnr]   = (a[anr] - b[bnr]) * scale;
 }
 
-float vecLengthSquared(const float * a, int anr) {
+float vecLengthSquared(const float * __restrict a, int anr)
+{
 	anr *= 3;
 	const auto a0 = a[anr], a1 = a[anr + 1], a2 = a[anr + 2];
 	return a0 * a0 + a1 * a1 + a2 * a2;
 }
 
-float vecDistSquared(const float * a, int anr, const float * b, int bnr) {
+float vecDistSquared(
+	const float * __restrict a, int anr,
+	const float * __restrict b, int bnr)
+{
 	anr *= 3; bnr *= 3;
 	const auto a0 = a[anr] - b[bnr], a1 = a[anr + 1] - b[bnr + 1], a2 = a[anr + 2] - b[bnr + 2];
 	return a0 * a0 + a1 * a1 + a2 * a2;
 }
 
-float vecDot(const float * a, int anr, const float * b, int bnr) {
+float vecDot(
+	const float * __restrict a, int anr,
+	const float * __restrict b, int bnr)
+{
 	anr *= 3; bnr *= 3;
 	return a[anr] * b[bnr] + a[anr + 1] * b[bnr + 1] + a[anr + 2] * b[bnr + 2];
 }
 
-void vecSetCross(float * a, int anr, const float * b, int bnr, const float * c, int cnr) {
+void vecSetCross(
+	      float * __restrict a, int anr,
+	const float * __restrict b, int bnr,
+	const float * __restrict c, int cnr)
+{
 	anr *= 3; bnr *= 3; cnr *= 3;
 	a[anr++] = b[bnr + 1] * c[cnr + 2] - b[bnr + 2] * c[cnr + 1];
 	a[anr++] = b[bnr + 2] * c[cnr + 0] - b[bnr + 0] * c[cnr + 2];
@@ -98,15 +127,16 @@ static const int volIdOrder[4][3] =
 	{ 0,1,2 }
 };
 
-struct SoftBody {
+struct SoftBody
+{
 	int numParticles = 0;
 	int numTets = 0;
 	float * pos = nullptr;
 	float * prevPos = nullptr;
 	float * vel = nullptr;
 	
-	std::vector<int> tetIds;
-	std::vector<int> edgeIds;
+	const int * tetIds = nullptr;
+	const int * edgeIds = nullptr;
 	std::vector<float> restVol;
 	std::vector<float> edgeLengths;
 	std::vector<float> invMass;
@@ -116,6 +146,8 @@ struct SoftBody {
 	
 	float * temp = nullptr;
 	float * grads = nullptr;
+	
+	const TetMesh * tetMesh = nullptr;
 	
 	int grabId = -1;
 	float grabInvMass = 0.f;
@@ -129,19 +161,26 @@ struct SoftBody {
 		this->pos = copyFloatVec(tetMesh.verts);
 		this->prevPos = copyFloatVec(tetMesh.verts);
 		this->vel = new float[3 * this->numParticles];
+		std::fill(this->vel, this->vel + 3 * this->numParticles, 0.f);
 
-		this->tetIds = tetMesh.tetIds;
-		this->edgeIds = tetMesh.tetEdgeIds;
-		this->restVol.resize(this->numTets);
-		this->edgeLengths.resize(this->edgeIds.size() / 2);
-		this->invMass.resize(this->numParticles);
+	// todo : restVol, edgeLengths and invMass really are part of the TetMesh resource, and not part of the physical simulation state for the soft body. initialize and store them inside TetMesh instead of here
+	
+		this->tetIds = tetMesh.tetIds.data();
+		this->edgeIds = tetMesh.tetEdgeIds.data();
+		this->restVol.resize(this->numTets, 0.f);
+		this->edgeLengths.resize(tetMesh.tetEdgeIds.size() / 2, 0.f);
+		this->invMass.resize(this->numParticles, 0.f);
 
 		this->edgeCompliance = edgeCompliance;
 		this->volCompliance = volCompliance;
 
 		this->temp = new float[4 * 3];
 		this->grads = new float[4 * 3];
+		std::fill(this->temp, this->temp + 4 * 3, 0.f);
+		std::fill(this->grads, this->grads + 4 * 3, 0.f);
 
+		this->tetMesh = &tetMesh;
+		
 		this->grabId = -1;
 		this->grabInvMass = 0.f;
 
@@ -566,13 +605,13 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 				
-				// todo : render meshes
+				// render meshes
 				
 				pushShaderOutputs("n");
 				{
 					for (auto * body : gPhysicsScene.objects)
 					{
-						auto & mesh = bunnyMesh; // todo : get mesh reference from body
+						auto * mesh = body->tetMesh;
 						
 						gxPushMatrix();
 						{
@@ -580,8 +619,8 @@ int main(int argc, char * argv[])
 							{
 								setColor(colorWhite);
 								
-								const auto numTriangles = mesh.tetSurfaceTriIds.size() / 3;
-								const auto * vertexIndices = mesh.tetSurfaceTriIds.data();
+								const auto numTriangles = mesh->tetSurfaceTriIds.size() / 3;
+								const auto * __restrict vertexIndices = mesh->tetSurfaceTriIds.data();
 								
 								for (int i = 0; i < numTriangles; ++i)
 								{
@@ -589,9 +628,9 @@ int main(int argc, char * argv[])
 									const auto vertexIndex2 = vertexIndices[1];
 									const auto vertexIndex3 = vertexIndices[2];
 									
-									const auto * vertex1 = body->pos + vertexIndex1 * 3;
-									const auto * vertex2 = body->pos + vertexIndex2 * 3;
-									const auto * vertex3 = body->pos + vertexIndex3 * 3;
+									const auto * __restrict vertex1 = body->pos + vertexIndex1 * 3;
+									const auto * __restrict vertex2 = body->pos + vertexIndex2 * 3;
+									const auto * __restrict vertex3 = body->pos + vertexIndex3 * 3;
 									
 									const Vec3 a(vertex1[0], vertex1[1], vertex1[2]);
 									const Vec3 b(vertex2[0], vertex2[1], vertex2[2]);

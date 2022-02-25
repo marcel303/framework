@@ -740,7 +740,7 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				// todo : render meshes
+				// render ground plane
 				
 				gxPushMatrix();
 				{
@@ -752,6 +752,8 @@ int main(int argc, char * argv[])
 					popLineSmooth();
 				}
 				gxPopMatrix();
+				
+				// render meshes
 				
 				pushShaderOutputs("n");
 				for (auto * body : bodies)
