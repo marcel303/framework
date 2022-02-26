@@ -86,6 +86,7 @@ add spatialAudioSystem-binaural
 add speakerpanner1
 add speakwithus
 with_platform macos add sRGB
+add tenminutePhysics
 add terrain1
 add twinkle
 add veem-360

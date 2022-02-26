@@ -2,12 +2,14 @@ app tenminutePhysics-10-softBodies
 	depend_library framework
 	add_files 10-softBodies.cpp
 
-app tenminitePhysics-99-fluid2d
+app tenminutePhysics-99-fluid2d
 	depend_library framework
 	add_files 99-fluid2d.cpp
 
-app tenminitePhysics-99-softBody
-        depend_library framework
-        add_files 99-softBody.cpp
-
-
+app tenminutePhysics-99-softBody
+	depend_library framework
+	add_files 99-softBody.cpp
+        
+app tenminutePhysics-88-pbfBoundary
+	depend_library framework
+	add_files 88-pbfBoundary.cpp
