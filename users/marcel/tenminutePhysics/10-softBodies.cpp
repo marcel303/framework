@@ -49,7 +49,18 @@ void vecAdd(
 void vecSetDiff(
 	      float * __restrict dst, int dnr,
 	const float * __restrict a,   int anr,
-	const float * __restrict b,   int bnr, const float scale = 1.f)
+	const float * __restrict b,   int bnr)
+{
+	dnr *= 3; anr *= 3; bnr *= 3;
+	dst[dnr++] = (a[anr++] - b[bnr++]);
+	dst[dnr++] = (a[anr++] - b[bnr++]);
+	dst[dnr]   = (a[anr] - b[bnr]);
+}
+
+void vecSetDiff(
+	      float * __restrict dst, int dnr,
+	const float * __restrict a,   int anr,
+	const float * __restrict b,   int bnr, const float scale)
 {
 	dnr *= 3; anr *= 3; bnr *= 3;
 	dst[dnr++] = (a[anr++] - b[bnr++]) * scale;
@@ -521,9 +532,9 @@ void squash() {
 void newBody() {
 	auto * body = new SoftBody(bunnyMesh);
 	body->translate(
-		-1.f + 2.f * random<float>(0.f, 1.f),
-		0.f,
-		-1.f + 2.f * random<float>(0.f, 1.f));
+		random<float>(-4.f, +4.f),
+		random<float>( 0.f,  2.f),
+		random<float>(-4.f, +4.f));
 	gPhysicsScene.objects.push_back(body);
 	
 	int numTets = 0;
