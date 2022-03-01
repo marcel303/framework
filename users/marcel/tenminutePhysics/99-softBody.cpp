@@ -40,7 +40,7 @@ var grabber;
 
 struct PhysicsParams
 {
-	Vec3 gravity = Vec3(0.f, -10.f, 0.f);
+	float gravity[3] = { 0.f, -10.f, 0.f };
 	float timeStep = 1.f / 60.f;
 	int numSubsteps = 5;
 	float friction = 1000.f;
@@ -223,12 +223,12 @@ struct SoftBody
 	int numParticles = 0;
 	int numElems = 0;
 	
-	float * pos = nullptr;
-	float * prevPos = nullptr;
-	float * vel = nullptr;
+	float * __restrict pos = nullptr;
+	float * __restrict prevPos = nullptr;
+	float * __restrict vel = nullptr;
 	
-	float * invMass = nullptr;
-	float * invRestPose = nullptr;
+	float * __restrict invMass = nullptr;
+	float * __restrict invRestPose = nullptr;
 	
 	std::vector<int> tetIds;
 	
@@ -240,6 +240,10 @@ struct SoftBody
 	float devCompliance = 0.f;
 	float volCompliance = 0.f;
 		
+	std::vector<float> visVerts;
+	std::vector<int> visTriIds;
+	int numVisVerts = 0;
+	
 	SoftBody(
 		const std::vector<float> & vertices,
 		const std::vector<int> & tetIds,
@@ -273,22 +277,11 @@ struct SoftBody
 
 		this->initPhysics(density);
 	
-	#if PHYS_TODO
 		// visual embedded mesh
 
 		this->visVerts = visVerts;
-		this->numVisVerts = visVerts.length / 4;
-		geometry = new THREE.BufferGeometry();
-		geometry.addAttribute('position', new THREE.BufferAttribute(
-			new Float32Array(3 * this->numVisVerts), 3));
-		geometry.setIndex(visTriIds);
-		this->visMesh = new THREE.Mesh(geometry, visMaterial);
-		this->visMesh.castShadow = true;
-		this->visMesh.userData = this;	// for raycasting
-		this->visMesh.layers.enable(1);
-		geometry.computeVertexNormals();
-		this->updateVisMesh();
-	#endif
+		this->visTriIds = visTriIds;
+		this->numVisVerts = visVerts.size() / 4;
 	}
 
 	void initPhysics(const float density)
@@ -330,7 +323,7 @@ struct SoftBody
 
 	void solveElem(const int elemNr, const float dt) 
 	{
-		const float * ir = this->invRestPose;
+		const float * __restrict ir = this->invRestPose;
 
 		// tr(F) = 3
 
@@ -340,14 +333,16 @@ struct SoftBody
 		const auto id3 = this->tetIds[4 * elemNr + 3];
 
 		float P[3*3];
+		float F[3*3];
+		float g[4*3];
+		
+		float dF[3*3];
+		
 		vecSetDiff(P,0, this->pos,id1, this->pos,id0);
 		vecSetDiff(P,1, this->pos,id2, this->pos,id0);
 		vecSetDiff(P,2, this->pos,id3, this->pos,id0);
 
-		float F[3*3];
 		matSetMatProduct(F,0, P,0, this->invRestPose,elemNr);
-
-		float g[4*3];
 		
 		vecSetZero(g,1);
 		vecAdd(g,1, F,0, 2.0 * matIJ(ir,elemNr, 0,0));
@@ -376,7 +371,6 @@ struct SoftBody
 
 		matSetMatProduct(F,0, P,0, this->invRestPose,elemNr);
 
-		float dF[3*3];
 		vecSetCross(dF,0, F,1, F,2);
 		vecSetCross(dF,1, F,2, F,0);
 		vecSetCross(dF,2, F,0, F,1);
@@ -402,7 +396,7 @@ struct SoftBody
 		this->applyToElem(elemNr, g, C, this->volCompliance, dt);
 	}
 
-	void applyToElem(const int elemNr, float * g, const float C, const float compliance, const float dt)
+	void applyToElem(const int elemNr, float * __restrict g, const float C, const float compliance, const float dt)
 	{
 		if (C == 0.f)
 			return;
@@ -489,48 +483,27 @@ struct SoftBody
 	#endif
 	}
 
-	// ----------------- end solver -----------------------------------------------------				
+	// ----------------- end solver -----------------------------------------------------
 
-	void endFrame() 
+	void drawVisMesh() const
 	{
-	#if PHYS_TODO
-		this->updateEdgeMesh();
-		this->updateVisMesh();
-	#endif
-	}
-
-#if PHYS_TODO
-	void updateEdgeMesh()
-	{
-		if (!showTetMesh)
-			return;
-		const positions = this->edgeMesh.geometry.attributes.position.array;
-		for (let i = 0; i < this->pos.length; i++)
-			positions[i] = this->pos[i];
-		this->edgeMesh.geometry.attributes.position.needsUpdate = true;
-		this->edgeMesh.geometry.computeBoundingSphere();
-	}
-#endif
-
-#if PHYS_TODO
-	void updateVisMesh()
-	{
-		const positions = this->visMesh.geometry.attributes.position.array;
+		float * __restrict positions = new float[this->numVisVerts * 3];
 
 		int nr = 0;
 
 		for (int i = 0; i < this->numVisVerts; i++)
 		{
-			var tetNr = this->visVerts[nr++] * 4;
-			var b0 = this->visVerts[nr++];
-			var b1 = this->visVerts[nr++];
-			var b2 = this->visVerts[nr++];
-			var b3 = 1.0 - b0 - b1 - b2;
+			int tetNr = this->visVerts[nr++] * 4;
+			
+			const float b0 = this->visVerts[nr++];
+			const float b1 = this->visVerts[nr++];
+			const float b2 = this->visVerts[nr++];
+			const float b3 = 1.f - b0 - b1 - b2;
 
-			var id0 = this->tetIds[tetNr++];
-			var id1 = this->tetIds[tetNr++];
-			var id2 = this->tetIds[tetNr++];
-			var id3 = this->tetIds[tetNr++];
+			const int id0 = this->tetIds[tetNr++];
+			const int id1 = this->tetIds[tetNr++];
+			const int id2 = this->tetIds[tetNr++];
+			const int id3 = this->tetIds[tetNr++];
 
 			vecSetZero(positions,i);
 
@@ -540,11 +513,40 @@ struct SoftBody
 			vecAdd(positions,i, this->pos,id3, b3);
 		}
 
-		this->visMesh.geometry.computeVertexNormals();
-		this->visMesh.geometry.attributes.position.needsUpdate = true;
-		this->visMesh.geometry.computeBoundingSphere();
+		gxBegin(GX_TRIANGLES);
+		{
+			const int numTriangles = this->visTriIds.size() / 3;
+			const int * __restrict vertexIndices = this->visTriIds.data();
+			
+			for (int i = 0; i < numTriangles; ++i)
+			{
+				const auto vertexIndex1 = vertexIndices[0];
+				const auto vertexIndex2 = vertexIndices[1];
+				const auto vertexIndex3 = vertexIndices[2];
+				
+				const auto * __restrict vertex1 = positions + vertexIndex1 * 3;
+				const auto * __restrict vertex2 = positions + vertexIndex2 * 3;
+				const auto * __restrict vertex3 = positions + vertexIndex3 * 3;
+				
+				const Vec3 a(vertex1[0], vertex1[1], vertex1[2]);
+				const Vec3 b(vertex2[0], vertex2[1], vertex2[2]);
+				const Vec3 c(vertex3[0], vertex3[1], vertex3[2]);
+				
+				const Vec3 normal = ((b - a) % (c - a)).CalcNormalized();
+				
+				gxNormal3fv(&normal[0]);
+				gxVertex3fv(vertex1);
+				gxVertex3fv(vertex2);
+				gxVertex3fv(vertex3);
+				
+				vertexIndices += 3;
+			}
+		}
+		gxEnd();
+		
+		delete [] positions;
+		positions = nullptr;
 	}
-#endif
 
 	void startGrab(Vec3Arg pos)
 	{
@@ -594,10 +596,6 @@ void initPhysics()
 		dragonAttachedTriIds);
 
 	physicsScene.softBodies.push_back(dragon);
-#if PHYS_TODO
-	scene.add(dragon.edgeMesh);
-	scene.add(dragon.visMesh);
-#endif
 }
 
 // ------------------------------------------------------------------
@@ -609,13 +607,8 @@ void simulate()
 	{
 		for (int i = 0; i < physicsScene.softBodies.size(); i++)
 		{
-			physicsScene.softBodies[i]->simulate(dt, &physicsParams.gravity[0]);
+			physicsScene.softBodies[i]->simulate(dt, physicsParams.gravity);
 		}
-	}
-	
-	for (int i = 0; i < physicsScene.softBodies.size(); i++)
-	{
-		physicsScene.softBodies[i]->endFrame();
 	}
 }
 
@@ -740,10 +733,10 @@ static void animate()
 	timeSum += endTime - startTime; 
 	timeFrames++;
 
-	if (timeFrames > 10)
+	if (timeFrames >= 10)
 	{
 		timeSum /= timeFrames;
-		logDebug("time: %.2fms", timeSum / 1000.f);
+		printf("time: %.2fms\n", timeSum / 1000.f);
 		timeFrames = 0;
 		timeSum = 0;
 	}
@@ -772,28 +765,18 @@ static void squash()
 			s.pos[3 * j + 1] = .5f;
 			s.pos[3 * j + 2] += random<float>(-.5f, +.5f) * .3f;
 		}
-
-	#if PHYS_TODO
-		s.updateVisMesh();
-	#endif
 	}
 
 	if (!paused)
 		run();
 }
 
-#if PHYS_TODO
-
-static bool showTetMesh = false;
+static bool showTetMesh = true;
 
 static void onTetMesh()
 {
 	showTetMesh = !showTetMesh;
-	for (int i = 0; i < physicsScene.softBodies.size(); i++)
-		physicsScene.softBodies[i]->edgeMesh.visible = showTetMesh;
 }
-
-#endif
 
 #if PHYS_TODO
 
@@ -819,7 +802,7 @@ int main(int argc, char * argv[])
 
 	Camera3d camera;
 
-	camera.position.Set(0, 4, -4);
+	camera.position.Set(0, 2, -2);
 	
 	for (;;)
 	{
@@ -830,6 +813,12 @@ int main(int argc, char * argv[])
 
 		if (keyboard.wentDown(SDLK_SPACE))
 			run();
+		
+		if (keyboard.wentDown(SDLK_s))
+			squash();
+			
+		if (keyboard.wentDown(SDLK_t))
+			onTetMesh();
 			
 		animate();
 
@@ -860,7 +849,6 @@ int main(int argc, char * argv[])
 				for (auto * body : physicsScene.softBodies)
 				{
 					setColor(colorGreen);
-					
 					gxBegin(GX_LINES);
 					{
 						for (auto & vertexIndex : dragonTetEdgeIds)
@@ -869,9 +857,17 @@ int main(int argc, char * argv[])
 						}
 					}
 					gxEnd();
+					
+					if (showTetMesh)
+					{
+						pushShaderOutputs("n");
+						{
+							setColor(colorWhite);
+							body->drawVisMesh();
+						}
+						popShaderOutputs();
+					}
 				}
-				
-				// todo : renderer.render( scene, camera );
 			}
 			camera.popViewMatrix();
 			
