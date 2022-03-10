@@ -37,9 +37,9 @@ cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --
 cd "$root"
 
 # generate cmake files using chibi
-mkdir -p chibi-build/gradle-files
-"$chibi_bin" -g . chibi-build/gradle-files -platform android.ovr-mobile $target_arg
+mkdir -p chibi-build/gradle-files-ovr
+"$chibi_bin" -g . chibi-build/gradle-files-ovr -platform android.ovr-mobile $target_arg
 
 if [ "$os" == "mac" ]; then
-	open -a Finder -R chibi-build/gradle-files/build.gradle
+	open -a Finder -R chibi-build/gradle-files-ovr/build.gradle
 fi
