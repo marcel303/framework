@@ -221,7 +221,7 @@ bool plain_type_tojson(const PlainType * plain_type, const void * object, REFLEC
 				int value;
 				if (!enum_type->get_value(object, value))
 					value = -1;
-				LOG_ERR("failed to find key for enum %s, value %d", enum_type->typeName, value);
+				LOG_ERR("failed to find key for enum: %s, value: %d", enum_type->typeName, value);
 				return false;
 			}
 			
@@ -257,7 +257,7 @@ bool member_tojson_recursive(
 		
 		if (vector_type == nullptr)
 		{
-			LOG_ERR("failed to find type for vector member %s", member_interface->name);
+			LOG_ERR("failed to find type for vector member: %s", member_interface->name);
 			result &= false;
 		}
 		else
@@ -305,7 +305,7 @@ bool member_tojson_recursive(
 		
 		if (member_type == nullptr)
 		{
-			LOG_ERR("failed to find type for member %s", member->name);
+			LOG_ERR("failed to find type for member: %s", member->name);
 			result &= false;
 		}
 		else if (member->hasFlag<MemberFlag_CustomJsonSerialization>())
@@ -444,14 +444,14 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Member * member, voi
 		
 		if (member_type == nullptr)
 		{
-			LOG_ERR("failed to find type for member %s", member->name);
+			LOG_ERR("failed to find type for member: %s", member->name);
 			result &= false;
 		}
 		else
 		{
 			if (object_fromjson_recursive(typeDB, member_type, member_object, document) == false)
 			{
-				LOG_ERR("failed to deserialize member %s", member->name);
+				LOG_ERR("failed to deserialize member: %s", member->name);
 				result &= false;
 			}
 		}
@@ -521,7 +521,7 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Member * member, const
 		
 		if (member_type == nullptr)
 		{
-			LOG_ERR("failed to find type for member %s", member->name);
+			LOG_ERR("failed to find type for member: %s", member->name);
 			result &= false;
 		}
 		else if (member->hasFlag<MemberFlag_CustomJsonSerialization>())
