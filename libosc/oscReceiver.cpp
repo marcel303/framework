@@ -351,6 +351,28 @@ void OscReceiver::flushMessages(OscReceiveHandler * receiveHandler)
 	}
 }
 
+struct OscReceiveHandler_Function : OscReceiveHandler
+{
+	const OscReceiveFunction & receiveFunction;
+	
+	OscReceiveHandler_Function(const OscReceiveFunction & in_receiveFunction)
+		: receiveFunction(in_receiveFunction)
+	{
+	}
+	
+	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
+	{
+		receiveFunction(m, remoteEndpoint);
+	}
+};
+
+void OscReceiver::flushMessages(const OscReceiveFunction & receiveFunction)
+{
+	OscReceiveHandler_Function receiveHandler(receiveFunction);
+	
+	flushMessages(&receiveHandler);
+}
+
 int OscReceiver::executeOscThread(void * data)
 {
 	OscReceiver * self = (OscReceiver*)data;

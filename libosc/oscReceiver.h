@@ -28,6 +28,7 @@
 #pragma once
 
 #include "osc/OscPacketListener.h"
+#include <functional>
 #include <string>
 
 class OscPacketListener;
@@ -37,6 +38,8 @@ struct OscReceiveHandler
 {
 	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) = 0;
 };
+
+typedef const std::function<void(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint)> OscReceiveFunction;
 
 struct OscReceiver
 {
@@ -63,6 +66,7 @@ struct OscReceiver
 	void pollMessages(OscReceiveHandler * receiveHandler);
 	
 	void flushMessages(OscReceiveHandler * receiveHandler);
+	void flushMessages(const OscReceiveFunction & receiveFunction);
 
 	static int executeOscThread(void * data);
 };
