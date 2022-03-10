@@ -1,13 +1,16 @@
 # note : the iphoneos library needs to be compiled as a static library, due to how it links to SDL_main
 
-with_platform macos    library libsdl2 shared
-with_platform iphoneos library libsdl2
+with_platform macos|android library libsdl2 shared
+with_platform iphoneos      library libsdl2
 
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path ../libsdl2-support/macos expose
 
 	# SDL_config is overridden for linux. the header path _must_ come before SDL itself
 	with_platform linux header_path libsdl2-support/linux expose
+
+	# SDL_config is overridden for android. the header path _must_ come before SDL itself
+	with_platform android header_path libsdl2-support/android expose
 
 	header_path ../libsdl2/include
 	header_path ../libsdl2/include alias_through_copy SDL2 expose
@@ -29,6 +32,7 @@ with_platform iphoneos library libsdl2
 	with_platform macos    scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
 	with_platform iphoneos scan_files c path ../libsdl2/src/render traverse group render
 	with_platform linux    scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
+	with_platform android  scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
 	scan_files c path ../libsdl2/src/render traverse group render
 	scan_files c path ../libsdl2/src/sensor group sensor
 	scan_files c path ../libsdl2/src/sensor/dummy group sensor/dummy
@@ -106,7 +110,38 @@ with_platform iphoneos library libsdl2
 	with_platform linux scan_files c path libsdl2/src/timer/unix
 	with_platform linux depend_package OpenGL
 
+	with_platform android scan_files c path ../libsdl2/src/audio/android
+	with_platform android scan_files c path ../libsdl2/src/core/android
+	with_platform android scan_files c path ../libsdl2/src/audio/android
+	with_platform android scan_files c path ../libsdl2/src/audio/openslES
+	with_platform android scan_files c path ../libsdl2/src/filesystem/android
+	with_platform android scan_files c path ../libsdl2/src/haptic/android
+	with_platform android scan_files c path ../libsdl2/src/hidapi
+	with_platform android scan_files c path ../libsdl2/src/joystick/android
+	with_platform android scan_files c path ../libsdl2/src/joystick/hidapi
+	with_platform android scan_files c path ../libsdl2/src/joystick/virtual group joystick/virtual
+	with_platform android scan_files c path ../libsdl2/src/loadso/dlopen
+	with_platform android scan_files c path ../libsdl2/src/locale/android
+	with_platform android scan_files c path ../libsdl2/src/main/android
+	with_platform android scan_files c path ../libsdl2/src/misc/android
+	with_platform android scan_files c path ../libsdl2/src/power/android
+	with_platform android scan_files c path ../libsdl2/src/sensor/android
+	with_platform android scan_files c path ../libsdl2/src/timer/unix group timer/unix
+	with_platform android scan_files c path ../libsdl2/src/video/android
+	with_platform android header_path android/cpufeatures
+	with_platform android add_files   android/cpufeatures/cpu-features.c
+	with_platform android depend_library android global
+	with_platform android depend_library EGL global
+	with_platform android depend_library GLESv3 global
+	with_platform android depend_library hidapi
+	with_platform android depend_library log global
+	with_platform android depend_library OpenSLES global
+
 	license_file ../libsdl2/COPYING.txt
+
+with_platform android library hidapi shared
+with_platform android	depend_library log global
+with_platform android	scan_files cpp path ../libsdl2/src/hidapi/android
 
 app libsdl2-test-basic
 	add_files test-basic.cpp

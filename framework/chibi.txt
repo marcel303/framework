@@ -149,16 +149,18 @@ library framework objc-arc
 	depend_library libgg
 	depend_library libfbx
 
-	with_platform macos depend_library libsdl2
-	with_platform iphoneos depend_library libsdl2
-	#with_platform linux depend_library libsdl2
-	with_platform windows depend_library libsdl2
+	with_platform      macos    depend_library libsdl2
+	with_platform      iphoneos depend_library libsdl2
+	#with_platform     linux    depend_library libsdl2
+	with_platform_full android  depend_library libsdl2
+	with_platform      windows  depend_library libsdl2
 	
-	with_platform macos    compile_definition FRAMEWORK_USE_SDL 1 expose
-	with_platform iphoneos compile_definition FRAMEWORK_USE_SDL 1 expose
-	with_platform linux    compile_definition FRAMEWORK_USE_SDL 1 expose
-	with_platform android  compile_definition FRAMEWORK_USE_SDL 0 expose
-	with_platform windows  compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform      macos              compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform      iphoneos           compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform      linux              compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform_full android            compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform_full android.ovr-mobile compile_definition FRAMEWORK_USE_SDL 0 expose
+	with_platform      windows            compile_definition FRAMEWORK_USE_SDL 1 expose
 
 	depend_library audiooutput
 	depend_library audiostream
