@@ -740,8 +740,8 @@ struct GraphEdit : GraphEditConnection
 		bool showBackground;
 		bool showGrid;
 		bool showSocketNames;
-		bool showNodeImages; // todo : load/save to XML
 		bool snapToGrid;
+		bool showNodeImages; // todo : load/save to XML
 		bool showOneShotActivity;
 		bool showContinuousActivity;
 		bool showCpuHeat;
@@ -758,8 +758,8 @@ struct GraphEdit : GraphEditConnection
 			, showBackground(true)
 			, showGrid(true)
 			, showSocketNames(true)
-			, showNodeImages(false)
 			, snapToGrid(false)
+			, showNodeImages(false)
 			, showOneShotActivity(false)
 			, showContinuousActivity(false)
 			, showCpuHeat(false)

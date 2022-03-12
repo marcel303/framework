@@ -27,6 +27,8 @@
 
 #pragma once
 
+// todo : use AudioOutputHD, and remove this implementation
+
 // todo : promote to a separate library, and add a core audio implementation
 
 typedef void PaStream;

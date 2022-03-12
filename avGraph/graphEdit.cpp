@@ -31,7 +31,6 @@
 #include "graphEdit_nodeResourceEditorWindow.h"
 #include "graphEdit_nodeTypeSelect.h"
 #include "Parse.h"
-#include "particle.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
@@ -3678,216 +3677,225 @@ bool GraphEdit::tickTouches()
 	const float sy = 1080*2/3;
 
 #if FRAMEWORK_USE_SDL
-	for (auto & event : framework.events) // note : we checked if the current window is active above, so we are okay here to handle touch events
+	if (framework.windowIsActive == false)
 	{
-		if (event.type == SDL_FINGERDOWN)
+		touches = Touches();
+		
+		state = kState_Idle; // todo : only reset state when it's a touch state..
+	}
+	else
+	{
+		for (auto & event : framework.events) // note : we checked if the current window is active above, so we are okay here to handle touch events
 		{
-			//logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
-			
-			if (touches.finger1.id == 0)
+			if (event.type == SDL_FINGERDOWN)
 			{
-				touches.finger1.id = event.tfinger.fingerId;
-			}
-			else if (touches.finger2.id == 0)
-			{
-				touches.finger2.id = event.tfinger.fingerId;
-			}
-		}
-		else if (event.type == SDL_FINGERUP)
-		{
-			//logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
-			
-			if (event.tfinger.fingerId == touches.finger1.id)
-			{
-				touches.finger1 = touches.finger2;
-				touches.finger2 = Touches::FingerInfo();
-			}
-			else if (event.tfinger.fingerId == touches.finger2.id)
-			{
-				touches.finger2 = Touches::FingerInfo();
-			}
-			
-			if (state == kState_TouchDecide)
-			{
-				if (touches.finger1.id == 0 || touches.finger2.id == 0)
+				//logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
+				
+				if (touches.finger1.id == 0)
 				{
-					//logDebug("touch up: TouchDecide -> Idle");
-					
-					state = kState_Idle;
+					touches.finger1.id = event.tfinger.fingerId;
+				}
+				else if (touches.finger2.id == 0)
+				{
+					touches.finger2.id = event.tfinger.fingerId;
 				}
 			}
-			else if (state == kState_TouchDrag)
+			else if (event.type == SDL_FINGERUP)
 			{
-				if (touches.finger1.id == 0 || touches.finger2.id == 0)
-				{
-					//logDebug("touch up: TouchDrag -> Idle");
-					
-					state = kState_Idle;
-				}
-			}
-			else if (state == kState_TouchZoom)
-			{
-				Assert(touches.finger1.id == 0 || touches.finger2.id == 0);
+				//logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
 				
-				if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+				if (event.tfinger.fingerId == touches.finger1.id)
 				{
-					dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
+					touches.finger1 = touches.finger2;
+					touches.finger2 = Touches::FingerInfo();
+				}
+				else if (event.tfinger.fingerId == touches.finger2.id)
+				{
+					touches.finger2 = Touches::FingerInfo();
 				}
 				
-				//logDebug("touch up: TouchZoom -> Idle");
-				
-				state = kState_Idle;
-			}
-		}
-		else if (event.type == SDL_FINGERMOTION)
-		{
-			if (event.tfinger.fingerId != touches.finger1.id &&
-				event.tfinger.fingerId != touches.finger2.id)
-			{
-				continue;
-			}
-			
-			// note : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. this is due to how touches are commonly implemented in windowing systems, where, to avoid issues with presses being confused with touch (movement) gestures, the windowing system first waits until a considerable amount of movement occurs, before sending touch movement events. so it's very likely the first touch movement event shows a very large positional delta compared to the first recorded touch position. and this would result in a 'jump' if we didn't consider this here. so to avoid these jumps, we first wait until the windowing system considers both fingers to be moving around
-			
-			auto & finger =
-				event.tfinger.fingerId == touches.finger1.id
-				? touches.finger1
-				: touches.finger2;
-			
-			if (!touches.finger1.hasPosition ||
-				!touches.finger2.hasPosition)
-			{
-				finger.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
-				finger.hasPosition = true;
-				
-				if (touches.finger1.hasPosition && touches.finger2.hasPosition)
+				if (state == kState_TouchDecide)
 				{
-					Assert(state == kState_Idle);
-					
-					if (state == kState_Idle)
+					if (touches.finger1.id == 0 || touches.finger2.id == 0)
 					{
-						//logDebug("touch move: Idle -> TouchDecide");
+						//logDebug("touch up: TouchDecide -> Idle");
 						
-						state = kState_TouchDecide;
-						touches.finger1.initialPosition = touches.finger1.position;
-						touches.finger2.initialPosition = touches.finger2.position;
-						touches.initialDistance = touches.getDistance();
+						state = kState_Idle;
 					}
 				}
-				else
+				else if (state == kState_TouchDrag)
+				{
+					if (touches.finger1.id == 0 || touches.finger2.id == 0)
+					{
+						//logDebug("touch up: TouchDrag -> Idle");
+						
+						state = kState_Idle;
+					}
+				}
+				else if (state == kState_TouchZoom)
+				{
+					Assert(touches.finger1.id == 0 || touches.finger2.id == 0);
+					
+					if (enabled(kFlag_Zoom) && std::abs(std::abs(dragAndZoom.desiredZoom) - 1.f) < .1f)
+					{
+						dragAndZoom.desiredZoom = Calc::Sign(dragAndZoom.desiredZoom);
+					}
+					
+					//logDebug("touch up: TouchZoom -> Idle");
+					
+					state = kState_Idle;
+				}
+			}
+			else if (event.type == SDL_FINGERMOTION)
+			{
+				if (event.tfinger.fingerId != touches.finger1.id &&
+					event.tfinger.fingerId != touches.finger2.id)
 				{
 					continue;
 				}
-			}
-			
-			const float dragSpeed = 1.f / 2.f / std::max(.02f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
-			
-			const Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
-			const Vec2 delta = position - finger.position;
-			const float lengthFromInitialPosition = (position - finger.initialPosition).CalcSize();
-			
-			finger.position = position;
-			
-			if (state == kState_TouchDecide)
-			{
-				const Vec2 delta1 = touches.finger1.initialPosition - touches.finger1.position;
-				const Vec2 delta2 = touches.finger2.initialPosition - touches.finger2.position;
-				const float distance1 = delta1.CalcSize();
-				const float distance2 = delta2.CalcSize();
 				
-				if (delta1 * delta2 > 0.f &&
-					distance1 >= 5.f &&
-					distance2 >= 5.f)
+				// note : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. this is due to how touches are commonly implemented in windowing systems, where, to avoid issues with presses being confused with touch (movement) gestures, the windowing system first waits until a considerable amount of movement occurs, before sending touch movement events. so it's very likely the first touch movement event shows a very large positional delta compared to the first recorded touch position. and this would result in a 'jump' if we didn't consider this here. so to avoid these jumps, we first wait until the windowing system considers both fingers to be moving around
+				
+				auto & finger =
+					event.tfinger.fingerId == touches.finger1.id
+					? touches.finger1
+					: touches.finger2;
+				
+				if (!touches.finger1.hasPosition ||
+					!touches.finger2.hasPosition)
 				{
-					//logDebug("touch move: TouchDecide -> TouchDrag");
+					finger.position.Set(event.tfinger.x * sx, event.tfinger.y * sy);
+					finger.hasPosition = true;
 					
-					state = kState_TouchDrag;
-				}
-				else
-				{
-					const float distance = fabsf(touches.getDistance() - touches.initialDistance);
-					
-					//logDebug("decide: distance: %.2f", distance);
-					
-					if (distance >= 40.f)
+					if (touches.finger1.hasPosition && touches.finger2.hasPosition)
 					{
-						//logDebug("touch move: TouchDecide -> TouchZoom");
+						Assert(state == kState_Idle);
 						
-						state = kState_TouchZoom;
-						touches.distance = touches.getDistance();
-						touches.initialDistance = touches.getDistance();
+						if (state == kState_Idle)
+						{
+							//logDebug("touch move: Idle -> TouchDecide");
+							
+							state = kState_TouchDecide;
+							touches.finger1.initialPosition = touches.finger1.position;
+							touches.finger2.initialPosition = touches.finger2.position;
+							touches.initialDistance = touches.getDistance();
+						}
+					}
+					else
+					{
+						continue;
 					}
 				}
-			}
-			else if (state == kState_TouchDrag)
-			{
-				if (enabled(kFlag_Drag))
-				{
-					dragAndZoom.focusX -= delta[0] * dragSpeed;
-					dragAndZoom.focusY -= delta[1] * dragSpeed;
-					
-					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
-					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
-					
-					dragAndZoom.updateTransform();
-				}
-			}
-			else if (state == kState_TouchZoom)
-			{
-				Assert(touches.finger1.id != 0);
-				Assert(touches.finger2.id != 0);
 				
-				// update zoom
+				const float dragSpeed = 1.f / 2.f / std::max(.02f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
 				
+				const Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
+				const Vec2 delta = position - finger.position;
+				const float lengthFromInitialPosition = (position - finger.initialPosition).CalcSize();
+				
+				finger.position = position;
+				
+				if (state == kState_TouchDecide)
 				{
-					const float kZoomPixels = 1000.f / 3.f;
+					const Vec2 delta1 = touches.finger1.initialPosition - touches.finger1.position;
+					const Vec2 delta2 = touches.finger2.initialPosition - touches.finger2.position;
+					const float distance1 = delta1.CalcSize();
+					const float distance2 = delta2.CalcSize();
 					
-					// calculate movement
-			
-					const float distance = touches.getDistance();
-					
-					// update zoom
-					
-					const float deltaLength = distance - touches.distance;
-					
-					const float zoomDelta = deltaLength / kZoomPixels;
-
-					// update current touch distance
-					
-					touches.distance = distance;
-					
-					// update zoom info
-					
-					if (enabled(kFlag_Zoom))
+					if (delta1 * delta2 > 0.f &&
+						distance1 >= 5.f &&
+						distance2 >= 5.f)
 					{
-						dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
-						dragAndZoom.desiredZoom = dragAndZoom.zoom;
+						//logDebug("touch move: TouchDecide -> TouchDrag");
+						
+						state = kState_TouchDrag;
+					}
+					else
+					{
+						const float distance = fabsf(touches.getDistance() - touches.initialDistance);
+						
+						//logDebug("decide: distance: %.2f", distance);
+						
+						if (distance >= 40.f)
+						{
+							//logDebug("touch move: TouchDecide -> TouchZoom");
+							
+							state = kState_TouchZoom;
+							touches.distance = touches.getDistance();
+							touches.initialDistance = touches.getDistance();
+						}
+					}
+				}
+				else if (state == kState_TouchDrag)
+				{
+					if (enabled(kFlag_Drag))
+					{
+						dragAndZoom.focusX -= delta[0] * dragSpeed;
+						dragAndZoom.focusY -= delta[1] * dragSpeed;
+						
+						dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+						dragAndZoom.desiredFocusY = dragAndZoom.focusY;
 						
 						dragAndZoom.updateTransform();
 					}
 				}
-				
-				// update movement
-				
-				if (enabled(kFlag_Drag))
+				else if (state == kState_TouchZoom)
 				{
-					// focus onto the mouse cursor location
-					// this makes it easier to zoom into part of the graph, by
-					// hovering over the area of interest, and use pinch to zoom in on it
-					// note : this naive implementation isn't compatible with the drag gesture
-					//        being active at the same time
-				
-					const Vec2 oldMousePosition(mousePosition.x, mousePosition.y);
-					const Vec2 srcMousePosition(mouse.x, mouse.y);
-					const Vec2 newMousePosition = dragAndZoom.invTransform * srcMousePosition;
-				
-					dragAndZoom.focusX += oldMousePosition[0] - newMousePosition[0];
-					dragAndZoom.focusY += oldMousePosition[1] - newMousePosition[1];
-				
-					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
-					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+					Assert(touches.finger1.id != 0);
+					Assert(touches.finger2.id != 0);
 					
-					dragAndZoom.updateTransform();
+					// update zoom
+					
+					{
+						const float kZoomPixels = 1000.f / 3.f;
+						
+						// calculate movement
+				
+						const float distance = touches.getDistance();
+						
+						// update zoom
+						
+						const float deltaLength = distance - touches.distance;
+						
+						const float zoomDelta = deltaLength / kZoomPixels;
+
+						// update current touch distance
+						
+						touches.distance = distance;
+						
+						// update zoom info
+						
+						if (enabled(kFlag_Zoom))
+						{
+							dragAndZoom.zoom += zoomDelta * (std::abs(dragAndZoom.zoom) + .5f);
+							dragAndZoom.desiredZoom = dragAndZoom.zoom;
+							
+							dragAndZoom.updateTransform();
+						}
+					}
+					
+					// update movement
+					
+					if (enabled(kFlag_Drag))
+					{
+						// focus onto the mouse cursor location
+						// this makes it easier to zoom into part of the graph, by
+						// hovering over the area of interest, and use pinch to zoom in on it
+						// note : this naive implementation isn't compatible with the drag gesture
+						//        being active at the same time
+					
+						const Vec2 oldMousePosition(mousePosition.x, mousePosition.y);
+						const Vec2 srcMousePosition(mouse.x, mouse.y);
+						const Vec2 newMousePosition = dragAndZoom.invTransform * srcMousePosition;
+					
+						dragAndZoom.focusX += oldMousePosition[0] - newMousePosition[0];
+						dragAndZoom.focusY += oldMousePosition[1] - newMousePosition[1];
+					
+						dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+						dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+						
+						dragAndZoom.updateTransform();
+					}
 				}
 			}
 		}

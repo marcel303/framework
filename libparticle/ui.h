@@ -4,15 +4,22 @@
 #include <string>
 #include <vector>
 
+// todo : rework how active color works
+
+// todo : inherit some things from newpath ui:
+//        - drawing with drawable lists (?). benefits: no longer tick/draw separation, layer support (overlay layer)
+//        - input capture support
+
 class Color;
 class ColorWheel;
 class EditorTextField;
+
 struct UiElem;
 struct UiMenu;
 struct UiMenuStates;
 struct UiState;
 
-struct ParticleColor; // todo : remove
+struct ParticleColor;
 
 static const int kUiItemHeight = 20;
 
@@ -78,7 +85,7 @@ struct UiMenu
 {
 	int sx;
 	
-	std::map<std::string, UiElem> elems;
+	std::map<std::string, UiElem> elems; // fixme : UiElem may be re-allocated, so activeElem isn't safely pointing to an elem?
 	
 	UiElem & getElem(const char * name)
 	{
@@ -103,7 +110,7 @@ struct UiState
 	float opacity;
 	
 	UiElem * activeElem;
-	ParticleColor * activeColor; // todo : remove
+	ParticleColor * activeColor;
 	ColorWheel * colorWheel;
 	UiMenuStates * menuStates;
 	
