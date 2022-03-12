@@ -10,12 +10,9 @@
 
 namespace assetcopy
 {
-	std::vector<std::string> list_assets(JavaVM * vm, jobject context_object, const char * asset_path)
+	std::vector<std::string> list_assets(JNIEnv * env, jobject context_object, const char * asset_path)
 	{
 		std::vector<std::string> result;
-
-		JNIEnv * env = nullptr;
-		vm->AttachCurrentThread(&env, nullptr);
 
 		auto getAssets_method = env->GetMethodID(env->GetObjectClass(context_object), "getAssets", "()Landroid/content/res/AssetManager;");
 		auto assetManager_object = env->CallObjectMethod(context_object, getAssets_method);
@@ -43,8 +40,6 @@ namespace assetcopy
 
 			env->DeleteLocalRef(jstr);
 		}
-
-		vm->DetachCurrentThread();
 
 		return result;
 	}
@@ -117,9 +112,9 @@ namespace assetcopy
 		return true;
 	}
 
-	bool recursively_copy_assets_to_filesystem(JavaVM * vm, jobject context_object, AAssetManager * assetManager, const char * asset_path)
+	bool recursively_copy_assets_to_filesystem(JNIEnv * env, jobject context_object, AAssetManager * assetManager, const char * asset_path)
 	{
-		auto filenames = list_assets(vm, context_object, asset_path);
+		auto filenames = list_assets(env, context_object, asset_path);
 
 		for (auto & filename : filenames)
 		{
@@ -139,7 +134,7 @@ namespace assetcopy
 				if (!push_dir(filename.c_str()))
 					return false;
 
-				if (!recursively_copy_assets_to_filesystem(vm, context_object, assetManager, full_path))
+				if (!recursively_copy_assets_to_filesystem(env, context_object, assetManager, full_path))
 					return false;
 
 				if (!pop_dir())

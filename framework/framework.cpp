@@ -65,6 +65,10 @@
 	#include "framework-android-app.h"
 	#include <android_native_app_glue.h>
 	#include <GLES3/gl3.h>
+
+	#include <SDL2/SDL_system.h> // SDL_AndroidGetActivity
+	#include <android/asset_manager.h>
+	#include <android/asset_manager_jni.h> // fromJava
 #else
 	#include <GL/glew.h>
 #endif
@@ -670,21 +674,54 @@ bool Framework::init(int sx, int sy)
 	
 #if defined(ANDROID)
 	{
+	#if FRAMEWORK_USE_SDL
+		auto * internalDataPath = SDL_AndroidGetInternalStoragePath();
+		logInfo("internalDataPath: %s", internalDataPath);
+		
+		chdir(internalDataPath); // todo : remove chdir..
+		
+		JNIEnv * env = (JNIEnv*)SDL_AndroidGetJNIEnv();
+		
+		env->PushLocalFrame(16);
+
+		jobject activity = (jobject)SDL_AndroidGetActivity();
+		jclass activity_class = env->GetObjectClass(activity);
+		jmethodID activity_getAssets = env->GetMethodID(activity_class, "getAssets", "()Landroid/content/res/AssetManager;");
+		env->DeleteLocalRef(activity_class);
+		jobject assetManager_java_local = env->CallObjectMethod(activity, activity_getAssets);
+		jobject assetManager_java_global = env->NewGlobalRef(assetManager_java_local); // todo : do we need a global ref? I'm a bit scared to remove this after all the random crashes that, fingers crossed, seem to be gone now (after many attempts rewriting this JNI stuff)
+		//env->DeleteLocalRef(assetManager_java_local);
+		auto * assetManager = AAssetManager_fromJava(env, assetManager_java_global);
+	#else
 		android_app * app = get_android_app();
+		auto & vm = app->activity->vm;
+		auto & clazz = app->activity->clazz;
+		auto & assetManager = app->activity->assetManager;
+		auto * internalDataPath = app->activity->internalDataPath;
+	#endif
+
 		const double t1 = GetSystemTime();
 		const bool copied_files =
-			chdir(app->activity->internalDataPath) == 0 &&
+			chdir(internalDataPath) == 0 &&
 			assetcopy::recursively_copy_assets_to_filesystem(
-				app->activity->vm,
-				app->activity->clazz,
-				app->activity->assetManager,
+				env,
+				activity,
+				assetManager,
 				"") &&
-			chdir(app->activity->internalDataPath) == 0;
+			chdir(internalDataPath) == 0;
 		const double t2 = GetSystemTime();
 		logInfo("asset copying took %.2f seconds", (t2 - t1));
+
+	#if FRAMEWORK_USE_SDL
+		//env->DeleteLocalRef(activity);
+		//env->DeleteLocalRef(clazz);
+
+		env->PopLocalFrame(nullptr);
+	#endif
+
 		if (copied_files == false)
 		{
-			logError("failed to copy assets to filesystem. destination path: %s", app->activity->internalDataPath);
+			logError("failed to copy assets to filesystem. destination path: %s", internalDataPath);
 			return false;
 		}
 	}
@@ -3547,7 +3584,7 @@ static void getCurrentBackingSize(int & sx, int & sy)
 		return;
 	else
 	{
-	#if defined(ENABLE_OPENGL)
+	#if defined(ENABLE_OPENGL) && FRAMEWORK_USE_SDL
 		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &sx, &sy);
 	#else
 		sx = globals.currentWindow->getWidth();
