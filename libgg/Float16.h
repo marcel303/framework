@@ -123,3 +123,6 @@ inline Float16 toFloat16(const float value)
 		return (Float16)(s | (e << 10) | (m >> 13));
 	}
 }
+
+// note : the array version of toFloat16 is optimized to use ARM NEON instructions
+void toFloat16(const float * __restrict values, const int numValues, Float16 * __restrict out_values);
