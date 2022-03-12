@@ -11,6 +11,7 @@ add libwebrequest
 add libreflection
 add libreflection-bindtofile
 add libreflection-jsonio
+add libreflection-object-helpers
 add libreflection-textio
 add magicavoxel
 add magicavoxel-framework

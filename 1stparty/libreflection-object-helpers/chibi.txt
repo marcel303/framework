@@ -1,0 +1,4 @@
+library libreflection-object-helpers
+	depend_library libreflection-textio
+	scan_files cpp|h
+	header_path . expose
