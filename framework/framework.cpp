@@ -3833,7 +3833,7 @@ Vec4 transformToView(const Vec4 & v)
 	
 	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	
-	// from current transform to world
+	// from current transform to view
 	
 	Vec4 t = matM * Vec4(v[0], v[1], v[2], v[3]);
 	

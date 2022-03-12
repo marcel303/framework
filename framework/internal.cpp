@@ -45,6 +45,7 @@
 
 #if ENABLE_MSDF_FONTS
 	#include "msdfgen.h"
+	#include "Float16.h" // for float to float16 conversion
 #endif
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -57,6 +58,8 @@
 #if defined(DEBUG)
 	#include "Timer.h"
 #endif
+
+#define MSDF_FONT_CACHE_VERSION 6
 
 Globals globals;
 
@@ -1714,7 +1717,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA32_FLOAT, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA16_FLOAT, true, true, nullptr);
 	
 	m_map.clear();
 }
@@ -1882,7 +1885,16 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		
 		for (;;)
 		{
-			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy);
+			const int numFloats = bitmapSx * bitmapSy * 4;
+			
+			const float * __restrict msdf_float32 = (float*)&msdf(0, 0);
+			   uint16_t * __restrict msdf_float16 = new uint16_t[numFloats];
+			toFloat16(msdf_float32, numFloats, msdf_float16);
+			
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)msdf_float16, bitmapSx, bitmapSy);
+			
+			delete [] msdf_float16;
+			msdf_float16 = nullptr;
 			
 			if (glyph.textureAtlasElem != nullptr)
 				break;
@@ -1935,7 +1947,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		result &= fread(&version, 4, 1, file) == 1;
 		
-		if (version != 5)
+		if (version != MSDF_FONT_CACHE_VERSION)
 		{
 			logDebug("loadCache: version mismatch");
 			result = false;
@@ -1996,7 +2008,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(int16_t) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
 				result &= fread(bytes, numBytes, 1, file) == 1;
@@ -2080,7 +2092,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	
 	if (result == true)
 	{
-		const int32_t version = 5;
+		const int32_t version = MSDF_FONT_CACHE_VERSION;
 		
 		result &= fwrite(&version, 4, 1, file) == 1;
 	}
@@ -2143,7 +2155,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(int16_t) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
 				result &= m_textureAtlas->texture->downloadContents(ae->x, ae->y, ae->sx, ae->sy, bytes, numBytes);
