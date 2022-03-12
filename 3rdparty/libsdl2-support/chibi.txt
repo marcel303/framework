@@ -1,7 +1,7 @@
 # note : the iphoneos library needs to be compiled as a static library, due to how it links to SDL_main
 
-with_platform macos|android library libsdl2 shared
-with_platform iphoneos      library libsdl2
+with_platform macos            library libsdl2 shared
+with_platform iphoneos|android library libsdl2
 
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path ../libsdl2-support/macos expose
