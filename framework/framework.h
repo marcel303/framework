@@ -534,6 +534,8 @@ public:
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
 	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
+	void (*eventHandler)(const SDL_Event & e, void * userData);
+	void * eventHandlerUserData;
 	
 	std::vector<std::string> resourcePaths;
 	

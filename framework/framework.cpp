@@ -251,6 +251,8 @@ Framework::Framework()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
+	eventHandler = 0;
+	eventHandlerUserData = 0;
 	
 	events.clear();
 	changedFiles.clear();
@@ -976,6 +978,8 @@ bool Framework::shutdown()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
+	eventHandler = 0;
+	eventHandlerUserData = 0;
 	
 	events.clear();
 	changedFiles.clear();
@@ -1326,10 +1330,17 @@ void Framework::process()
 		else if (e.type == SDL_APP_DIDENTERBACKGROUND)
 		{
 			backgrounded = true;
+			logDebug("setting backgrounded to true");
 		}
 		else if (e.type == SDL_APP_DIDENTERFOREGROUND || e.type == SDL_APP_WILLENTERFOREGROUND)
 		{
 			backgrounded = false;
+			logDebug("setting backgrounded to false");
+		}
+		
+		if (eventHandler)
+		{
+			eventHandler(e, eventHandlerUserData);
 		}
 	}
 
