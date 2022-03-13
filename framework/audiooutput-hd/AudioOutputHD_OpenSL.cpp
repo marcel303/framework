@@ -298,14 +298,8 @@ bool AudioOutputHD_OpenSL::doInitialize(const int numChannels, const int frameRa
 	m_buffers[0] = new int16_t[bufferSize * numChannels];
 	m_buffers[1] = new int16_t[bufferSize * numChannels];
 	Assert(m_nextBuffer == 0);
-
-	// start streaming
-	const int initialBufferSize = bufferSize * sizeof(int16_t) * numChannels;
-	memset(m_buffers[m_nextBuffer], 0, initialBufferSize);
-	checkError("Enqueue", (*playBufferQueue)->Enqueue(playBufferQueue, m_buffers[m_nextBuffer], initialBufferSize));
-	m_nextBuffer = 1 - m_nextBuffer;
-
-		// fill in stream info
+	
+	// fill in stream info
 
 	m_streamInfo.frameRate = frameRate;
 	m_streamInfo.secondsSincePlay = 0;
@@ -315,6 +309,12 @@ bool AudioOutputHD_OpenSL::doInitialize(const int numChannels, const int frameRa
 	m_numChannels = numChannels;
 	m_frameRate = frameRate;
 	m_bufferSize = bufferSize;
+
+	// start streaming
+	const int initialBufferSize = bufferSize * sizeof(int16_t) * numChannels;
+	memset(m_buffers[m_nextBuffer], 0, initialBufferSize);
+	checkError("Enqueue", (*playBufferQueue)->Enqueue(playBufferQueue, m_buffers[m_nextBuffer], initialBufferSize));
+	m_nextBuffer = 1 - m_nextBuffer;
 
 	return true;
 }
@@ -353,14 +353,6 @@ bool AudioOutputHD_OpenSL::Shutdown()
 {
 	Stop();
 
-	// free buffers
-
-	delete [] m_buffers[0];
-	delete [] m_buffers[1];
-	m_buffers[0] = nullptr;
-	m_buffers[1] = nullptr;
-	m_nextBuffer = 0;
-
 	// destroy OpenSL objects
 	
 	playVolume = nullptr;
@@ -396,6 +388,14 @@ bool AudioOutputHD_OpenSL::Shutdown()
 		(*engineObject)->Destroy(engineObject);
 		engineObject = nullptr;
 	}
+	
+	// free buffers
+
+	delete [] m_buffers[0];
+	delete [] m_buffers[1];
+	m_buffers[0] = nullptr;
+	m_buffers[1] = nullptr;
+	m_nextBuffer = 0;
 
 	return true;
 }
