@@ -31,18 +31,22 @@
 
 #include <stdio.h>
 
-#define USE_BITBUFFER 1
-
 struct Integer
 {
 	static int numberOfLeadingZeros(const uint32_t value)
 	{
-		return __builtin_clz(value);
+		return
+			value == 0
+			? 32
+			: __builtin_clz(value);
 	}
 	
 	static int numberOfLeadingZeros64(const uint64_t value)
 	{
-		return __builtin_clzll(value);
+		return
+			value == 0
+			? 64
+			: __builtin_clzll(value);
 	}
 };
 
@@ -51,14 +55,9 @@ struct BitInputStream
 	const uint8_t * __restrict bytes = nullptr;
 	size_t numBytes = 0;
 	
-#if USE_BITBUFFER == 1
 	size_t nextByte = 0;
 	uint64_t bitBuffer = 0;
 	uint8_t bitBufferLen = 0;
-#else
-	size_t nextBit = 0;
-	uint8_t currentByte = 0;
-#endif
 
 	~BitInputStream()
 	{
@@ -103,24 +102,6 @@ struct BitInputStream
 	
 	uint8_t readBit()
 	{
-	#if USE_BITBUFFER == 0
-		// should we load the next byte ?
-		
-		if ((nextBit & 7) == 0)
-		{
-			const size_t nextByte = nextBit >> 3;
-			
-			currentByte = bytes[nextByte];
-		}
-		
-		const uint8_t result = (currentByte >> 7) & 1;
-		
-		nextBit++;
-		
-		currentByte <<= 1;
-		
-		return result;
-	#else
 		if (bitBufferLen == 0)
 		{
 			const uint8_t temp = bytes[nextByte];
@@ -133,26 +114,19 @@ struct BitInputStream
 		
 		bitBufferLen -= 1;
 		
-		uint32_t result = (bitBuffer >> bitBufferLen) & 1;
+		const uint32_t result = (bitBuffer >> bitBufferLen) & 1;
 			
 		return result;
-	#endif
 	}
 
 	void alignToByte()
 	{
-	#if USE_BITBUFFER == 0
-		nextBit  += 7;
-		nextBit >>= 3;
-		nextBit <<= 3;
-	#else
 		bitBufferLen -= bitBufferLen & 7;
-	#endif
 	}
 	
 	void skip(const size_t numBits)
 	{
-	#if USE_BITBUFFER == 0
+	#if 0
 		for (size_t i = 0; i < numBits; ++i)
 			readBit();
 	#else
@@ -182,14 +156,9 @@ struct BitInputStream
 	
 	bool eof() const
 	{
-	#if USE_BITBUFFER == 0
-		return (nextBit >> 3) >= numBytes;
-	#else
 		return nextByte == numBytes;
-	#endif
 	}
 	
-#if USE_BITBUFFER == 1
 	uint32_t readUint(const uint8_t numBits)
 	{
 		Assert(numBits <= 32);
@@ -213,23 +182,6 @@ struct BitInputStream
 			
 		return result;
 	}
-#else
-	uint32_t readUint(const uint8_t numBits)
-	{
-		Assert(numBits <= 32);
-		
-		uint32_t result = 0;
-		
-		for (uint8_t i = 0; i < numBits; ++i)
-		{
-			result <<= 1;
-			
-			result |= readBit();
-		}
-		
-		return result;
-	}
-#endif
 	
 	int32_t readSignedInt(const uint8_t n)
 	{
@@ -262,27 +214,22 @@ struct BitInputStream
 			nextByte++;
 		}
 		
-		uint8_t numZeros = Integer::numberOfLeadingZeros64(bitBuffer << (64 - bitBufferLen));
+		const uint8_t numZeros = Integer::numberOfLeadingZeros64(bitBuffer << (64 - bitBufferLen));
 		
-		if (numZeros > bitBufferLen)
-			numZeros = bitBufferLen;
-		
-		val = numZeros;
-		
-		bitBufferLen -= numZeros;
-		
-		if (bitBufferLen == 0)
+		if (numZeros < bitBufferLen)
 		{
+			val = numZeros;
+			
+			bitBufferLen -= numZeros + 1;
+		}
+		else
+		{
+			val = bitBufferLen;
+			
 			// the entire bit buffer contained zeros. keep reading individual bits until we find a non-zero one
 			
 			while (readBit() == 0)
 				val++;
-		}
-		else
-		{
-			// consume the final non-zero bit
-			
-			bitBufferLen -= 1;
 		}
 	#else
 		while (readBit() == 0)
@@ -309,25 +256,20 @@ struct BitInputStream
 		
 		uint8_t numZeros = Integer::numberOfLeadingZeros64(bitBuffer << (64 - bitBufferLen));
 		
-		if (numZeros > bitBufferLen)
-			numZeros = bitBufferLen;
-		
-		val = numZeros;
-		
-		bitBufferLen -= numZeros;
-		
-		if (bitBufferLen == 0)
+		if (numZeros < bitBufferLen)
 		{
+			val = numZeros;
+			
+			bitBufferLen -= numZeros + 1;
+		}
+		else
+		{
+			val = bitBufferLen;
+			
 			// the entire bit buffer contained zeros. keep reading individual bits until we find a non-zero one
 			
 			while (readBit() == 0)
 				val++;
-		}
-		else
-		{
-			// consume the final non-zero bit
-			
-			bitBufferLen -= 1;
 		}
 	#else
 		while (readBit() == 0)
