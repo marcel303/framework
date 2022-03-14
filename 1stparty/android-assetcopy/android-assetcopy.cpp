@@ -49,9 +49,9 @@ namespace assetcopy
 		bool result = true;
 
 		AAsset * asset = AAssetManager_open(
-				assetManager,
-				asset_name,
-				AASSET_MODE_STREAMING);
+			assetManager,
+			asset_name,
+			AASSET_MODE_STREAMING);
 
 		if (asset == nullptr)
 			result = false;
@@ -153,5 +153,53 @@ namespace assetcopy
 		}
 
 		return true;
+	}
+
+	static uint32_t hash_combine(uint32_t hash1, uint32_t hash2)
+	{
+		hash1 ^= hash2 + 0x9e3779b9 + (hash1 << 6) + (hash1 >> 2);
+
+		return hash1;
+	}
+
+	uint32_t recursively_calculate_assets_hash_based_on_length(JNIEnv * env, jobject context_object, AAssetManager * assetManager, const char * asset_path)
+	{
+		uint32_t hash = 0;
+
+		auto filenames = list_assets(env, context_object, asset_path);
+
+		for (auto & filename : filenames)
+		{
+			char full_path[PATH_MAX];
+
+			if (asset_path[0] != 0)
+				sprintf(full_path, "%s/%s", asset_path, filename.c_str());
+			else
+				strcpy(full_path, filename.c_str());
+
+			auto * asset = AAssetManager_open(assetManager, full_path, AASSET_MODE_UNKNOWN);
+
+			if (asset == nullptr)
+			{
+				// this is a directory. traverse
+
+				const uint32_t child_hash = recursively_calculate_assets_hash_based_on_length(env, context_object, assetManager, full_path);
+				
+				hash = hash_combine(hash, child_hash);
+			}
+			else
+			{
+				// this is a file. combine its length into the hash
+
+				const uint32_t file_hash = AAsset_getLength(asset);
+
+				hash = hash_combine(hash, file_hash);
+
+				AAsset_close(asset);
+				asset = nullptr;
+			}
+		}
+
+		return hash;
 	}
 }

@@ -4,6 +4,7 @@
 
 #include <jni.h>
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -16,4 +17,6 @@ namespace assetcopy
 	bool copy_asset_to_filesystem(AAssetManager * assetManager, const char * asset_name, const char * file_name);
 
 	bool recursively_copy_assets_to_filesystem(JNIEnv * env, jobject context_object, AAssetManager * assetManager, const char * asset_path);
+
+	uint32_t recursively_calculate_assets_hash_based_on_length(JNIEnv * env, jobject context_object, AAssetManager * assetManager, const char * asset_path);
 }
