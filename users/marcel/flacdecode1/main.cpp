@@ -33,7 +33,7 @@
 
 struct BitInputStream
 {
-	uint8_t * bytes = nullptr;
+	const uint8_t * __restrict bytes = nullptr;
 	size_t numBytes = 0;
 	
 	size_t nextBit = 0;
@@ -44,8 +44,18 @@ struct BitInputStream
 		close();
 	}
 	
+	void open(void * in_bytes, const int in_numBytes)
+	{
+		close();
+		
+		bytes = (uint8_t*)in_bytes;
+		numBytes = in_numBytes;
+	}
+	
 	void open(const char * path)
 	{
+		close();
+		
 		char * text;
 		size_t size;
 		
@@ -60,22 +70,23 @@ struct BitInputStream
 	
 	void close()
 	{
+		// deallocate memory
+		
 		delete [] bytes;
 		bytes = nullptr;
+		
+		// reset all the fields
 		
 		new (this) BitInputStream();
 	}
 	
 	uint8_t readBit()
 	{
+		// should we load the next byte ?
+		
 		if ((nextBit & 7) == 0)
 		{
 			const size_t nextByte = nextBit >> 3;
-			
-			if (nextByte >= numBytes)
-			{
-				throw ExceptionVA("read beyond end of stream");
-			}
 			
 			currentByte = bytes[nextByte];
 		}
@@ -88,42 +99,6 @@ struct BitInputStream
 		
 		return result;
 	}
-	
-#if 0
-	public int readByte() throws IOException {
-		if (bitBufferLen >= 8)
-			return readUint(8);
-		else
-			return in.read();
-	}
-	
-	readUint:
-		while (bitBufferLen < n) {
-			int temp = in.read();
-			if (temp == -1)
-				throw new EOFException();
-			bitBuffer = (bitBuffer << 8) | temp;
-			bitBufferLen += 8;
-		}
-		bitBufferLen -= n;
-		int result = (int)(bitBuffer >>> bitBufferLen);
-		if (n < 32)
-			result &= (1 << n) - 1;
-		return result;
-		
-	public int readSignedInt(int n) throws IOException {
-		return (readUint(n) << (32 - n)) >> (32 - n);
-	}
-	
-	
-	public long readRiceSignedInt(int param) throws IOException {
-		long val = 0;
-		while (readUint(1) == 0)
-			val++;
-		val = (val << param) | readUint(param);
-		return (val >>> 1) ^ -(val & 1);
-	}
-#endif
 
 	void alignToByte()
 	{
@@ -132,26 +107,21 @@ struct BitInputStream
 		nextBit <<= 3;
 	}
 	
-	int32_t readByte()
+	void skip(const size_t numBits)
 	{
-		if ((nextBit >> 3) >= numBytes)
-			return -1;
-		/*
-	// fixme : why this branch ?
-		if (bitBufferLen >= 8)
-			return readUint(8);
-		else
-			return in.read();
-		*/
-		
-		return readUint(8);
+		for (size_t i = 0; i < numBits; ++i)
+			readBit();
+	}
+	
+	bool eof() const
+	{
+		return (nextBit >> 3) >= numBytes;
 	}
 	
 	uint32_t readUint(const uint8_t numBits)
 	{
 		Assert(numBits <= 32);
 		
-	#if 1
 		uint32_t result = 0;
 		
 		for (uint8_t i = 0; i < numBits; ++i)
@@ -162,25 +132,9 @@ struct BitInputStream
 		}
 		
 		return result;
-	#else
-		uint64_t result = 0;
-		
-		for (uint8_t i = 0; i < numBits; ++i)
-		{
-			result |= uint64_t(readBit()) << 32;
-			
-			result >>= 1;
-		}
-		
-		result >>= 32 - numBits;
-		
-		const uint32_t result_32 = uint32_t(result);
-		
-		return result_32;
-	#endif
 	}
 	
-	int32_t readSignedInt(uint8_t n)
+	int32_t readSignedInt(const uint8_t n)
 	{
 		// read unsigned
 		
@@ -196,11 +150,11 @@ struct BitInputStream
 		return result;
 	}
 	
-	int32_t readRiceSignedInt(int param)
+	int64_t readRiceSignedInt(const uint8_t param)
 	{
-		int32_t val = 0;
+		int64_t val = 0;
 		
-		while (readUint(1) == 0)
+		while (readBit() == 0)
 			val++;
 		
 		val = (val << param) | readUint(param);
@@ -278,43 +232,43 @@ struct SimpleDecodeFlacToWav
 	static void decodeFile(BitInputStream & in, OutputStream & out)
 	{
 		// Handle FLAC header and metadata blocks
+		
 		if (in.readUint(32) != 0x664C6143)
 			throw ExceptionVA("Invalid magic string");
+			
 		int sampleRate = -1;
 		int numChannels = -1;
 		int sampleDepth = -1;
-		long numSamples = -1;
-		for (bool last = false; !last; )
+		int64_t numSamples = -1;
+		
+		for (;;)
 		{
-			last = in.readUint(1) != 0;
+			const bool last = in.readBit() != 0;
 			
-			int type = in.readUint(7);
-			int length = in.readUint(24);
+			const int type = in.readUint(7);
+			const int length = in.readUint(24);
 			
 			if (type == 0) // Stream info block
 			{
-				in.readUint(16);
-				in.readUint(16);
-				in.readUint(24);
-				in.readUint(24);
+				in.skip(16);
+				in.skip(16);
+				in.skip(24);
+				in.skip(24);
 				
 				sampleRate = in.readUint(20);
 				numChannels = in.readUint(3) + 1;
 				sampleDepth = in.readUint(5) + 1;
-				numSamples = (long)in.readUint(18) << 18 | in.readUint(18);
+				numSamples = int64_t(in.readUint(18)) << 18 | in.readUint(18);
 				
-				for (int i = 0; i < 16; i++)
-				{
-					in.readUint(8);
-				}
+				in.skip(16 * 8);
 			}
 			else
 			{
-				for (int i = 0; i < length; i++)
-				{
-					in.readUint(8);
-				}
+				in.skip(length * 8);
 			}
+			
+			if (last)
+				break;
 		}
 		
 		if (sampleRate == -1)
@@ -323,7 +277,7 @@ struct SimpleDecodeFlacToWav
 			throw ExceptionVA("Sample depth not supported");
 		
 		// Start writing WAV file headers
-		int sampleDataLen = numSamples * numChannels * (sampleDepth / 8);
+		const int64_t sampleDataLen = numSamples * numChannels * (sampleDepth / 8);
 		writeString("RIFF", out);
 		writeLittleInt(4, (int)sampleDataLen + 36, out);
 		writeString("WAVE", out);
@@ -346,9 +300,9 @@ struct SimpleDecodeFlacToWav
 	}
 	
 	
-	static void writeLittleInt(int numBytes, int val, OutputStream & out)
+	static void writeLittleInt(const uint8_t numBytes, int32_t val, OutputStream & out)
 	{
-		for (int i = 0; i < numBytes; i++)
+		for (uint8_t i = 0; i < numBytes; i++)
 		{
 			out.write(val & 0xff);
 			
@@ -356,35 +310,36 @@ struct SimpleDecodeFlacToWav
 		}
 	}
 	
-	static void writeString(const char * s, OutputStream &out)
+	static void writeString(const char * s, OutputStream & out)
 	{
 		out.write(s, strlen(s));
 	}
 	
-	static bool decodeFrame(BitInputStream & in, int numChannels, int sampleDepth, OutputStream & out)
+	static bool decodeFrame(BitInputStream & in, const int numChannels, const int sampleDepth, OutputStream & out)
 	{
 		// Read a ton of header fields, and ignore most of them
-		int temp = in.readByte();
-		if (temp == -1)
-			return false;
+		if (in.eof())
+			return false;;
+		const int hdr = in.readUint(8);
 			
-		int sync = temp << 6 | in.readUint(6);
+		const int sync = hdr << 6 | in.readUint(6);
 		if (sync != 0x3FFE)
 			throw ExceptionVA("Sync code expected");
 		
-		in.readUint(1);
-		in.readUint(1);
-		int blockSizeCode = in.readUint(4);
-		int sampleRateCode = in.readUint(4);
-		int chanAsgn = in.readUint(4);
-		in.readUint(3);
-		in.readUint(1);
+		in.skip(1);
+		in.skip(1);
+		const int blockSizeCode = in.readUint(4);
+		const int sampleRateCode = in.readUint(4);
+		const int chanAsgn = in.readUint(4);
+		in.skip(3);
+		in.skip(1);
 		
-		temp = Integer::numberOfLeadingZeros(~(in.readUint(8) << 24)) - 1;
-		for (int i = 0; i < temp; i++)
-			in.readUint(8);
+		const int temp = Integer::numberOfLeadingZeros(~(in.readUint(8) << 24)) - 1;
+		if (temp != -1)
+			in.skip(temp * 8);
 		
 		int blockSize;
+		
 		if (blockSizeCode == 1)
 			blockSize = 192;
 		else if (2 <= blockSizeCode && blockSizeCode <= 5)
@@ -399,11 +354,11 @@ struct SimpleDecodeFlacToWav
 			throw ExceptionVA("Reserved block size");
 		
 		if (sampleRateCode == 12)
-			in.readUint(8);
+			in.skip(8);
 		else if (sampleRateCode == 13 || sampleRateCode == 14)
-			in.readUint(16);
+			in.skip(16);
 		
-		in.readUint(8);
+		in.skip(8);
 		
 		// Decode each channel's subframe, then skip footer
 		std::vector<std::vector<int>> samples;
@@ -412,7 +367,7 @@ struct SimpleDecodeFlacToWav
 			block.resize(blockSize);
 		decodeSubframes(in, sampleDepth, chanAsgn, samples);
 		in.alignToByte();
-		in.readUint(16);
+		in.skip(16);
 		
 		// Write the decoded samples
 		for (int i = 0; i < blockSize; i++)
@@ -430,11 +385,11 @@ struct SimpleDecodeFlacToWav
 		return true;
 	}
 	
-	static void decodeSubframes(BitInputStream & in, int sampleDepth, int chanAsgn, std::vector<std::vector<int>> & result)
+	static void decodeSubframes(BitInputStream & in, const int sampleDepth, const int chanAsgn, std::vector<std::vector<int>> & result)
 	{
-		int blockSize = result[0].size();
+		const int blockSize = result[0].size();
 		
-		std::vector<std::vector<int>> subframes;
+		std::vector<std::vector<int64_t>> subframes;
 		subframes.resize(result.size());
 		for (auto & block : subframes)
 			block.resize(blockSize);
@@ -463,8 +418,9 @@ struct SimpleDecodeFlacToWav
 			{
 				for (int i = 0; i < blockSize; i++)
 				{
-					long side = subframes[1][i];
-					long right = subframes[0][i] - (side >> 1);
+					const int64_t side  = subframes[1][i];
+					const int64_t right = subframes[0][i] - (side >> 1);
+					
 					subframes[1][i] = right;
 					subframes[0][i] = right + side;
 				}
@@ -478,19 +434,19 @@ struct SimpleDecodeFlacToWav
 		for (int ch = 0; ch < result.size(); ch++)
 		{
 			for (int i = 0; i < blockSize; i++)
-				result[ch][i] = (int)subframes[ch][i];
+				result[ch][i] = int32_t(subframes[ch][i]);
 		}
 	}
 	
-	static void decodeSubframe(BitInputStream & in, int sampleDepth, std::vector<int> & result)
+	static void decodeSubframe(BitInputStream & in, int sampleDepth, std::vector<int64_t> & result)
 	{
-		in.readUint(1);
-		int type = in.readUint(6);
-		int shift = in.readUint(1);
+		in.skip(1);
+		const int type = in.readUint(6);
+		int shift = in.readBit();
 		
 		if (shift == 1)
 		{
-			while (in.readUint(1) == 0)
+			while (in.readBit() == 0)
 				shift++;
 		}
 		
@@ -518,13 +474,16 @@ struct SimpleDecodeFlacToWav
 			throw ExceptionVA("Reserved subframe type");
 		}
 		
-		for (int i = 0; i < result.size(); i++)
+		if (shift != 0) // Don't shift if shift is zero
 		{
-			result[i] <<= shift; // todo : don't shift if shift is zero
+			for (int i = 0; i < result.size(); i++)
+			{
+				result[i] <<= shift;
+			}
 		}
 	}
 	
-	static void decodeFixedPredictionSubframe(BitInputStream & in, int predOrder, int sampleDepth, std::vector<int> & result)
+	static void decodeFixedPredictionSubframe(BitInputStream & in, const int predOrder, const int sampleDepth, std::vector<int64_t> & result)
 	{
 		for (int i = 0; i < predOrder; i++)
 		{
@@ -536,15 +495,15 @@ struct SimpleDecodeFlacToWav
 		restoreLinearPrediction(result, FIXED_PREDICTION_COEFFICIENTS[predOrder], 0);
 	}
 	
-	static void decodeLinearPredictiveCodingSubframe(BitInputStream & in, int lpcOrder, int sampleDepth, std::vector<int> & result)
+	static void decodeLinearPredictiveCodingSubframe(BitInputStream & in, const int lpcOrder, const int sampleDepth, std::vector<int64_t> & result)
 	{
 		for (int i = 0; i < lpcOrder; i++)
 		{
 			result[i] = in.readSignedInt(sampleDepth);
 		}
 		
-		int precision = in.readUint(4) + 1;
-		int shift = in.readSignedInt(5);
+		const int precision = in.readUint(4) + 1;
+		const int shift = in.readSignedInt(5);
 		
 		std::vector<int> coefs;
 		coefs.resize(lpcOrder);
@@ -556,28 +515,29 @@ struct SimpleDecodeFlacToWav
 		restoreLinearPrediction(result, coefs, shift);
 	}
 	
-	static void decodeResiduals(BitInputStream & in, int warmup, std::vector<int> & result)
+	static void decodeResiduals(BitInputStream & in, const int warmup, std::vector<int64_t> & result)
 	{
-		int method = in.readUint(2);
+		const int method = in.readUint(2);
 		if (method >= 2)
 			throw ExceptionVA("Reserved residual coding method");
 			
-		int paramBits = method == 0 ? 4 : 5;
-		int escapeParam = method == 0 ? 0xF : 0x1F;
+		const int paramBits = method == 0 ? 4 : 5;
+		const int escapeParam = method == 0 ? 0xF : 0x1F;
 		
-		int partitionOrder = in.readUint(4);
-		int numPartitions = 1 << partitionOrder;
+		const int partitionOrder = in.readUint(4);
+		const int numPartitions = 1 << partitionOrder;
 		if (result.size() % numPartitions != 0)
 			throw ExceptionVA("Block size not divisible by number of Rice partitions");
 			
-		int partitionSize = result.size() / numPartitions;
+		const int partitionSize = result.size() / numPartitions;
 		
 		for (int i = 0; i < numPartitions; i++)
 		{
-			int start = i * partitionSize + (i == 0 ? warmup : 0);
-			int end = (i + 1) * partitionSize;
+			const int start = i * partitionSize + (i == 0 ? warmup : 0);
+			const int end = (i + 1) * partitionSize;
 			
-			int param = in.readUint(paramBits);
+			const int param = in.readUint(paramBits);
+			
 			if (param < escapeParam)
 			{
 				for (int j = start; j < end; j++)
@@ -592,11 +552,11 @@ struct SimpleDecodeFlacToWav
 		}
 	}
 	
-	static void restoreLinearPrediction(std::vector<int> & result, const std::vector<int> & coefs, int shift)
+	static void restoreLinearPrediction(std::vector<int64_t> & result, const std::vector<int> & coefs, const int shift)
 	{
 		for (int i = coefs.size(); i < result.size(); i++)
 		{
-			long sum = 0;
+			int64_t sum = 0;
 			for (int j = 0; j < coefs.size(); j++)
 				sum += result[i - 1 - j] * coefs[j];
 				
