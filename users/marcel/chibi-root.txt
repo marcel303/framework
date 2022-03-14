@@ -29,6 +29,7 @@ with_platform macos   add etherdream1
 with_platform windows add etherdream1
 add fbm1
 add fourier
+add flacdecode1
 add fluidCube
 add freeverb1-1
 add geo
