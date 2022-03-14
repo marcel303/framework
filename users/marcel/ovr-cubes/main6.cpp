@@ -1716,7 +1716,7 @@ void Scene::drawWatersim() const
 			params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
 			params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
-			params.setBaseColorTexture(metallicRoughnessShader, getTexture("texture.bmp"), 0, nextTextureUnit);
+			params.setBaseColorTexture(metallicRoughnessShader, getTexture("texture.png"), 0, nextTextureUnit);
 
 			setColor(255, 200, 180, 180);
 			gxBegin(GX_QUADS);
