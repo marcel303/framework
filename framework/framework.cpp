@@ -336,12 +336,10 @@ bool Framework::init(int sx, int sy)
 
 	int flags = 0;
 
-#if defined(IPHONEOS)
 	if (portraitMode)
 		SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
 	else
 		SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-#endif
 
 #if ENABLE_OPENGL
 	#if defined(IPHONEOS) || defined(ANDROID)
