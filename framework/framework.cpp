@@ -703,14 +703,64 @@ bool Framework::init(int sx, int sy)
 	#endif
 
 		const double t1 = GetSystemTime();
-		const bool copied_files =
-			chdir(internalDataPath) == 0 &&
-			assetcopy::recursively_copy_assets_to_filesystem(
-				env,
-				activity,
-				assetManager,
-				"") &&
-			chdir(internalDataPath) == 0;
+		
+		// as an optimization, we compare the hash for all of the assets, to the same hash
+		// the last time we copied assets. if these values are the same, we can be relatively
+		// sure the assets are the same, and it's safe to skip copying assets
+		// in case they are different, we will copy all of the assets and save the current
+		// hash for next time
+		
+		const uint32_t hash = assetcopy::recursively_calculate_assets_hash_based_on_length(
+			env,
+			activity,
+			assetManager,
+			"");
+		
+		const char * dictionary_path = "assetcopy-info.txt";
+		
+		Dictionary dictionary;
+		dictionary.load(dictionary_path);
+		
+		const uint32_t current_hash = dictionary.getInt("hash", 0);
+
+		bool copied_files;
+
+		if (hash == current_hash)
+		{
+			logDebug("asset hash matches the current hash. not copying assets: hash=%x, current_hash=%x",
+		         hash,
+		         current_hash);
+
+			copied_files = true;
+		}
+		else
+		{
+			logDebug("asset hash doesn't match the current hash. will copy assets: hash=%x, current_hash=%x",
+				hash,
+				current_hash);
+			
+			// copy all of the assets
+			
+			copied_files =
+				chdir(internalDataPath) == 0 &&
+				assetcopy::recursively_copy_assets_to_filesystem(
+					env,
+					activity,
+					assetManager,
+					"") &&
+				chdir(internalDataPath) == 0;
+			
+			// and update the hash (but only on success!)
+			
+			if (copied_files)
+			{
+				dictionary.setInt("hash", hash);
+				dictionary.save(dictionary_path);
+				
+				logDebug("updating hash: %x", hash);
+			}
+		}
+		
 		const double t2 = GetSystemTime();
 		logInfo("asset copying took %.2f seconds", (t2 - t1));
 
