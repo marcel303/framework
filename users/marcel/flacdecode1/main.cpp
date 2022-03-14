@@ -31,14 +31,35 @@
 
 #include <stdio.h>
 
+#define USE_BITBUFFER 1
+
+struct Integer
+{
+	static int numberOfLeadingZeros(const uint32_t value)
+	{
+		return __builtin_clz(value);
+	}
+	
+	static int numberOfLeadingZeros64(const uint64_t value)
+	{
+		return __builtin_clzll(value);
+	}
+};
+
 struct BitInputStream
 {
 	const uint8_t * __restrict bytes = nullptr;
 	size_t numBytes = 0;
 	
+#if USE_BITBUFFER == 1
+	size_t nextByte = 0;
+	uint64_t bitBuffer = 0;
+	uint8_t bitBufferLen = 0;
+#else
 	size_t nextBit = 0;
 	uint8_t currentByte = 0;
-	
+#endif
+
 	~BitInputStream()
 	{
 		close();
@@ -82,6 +103,7 @@ struct BitInputStream
 	
 	uint8_t readBit()
 	{
+	#if USE_BITBUFFER == 0
 		// should we load the next byte ?
 		
 		if ((nextBit & 7) == 0)
@@ -98,26 +120,100 @@ struct BitInputStream
 		currentByte <<= 1;
 		
 		return result;
+	#else
+		if (bitBufferLen == 0)
+		{
+			const uint8_t temp = bytes[nextByte];
+			
+			bitBuffer = temp;
+			bitBufferLen = 8;
+			
+			nextByte++;
+		}
+		
+		bitBufferLen -= 1;
+		
+		uint32_t result = (bitBuffer >> bitBufferLen) & 1;
+			
+		return result;
+	#endif
 	}
 
 	void alignToByte()
 	{
+	#if USE_BITBUFFER == 0
 		nextBit  += 7;
 		nextBit >>= 3;
 		nextBit <<= 3;
+	#else
+		bitBufferLen -= bitBufferLen & 7;
+	#endif
 	}
 	
 	void skip(const size_t numBits)
 	{
+	#if USE_BITBUFFER == 0
 		for (size_t i = 0; i < numBits; ++i)
 			readBit();
+	#else
+		size_t todo = numBits;
+		
+		const size_t todo_bitBuffer =
+			todo < bitBufferLen
+				? todo
+				: bitBufferLen;
+		
+		bitBufferLen -= todo_bitBuffer;
+		
+		todo -= todo_bitBuffer;
+		
+		const size_t todo_bytes = todo >> 3;
+		
+		nextByte += todo_bytes;
+		
+		todo -= todo_bytes << 3;
+		
+		if (todo > 0)
+		{
+			readUint(todo);
+		}
+	#endif
 	}
 	
 	bool eof() const
 	{
+	#if USE_BITBUFFER == 0
 		return (nextBit >> 3) >= numBytes;
+	#else
+		return nextByte == numBytes;
+	#endif
 	}
 	
+#if USE_BITBUFFER == 1
+	uint32_t readUint(const uint8_t numBits)
+	{
+		Assert(numBits <= 32);
+		
+		while (bitBufferLen < numBits)
+		{
+			const uint8_t temp = bytes[nextByte];
+			
+			bitBuffer = (bitBuffer << 8) | temp;
+			bitBufferLen += 8;
+			
+			nextByte++;
+		}
+		
+		bitBufferLen -= numBits;
+		
+		uint32_t result = bitBuffer >> bitBufferLen;
+		
+		if (numBits < 32)
+			result &= (1 << numBits) - 1;
+			
+		return result;
+	}
+#else
 	uint32_t readUint(const uint8_t numBits)
 	{
 		Assert(numBits <= 32);
@@ -133,6 +229,7 @@ struct BitInputStream
 		
 		return result;
 	}
+#endif
 	
 	int32_t readSignedInt(const uint8_t n)
 	{
@@ -150,13 +247,93 @@ struct BitInputStream
 		return result;
 	}
 	
+	int64_t readRiceSignedInt()
+	{
+		int64_t val = 0;
+		
+	#if 1
+		while (bitBufferLen < 64 - 8 && nextByte != numBytes)
+		{
+			const uint8_t temp = bytes[nextByte];
+			
+			bitBuffer = (bitBuffer << 8) | temp;
+			bitBufferLen += 8;
+			
+			nextByte++;
+		}
+		
+		uint8_t numZeros = Integer::numberOfLeadingZeros64(bitBuffer << (64 - bitBufferLen));
+		
+		if (numZeros > bitBufferLen)
+			numZeros = bitBufferLen;
+		
+		val = numZeros;
+		
+		bitBufferLen -= numZeros;
+		
+		if (bitBufferLen == 0)
+		{
+			// the entire bit buffer contained zeros. keep reading individual bits until we find a non-zero one
+			
+			while (readBit() == 0)
+				val++;
+		}
+		else
+		{
+			// consume the final non-zero bit
+			
+			bitBufferLen -= 1;
+		}
+	#else
+		while (readBit() == 0)
+			val++;
+	#endif
+		
+		return (val >> 1) ^ -(val & 1);
+	}
+	
 	int64_t readRiceSignedInt(const uint8_t param)
 	{
 		int64_t val = 0;
 		
+	#if 1
+		while (bitBufferLen < 64 - 8 && nextByte != numBytes)
+		{
+			const uint8_t temp = bytes[nextByte];
+			
+			bitBuffer = (bitBuffer << 8) | temp;
+			bitBufferLen += 8;
+			
+			nextByte++;
+		}
+		
+		uint8_t numZeros = Integer::numberOfLeadingZeros64(bitBuffer << (64 - bitBufferLen));
+		
+		if (numZeros > bitBufferLen)
+			numZeros = bitBufferLen;
+		
+		val = numZeros;
+		
+		bitBufferLen -= numZeros;
+		
+		if (bitBufferLen == 0)
+		{
+			// the entire bit buffer contained zeros. keep reading individual bits until we find a non-zero one
+			
+			while (readBit() == 0)
+				val++;
+		}
+		else
+		{
+			// consume the final non-zero bit
+			
+			bitBufferLen -= 1;
+		}
+	#else
 		while (readBit() == 0)
 			val++;
-		
+	#endif
+	
 		val = (val << param) | readUint(param);
 		
 		return (val >> 1) ^ -(val & 1);
@@ -207,14 +384,6 @@ struct OutputStream
 		{
 			throw ExceptionVA("failed to write to file");
 		}
-	}
-};
-
-struct Integer
-{
-	static int numberOfLeadingZeros(const uint32_t value)
-	{
-		return __builtin_clz(value);
 	}
 };
 
@@ -365,7 +534,7 @@ struct SimpleDecodeFlacToWav
 		samples.resize(numChannels);
 		for (auto & block : samples)
 			block.resize(blockSize);
-		decodeSubframes(in, sampleDepth, chanAsgn, samples);
+		decodeSubframes(in, sampleDepth, chanAsgn, samples, numChannels);
 		in.alignToByte();
 		in.skip(16);
 		
@@ -385,34 +554,59 @@ struct SimpleDecodeFlacToWav
 		return true;
 	}
 	
-	static void decodeSubframes(BitInputStream & in, const int sampleDepth, const int chanAsgn, std::vector<std::vector<int>> & result)
+	static void decodeSubframes(BitInputStream & in, const int sampleDepth, const int chanAsgn, std::vector<std::vector<int>> & result, const int numChannels)
 	{
 		const int blockSize = result[0].size();
 		
-		std::vector<std::vector<int64_t>> subframes;
-		subframes.resize(result.size());
-		for (auto & block : subframes)
-			block.resize(blockSize);
-		
-		if (0 <= chanAsgn && chanAsgn <= 7)
+		if (chanAsgn >= 0 && chanAsgn <= 7)
 		{
-			for (int ch = 0; ch < result.size(); ch++)
-				decodeSubframe(in, sampleDepth, subframes[ch]);
+			std::vector<std::vector<int64_t>> subframes;
+			subframes.resize(numChannels);
+			for (auto & block : subframes)
+				block.resize(blockSize);
+				
+			for (int ch = 0; ch < numChannels; ch++)
+			{
+				decodeSubframe(in, sampleDepth, subframes[ch].data(), subframes[ch].size());
+			}
+			
+			for (int ch = 0; ch < numChannels; ch++)
+			{
+				const int64_t * __restrict subframes_ch = subframes[ch].data();
+						  int * __restrict result_ch = result[ch].data();
+				
+				for (int i = 0; i < blockSize; i++)
+				{
+					result_ch[i] = int32_t(subframes_ch[i]);
+				}
+			}
 		}
-		else if (8 <= chanAsgn && chanAsgn <= 10)
+		else if (chanAsgn >= 8 && chanAsgn <= 10)
 		{
-			decodeSubframe(in, sampleDepth + (chanAsgn == 9 ? 1 : 0), subframes[0]);
-			decodeSubframe(in, sampleDepth + (chanAsgn == 9 ? 0 : 1), subframes[1]);
+			Assert(numChannels == 2);
+			
+			int64_t * __restrict subframes[2] =
+			{
+				(int64_t*)alloca(blockSize * sizeof(int64_t)),
+				(int64_t*)alloca(blockSize * sizeof(int64_t))
+			};
+			
+			decodeSubframe(in, sampleDepth + (chanAsgn == 9 ? 1 : 0), subframes[0], blockSize);
+			decodeSubframe(in, sampleDepth + (chanAsgn == 9 ? 0 : 1), subframes[1], blockSize);
 			
 			if (chanAsgn == 8)
 			{
 				for (int i = 0; i < blockSize; i++)
+				{
 					subframes[1][i] = subframes[0][i] - subframes[1][i];
+				}
 			}
 			else if (chanAsgn == 9)
 			{
 				for (int i = 0; i < blockSize; i++)
+				{
 					subframes[0][i] += subframes[1][i];
+				}
 			}
 			else if (chanAsgn == 10)
 			{
@@ -425,20 +619,25 @@ struct SimpleDecodeFlacToWav
 					subframes[0][i] = right + side;
 				}
 			}
+			
+			for (int ch = 0; ch < numChannels; ch++)
+			{
+				const int64_t * __restrict subframes_ch = subframes[ch];
+						  int * __restrict result_ch = result[ch].data();
+				
+				for (int i = 0; i < blockSize; i++)
+				{
+					result_ch[i] = int32_t(subframes_ch[i]);
+				}
+			}
 		}
 		else
 		{
 			throw ExceptionVA("Reserved channel assignment");
 		}
-		
-		for (int ch = 0; ch < result.size(); ch++)
-		{
-			for (int i = 0; i < blockSize; i++)
-				result[ch][i] = int32_t(subframes[ch][i]);
-		}
 	}
 	
-	static void decodeSubframe(BitInputStream & in, int sampleDepth, std::vector<int64_t> & result)
+	static void decodeSubframe(BitInputStream & in, int sampleDepth, int64_t * __restrict result, const int result_size)
 	{
 		in.skip(1);
 		const int type = in.readUint(6);
@@ -454,48 +653,52 @@ struct SimpleDecodeFlacToWav
 		
 		if (type == 0) // Constant coding
 		{
-			std::fill(result.begin(), result.end(), in.readSignedInt(sampleDepth));
+			std::fill(result, result + result_size, in.readSignedInt(sampleDepth));
 		}
 		else if (type == 1) // Verbatim coding
 		{
-			for (int i = 0; i < result.size(); i++)
+			for (int i = 0; i < result_size; i++)
+			{
 				result[i] = in.readSignedInt(sampleDepth);
+			}
 		}
 		else if (8 <= type && type <= 12)
 		{
-			decodeFixedPredictionSubframe(in, type - 8, sampleDepth, result);
+			decodeFixedPredictionSubframe(in, type - 8, sampleDepth, result, result_size);
 		}
 		else if (32 <= type && type <= 63)
 		{
-			decodeLinearPredictiveCodingSubframe(in, type - 31, sampleDepth, result);
+			decodeLinearPredictiveCodingSubframe(in, type - 31, sampleDepth, result, result_size);
 		}
 		else
 		{
 			throw ExceptionVA("Reserved subframe type");
 		}
 		
-		if (shift != 0) // Don't shift if shift is zero
+		if (shift != 0) // Don't shift if the shift amount is zero
 		{
-			for (int i = 0; i < result.size(); i++)
+			for (int i = 0; i < result_size; i++)
 			{
 				result[i] <<= shift;
 			}
 		}
 	}
 	
-	static void decodeFixedPredictionSubframe(BitInputStream & in, const int predOrder, const int sampleDepth, std::vector<int64_t> & result)
+	static void decodeFixedPredictionSubframe(BitInputStream & in, const int predOrder, const int sampleDepth, int64_t * __restrict result, const int result_size)
 	{
 		for (int i = 0; i < predOrder; i++)
 		{
 			result[i] = in.readSignedInt(sampleDepth);
 		}
 			
-		decodeResiduals(in, predOrder, result);
+		decodeResiduals(in, predOrder, result, result_size);
 		
-		restoreLinearPrediction(result, FIXED_PREDICTION_COEFFICIENTS[predOrder], 0);
+		auto & coefs = FIXED_PREDICTION_COEFFICIENTS[predOrder];
+		
+		restoreLinearPrediction(result, result_size, coefs.data(), coefs.size(), 0);
 	}
 	
-	static void decodeLinearPredictiveCodingSubframe(BitInputStream & in, const int lpcOrder, const int sampleDepth, std::vector<int64_t> & result)
+	static void decodeLinearPredictiveCodingSubframe(BitInputStream & in, const int lpcOrder, const int sampleDepth, int64_t * __restrict result, const int result_size)
 	{
 		for (int i = 0; i < lpcOrder; i++)
 		{
@@ -505,17 +708,17 @@ struct SimpleDecodeFlacToWav
 		const int precision = in.readUint(4) + 1;
 		const int shift = in.readSignedInt(5);
 		
-		std::vector<int> coefs;
-		coefs.resize(lpcOrder);
-		for (int i = 0; i < coefs.size(); i++)
+		const int coefs_size = lpcOrder;
+		int * coefs = (int*)alloca(coefs_size * sizeof(int));
+		for (int i = 0; i < coefs_size; i++)
 			coefs[i] = in.readSignedInt(precision);
 		
-		decodeResiduals(in, lpcOrder, result);
+		decodeResiduals(in, lpcOrder, result, result_size);
 		
-		restoreLinearPrediction(result, coefs, shift);
+		restoreLinearPrediction(result, result_size, coefs, coefs_size, shift);
 	}
 	
-	static void decodeResiduals(BitInputStream & in, const int warmup, std::vector<int64_t> & result)
+	static void decodeResiduals(BitInputStream & in, const int warmup, int64_t * __restrict result, const int result_size)
 	{
 		const int method = in.readUint(2);
 		if (method >= 2)
@@ -526,41 +729,90 @@ struct SimpleDecodeFlacToWav
 		
 		const int partitionOrder = in.readUint(4);
 		const int numPartitions = 1 << partitionOrder;
-		if (result.size() % numPartitions != 0)
+		if (result_size % numPartitions != 0)
 			throw ExceptionVA("Block size not divisible by number of Rice partitions");
 			
-		const int partitionSize = result.size() / numPartitions;
+		const int partitionSize = result_size / numPartitions;
 		
 		for (int i = 0; i < numPartitions; i++)
 		{
 			const int start = i * partitionSize + (i == 0 ? warmup : 0);
 			const int end = (i + 1) * partitionSize;
 			
-			const int param = in.readUint(paramBits);
+			const uint8_t param = in.readUint(paramBits);
 			
 			if (param < escapeParam)
 			{
-				for (int j = start; j < end; j++)
-					result[j] = in.readRiceSignedInt(param);
+				if (param == 0)
+				{
+					for (int j = start; j < end; j++)
+						result[j] = in.readRiceSignedInt();
+				}
+				else
+				{
+					for (int j = start; j < end; j++)
+						result[j] = in.readRiceSignedInt(param);
+				}
 			}
 			else
 			{
-				int numBits = in.readUint(5);
+				const uint8_t numBits = in.readUint(5);
+				
 				for (int j = start; j < end; j++)
 					result[j] = in.readSignedInt(numBits);
 			}
 		}
 	}
 	
-	static void restoreLinearPrediction(std::vector<int64_t> & result, const std::vector<int> & coefs, const int shift)
+	template <int coefs_size>
+	static void restoreLinearPrediction(
+		int64_t * __restrict result,
+		const int result_size,
+		const int * __restrict coefs,
+		const int shift)
 	{
-		for (int i = coefs.size(); i < result.size(); i++)
+		for (int i = coefs_size; i < result_size; i++)
 		{
+			int64_t coef_result[coefs_size];
+			for (int j = 0; j < coefs_size; j++)
+				coef_result[j] = result[i - 1 - j] * coefs[j];
+			
 			int64_t sum = 0;
-			for (int j = 0; j < coefs.size(); j++)
-				sum += result[i - 1 - j] * coefs[j];
-				
+			for (int j = 0; j < coefs_size; j++)
+				sum += coef_result[j];
+			
 			result[i] += sum >> shift;
+		}
+	}
+	
+	static void restoreLinearPrediction(
+		int64_t * __restrict result,
+		const int result_size,
+		const int * __restrict coefs,
+		const int coefs_size,
+		const int shift)
+	{
+		switch (coefs_size)
+		{
+	#if 1
+		case 1: restoreLinearPrediction<1>(result, result_size, coefs, shift); break;
+		case 2: restoreLinearPrediction<2>(result, result_size, coefs, shift); break;
+		case 3: restoreLinearPrediction<3>(result, result_size, coefs, shift); break;
+		case 4: restoreLinearPrediction<4>(result, result_size, coefs, shift); break;
+		case 5: restoreLinearPrediction<5>(result, result_size, coefs, shift); break;
+		case 6: restoreLinearPrediction<6>(result, result_size, coefs, shift); break;
+		case 7: restoreLinearPrediction<7>(result, result_size, coefs, shift); break;
+		case 8: restoreLinearPrediction<8>(result, result_size, coefs, shift); break;
+	#endif
+		default:
+			for (int i = coefs_size; i < result_size; i++)
+			{
+				int64_t sum = 0;
+				for (int j = 0; j < coefs_size; j++)
+					sum += result[i - 1 - j] * coefs[j];
+					
+				result[i] += sum >> shift;
+			}
 		}
 	}
 };
@@ -575,6 +827,8 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 	
+	//for (int i = 0; i < 100; ++i)
+	{
 	try
 	{
 		const char * in_path = argv[1];
@@ -591,6 +845,7 @@ int main(int argc, char * argv[])
 	catch (std::exception & e)
 	{
 		logError("error: %s", e.what());
+	}
 	}
 	
 	return 0;
