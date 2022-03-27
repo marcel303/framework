@@ -175,6 +175,7 @@ library framework objc-arc
 	with_platform windows depend_library remotery
 
 	depend_library freetype2
+	depend_library nanosvg-rast
 	depend_library tinyxml2
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind

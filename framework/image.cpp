@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "image.h"
 #include "MemAlloc.h"
+#include "Path.h"
 #include <string.h> // memset
 
 #ifdef WIN32
@@ -38,8 +39,8 @@
 	#define USE_FREEIMAGE 1 // do not alter
 #endif
 
-#if USE_FREEIMAGE
-	#include <FreeImage.h>
+#if !defined(USE_NANOSVG)
+	#define USE_NANOSVG 1 // do not alter
 #endif
 
 //
@@ -72,9 +73,104 @@ ImageData::~ImageData()
 
 //
 
-ImageData * loadImage(const char * filename)
+#if USE_NANOSVG == 1
+	#include "nanosvgrast.h"
+#endif
+
+ImageData * loadImage_svg(const char * filename, const float scale)
 {
-#if USE_FREEIMAGE
+#if USE_NANOSVG == 1
+	bool success = true;
+	
+	NSVGimage * image = nullptr;
+	
+	if (success)
+	{
+		image = nsvgParseFromFile(filename, "px", 96.0f);
+	
+		if (image == nullptr)
+		{
+			success = false;
+		}
+	}
+	
+	int sx;
+	int sy;
+	
+	if (success)
+	{
+		sx = int(ceilf(scale * image->width));
+		sy = int(ceilf(scale * image->height));
+	}
+	
+	NSVGrasterizer * rast = nullptr;
+	
+	if (success)
+	{
+		rast = nsvgCreateRasterizer();
+		
+		if (rast == nullptr)
+		{
+			success = false;
+		}
+	}
+	
+	ImageData * imageData = nullptr;
+	
+	if (success)
+	{
+		imageData = new ImageData();
+		
+		imageData->sx = sx;
+		imageData->sy = sy;
+		imageData->imageData = (ImageData::Pixel*)MemAlloc(sx * sy * 4, 16);
+	}
+	
+	if (success)
+	{
+		nsvgRasterize(
+			rast,
+			image,
+			0, // tx
+			0, // ty
+			scale, // scale
+			(unsigned char *)imageData->imageData,
+			sx,
+			sy,
+			sx * 4);
+	}
+	
+	if (rast != nullptr)
+	{
+		nsvgDeleteRasterizer(rast);
+		rast = nullptr;
+	}
+	
+	if (image != nullptr)
+	{
+		nsvgDelete(image);
+		image = nullptr;
+	}
+	
+	if (success == false)
+	{
+		delete imageData;
+		imageData = nullptr;
+	}
+	
+	return imageData;
+#else
+	return nullptr;
+#endif
+}
+	
+#if USE_FREEIMAGE == 1
+	#include <FreeImage.h>
+#endif
+
+ImageData * loadImage_freeimage(const char * filename)
+{
+#if USE_FREEIMAGE == 1
 	FIBITMAP * bmp = FreeImage_Load(FreeImage_GetFileType(filename), filename);
 	
 	if (!bmp)
@@ -169,6 +265,18 @@ ImageData * loadImage(const char * filename)
 #else
 	return nullptr;
 #endif
+}
+
+ImageData * loadImage(const char * filename)
+{
+	if (Path::IsExtension(filename, "svg", true))
+	{
+		return loadImage_svg(filename, 1.f);
+	}
+	else
+	{
+		return loadImage_freeimage(filename);
+	}
 }
 
 ImageData *  imagePremultiplyAlpha(const ImageData * image)
@@ -286,7 +394,7 @@ ImageData * imageFixAlphaFilter(const ImageData * image)
 
 bool saveImage(const ImageData * image, const char * filename)
 {
-#if USE_FREEIMAGE
+#if USE_FREEIMAGE == 1
 	bool result = false;
 	
 	FIBITMAP * bmp = FreeImage_Allocate(image->sx, image->sy, 32);

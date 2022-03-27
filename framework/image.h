@@ -58,6 +58,8 @@ public:
 };
 
 ImageData * loadImage(const char * filename);
+ImageData * loadImage_svg(const char * filename, const float scale);
+
 ImageData * imagePremultiplyAlpha(const ImageData * image);
 void        imagePremultiplyAlpha_inPlace(const ImageData * image);
 ImageData * imageFixAlphaFilter(const ImageData * image);
