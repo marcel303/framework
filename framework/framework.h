@@ -1687,6 +1687,7 @@ void setLumif(float l);
 void pushColor();
 void pushColor(const Color & color);
 void popColor();
+const Color & getColor();
 
 void setFont(const Font & font);
 void setFont(const char * font);

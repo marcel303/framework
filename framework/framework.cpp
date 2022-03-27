@@ -4525,6 +4525,11 @@ void popColor()
 	setColor(color);
 }
 
+const Color & getColor()
+{
+	return globals.color;
+}
+
 void setFont(const Font & font)
 {
 	globals.font = const_cast<Font&>(font).getFont();
