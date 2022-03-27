@@ -2176,6 +2176,15 @@ static void gxValidatePipelineState()
 					att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
 					att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
 					break;
+				case BLEND_MUL_ALPHA:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorZero;
+					att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+					att.destinationRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					break;
 				case BLEND_MIN:
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationMin;

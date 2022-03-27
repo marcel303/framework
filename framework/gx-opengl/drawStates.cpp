@@ -104,6 +104,12 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 		break;
+	case BLEND_MUL_ALPHA:
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ZERO, GL_SRC_ALPHA);
+		break;
 	case BLEND_MIN:
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
