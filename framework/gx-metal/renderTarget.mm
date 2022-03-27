@@ -168,7 +168,9 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 				mipmapped:NO];
 
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
-		descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+		descriptor.usage =
+			MTLTextureUsageRenderTarget |
+			MTLTextureUsageShaderRead;
 		
 		__unsafe_unretained id <MTLDevice> device = metal_get_device();
 		id <MTLTexture> depthTexture = [device newTextureWithDescriptor:descriptor];

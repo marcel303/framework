@@ -138,8 +138,15 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 		
 		auto device = metal_get_device();
 		
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:mipmapped];
-		descriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor
+			texture2DDescriptorWithPixelFormat:metalFormat
+			width:sx
+			height:sy
+			mipmapped:mipmapped];
+		descriptor.usage =
+			MTLTextureUsageShaderRead |
+			MTLTextureUsageRenderTarget; // for clear functions
+		//descriptor.storageMode = MTLStorageModePrivate; // note : cannot be private as we may want to download its contents
 		
 		texture = [device newTextureWithDescriptor:descriptor];
 	}
@@ -320,7 +327,12 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int i
 		
 		const MTLPixelFormat metalFormat = toMetalFormat(format);
 
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:srcSx height:srcSy mipmapped:NO];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor
+			texture2DDescriptorWithPixelFormat:metalFormat
+			width:srcSx
+			height:srcSy
+			mipmapped:NO];
+		descriptor.cpuCacheMode = MTLCPUCacheModeWriteCombined;
 		
 		auto src_texture = [device newTextureWithDescriptor:descriptor];
 
@@ -537,7 +549,8 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 		descriptor.height = sy;
 		descriptor.depth = sz;
 		descriptor.mipmapLevelCount = numLevels;
-		descriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+		descriptor.usage = MTLTextureUsageShaderRead;
+		//descriptor.storageMode = MTLStorageModePrivate; // note : cannot be private as we may want to download its contents
 		
 		texture = [device newTextureWithDescriptor:descriptor];
 	}
@@ -602,6 +615,7 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 		descriptor.width = srcSx;
 		descriptor.height = srcSy;
 		descriptor.depth = srcSz;
+		descriptor.cpuCacheMode = MTLCPUCacheModeWriteCombined;
 		
 		auto src_texture = [device newTextureWithDescriptor:descriptor];
 

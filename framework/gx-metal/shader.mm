@@ -1072,12 +1072,12 @@ void Shader::setTexture(GxImmediateIndex index, int unit, GxTextureId texture, b
 
 void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
-	not_implemented;
+	not_implemented; // todo : metal : implement setTextureArray
 }
 
 void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered)
 {
-	not_implemented;
+	not_implemented; // todo : metal : implement setTextureCube
 }
 
 void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
@@ -1127,17 +1127,17 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 
 void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
-	not_implemented;
+	not_implemented;  // todo : metal : implement setBuffer
 }
 
 void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 {
-	not_implemented;
+	not_implemented; // todo : metal : implement setBufferRw
 }
 
 void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
-	not_implemented;
+	not_implemented; // todo : metal : implement setBufferRw
 }
 
 const ShaderCacheElem & Shader::getCacheElem() const
