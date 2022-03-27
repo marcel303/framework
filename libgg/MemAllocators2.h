@@ -280,7 +280,7 @@ protected:
 		return m_pBytes;
 	}
 
-	void SetBytes(void * p, uint32_t size)
+	void SetBytes(void * p, size_t size)
 	{
 		Assert(m_pBytes == m_pBytePtr);
 
