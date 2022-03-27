@@ -1,0 +1,14 @@
+library nanosvg
+	scan_files c|h path ../nanosvg/src
+	header_path ../nanosvg/src expose
+	add_files dummy.c
+
+app nanosvg-example-001
+	depend_library nanosvg
+	add_files ../nanosvg/example/example1.c
+	resource_path ../nanosvg/example
+
+app nanosvg-example-002
+        depend_library nanosvg
+        add_files ../nanosvg/example/example2.c
+        resource_path ../nanosvg/example
