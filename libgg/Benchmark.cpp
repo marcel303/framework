@@ -1,6 +1,10 @@
 #include "Benchmark.h"
 #include "Timer.h"
 
+#if defined(_MSC_VER)
+	#define __thread __declspec(thread)
+#endif
+
 static __thread int m_Indent = 0;
 
 Benchmark::Benchmark(const char* name)
