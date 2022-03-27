@@ -19,7 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <float.h>
-#include <GLFW/glfw3.h>
+
+#include "framework.h"
 
 #define NANOSVG_IMPLEMENTATION
 #include "nanosvg.h"
@@ -73,24 +74,24 @@ static void cubicBez(float x1, float y1, float x2, float y2,
 		cubicBez(x1,y1, x12,y12, x123,y123, x1234,y1234, tol, level+1); 
 		cubicBez(x1234,y1234, x234,y234, x34,y34, x4,y4, tol, level+1); 
 	} else {
-		glVertex2f(x4, y4);
+		gxVertex2f(x4, y4);
 	}
 }
 
 void drawPath(float* pts, int npts, char closed, float tol)
 {
 	int i;
-	glBegin(GL_LINE_STRIP);
-	glColor4ubv(lineColor);
-	glVertex2f(pts[0], pts[1]);
+	gxBegin(GX_LINE_STRIP);
+	gxColor4ub(lineColor[0], lineColor[1], lineColor[2], lineColor[3]);
+	gxVertex2f(pts[0], pts[1]);
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
 		cubicBez(p[0],p[1], p[2],p[3], p[4],p[5], p[6],p[7], tol, 0);
 	}
 	if (closed) {
-		glVertex2f(pts[0], pts[1]);
+		gxVertex2f(pts[0], pts[1]);
 	}
-	glEnd();
+	gxEnd();
 }
 
 void drawControlPts(float* pts, int npts)
@@ -98,64 +99,49 @@ void drawControlPts(float* pts, int npts)
 	int i;
 
 	// Control lines
-	glColor4ubv(lineColor);
-	glBegin(GL_LINES);
+	gxColor4ub(lineColor[0], lineColor[1], lineColor[2], lineColor[3]);
+	gxBegin(GX_LINES);
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
-		glVertex2f(p[0],p[1]);
-		glVertex2f(p[2],p[3]);
-		glVertex2f(p[4],p[5]);
-		glVertex2f(p[6],p[7]);
+		gxVertex2f(p[0],p[1]);
+		gxVertex2f(p[2],p[3]);
+		gxVertex2f(p[4],p[5]);
+		gxVertex2f(p[6],p[7]);
 	}
-	glEnd();
+	gxEnd();
 
 	// Points
-	glPointSize(6.0f);
-	glColor4ubv(lineColor);
+	gxColor4ub(lineColor[0], lineColor[1], lineColor[2], lineColor[3]);
 
-	glBegin(GL_POINTS);
-	glVertex2f(pts[0],pts[1]);
+	hqBegin(HQ_FILLED_CIRCLES);
+	hqFillCircle(pts[0],pts[1], 3.f);
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
-		glVertex2f(p[6],p[7]);
+		hqFillCircle(p[6],p[7], 3.f);
 	}
-	glEnd();
+	hqEnd();
 
 	// Points
-	glPointSize(3.0f);
-
-	glBegin(GL_POINTS);
-	glColor4ubv(bgColor);
-	glVertex2f(pts[0],pts[1]);
+	hqBegin(HQ_FILLED_CIRCLES);
+	gxColor4ub(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
+	hqFillCircle(pts[0],pts[1], 1.5f);
 	for (i = 0; i < npts-1; i += 3) {
 		float* p = &pts[i*2];
-		glColor4ubv(lineColor);
-		glVertex2f(p[2],p[3]);
-		glVertex2f(p[4],p[5]);
-		glColor4ubv(bgColor);
-		glVertex2f(p[6],p[7]);
+		gxColor4ub(lineColor[0], lineColor[1], lineColor[2], lineColor[3]);
+		hqFillCircle(p[2],p[3], 1.5f);
+		hqFillCircle(p[4],p[5], 1.5f);
+		gxColor4ub(bgColor[0], bgColor[1], bgColor[2], bgColor[3]);
+		hqFillCircle(p[6],p[7], 1.5f);
 	}
-	glEnd();
+	hqEnd();
 }
 
-void drawframe(GLFWwindow* window)
+void drawframe()
 {
 	int width = 0, height = 0;
 	float view[4], cx, cy, hw, hh, aspect, px;
 	NSVGshape* shape;
 	NSVGpath* path;
-
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-	glfwGetFramebufferSize(window, &width, &height);
-
-	glViewport(0, 0, width, height);
-	glClearColor(220.0f/255.0f, 220.0f/255.0f, 220.0f/255.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_TEXTURE_2D);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
 
 	// Fit view to bounds
 	cx = g_image->width*0.5f;
@@ -176,26 +162,20 @@ void drawframe(GLFWwindow* window)
 		view[1] = cy - hh * 1.2f;
 		view[3] = cy + hh * 1.2f;
 	}
+	
 	// Size of one pixel.
 	px = (view[2] - view[1]) / (float)width;
 
-	glOrtho(view[0], view[2], view[3], view[1], -1, 1);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	glDisable(GL_DEPTH_TEST);
-	glColor4ub(255,255,255,255);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	setColor(colorWhite);
 
 	// Draw bounds
-	glColor4ub(0,0,0,64);
-	glBegin(GL_LINE_LOOP);
-	glVertex2f(0, 0);
-	glVertex2f(g_image->width, 0);
-	glVertex2f(g_image->width, g_image->height);
-	glVertex2f(0, g_image->height);
-	glEnd();
+	setColor(0,0,0,64);
+	gxBegin(GX_LINE_LOOP);
+	gxVertex2f(0, 0);
+	gxVertex2f(g_image->width, 0);
+	gxVertex2f(g_image->width, g_image->height);
+	gxVertex2f(0, g_image->height);
+	gxEnd();
 
 	for (shape = g_image->shapes; shape != NULL; shape = shape->next) {
 		for (path = shape->paths; path != NULL; path = path->next) {
@@ -203,56 +183,43 @@ void drawframe(GLFWwindow* window)
 			drawControlPts(path->pts, path->npts);
 		}
 	}
-
-	glfwSwapBuffers(window);
-}
-
-void resizecb(GLFWwindow* window, int width, int height)
-{
-	// Update and render
-	NSVG_NOTUSED(width);
-	NSVG_NOTUSED(height);
-	drawframe(window);
 }
 
 int main()
 {
-	GLFWwindow* window;
-	const GLFWvidmode* mode;
-
-	if (!glfwInit())
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+	if (!framework.init(800, 600))
 		return -1;
-
-	mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    window = glfwCreateWindow(mode->width - 40, mode->height - 80, "Nano SVG", NULL, NULL);
-	if (!window)
-	{
-		printf("Could not open window\n");
-		glfwTerminate();
-		return -1;
-	}
-
-	glfwSetFramebufferSizeCallback(window, resizecb);
-	glfwMakeContextCurrent(window);
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-
+		
 
 	g_image = nsvgParseFromFile("../example/nano.svg", "px", 96.0f);
 	if (g_image == NULL) {
 		printf("Could not open SVG image.\n");
-		glfwTerminate();
 		return -1;
 	}
 
-	while (!glfwWindowShouldClose(window))
+	for (;;)
 	{
-		drawframe(window);
-		glfwPollEvents();
+		framework.process();
+		
+		if (framework.quitRequested)
+			break;
+		
+		framework.beginDraw(220, 220, 220, 255);
+		{
+			pushLineSmooth(true);
+			{
+				drawframe();
+			}
+			popLineSmooth();
+		}
+		framework.endDraw();
 	}
-
+	
 	nsvgDelete(g_image);
 
-	glfwTerminate();
+	framework.shutdown();
+	
 	return 0;
 }
