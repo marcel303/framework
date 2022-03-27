@@ -4,7 +4,13 @@
 
 // todo : add usage example
 
-//
+/**
+ * Add to a member type to flag an integer type field as a version number. The version number automatically gets
+ * incremented when the object is (re)loaded.
+ */
+struct ObjectVersionFlag : MemberFlag<ObjectVersionFlag>
+{
+};
 
 /**
  * Binds an object to file. If the file doesn't exist yet, the contents of the object will be written to disk. Otherwise, the object will be loaded from file.
@@ -53,3 +59,5 @@ bool loadObjectFromFile(const TypeDB & typeDB, T & object, const char * filename
 	auto * type = typeDB.findType<T>();
 	return loadObjectFromFile(typeDB, type, &object, filename);
 }
+
+int * findObjectVersionMember(const TypeDB & typeDB, const Type * type, void * object);

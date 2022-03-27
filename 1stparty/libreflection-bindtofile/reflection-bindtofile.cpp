@@ -231,12 +231,24 @@ static bool loadObjectFromJsonFile(const TypeDB & typeDB, const Type * type, voi
 
 	if (result)
 	{
-		return object_fromjson_recursive(typeDB, type, object, document);
+		if (object_fromjson_recursive(typeDB, type, object, document) == false)
+		{
+			LOG_ERR("failed to read object from json");
+			result = false;
+		}
 	}
-	else
+	
+	if (result)
 	{
-		return false;
+		int * versionMember = findObjectVersionMember(typeDB, type, object);
+		
+		if (versionMember != nullptr)
+		{
+			(*versionMember)++;
+		}
 	}
+	
+	return result;
 }
 
 static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, void * object, const char * filename)
@@ -265,6 +277,13 @@ static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, voi
 			return false;
 		}
 		
+		int * versionMember = findObjectVersionMember(typeDB, type, object);
+		
+		if (versionMember != nullptr)
+		{
+			(*versionMember)++;
+		}
+		
 		return true;
 	}
 }
@@ -275,4 +294,54 @@ bool loadObjectFromFile(const TypeDB & typeDB, const Type * type, void * object,
 		return loadObjectFromJsonFile(typeDB, type, object, filename);
 	else
 		return loadObjectFromTextFile(typeDB, type, object, filename);
+}
+
+int * findObjectVersionMember(const TypeDB & typeDB, const Type * type, void * object)
+{
+	int * result = nullptr;
+	
+	if (type->isStructured)
+	{
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
+		{
+			if (member->hasFlag<ObjectVersionFlag>())
+			{
+				Assert(result == nullptr);
+				
+				Assert(member->isVector == false);
+				
+				if (member->isVector == false)
+				{
+					auto * member_scalar = static_cast<const Member_Scalar*>(member);
+					
+					auto * member_type = typeDB.findType(member_scalar->typeIndex);
+					
+					Assert(member_type != nullptr);
+					
+					if (member_type != nullptr)
+					{
+						Assert(member_type->isStructured == false);
+						
+						if (member_type->isStructured == false)
+						{
+							auto * member_type_plain = static_cast<const PlainType*>(member_type);
+							
+							Assert(member_type_plain->dataType == kDataType_Int);
+							
+							if (member_type_plain->dataType == kDataType_Int)
+							{
+								auto * member_object = member_scalar->scalar_access(object);
+								
+								result = &member_type_plain->access<int>(member_object);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return result;
 }
