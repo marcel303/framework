@@ -142,6 +142,7 @@ void AudioOutputHD_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 			
 			// apply a sigmoid function as a soft clipping method
 			
+		// todo : use float representation on devices that support it
 		// fixme : this creates distortion
 			value = value / (1.f + sqrtf(value * value));
 			

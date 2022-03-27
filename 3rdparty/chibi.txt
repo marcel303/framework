@@ -23,6 +23,7 @@ add liquidfun-support
 add midifile
 add miniz
 add msdfgen
+add nanosvg-support
 add nanovg-support
 add oggvorbis
 add oscpack
