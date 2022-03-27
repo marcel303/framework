@@ -140,16 +140,28 @@ void ShaderCacheElem_Metal::shut()
 	
 	//
 	
+	for (auto & vsTextureSampler : vsTextureSamplers)
+		vsTextureSampler = 0;
+	for (auto & psTextureSampler : psTextureSamplers)
+		psTextureSampler = 0;
+		
 	for (auto & vsTexture : vsTextures)
 		vsTexture = nullptr;
 	for (auto & psTexture : psTextures)
 		psTexture = nullptr;
 	
+	textureInfos.clear();
+	
 	//
 	
-	memset(params, -1, sizeof(params));
+	for (int i = 0; i < kMaxBuffers; ++i)
+	{
+		vsBuffers[i] = nullptr;
+		psBuffers[i] = nullptr;
+	}
 	
-	textureInfos.clear();
+	vsMainUniformBufferIndex = -1;
+	psMainUniformBufferIndex = -1;
 	
 	for (int i = 0; i < kMaxBuffers; ++i)
 	{
@@ -161,13 +173,19 @@ void ShaderCacheElem_Metal::shut()
 	
 	uniformInfos.clear();
 	
+	//
+	
 	vsInfo = StageInfo();
 	psInfo = StageInfo();
 	
 	vsFunction = nullptr;
 	psFunction = nullptr;
 	
+	outputs.clear();
+	
 	name.clear();
+	
+	memset(params, -1, sizeof(params));
 }
 
 void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs)
