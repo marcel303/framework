@@ -1,7 +1,12 @@
 library nanosvg
-	scan_files c|h path ../nanosvg/src
+	scan_files h path ../nanosvg/src
 	header_path ../nanosvg/src expose
-	add_files dummy.c
+	add_files svg-impl.c
+
+library nanosvg-rast
+        scan_files h path ../nanosvg/src
+        header_path ../nanosvg/src expose
+        add_files svg-rast-impl.c
 
 app nanosvg-example-001
 	depend_library framework
@@ -11,5 +16,6 @@ app nanosvg-example-001
 
 app nanosvg-example-002
 	depend_library nanosvg
+	depend_library nanosvg-rast
 	add_files ../nanosvg/example/example2.c
 	resource_path ../nanosvg/example
