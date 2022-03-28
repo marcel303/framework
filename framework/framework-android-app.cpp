@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(ANDROID)
+#if defined(ANDROID) && FRAMEWORK_USE_SDL == 1
 
 #include "framework-android-app.h"
 #include <android_native_app_glue.h>
