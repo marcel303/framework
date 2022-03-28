@@ -365,7 +365,7 @@ static Plane makePlane(Vec2Arg v1, Vec2Arg v2)
 	return result;
 }
 
-static Plane makePlaneWithWinding(Vec2Arg v1, Vec2Arg v2, const float winding)
+static Plane makePlaneWithWinding(Vec2Arg v1, Vec2Arg v2, const float windingParity)
 {
 	Plane result;
 	
@@ -375,7 +375,7 @@ static Plane makePlaneWithWinding(Vec2Arg v1, Vec2Arg v2, const float winding)
 	result.normal = makePerpendicularVector(v2 - v1).CalcNormalized();
 	result.distance = result.normal * v1;
 	
-	if (winding < 0.f)
+	if (windingParity < 0.f)
 	{
 		std::swap(result.v1, result.v2);
 		
@@ -424,6 +424,8 @@ static void epa(
 			triangleVertex2,
 			triangleVertex3);
 	
+// todo : check if winding parity is 0. if it is this means two or more vertices are equal to each other and the simplex has collapsed in on itself
+
 	planes.push(makePlaneWithWinding(triangleVertex1, triangleVertex2, windingParity));
 	planes.push(makePlaneWithWinding(triangleVertex2, triangleVertex3, windingParity));
 	planes.push(makePlaneWithWinding(triangleVertex3, triangleVertex1, windingParity));
