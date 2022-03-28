@@ -158,9 +158,13 @@ void VfxNodeDrawPrimitive::draw() const
 						const float x = zipper.read(0, 0.f);
 						const float y = zipper.read(1, 0.f);
 						const float rx = zipper.read(2, 1.f);
-						const float ry = zipper.read(3, rx);
+						const float ry = zipper.read(3, rx); // .. todo : default = 0 ? ..
 						
-						hqFillRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size);
+						hqFillRect(
+							x - rx * size,
+							y - ry * size,
+							x + rx * size,
+							y + ry * size);
 						
 						zipper.next();
 					}
@@ -228,9 +232,15 @@ void VfxNodeDrawPrimitive::draw() const
 						const float x = zipper.read(0, 0.f);
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
-						const float s = zipper.read(3, 1.f);
+						const float s = zipper.read(3, 1.f); // .. todo : default = 0 ? ..
 						
-						hqLine(x - r * size, y, s * strokeSize, x + r * size, y, s * strokeSize);
+						hqLine(
+							x - r * size,
+							y,
+							s * strokeSize,
+							x + r * size,
+							y,
+							s * strokeSize);
 						
 						zipper.next();
 					}
@@ -248,9 +258,15 @@ void VfxNodeDrawPrimitive::draw() const
 						const float x = zipper.read(0, 0.f);
 						const float y = zipper.read(1, 0.f);
 						const float r = zipper.read(2, 1.f);
-						const float s = zipper.read(3, 1.f);
+						const float s = zipper.read(3, 1.f); // .. todo : default = 0 ? ..
 						
-						hqLine(x, y - r * size, s * strokeSize, x, y + r * size, s * strokeSize);
+						hqLine(
+							x,
+							y - r * size,
+							s * strokeSize,
+							x,
+							y + r * size,
+							s * strokeSize);
 						
 						zipper.next();
 					}
@@ -324,10 +340,14 @@ void VfxNodeDrawPrimitive::draw() const
 					{
 						const float x = zipper.read(0, 0.f);
 						const float y = zipper.read(1, 0.f);
-						const float rx = zipper.read(2, 1.f);
-						const float ry = zipper.read(3, rx);
+						const float r = zipper.read(2, 1.f);
 						
-						hqStrokeRect(x - rx * size, y - ry * size, x + rx * size, y + ry * size, strokeSize);
+						hqStrokeRect(
+							x - r * size,
+							y - r * size,
+							x + r * size,
+							y + r * size,
+							strokeSize);
 						
 						zipper.next();
 					}
