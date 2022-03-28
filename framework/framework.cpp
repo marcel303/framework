@@ -62,13 +62,16 @@
 	#include <OpenGLES/ES3/glext.h>
 #elif defined(ANDROID)
 	#include "android-assetcopy.h"
-	#include "framework-android-app.h"
-	#include <android_native_app_glue.h>
 	#include <GLES3/gl3.h>
 
 	#include <SDL2/SDL_system.h> // SDL_AndroidGetActivity
 	#include <android/asset_manager.h>
 	#include <android/asset_manager_jni.h> // fromJava
+
+#if FRAMEWORK_USE_SDL == 0
+	#include "framework-android-app.h" // app activity assetManager
+	#include <android_native_app_glue.h>
+#endif
 #else
 	#include <GL/glew.h>
 #endif

@@ -241,7 +241,6 @@ library framework objc-arc
 
 	with_platform android depend_library FreeImage
 	with_platform android depend_library android-assetcopy
-	with_platform android depend_library android-native-app-glue
 	with_platform android depend_library android global
 	with_platform android depend_library log global
 	with_platform android depend_library GLESv3 global
@@ -252,6 +251,7 @@ library framework objc-arc
 	with_platform android.ovr-mobile compile_definition FRAMEWORK_USE_OVR_MOBILE 1 expose
 	with_platform android.ovr-mobile depend_library ovr-mobile-opengl
 	with_platform android.ovr-mobile depend_library ovr-mobile-vrapi
+	with_platform android.ovr-mobile depend_library android-native-app-glue
 
 	resource_path data
 
