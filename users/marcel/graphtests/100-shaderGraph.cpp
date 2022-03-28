@@ -2215,7 +2215,11 @@ int main(int argc, char * argv[])
 	
 	graphEdit.load("test-001.xml");
 	
+#define ENABLE_SHADER_GRAPH_CACHE_TEST 1
+
+#if ENABLE_SHADER_GRAPH_CACHE_TEST == 1
 	framework.registerResourceCache(&g_shaderGraphCache);
+	
 	g_shaderGraphCache.addShaderNodePath("100-nodes");
 	
 	{
@@ -2226,6 +2230,7 @@ int main(int argc, char * argv[])
 		shader.setImmediate("time", 0.f);
 		clearShader();
 	}
+#endif
 	
 	std::set<std::string> nodeDependencies;
 	std::map<int, int> usedVsInputsByNode;
