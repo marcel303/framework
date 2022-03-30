@@ -368,6 +368,8 @@ void metal_set_viewport(const int sx, const int sy)
 
 void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const int in_sy)
 {
+	Assert(s_activeRenderPass != nullptr);
+	
 	// clip coords to be within render target size
 	
 	int x = in_x;
@@ -431,6 +433,8 @@ void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const in
 
 void metal_clear_scissor()
 {
+	Assert(s_activeRenderPass != nullptr);
+	
 	const NSUInteger sx = s_activeRenderPass->backingSx;
 	const NSUInteger sy = s_activeRenderPass->backingSy;
 	
@@ -1327,7 +1331,9 @@ static GxTextureId createTexture(
 				width:sx
 				height:sy
 				mipmapped:NO];
-		
+		descriptor.usage = MTLTextureUsageShaderRead;
+		descriptor.storageMode = MTLStorageModePrivate;
+			
 		id <MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
 		
 		if (texture == nullptr)
