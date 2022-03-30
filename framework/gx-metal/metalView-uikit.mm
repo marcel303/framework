@@ -36,6 +36,7 @@
 #import "metalView-uikit.h"
 
 #import <Metal/Metal.h>
+#import <UIKit/UIKit.h>
 #import <QuartzCore/CAMetalLayer.h>
 
 @implementation MetalView
@@ -59,11 +60,16 @@
 {
     if ((self = [super initWithFrame:frame]))
     {
+		self.opaque = YES;
+		self.backgroundColor = nil;
+		if (framework.windowIsResizable)
+			self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
 		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;
+        self.metalLayer.backgroundColor = nil;
         self.metalLayer.device = device;
         self.metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 		
@@ -84,6 +90,19 @@
 
 - (void)updateDrawableSize
 {
+	UIScreen * screen = [UIScreen mainScreen];
+	
+	const float scale =
+		framework.allowHighDpi
+		? screen.nativeScale
+		: 1.0;
+		
+	logDebug("contentScaleFactor: %.2f -> %.2f",
+		self.contentScaleFactor,
+		scale);
+	
+	self.metalLayer.contentsScale = scale;
+		
     CGSize size  = self.bounds.size;
     size.width  *= self.layer.contentsScale;
     size.height *= self.layer.contentsScale;
@@ -104,9 +123,30 @@
 		}
 	}
 	
-    //NSLog(@"updateDrawableSize");
+    NSLog(@"updateDrawableSize: (%.2f x %.2f) @%.2f -> (%.2f x %.2f)",
+		self.bounds.size.width,
+		self.bounds.size.height,
+		scale,
+		self.metalLayer.drawableSize.width,
+		self.metalLayer.drawableSize.height);
 }
 
+/*
+- (void)didMoveToWindow
+{
+	[self updateDrawableSize];
+	
+    //self.contentScaleFactor = self.window.screen.nativeScale;
+}
+*/
+
+- (void)layoutSubviews
+{
+    [super layoutSubviews];
+    
+    [self updateDrawableSize];
+}
+    
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {
 	return nil;

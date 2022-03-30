@@ -461,6 +461,22 @@ float metal_get_backing_scale(SDL_Window * window)
 		
 		return result;
 	}
+#elif defined(IPHONEOS)
+	@autoreleasepool
+	{
+		float result = 1.f;
+		
+		auto i = windowDatas.find(window);
+		
+		if (i != windowDatas.end())
+		{
+			auto * windowData = i->second;
+			
+			result = windowData->metalview.layer.contentsScale;
+		}
+		
+		return result;
+	}
 #else
 	#error
 #endif
@@ -2690,7 +2706,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 		//        user doesn't specify a custom vertex layout, we are required
 		//        to at least set _something_ for the VS inputs
 		[s_activeRenderPass->encoder
-			setVertexBytes:s_gxVertices
+			setVertexBytes:s_gxVertexBuffer
 			length:sizeof(GxVertex)
 			atIndex:0];
 	}

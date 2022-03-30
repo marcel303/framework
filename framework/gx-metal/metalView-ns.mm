@@ -67,6 +67,7 @@
 		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;
+        self.metalLayer.backgroundColor = nil;
         self.metalLayer.device = device;
         self.metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 		

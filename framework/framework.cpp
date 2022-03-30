@@ -4112,7 +4112,7 @@ static void setDrawRect_physical(int x, int y, int sx, int sy)
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
-	logDebug("setDrawRect (virtual): (%d, %d) x (%d, %d)", x, y, sx , sy);
+	//logDebug("setDrawRect (virtual): (%d, %d) x (%d, %d)", x, y, sx , sy);
 	
 	int viewportSx;
 	int viewportSy;
@@ -4130,7 +4130,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	ScaleX(sx);
 	ScaleY(sy);
 	
-	logDebug("setDrawRect (physical): (%d, %d) x (%d, %d)", x, y, sx , sy);
+	//logDebug("setDrawRect (physical): (%d, %d) x (%d, %d)", x, y, sx , sy);
 	
 	setDrawRect_physical(x, y, sx, sy);
 }
