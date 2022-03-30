@@ -439,6 +439,7 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 		
 		const int bytesPerPixel =
 			texture.pixelFormat == MTLPixelFormatRGBA8Unorm ? 4 :
+			texture.pixelFormat == MTLPixelFormatRGBA16Float ? 8 :
 			texture.pixelFormat == MTLPixelFormatRGBA32Float ? 16 :
 			0;
 		
