@@ -822,6 +822,9 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
 	
+	if (s_activeRenderPass != nullptr)
+		pushDrawRect();
+	
 	// end the current pass and begin a new one
 	
 	if (s_renderPasses.empty() == false)
@@ -852,6 +855,9 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	gxPushMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
+	
+	if (s_activeRenderPass != nullptr)
+		pushDrawRect();
 	
 	// end the current pass and begin a new one
 	
@@ -913,6 +919,9 @@ void popRenderPass()
 	gxPopMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
+	
+	if (s_activeRenderPass != nullptr)
+		popDrawRect();
 }
 
 // -- render states --
