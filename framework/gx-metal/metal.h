@@ -48,6 +48,8 @@ void metal_set_viewport(const int sx, const int sy);
 void metal_set_scissor(const int x, const int y, const int sx, const int sy);
 void metal_clear_scissor();
 
+float metal_get_backing_scale(SDL_Window * window);
+
 #ifdef __OBJC__
 
 // --- private data and helper functions ---

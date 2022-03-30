@@ -29,11 +29,11 @@
 #include "gx_render.h"
 #include <algorithm>
 
-extern int s_backingScale; // todo : can this be exposed/determined more nicely?
-
 void Surface::construct()
 {
-	m_backingScale = 1;
+	m_backingScale = 1.f;
+	m_backingSx = 0;
+	m_backingSy = 0;
 	
 	m_bufferId = 0;
 	
@@ -78,7 +78,7 @@ void Surface::destruct()
 	m_depthTarget[1] = nullptr;
 	
 	m_properties = SurfaceProperties();
-	m_backingScale = 1;
+	m_backingScale = 1.f;
 	
 	m_bufferId = 0;
 }
@@ -88,14 +88,14 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered, const int backingScale)
+Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered, const float backingScale)
 {
 	construct();
 	
 	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered, backingScale);
 }
 
-Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale)
+Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const float backingScale)
 {
 	construct();
 
@@ -129,21 +129,21 @@ bool Surface::init(const SurfaceProperties & properties)
 	
 	bool result = true;
 	
-	if (properties.dimensions.backingScale != 0)
+	if (properties.dimensions.backingScale != 0.f)
 		m_backingScale = properties.dimensions.backingScale;
 	else
-		m_backingScale = s_backingScale;
+		m_backingScale = ::getBackingScale();
 	
-	const int backingSx = sx * m_backingScale;
-	const int backingSy = sy * m_backingScale;
+	m_backingSx = sx == 0 ? 0 : std::max<int>(1, sx * m_backingScale);
+	m_backingSy = sy == 0 ? 0 : std::max<int>(1, sy * m_backingScale);
 	
 	// allocate color target backing storage
 
 	if (properties.colorTarget.enabled)
 	{
 		ColorTargetProperties targetProperties;
-		targetProperties.dimensions.width = backingSx;
-		targetProperties.dimensions.height = backingSy;
+		targetProperties.dimensions.width = m_backingSx;
+		targetProperties.dimensions.height = m_backingSy;
 		targetProperties.format = properties.colorTarget.format;
 		
 		for (int i = 0; result && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
@@ -163,8 +163,8 @@ bool Surface::init(const SurfaceProperties & properties)
 	if (properties.depthTarget.enabled)
 	{
 		DepthTargetProperties targetProperties;
-		targetProperties.dimensions.width = backingSx;
-		targetProperties.dimensions.height = backingSy;
+		targetProperties.dimensions.width = m_backingSx;
+		targetProperties.dimensions.height = m_backingSy;
 		targetProperties.format = properties.depthTarget.format;
 		targetProperties.enableTexture = true;
 		
@@ -201,7 +201,7 @@ bool Surface::init(const SurfaceProperties & properties)
 	return result;
 }
 
-bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, int backingScale)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, float backingScale)
 {
 	SurfaceProperties properties;
 	
@@ -301,9 +301,19 @@ int Surface::getHeight() const
 	return m_properties.dimensions.height;
 }
 
-int Surface::getBackingScale() const
+float Surface::getBackingScale() const
 {
 	return m_backingScale;
+}
+
+int Surface::getBackingWidth() const
+{
+	return m_backingSx;
+}
+
+int Surface::getBackingHeight() const
+{
+	return m_backingSy;
 }
 
 SURFACE_FORMAT Surface::getFormat() const

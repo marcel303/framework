@@ -131,10 +131,6 @@ static inline float scale255(const float v)
 
 #endif
 
-static int getCurrentBackingScale();
-static void getCurrentBackingSize(int & sx, int & sy);
-static void getCurrentViewportSize(int & sx, int & sy);
-
 // -----
 
 Color colorBlackTranslucent(0, 0, 0, 0);
@@ -156,8 +152,6 @@ VrHand vrHand[2];
 VrPointer vrPointer[2];
 
 // -----
-
-int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
@@ -500,9 +494,6 @@ bool Framework::init(int sx, int sy)
 
 	globals.mainWindow = new Window(mainWindow);
 	
-	fassert(globals.currentWindow == nullptr);
-	globals.currentWindow = globals.mainWindow;
-	
 	windowSx = sx;
 	windowSy = sy;
 
@@ -519,14 +510,35 @@ bool Framework::init(int sx, int sy)
 		return false;
 	}
 	
+	// determine the backing scale. a few options exist here:
+	// 1.) we inherit the backing scale the platform natively uses
+	//     examples: on Apple devices we may have a window sized (sx, sy) with a drawable size a multiple of these
+	//               dimensions. on Apple devices, it's possible to divide these sizes and get the backing scale
+	// 2.) we determine the backing scale based on the screen size and the desired window size
+	//     examples: on Android devices SDL supports only the native screen resolution. the window size reported
+	//               by SDL doesn't include any scaling, so the drawable size and window size are always 1:1 on
+	//               these devices. onne way to determine a backing scale, is to divide the actual window size by
+	//               the desired window size
+#if defined(IPHONEOS) && 0
 	int drawableSx;
 	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-	const float backingScaleX = drawableSx / float(globals.currentWindow->getWidth());
-	const float backingScaleY = drawableSy / float(globals.currentWindow->getHeight());
-	s_backingScale = (int)roundf(fmaxf(backingScaleX, backingScaleY));
-	if (s_backingScale < 1)
-		s_backingScale = 1;
+	SDL_GL_GetDrawableSize(globals.mainWindow->getWindow(), &drawableSx, &drawableSy);
+	const float backingScaleX = drawableSx / float(mainWindow->getWidth());
+	const float backingScaleY = drawableSy / float(mainWindow->getHeight());
+	globals.initialScreenBackingScale = fmaxf(backingScaleX, backingScaleY);
+	if (globals.initialScreenBackingScale < 1.f)
+		globals.initialScreenBackingScale = 1.f;
+#else
+	int drawableSx;
+	int drawableSy;
+	SDL_GL_GetDrawableSize(globals.mainWindow->getWindow(), &drawableSx, &drawableSy);
+	const float backingScaleX = drawableSx / float(sx);
+	const float backingScaleY = drawableSy / float(sy);
+	globals.initialScreenBackingScale = fmaxf(backingScaleX, backingScaleY);
+	if (globals.initialScreenBackingScale < 1.f)
+		globals.initialScreenBackingScale = 1.f;
+#endif
+	Assert(globals.initialScreenBackingScale >= 1.f);
 	
 	{
 		const char * renderer = (char*)glGetString(GL_RENDERER);
@@ -603,6 +615,8 @@ bool Framework::init(int sx, int sy)
 	metal_attach(globals.mainWindow->getWindow());
 	
 	metal_make_active(globals.mainWindow->getWindow());
+	
+	globals.initialScreenBackingScale = metal_get_backing_scale(globals.mainWindow->getWindow());
 #endif
 #else // !FRAMEWORK_USE_SDL
 #if FRAMEWORK_USE_OVR_MOBILE
@@ -634,17 +648,16 @@ bool Framework::init(int sx, int sy)
 	globals.mainWindow->hide();
 #endif
 
-	fassert(globals.currentWindow == nullptr);
-	globals.currentWindow = globals.mainWindow;
-
 	windowSx = sx;
 	windowSy = sy;
 
-	s_backingScale = 1;
+	globals.initialScreenBackingScale = 1.f;
 #endif
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
+
+	pushWindow(*globals.mainWindow);
 
 	registerShaderOutput('c', "color", "vec4", "shader_fragColor");
 	registerShaderOutput('n', "normal", "vec4", "shader_fragNormal");
@@ -966,10 +979,12 @@ bool Framework::shutdown()
 	{
 		fassert(globals.currentWindow == globals.mainWindow);
 		
+		popWindow();
+		
+		fassert(globals.currentWindow == nullptr);
+		
 		delete globals.mainWindow;
 		globals.mainWindow = nullptr;
-		
-		globals.currentWindow = nullptr;
 	}
 	
 #if FRAMEWORK_USE_SDL
@@ -1992,12 +2007,57 @@ void Framework::setFullscreen(bool fullscreen)
 
 void Framework::getCurrentViewportSize(int & sx, int & sy) const
 {
-	::getCurrentViewportSize(sx, sy);
+	// return the view size of the current render target
+	
+	if (globals.renderPass.isActive)
+	{
+		sx = globals.renderPass.viewportSx;
+		sy = globals.renderPass.viewportSy;
+	}
+	else
+	{
+		// or when no render target is active, the view size of the current window
+	
+	#if ENABLE_DISPLAY_SIZE_SCALING
+		// todo : fix for case with fullscreen desktop mode
+		// fixme : add specific code for setting screen matrix
+		if (globals.currentWindow == globals.mainWindow)
+		{
+			sx = globals.displaySize[0];
+			sy = globals.displaySize[1];
+		}
+		else
+	#endif
+		{
+			sx = globals.currentWindow->getWidth() * framework.minification;
+			sy = globals.currentWindow->getHeight() * framework.minification;
+		}
+	}
 }
 
-int Framework::getCurrentBackingScale() const
+void Framework::getCurrentBackingSize(int & sx, int & sy) const
 {
-	return ::getCurrentBackingScale();
+	if (getCurrentRenderTargetSize(sx, sy))
+	{
+		return;
+	}
+	else
+	{
+		AssertMsg(false, "getCurrentBackingSize(..) is called while no render target is set");
+		
+	#if FRAMEWORK_USE_SDL && defined(ENABLE_OPENGL)
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &sx, &sy);
+	#else
+		Assert(globals.currentWindow->getScreenBackingScale() == 1.f);
+		sx = globals.currentWindow->getWidth();
+		sy = globals.currentWindow->getHeight();
+	#endif
+	}
+}
+
+float Framework::getCurrentBackingScale() const
+{
+	return globals.renderBackingScale;
 }
 
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
@@ -3627,66 +3687,21 @@ static int surfaceStackSize = 0;
 bool s_renderPassIsBackbufferPass = false; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
 #endif
 
-static int getCurrentBackingScale()
+bool getCurrentRenderTargetSize(int & sx, int & sy)
 {
-	int sx, sy;
-	int backingScale;
-	
-	if (getCurrentRenderTargetSize(sx, sy, backingScale))
-		return backingScale;
-	else
-		return s_backingScale;
-}
-
-static void getCurrentBackingSize(int & sx, int & sy)
-{
-	int backingScale;
-	
-	if (getCurrentRenderTargetSize(sx, sy, backingScale))
-		return;
+	if (globals.renderPass.isActive == false)
+	{
+		return false;
+	}
 	else
 	{
-	#if defined(ENABLE_OPENGL) && FRAMEWORK_USE_SDL
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &sx, &sy);
-	#else
-		sx = globals.currentWindow->getWidth();
-		sy = globals.currentWindow->getHeight();
+		Assert(globals.renderPass.backingSx != 0);
+		Assert(globals.renderPass.backingSy != 0);
 		
-		sx *= s_backingScale;
-		sy *= s_backingScale;
-	#endif
-	}
-}
-
-static void getCurrentViewportSize(int & sx, int & sy)
-{
-	// return the size of the current render target
-	
-	int backingScale;
-	
-	if (getCurrentRenderTargetSize(sx, sy, backingScale))
-	{
-		sx /= backingScale;
-		sy /= backingScale;
-	}
-	else
-	{
-		// or when no render target is active, the size of the current window
-	
-	#if ENABLE_DISPLAY_SIZE_SCALING
-		// todo : fix for case with fullscreen desktop mode
-		// fixme : add specific code for setting screen matrix
-		if (globals.currentWindow == globals.mainWindow)
-		{
-			sx = globals.displaySize[0];
-			sy = globals.displaySize[1];
-		}
-		else
-	#endif
-		{
-			sx = globals.currentWindow->getWidth() * framework.minification;
-			sy = globals.currentWindow->getHeight() * framework.minification;
-		}
+		sx = globals.renderPass.backingSx;
+		sy = globals.renderPass.backingSy;
+		
+		return true;
 	}
 }
 
@@ -3706,7 +3721,7 @@ void applyTransform()
 {
 	int sx;
 	int sy;
-	getCurrentViewportSize(sx, sy);
+	framework.getCurrentViewportSize(sx, sy);
 	
 	applyTransformWithViewportSize(sx, sy);
 }
@@ -3902,7 +3917,7 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 	
 	int sx;
 	int sy;
-	getCurrentViewportSize(sx, sy);
+	framework.getCurrentViewportSize(sx, sy);
 	
 #if ENABLE_OPENGL
 	transform.MakePerspectiveGL(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
@@ -3974,6 +3989,25 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	return transformToScreen(modelViewProjection, v, w);
 }
 
+static Stack<float, kMaxSurfaceStackSize> s_backingScaleStack;
+
+void pushBackingScale(const float scale)
+{
+	s_backingScaleStack.push(globals.renderBackingScale);
+	
+	globals.renderBackingScale = scale;
+}
+
+void popBackingScale()
+{
+	globals.renderBackingScale = s_backingScaleStack.popValue();
+}
+
+float getBackingScale()
+{
+	return globals.renderBackingScale;
+}
+
 void pushSurface(Surface * newSurface, const bool clearSurface)
 {
 #if ENABLE_SCREENSHOTS
@@ -3992,23 +4026,25 @@ void pushSurface(Surface * newSurface, const bool clearSurface)
 	
 	if (newSurface == nullptr)
 	{
+		// note : we first push the backing scale, as the render pass will (re)apply the transform, which references the backing scale
+		pushBackingScale(globals.currentWindow->getScreenBackingScale());
 		pushBackbufferRenderPass(
 			clearSurface,
 			colorBlackTranslucent,
 			clearSurface,
 			0.f,
-			"Backbuffer",
-			s_backingScale);
+			"Backbuffer");
 	}
 	else
 	{
+		// note : we first push the backing scale, as the render pass will (re)apply the transform, which references the backing scale
+		pushBackingScale(newSurface->getBackingScale());
 		pushRenderPass(
 			newSurface->getColorTarget(),
 			clearSurface,
 			newSurface->getDepthTarget(),
 			clearSurface,
-			newSurface->getName(),
-			newSurface->getBackingScale());
+			newSurface->getName());
 	}
 
 	//
@@ -4032,6 +4068,7 @@ void popSurface()
 	surfaceStack[--surfaceStackSize] = 0;
 	
 	popRenderPass();
+	popBackingScale();
 }
 
 struct DrawRectState
@@ -4045,35 +4082,23 @@ struct DrawRectState
 
 static Stack<DrawRectState, 32> s_drawRectStack;
 
-void setDrawRect(int x, int y, int sx, int sy)
+static void setDrawRect_physical(int x, int y, int sx, int sy)
 {
 	globals.drawRect.isSet = true;
 	globals.drawRect.x = x;
 	globals.drawRect.y = y;
 	globals.drawRect.sx = sx;
 	globals.drawRect.sy = sy;
-	
-	int surfaceSx;
-	int surfaceSy;
-	getCurrentViewportSize(surfaceSx, surfaceSy);
-	
-	int backingSx;
-	int backingSy;
-	getCurrentBackingSize(backingSx, backingSy);
-	
-	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
-	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
-	
-	ScaleX(x);
-	ScaleY(y);
-	ScaleX(sx);
-	ScaleY(sy);
 
 #if ENABLE_METAL
 	metal_set_scissor(x, y, sx, sy);
 #endif
 
 #if ENABLE_OPENGL
+	int backingSx;
+	int backingSy;
+	framework.getCurrentBackingSize(backingSx, backingSy);
+	
 	if (s_renderPassIsBackbufferPass)
 		y = backingSy - y - sy;
 	
@@ -4083,6 +4108,31 @@ void setDrawRect(int x, int y, int sx, int sy)
 	glEnable(GL_SCISSOR_TEST);
 	checkErrorGL();
 #endif
+}
+
+void setDrawRect(int x, int y, int sx, int sy)
+{
+	logDebug("setDrawRect (virtual): (%d, %d) x (%d, %d)", x, y, sx , sy);
+	
+	int viewportSx;
+	int viewportSy;
+	framework.getCurrentViewportSize(viewportSx, viewportSy);
+	
+	int backingSx;
+	int backingSy;
+	framework.getCurrentBackingSize(backingSx, backingSy);
+	
+	#define ScaleX(x) x = ((x) * backingSx / (viewportSx / framework.minification))
+	#define ScaleY(y) y = ((y) * backingSy / (viewportSy / framework.minification))
+	
+	ScaleX(x);
+	ScaleY(y);
+	ScaleX(sx);
+	ScaleY(sy);
+	
+	logDebug("setDrawRect (physical): (%d, %d) x (%d, %d)", x, y, sx , sy);
+	
+	setDrawRect_physical(x, y, sx, sy);
 }
 
 void clearDrawRect()
@@ -4130,7 +4180,7 @@ void popDrawRect()
 	
 	if (drawRect.isSet)
 	{
-		setDrawRect(
+		setDrawRect_physical(
 			drawRect.x,
 			drawRect.y,
 			drawRect.sx,

@@ -85,6 +85,15 @@
 
 - (void)updateDrawableSize
 {
+	NSScreen * screen = [NSScreen mainScreen];
+		
+	const float scale =
+		framework.allowHighDpi
+		? screen.backingScaleFactor
+		: 1.0;
+	
+	self.layer.contentsScale = scale;
+	
     CGSize size  = self.bounds.size;
     size.width  *= self.layer.contentsScale;
     size.height *= self.layer.contentsScale;
@@ -105,7 +114,12 @@
 		}
 	}
 	
-    //NSLog(@"updateDrawableSize");
+    NSLog(@"updateDrawableSize: (%.2f x %.2f) @%.2f -> (%.2f x %.2f)",
+		self.bounds.size.width,
+		self.bounds.size.height,
+		scale,
+		self.metalLayer.drawableSize.width,
+		self.metalLayer.drawableSize.height);
 }
 
 - (void)resizeWithOldSuperviewSize:(NSSize)oldSize

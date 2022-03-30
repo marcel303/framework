@@ -411,6 +411,13 @@ DepthTarget * Window::getDepthTarget() const
 #endif
 }
 
+float Window::getScreenBackingScale() const
+{
+// todo : the screen backing scale should be updated when the window is dragged onto another screen
+
+	return globals.initialScreenBackingScale;
+}
+
 #if FRAMEWORK_USE_SDL
 
 SDL_Window * Window::getWindow() const
@@ -556,10 +563,12 @@ void pushWindow(Window & window)
 	globals.currentWindow = &window;
 	globals.currentWindow->getWindowData()->makeActive();
 	
+	pushBackingScale(window.getScreenBackingScale());
+	
 #if WINDOW_HAS_A_SURFACE
 	if (window.hasSurface())
 	{
-		return;
+		// nothing to do
 	}
 	else
 #endif
@@ -584,25 +593,29 @@ void popWindow()
 	Window * window = s_windowStack.popValue();
 	
 	globals.currentWindow = window;
-	globals.currentWindow->getWindowData()->makeActive();
 	
-	if (globals.currentWindow->hasSurface())
+	if (globals.currentWindow != nullptr)
 	{
-		return;
-	}
-	else
-	{
-	#if FRAMEWORK_USE_SDL
-		if (globals.currentWindow->getWindow())
+		globals.currentWindow->getWindowData()->makeActive();
+		
+		if (globals.currentWindow->hasSurface())
 		{
-		#if ENABLE_OPENGL
-			SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
-		#endif
+			return;
+		}
+		else
+		{
+		#if FRAMEWORK_USE_SDL
+			if (globals.currentWindow->getWindow())
+			{
+			#if ENABLE_OPENGL
+				SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+			#endif
 
-		#if ENABLE_METAL
-			metal_make_active(globals.currentWindow->getWindow());
+			#if ENABLE_METAL
+				metal_make_active(globals.currentWindow->getWindow());
+			#endif
+			}
 		#endif
 		}
-	#endif
 	}
 }

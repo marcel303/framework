@@ -557,6 +557,16 @@ public:
 	ovrEgl egl;
 #endif
 	int displaySize[2]; // size as passed to init
+	float initialScreenBackingScale;
+	float renderBackingScale;
+	struct
+	{
+		bool isActive;
+		int backingSx;
+		int backingSy;
+		int viewportSx;
+		int viewportSy;
+	} renderPass;
 #if ENABLE_PROFILING
 	Remotery * rmt;
 #endif

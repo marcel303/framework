@@ -53,3 +53,4 @@ build/
 *.blend1
 users/marcel/bilateralFilter1/data/output
 users/marcel/libgg-psd/libgg-psd-all.cxx
+svg.png

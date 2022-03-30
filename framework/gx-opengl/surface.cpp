@@ -113,8 +113,8 @@ void Surface::blitTo(Surface * surface) const
 	checkErrorGL();
 
 	glBlitFramebuffer(
-		0, 0, getWidth() * m_backingScale, getHeight() * m_backingScale,
-		0, 0, surface->getWidth() * surface->m_backingScale, surface->getHeight() * surface->m_backingScale,
+		0, 0, getBackingWidth(), getBackingHeight(),
+		0, 0, surface->getBackingWidth(), surface->getBackingHeight(),
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
 	checkErrorGL();

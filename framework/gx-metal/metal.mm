@@ -88,9 +88,8 @@ struct RenderPassData
 	
 	RenderPipelineState::RenderPass renderPass;
 	
-	int viewportSx = 0;
-	int viewportSy = 0;
-	int backingScale = 0;
+	int backingSx = 0;
+	int backingSy = 0;
 };
 
 struct RenderPassDataForPushPop
@@ -99,8 +98,9 @@ struct RenderPassDataForPushPop
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
-	int backingScale = 0;
 	char passName[32] = { };
+	int viewportSx = 0;
+	int viewportSy = 0;
 };
 
 static std::stack<RenderPassDataForPushPop> s_renderPasses;
@@ -380,26 +380,32 @@ void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const in
 		sx += x;
 		x = 0;
 	}
-	else if (x >= s_activeRenderPass->viewportSx)
+	
+	if (x >= s_activeRenderPass->backingSx)
 	{
 		x = 0;
 		sx = 0;
 	}
-	else if (x + sx > s_activeRenderPass->viewportSx)
-		sx += s_activeRenderPass->viewportSx - (x + sx);
+	else if (x + sx > s_activeRenderPass->backingSx)
+	{
+		sx += s_activeRenderPass->backingSx - (x + sx);
+	}
 	
 	if (y < 0)
 	{
 		sy += y;
 		y = 0;
 	}
-	else if (y >= s_activeRenderPass->viewportSy)
+	
+	if (y >= s_activeRenderPass->backingSy)
 	{
 		y = 0;
 		sy = 0;
 	}
-	else if (y + sy > s_activeRenderPass->viewportSy)
-		sy += s_activeRenderPass->viewportSy - (y + sy);
+	else if (y + sy > s_activeRenderPass->backingSy)
+	{
+		sy += s_activeRenderPass->backingSy - (y + sy);
+	}
 	
 	if (sx < 0)
 		sx = 0;
@@ -411,8 +417,8 @@ void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const in
 		y >= 0 &&
 		sx >= 0 &&
 		sy >= 0 &&
-		x + sx <= s_activeRenderPass->viewportSx &&
-		y + sy <= s_activeRenderPass->viewportSy);
+		x + sx <= s_activeRenderPass->backingSx &&
+		y + sy <= s_activeRenderPass->backingSy);
 
 	const MTLScissorRect rect = {
 		(NSUInteger)x,
@@ -425,12 +431,35 @@ void metal_set_scissor(const int in_x, const int in_y, const int in_sx, const in
 
 void metal_clear_scissor()
 {
-	const NSUInteger sx = s_activeRenderPass->viewportSx;
-	const NSUInteger sy = s_activeRenderPass->viewportSy;
+	const NSUInteger sx = s_activeRenderPass->backingSx;
+	const NSUInteger sy = s_activeRenderPass->backingSy;
 	
 	const MTLScissorRect rect = { 0, 0, sx, sy };
 	
 	[s_activeRenderPass->encoder setScissorRect:rect];
+}
+
+float metal_get_backing_scale(SDL_Window * window)
+{
+#if defined(MACOS)
+	@autoreleasepool
+	{
+		float result = 1.f;
+		
+		auto i = windowDatas.find(window);
+		
+		if (i != windowDatas.end())
+		{
+			auto * windowData = i->second;
+			
+			result = windowData->metalview.layer.contentsScale;
+		}
+		
+		return result;
+	}
+#else
+	#error
+#endif
 }
 
 id <MTLDevice> metal_get_device()
@@ -611,8 +640,7 @@ void beginRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName,
-	const int backingScale)
+	const char * passName)
 {
 	beginRenderPass(
 		&target,
@@ -620,8 +648,7 @@ void beginRenderPass(
 		clearColor,
 		depthTarget,
 		clearDepth,
-		passName,
-		backingScale);
+		passName);
 }
 
 void beginRenderPass(
@@ -630,8 +657,7 @@ void beginRenderPass(
 	const bool in_clearColor,
 	DepthTarget * depthTarget,
 	const bool in_clearDepth,
-	const char * passName,
-	const int backingScale)
+	const char * passName)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -643,8 +669,8 @@ void beginRenderPass(
 
 	pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
 	
-	int viewportSx = 0;
-	int viewportSy = 0;
+	int backingSx = 0;
+	int backingSy = 0;
 	
 	// specify the color and depth attachment(s)
 	
@@ -665,10 +691,10 @@ void beginRenderPass(
 		
 		pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
 		
-		if (colorattachment.texture.width > viewportSx)
-			viewportSx = colorattachment.texture.width;
-		if (colorattachment.texture.height > viewportSy)
-			viewportSy = colorattachment.texture.height;
+		if (colorattachment.texture.width > backingSx)
+			backingSx = colorattachment.texture.width;
+		if (colorattachment.texture.height > backingSy)
+			backingSy = colorattachment.texture.height;
 	}
 	
 	if (depthTarget != nullptr)
@@ -681,10 +707,10 @@ void beginRenderPass(
 		
 		pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
 		
-		if (depthattachment.texture.width > viewportSx)
-			viewportSx = depthattachment.texture.width;
-		if (depthattachment.texture.height > viewportSy)
-			viewportSy = depthattachment.texture.height;
+		if (depthattachment.texture.width > backingSx)
+			backingSx = depthattachment.texture.width;
+		if (depthattachment.texture.height > backingSy)
+			backingSy = depthattachment.texture.height;
 		
 	#if defined(IPHONEOS)
 		if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
@@ -703,9 +729,8 @@ void beginRenderPass(
 		}
 	}
 	
-	pd.viewportSx = viewportSx;
-	pd.viewportSy = viewportSy;
-	pd.backingScale = backingScale;
+	pd.backingSx = backingSx;
+	pd.backingSy = backingSy;
 	
 	// begin encoding
 	
@@ -717,18 +742,26 @@ void beginRenderPass(
 	s_renderPassData = pd;
 	s_activeRenderPass = &s_renderPassData;
 	
-	// set viewport and apply transform
+	// update globals
 	
-	metal_set_viewport(viewportSx, viewportSy);
-	
-	applyTransform();
+	globals.renderPass.isActive = true;
+	globals.renderPass.backingSx = backingSx;
+	globals.renderPass.backingSy = backingSy;
+	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / globals.renderBackingScale));
+	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / globals.renderBackingScale));
 	
 	// clear draw rect
 	
-	pushDrawRect();
+	clearDrawRect();
+	
+	// set viewport and apply transform
+	
+	metal_set_viewport(backingSx, backingSy);
+	
+	applyTransform();
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
 {
 	ColorTarget colorTarget((__bridge void*)activeWindowData->current_drawable.texture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
@@ -741,19 +774,16 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		clearColor,
 		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
 		clearDepth,
-		passName,
-		backingScale);
+		passName);
 }
 
 void endRenderPass()
 {
 	Assert(s_activeRenderPass != nullptr);
 	
-	// restore draw rect
-	
-	popDrawRect();
-	
 	gxEndDraw();
+	
+	globals.renderPass.isActive = false;
 	
 	auto & pd = *s_activeRenderPass;
 	
@@ -776,12 +806,12 @@ void endRenderPass()
 
 // --- render passes stack ---
 
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const int backingScale)
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName, const int backingScale)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -799,7 +829,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName, backingScale);
+	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -807,13 +837,14 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
-	pd.backingScale = backingScale;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
+	pd.viewportSx = globals.renderPass.viewportSx;
+	pd.viewportSy = globals.renderPass.viewportSy;
 
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
 {
 	// save state
 	
@@ -829,14 +860,15 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassDataForPushPop pd;
 	pd.isBackbufferPass = true;
-	pd.backingScale = backingScale;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
+	pd.viewportSx = globals.renderPass.viewportSx;
+	pd.viewportSy = globals.renderPass.viewportSy;
 	
 	s_renderPasses.push(pd);
 }
@@ -864,12 +896,15 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName, new_pd.backingScale);
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName, new_pd.backingScale);
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName);
 		}
+		
+		globals.renderPass.viewportSx = new_pd.viewportSx;
+		globals.renderPass.viewportSy = new_pd.viewportSy;
 	}
 	
 	// restore state
@@ -878,23 +913,6 @@ void popRenderPass()
 	gxPopMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
-}
-
-bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
-{
-	if (s_activeRenderPass == nullptr)
-		return false;
-	else
-	{
-		Assert(s_activeRenderPass->viewportSx != 0);
-		Assert(s_activeRenderPass->viewportSy != 0);
-		Assert(s_activeRenderPass->backingScale != 0);
-		
-		sx = s_activeRenderPass->viewportSx;
-		sy = s_activeRenderPass->viewportSy;
-		backingScale = s_activeRenderPass->backingScale;
-		return true;
-	}
 }
 
 // -- render states --

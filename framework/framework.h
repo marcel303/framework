@@ -452,7 +452,8 @@ public:
 	void setFullscreen(bool fullscreen);
 	
 	void getCurrentViewportSize(int & sx, int & sy) const;
-	int getCurrentBackingScale() const;
+	void getCurrentBackingSize(int & sx, int & sy) const;
+	float getCurrentBackingScale() const;
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();
@@ -630,6 +631,8 @@ public:
 	class ColorTarget * getColorTarget() const;
 	class DepthTarget * getDepthTarget() const;
 
+	float getScreenBackingScale() const;
+	
 #if FRAMEWORK_USE_SDL
 	SDL_Window * getWindow() const;
 #else
@@ -713,7 +716,7 @@ public:
 	{
 		int width = 0;
 		int height = 0;
-		int backingScale = 0; // the backing scale is a multiplier applied to the size of the surface. 0 = automatically select the backing scale, any other value will be used to multiply the width and height of the storage used to back the surface
+		float backingScale = 0.f; // the backing scale is a multiplier applied to the size of the surface. 0 = automatically select the backing scale, any other value will be used to multiply the width and height of the storage used to back the surface
 		
 		void init(const int sx, const int sy)
 		{
@@ -721,7 +724,7 @@ public:
 			height = sy;
 		}
 		
-		void setBackingScale(const int in_backingScale)
+		void setBackingScale(const float in_backingScale)
 		{
 			backingScale = in_backingScale;
 		}
@@ -769,7 +772,9 @@ class Surface
 {
 	SurfaceProperties m_properties;
 	
-	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	float m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used to render to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	int m_backingSx;
+	int m_backingSy;
 	
 	int m_bufferId;
 	
@@ -783,14 +788,14 @@ class Surface
 	
 public:
 	Surface();
-	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true, const int backingScale = 0);
-	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale = 0);
+	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true, const float backingScale = 0.f);
+	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const float backingScale = 0.f);
 	~Surface();
 	
 	void swapBuffers();
 
 	bool init(const SurfaceProperties & properties);
-	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, int backingScale = 0);
+	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, float backingScale = 0.f);
 	void free();
 	void setSwizzle(int r, int g, int b, int a);
 	void setClearColor(int r, int g, int b, int a);
@@ -807,7 +812,9 @@ public:
 	GxTextureId getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
-	int getBackingScale() const;
+	float getBackingScale() const;
+	int getBackingWidth() const;
+	int getBackingHeight() const;
 	SURFACE_FORMAT getFormat() const;
 	
 	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
@@ -1576,6 +1583,10 @@ void viewLookat3d(const float originX, const float originY, const float originZ,
 Vec4 transformToView(const Vec4 & v);
 Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w);
 Vec2 transformToScreen(const Vec3 & v, float & w);
+
+void pushBackingScale(const float scale);
+void popBackingScale();
+float getBackingScale();
 
 void pushSurface(Surface * surface, const bool clearSurface = false);
 void popSurface();
