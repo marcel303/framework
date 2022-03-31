@@ -73,6 +73,31 @@ ImageData::~ImageData()
 
 //
 
+#include "qoi.h"
+
+ImageData * loadImage_qoi(const char * filename)
+{
+	ImageData * imageData = nullptr;
+	
+	qoi_desc desc;
+	
+	void * data = qoi_read(filename, &desc, 4);
+	
+	if (data != nullptr)
+	{
+		Assert(desc.channels == 4);
+		
+		imageData = new ImageData();
+		imageData->sx = desc.width;
+		imageData->sy = desc.height;
+		imageData->imageData = (ImageData::Pixel*)data;
+	}
+	
+	return imageData;
+}
+
+//
+
 #if USE_NANOSVG == 1
 	#include "nanosvgrast.h"
 #endif
@@ -272,6 +297,10 @@ ImageData * loadImage(const char * filename)
 	if (Path::IsExtension(filename, "svg", true))
 	{
 		return loadImage_svg(filename, 1.f);
+	}
+	else if (Path::IsExtension(filename, "qoi", true))
+	{
+		return loadImage_qoi(filename);
 	}
 	else
 	{

@@ -30,6 +30,7 @@ add oscpack
 with_platform android add ovr-mobile
 add portaudio-support
 add PS3EYEDriver/framework
+add qoi-support
 add rapidjson-support
 add remotery
 add rgbe

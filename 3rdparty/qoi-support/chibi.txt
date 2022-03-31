@@ -1,0 +1,5 @@
+library qoi
+	add_files ../qoi/qoi.h
+	add_files impl.c
+	header_path ../qoi expose
+
