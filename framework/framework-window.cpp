@@ -563,8 +563,6 @@ void pushWindow(Window & window)
 	globals.currentWindow = &window;
 	globals.currentWindow->getWindowData()->makeActive();
 	
-	pushBackingScale(window.getScreenBackingScale());
-	
 #if WINDOW_HAS_A_SURFACE
 	if (window.hasSurface())
 	{
@@ -586,6 +584,8 @@ void pushWindow(Window & window)
 		}
 	#endif
 	}
+	
+	pushBackingScale(window.getScreenBackingScale());
 }
 
 void popWindow()
@@ -596,11 +596,13 @@ void popWindow()
 	
 	if (globals.currentWindow != nullptr)
 	{
+		popBackingScale();
+		
 		globals.currentWindow->getWindowData()->makeActive();
 		
 		if (globals.currentWindow->hasSurface())
 		{
-			return;
+			// nothing to do
 		}
 		else
 		{
