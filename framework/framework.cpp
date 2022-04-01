@@ -517,28 +517,18 @@ bool Framework::init(int sx, int sy)
 	// 2.) we determine the backing scale based on the screen size and the desired window size
 	//     examples: on Android devices SDL supports only the native screen resolution. the window size reported
 	//               by SDL doesn't include any scaling, so the drawable size and window size are always 1:1 on
-	//               these devices. onne way to determine a backing scale, is to divide the actual window size by
+	//               these devices. one way to determine a backing scale, is to divide the actual window size by
 	//               the desired window size
-#if defined(IPHONEOS) && 0
+	//     downside: we would need to mimic content scaling, as how it would work for instance on Apple devices
+	//               meaning: we would need to scale the screen matrix by "1 / backing scale"
 	int drawableSx;
 	int drawableSy;
 	SDL_GL_GetDrawableSize(globals.mainWindow->getWindow(), &drawableSx, &drawableSy);
-	const float backingScaleX = drawableSx / float(mainWindow->getWidth());
-	const float backingScaleY = drawableSy / float(mainWindow->getHeight());
+	const float backingScaleX = drawableSx / float(globals.mainWindow->getWidth());
+	const float backingScaleY = drawableSy / float(globals.mainWindow->getHeight());
 	globals.initialScreenBackingScale = fmaxf(backingScaleX, backingScaleY);
 	if (globals.initialScreenBackingScale < 1.f)
 		globals.initialScreenBackingScale = 1.f;
-#else
-	int drawableSx;
-	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.mainWindow->getWindow(), &drawableSx, &drawableSy);
-	const float backingScaleX = drawableSx / float(sx);
-	const float backingScaleY = drawableSy / float(sy);
-	globals.initialScreenBackingScale = fmaxf(backingScaleX, backingScaleY);
-	if (globals.initialScreenBackingScale < 1.f)
-		globals.initialScreenBackingScale = 1.f;
-#endif
-	Assert(globals.initialScreenBackingScale >= 1.f);
 	
 	{
 		const char * renderer = (char*)glGetString(GL_RENDERER);
@@ -2074,7 +2064,8 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 		pushRenderPass(
 			globals.currentWindow->getColorTarget(), true,
 			globals.currentWindow->getDepthTarget(), true,
-			globals.currentWindow->getTitle());
+			globals.currentWindow->getTitle(),
+			globals.currentWindow->getBackingScale());
 	}
 	else
 	{
@@ -2092,11 +2083,15 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 			scale255(b),
 			scale255(a));
 			
-		pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer pass");
+		pushBackbufferRenderPass(
+			true, color,
+			enableDepthBuffer, depth,
+			"Backbuffer pass",
+			globals.currentWindow->getBackingScale());
 	#endif
 	}
 	
-	applyTransform();
+	applyTransform(); // todo : this is redundant.. push**RenderPass also does this
 	
 	setBlend(BLEND_ALPHA);
 }
@@ -4026,25 +4021,23 @@ void pushSurface(Surface * newSurface, const bool clearSurface)
 	
 	if (newSurface == nullptr)
 	{
-		// note : we first push the backing scale, as the render pass will (re)apply the transform, which references the backing scale
-		pushBackingScale(globals.currentWindow->getScreenBackingScale());
 		pushBackbufferRenderPass(
 			clearSurface,
 			colorBlackTranslucent,
 			clearSurface,
 			0.f,
-			"Backbuffer");
+			"Backbuffer",
+			globals.renderBackingScale);
 	}
 	else
 	{
-		// note : we first push the backing scale, as the render pass will (re)apply the transform, which references the backing scale
-		pushBackingScale(newSurface->getBackingScale());
 		pushRenderPass(
 			newSurface->getColorTarget(),
 			clearSurface,
 			newSurface->getDepthTarget(),
 			clearSurface,
-			newSurface->getName());
+			newSurface->getName(),
+			newSurface->getBackingScale());
 	}
 
 	//
@@ -4068,7 +4061,6 @@ void popSurface()
 	surfaceStack[--surfaceStackSize] = 0;
 	
 	popRenderPass();
-	popBackingScale();
 }
 
 struct DrawRectState

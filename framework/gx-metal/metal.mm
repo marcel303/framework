@@ -99,8 +99,7 @@ struct RenderPassDataForPushPop
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
 	char passName[32] = { };
-	int viewportSx = 0;
-	int viewportSy = 0;
+	float backingScale = 0.f;
 };
 
 static std::stack<RenderPassDataForPushPop> s_renderPasses;
@@ -516,7 +515,12 @@ void metal_upload_texture_area(
 {
 	@autoreleasepool
 	{
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat width:srcSx height:srcSy mipmapped:NO];
+		MTLTextureDescriptor * descriptor =
+			[MTLTextureDescriptor
+				texture2DDescriptorWithPixelFormat:pixelFormat
+				width:srcSx
+				height:srcSy
+				mipmapped:NO];
 		
 		id <MTLTexture> src_texture = [device newTextureWithDescriptor:descriptor];
 		
@@ -660,7 +664,8 @@ void beginRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const float backingScale)
 {
 	beginRenderPass(
 		&target,
@@ -668,7 +673,8 @@ void beginRenderPass(
 		clearColor,
 		depthTarget,
 		clearDepth,
-		passName);
+		passName,
+		backingScale);
 }
 
 void beginRenderPass(
@@ -677,7 +683,8 @@ void beginRenderPass(
 	const bool in_clearColor,
 	DepthTarget * depthTarget,
 	const bool in_clearDepth,
-	const char * passName)
+	const char * passName,
+	const float backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -767,8 +774,10 @@ void beginRenderPass(
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / globals.renderBackingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / globals.renderBackingScale));
+	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
+	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	
+	pushBackingScale(backingScale);
 	
 	// clear draw rect
 	
@@ -781,7 +790,7 @@ void beginRenderPass(
 	applyTransform();
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
 	ColorTarget colorTarget((__bridge void*)activeWindowData->current_drawable.texture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
@@ -794,7 +803,8 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		clearColor,
 		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
 		clearDepth,
-		passName);
+		passName,
+		backingScale);
 }
 
 void endRenderPass()
@@ -802,6 +812,8 @@ void endRenderPass()
 	Assert(s_activeRenderPass != nullptr);
 	
 	gxEndDraw();
+	
+	popBackingScale();
 	
 	globals.renderPass.isActive = false;
 	
@@ -826,12 +838,12 @@ void endRenderPass()
 
 // --- render passes stack ---
 
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const float backingScale)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName, const float backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -852,7 +864,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName);
+	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -861,13 +873,12 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
-	pd.viewportSx = globals.renderPass.viewportSx;
-	pd.viewportSy = globals.renderPass.viewportSy;
+	pd.backingScale = backingScale;
 
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
 	// save state
 	
@@ -886,15 +897,14 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassDataForPushPop pd;
 	pd.isBackbufferPass = true;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
-	pd.viewportSx = globals.renderPass.viewportSx;
-	pd.viewportSy = globals.renderPass.viewportSy;
+	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
 }
@@ -922,15 +932,12 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName);
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName);
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, passName, new_pd.backingScale);
 		}
-		
-		globals.renderPass.viewportSx = new_pd.viewportSx;
-		globals.renderPass.viewportSy = new_pd.viewportSy;
 	}
 	
 	// restore state
@@ -1348,7 +1355,6 @@ static GxTextureId createTexture(
 				height:sy
 				mipmapped:NO];
 		descriptor.usage = MTLTextureUsageShaderRead;
-		descriptor.storageMode = MTLStorageModePrivate;
 			
 		id <MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
 		

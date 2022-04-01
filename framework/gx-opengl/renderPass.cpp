@@ -55,12 +55,12 @@ extern bool s_renderPassIsBackbufferPass;
 
 //
 
-void beginRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void beginRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const float backingScale)
 {
-	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
-void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const float backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	Assert(s_frameBufferId == 0);
@@ -221,8 +221,10 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / globals.renderBackingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / globals.renderBackingScale));
+	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
+	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	
+	pushBackingScale(backingScale);
 	
 	// update viewport
 	
@@ -233,7 +235,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	applyTransform();
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
 	Assert(s_frameBufferId == 0);
 	
@@ -312,8 +314,10 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / globals.renderBackingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / globals.renderBackingScale));
+	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
+	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	
+	pushBackingScale(backingScale);
 	
 	// update viewport
 	
@@ -328,6 +332,8 @@ void endRenderPass()
 {
 	// note : for MSAA, SDL uses a separate framebuffer. we ask/store the framebuffer used by the current windows, and set that instead of the framebuffer with id zero
 
+	popBackingScale();
+	
 	globals.renderPass.isActive = false;
 	
 	// restore the previous frame buffer bindings
@@ -397,8 +403,7 @@ struct RenderPassData
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
 	char passName[32] = { };
-	int viewportSx = 0; // viewport size is normally calculated by dividing backing size by current backing scale. however, during push/pop we want to use the same backing scale as at the time the render pass was begun, which may be different from the current backing scale. so we cache the previous viewport size here and restore it during popRenderPass
-	int viewportSy = 0;
+	float backingScale;
 };
 
 static std::stack<RenderPassData> s_renderPasses;
@@ -408,9 +413,10 @@ void pushRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const float backingScale)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
 void pushRenderPass(
@@ -419,7 +425,8 @@ void pushRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const float backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -439,7 +446,7 @@ void pushRenderPass(
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(targets, numTargets, clearColor, depthTarget, clearDepth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -448,13 +455,12 @@ void pushRenderPass(
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
-	pd.viewportSx = globals.renderPass.viewportSx;
-	pd.viewportSy = globals.renderPass.viewportSy;
+	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
 	// save state
 	
@@ -472,15 +478,14 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
 	pd.isBackbufferPass = true;
 	strcpy_s(pd.passName, sizeof(pd.passName), passName);
-	pd.viewportSx = globals.renderPass.viewportSx;
-	pd.viewportSy = globals.renderPass.viewportSy;
+	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
 }
@@ -505,15 +510,12 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName);
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName);
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
 		}
-		
-		globals.renderPass.viewportSx = new_pd.viewportSx;
-		globals.renderPass.viewportSy = new_pd.viewportSy;
 	}
 	
 	// restore state

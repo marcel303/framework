@@ -631,6 +631,7 @@ public:
 	class ColorTarget * getColorTarget() const;
 	class DepthTarget * getDepthTarget() const;
 
+	float getBackingScale() const;
 	float getScreenBackingScale() const;
 	
 #if FRAMEWORK_USE_SDL

@@ -411,6 +411,15 @@ DepthTarget * Window::getDepthTarget() const
 #endif
 }
 
+float Window::getBackingScale() const
+{
+#if WINDOW_HAS_A_SURFACE
+	return 1.f;
+#else
+	return globals.initialScreenBackingScale;
+#endif
+}
+
 float Window::getScreenBackingScale() const
 {
 // todo : the screen backing scale should be updated when the window is dragged onto another screen
@@ -585,7 +594,7 @@ void pushWindow(Window & window)
 	#endif
 	}
 	
-	pushBackingScale(window.getScreenBackingScale());
+	pushBackingScale(window.getBackingScale());
 }
 
 void popWindow()
