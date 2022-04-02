@@ -1152,7 +1152,7 @@ public:
 
 //
 
-GxTextureId getTexture(const char * filename);
+GxTextureId getTexture(const char * filename, float contentScale = 0.f);
 const GxTexture3d & getTexture3d(const char * filename);
 
 //
@@ -1162,7 +1162,7 @@ class Sprite
 public:
 	friend class Framework;
 	
-	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false, bool hasSpriteSheet = true);
+	Sprite(const char * filename, float pivotX = 0.f, float pivotY = 0.f, const char * spritesheet = 0, bool autoUpdate = false, bool hasSpriteSheet = true, float contentScale = 0.f);
 	~Sprite();
 	
 	void reload();
@@ -1196,8 +1196,8 @@ public:
 	bool pixelpos;
 	TEXTURE_FILTER filter;
 	
-	int getWidth() const;
-	int getHeight() const;
+	float getWidth() const;
+	float getHeight() const;
 	GxTextureId getTexture() const;
 	
 	// animation

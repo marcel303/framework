@@ -40,7 +40,7 @@
 
 static AnimCacheElem s_dummyAnimCacheElem;
 
-Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet, bool autoUpdate, bool hasSpriteSheet)
+Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * spritesheet, bool autoUpdate, bool hasSpriteSheet, float contentScale)
 	: m_autoUpdate(autoUpdate)
 {
 	// drawing
@@ -112,7 +112,7 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	}
 	
 	// texture
-	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1], true);
+	m_texture = &g_textureCache.findOrCreate(filename, m_anim->m_gridSize[0], m_anim->m_gridSize[1], true, contentScale);
 	
 	m_prev = 0;
 	m_next = 0;
@@ -189,8 +189,8 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				filter == FILTER_MIPMAP ? GX_SAMPLE_MIPMAP : GX_SAMPLE_NEAREST,
 				true);
 			
-			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
-			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
+			const float rsx = m_texture->sx / float(m_anim->m_gridSize[0]);
+			const float rsy = m_texture->sy / float(m_anim->m_gridSize[1]);
 			
 			gxBegin(GX_QUADS);
 			{
@@ -302,7 +302,7 @@ void Sprite::updateAnimationSegment()
 		}
 		
 		// recache texture, since the animation grid size may have changed
-		m_texture = &g_textureCache.findOrCreate(m_texture->name.c_str(), m_anim->m_gridSize[0], m_anim->m_gridSize[1], false);
+		m_texture = &g_textureCache.findOrCreate(m_texture->name.c_str(), m_anim->m_gridSize[0], m_anim->m_gridSize[1], false, m_texture->contentScale);
 	}
 }
 
@@ -405,14 +405,14 @@ int Sprite::calculateLoopedFrameIndex(int frame) const
 	return frame;
 }
 
-int Sprite::getWidth() const
+float Sprite::getWidth() const
 {
-	return m_texture->sx / m_anim->m_gridSize[0];
+	return m_texture->sx / float(m_anim->m_gridSize[0]);
 }
 
-int Sprite::getHeight() const
+float Sprite::getHeight() const
 {
-	return m_texture->sy / m_anim->m_gridSize[1];
+	return m_texture->sy / float(m_anim->m_gridSize[1]);
 }
 
 GxTextureId Sprite::getTexture() const

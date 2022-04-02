@@ -679,15 +679,16 @@ class TextureCacheElem
 public:
 	std::string name;
 	GxTexture * textures;
-	int sx;
-	int sy;
+	float sx;
+	float sy;
 	int gridSx;
 	int gridSy;
 	bool mipmapped;
+	float contentScale;
 	
 	TextureCacheElem();
 	void free();
-	void load(const char * filename, int gridSx, int gridSy, bool mipmapped);
+	void load(const char * filename, int gridSx, int gridSy, bool mipmapped, float contentScale);
 	void reload();
 };
 
@@ -701,6 +702,7 @@ public:
 		int gridSx;
 		int gridSy;
 		bool mipmapped;
+		float contentScale;
 		
 		inline bool operator<(const Key & other) const
 		{
@@ -712,6 +714,8 @@ public:
 				return gridSy < other.gridSy;
 			if (mipmapped != other.mipmapped)
 				return mipmapped < other.mipmapped;
+			if (contentScale != other.contentScale)
+				return contentScale < other.contentScale;
 			return false;
 		}
 	};
@@ -722,7 +726,7 @@ public:
 	virtual void clear() override;
 	virtual void reload() override;
 	virtual void handleFileChange(const std::string & filename, const std::string & extension) override;
-	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped);
+	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped, float contentScale = 0.f);
 };
 
 //

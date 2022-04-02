@@ -58,6 +58,7 @@ public:
 };
 
 ImageData * loadImage(const char * filename);
+ImageData * loadImage(const char * filename, const float scale);
 ImageData * loadImage_svg(const char * filename, const float scale);
 
 ImageData * imagePremultiplyAlpha(const ImageData * image);

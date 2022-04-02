@@ -294,9 +294,14 @@ ImageData * loadImage_freeimage(const char * filename)
 
 ImageData * loadImage(const char * filename)
 {
+	return loadImage(filename, 1.f);
+}
+
+ImageData * loadImage(const char * filename, const float scale)
+{
 	if (Path::IsExtension(filename, "svg", true))
 	{
-		return loadImage_svg(filename, 1.f);
+		return loadImage_svg(filename, scale);
 	}
 	else if (Path::IsExtension(filename, "qoi", true))
 	{

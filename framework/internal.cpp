@@ -37,6 +37,8 @@
 #include "image.h"
 #include "internal.h"
 #include "spriter.h"
+
+#include "Path.h"
 #include "StringEx.h"
 
 #if USE_GLYPH_ATLAS
@@ -49,11 +51,6 @@
 #endif
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
-
-// for resource caching
-#include "FileStream.h"
-#include "StreamReader.h"
-#include "StreamWriter.h"
 
 #if defined(DEBUG)
 	#include "Timer.h"
@@ -247,9 +244,10 @@ void StbFont::free()
 TextureCacheElem::TextureCacheElem()
 {
 	textures = 0;
-	sx = sy = 0;
+	sx = sy = 0.f;
 	gridSx = gridSy = 0;
 	mipmapped = false;
+	contentScale = 0.f;
 }
 
 void TextureCacheElem::free()
@@ -263,9 +261,10 @@ void TextureCacheElem::free()
 		
 		name.clear();
 		textures = 0;
-		sx = sy = 0;
+		sx = sy = 0.f;
 		gridSx = gridSy = 0;
 		mipmapped = false;
+		contentScale = 0.f;
 	}
 }
 
@@ -372,7 +371,7 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 }
 #endif
 
-void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool mipmapped)
+void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool mipmapped, float contentScale)
 {
 	ScopedLoadTimer loadTimer(filename);
 
@@ -380,79 +379,18 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 	
 	name = filename;
 	
-	ImageData * imageData = 0;
-
-	if (framework.cacheResourceData)
+	if (gridSx != 1 || gridSy != 1)
 	{
-		const std::string cacheFilename = getCacheFilename(filename, true);
-
-		if (!cacheFilename.empty() && FileStream::Exists(cacheFilename.c_str()))
-		{
-			try
-			{
-				FileStream stream(cacheFilename.c_str(), OpenMode_Read);
-				StreamReader reader(&stream, false);
-
-				const uint32_t version = reader.ReadUInt32();
-
-				if (version == 0)
-				{
-					const uint32_t sx = reader.ReadUInt32();
-					const uint32_t sy = reader.ReadUInt32();
-
-					imageData = new ImageData(sx, sy);
-
-					reader.ReadBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
-				}
-			}
-			catch (std::exception & e)
-			{
-				logError("failed to read cache data: %s", e.what());
-				(void)e;
-
-				delete imageData;
-				imageData = 0;
-			}
-		}
+		// make sure the content scale is an integer when we need to subdivide the texture into a grid
+		
+		contentScale = int(ceilf(contentScale));
 	}
-
-	if (!imageData)
-	{
-		imageData = loadImage(filename);
-
-		if (framework.cacheResourceData && imageData)
-		{
-			const std::string cacheFilename = getCacheFilename(filename, false);
-			
-			if (cacheFilename.empty())
-			{
-				logWarning("failed to get cache filename for: %s", filename);
-			}
-			else
-			{
-				try
-				{
-					FileStream stream(cacheFilename.c_str(), OpenMode_Write);
-					StreamWriter writer(&stream, false);
-
-					writer.WriteUInt32(0); // version number
-					writer.WriteUInt32(imageData->sx);
-					writer.WriteUInt32(imageData->sy);
-
-					writer.WriteBytes(imageData->imageData, imageData->sx * imageData->sy * sizeof(ImageData::Pixel));
-				}
-				catch (std::exception & e)
-				{
-					logError("failed to write cache data: %s", e.what());
-					(void)e;
-				}
-			}
-		}
-	}
+	
+	ImageData * imageData = loadImage(filename, contentScale);
 	
 	if (!imageData)
 	{
-		logError("failed to load %s (%dx%d)", filename, gridSx, gridSy);
+		logError("failed to load %s (%dx%d) @%.2fx", filename, gridSx, gridSy, contentScale);
 	}
 	else
 	{
@@ -465,10 +403,10 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 		}
 	#endif
 
-		if ((imageData->sx % gridSx) != 0 || (imageData->sy % gridSy) != 0)
+		if ((imageData->sx % int(gridSx * contentScale)) != 0 || (imageData->sy % int(gridSy * contentScale)) != 0)
 		{
-			logError("image size (%d, %d) must be a multiple of the grid size (%d, %d)",
-				imageData->sx, imageData->sy, gridSx, gridSy);
+			logError("image size (%d, %d) must be a multiple of the grid size (%d, %d) @%.2fx",
+				imageData->sx, imageData->sy, gridSx, gridSy, contentScale);
 		}
 		else
 		{
@@ -507,16 +445,18 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 				textures[i].upload(source, 0, imageData->sx, true);
 			}
 			
-			this->sx = imageData->sx;
-			this->sy = imageData->sy;
+			this->sx = imageData->sx / contentScale;
+			this->sy = imageData->sy / contentScale;
 			this->gridSx = gridSx;
 			this->gridSy = gridSy;
 			this->mipmapped = mipmapped;
+			this->contentScale = contentScale;
 			
-			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
+			logInfo("loaded %s (%dx%d) @%.2fx", filename, gridSx, gridSy, contentScale);
 		}
 		
 		delete imageData;
+		imageData = nullptr;
 	}
 }
 
@@ -526,10 +466,11 @@ void TextureCacheElem::reload()
 	const int oldGridSx = gridSx;
 	const int oldGridSy = gridSy;
 	const bool oldMipmapped = mipmapped;
+	const float oldContentScale = contentScale;
 
 	free();
 
-	load(oldName.c_str(), oldGridSx, oldGridSy, oldMipmapped);
+	load(oldName.c_str(), oldGridSx, oldGridSy, oldMipmapped, oldContentScale);
 }
 
 void TextureCache::clear()
@@ -561,13 +502,26 @@ void TextureCache::handleFileChange(const std::string & filename, const std::str
 	}
 }
 
-TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped)
+TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped, float contentScale)
 {
+	if (contentScale == 0.f)
+	{
+		contentScale = framework.getCurrentBackingScale();
+	}
+	
+	// ignore content scale for file formats that don't support it
+	
+	if (Path::IsExtension(name, "svg", true) == false)
+	{
+		contentScale = 1.f;
+	}
+	
 	Key key;
 	key.name = name;
 	key.gridSx = gridSx;
 	key.gridSy = gridSy;
 	key.mipmapped = mipmapped;
+	key.contentScale = contentScale;
 	
 	Map::iterator i = m_map.find(key);
 	
@@ -581,7 +535,7 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 		
 		TextureCacheElem elem;
 		
-		elem.load(resolved_filename, gridSx, gridSy, mipmapped);
+		elem.load(resolved_filename, gridSx, gridSy, mipmapped, contentScale);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
