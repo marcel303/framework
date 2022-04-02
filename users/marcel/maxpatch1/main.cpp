@@ -561,9 +561,6 @@ int main(int arg, char * argv[])
 		
 		framework.beginDraw(c/2, c/2, c/2, 0);
 		{
-			int viewSx, viewSy;
-			framework.getCurrentViewportSize(viewSx, viewSy);
-			
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
 			

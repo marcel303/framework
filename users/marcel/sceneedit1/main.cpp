@@ -677,27 +677,43 @@ int main(int argc, char * argv[])
 		
 		if (framework.isStereoVr())
 		{
+			int viewSx;
+			int viewSy;
+			framework.getCurrentViewportSize(
+				viewSx,
+				viewSy);
+				
 			editor.preview.viewportX = 0;
 			editor.preview.viewportY = 0;
-			framework.getCurrentViewportSize(
-				editor.preview.viewportSx,
-				editor.preview.viewportSy);
+			editor.preview.viewportSx = viewSx;
+			editor.preview.viewportSy = viewSy;
 		}
 		else if (USE_GUI_WINDOW)
 		{
+			int viewSx;
+			int viewSy;
+			framework.getCurrentViewportSize(
+				viewSx,
+				viewSy);
+				
 			editor.preview.viewportX = 0;
 			editor.preview.viewportY = 0;
-			framework.getCurrentViewportSize(
-				editor.preview.viewportSx,
-				editor.preview.viewportSy);
+			editor.preview.viewportSx = viewSx;
+			editor.preview.viewportSy = viewSy;
 		}
 		else
 		{
+			int viewSx;
+			int viewSy;
 			framework.getCurrentViewportSize(
-				editor.preview.viewportSx,
-				editor.preview.viewportSy);
+				viewSx,
+				viewSy);
+			
 			editor.preview.viewportX = 0;
 			editor.preview.viewportY = 0;
+			editor.preview.viewportSx = viewSx;
+			editor.preview.viewportSy = viewSy;
+			
 			if (editor.showUi)
 			{
 				editor.preview.viewportX = SceneEditor::kMainWindowWidth;
