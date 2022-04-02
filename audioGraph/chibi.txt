@@ -7,6 +7,7 @@ library audiograph-core
 	depend_library libavgraph-core
 	depend_library libgg
 
+# todo : remove PcmData from core. add it (and PcmDataCache) to the node library using it
 	# PcmData::load
 	depend_library soundfile
 

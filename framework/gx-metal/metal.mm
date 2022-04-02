@@ -1460,6 +1460,8 @@ GxTextureId copyTexture(const GxTextureId source)
 					width:src.width
 					height:src.height
 					mipmapped:NO];
+			descriptor.usage = MTLTextureUsageShaderRead;
+			descriptor.storageMode = MTLStorageModePrivate;
 			
 			id <MTLTexture> dst = [device newTextureWithDescriptor:descriptor];
 			

@@ -1296,6 +1296,8 @@ void Framework::process()
 		
 		WindowData * windowData = findWindowDataById(e.key.windowID);
 		
+	// todo : assert offset of e.key.windowID, e.motion.windowID, e.button.windowID, e.text.windowID, e.wheel.windowID and e.window.windowID are all equal
+	
 		if (windowData != nullptr)
 		{
 			windowData->events.push_back(e);

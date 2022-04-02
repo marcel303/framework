@@ -532,8 +532,6 @@ void step()
 		timeFrames = 0;
 		timeSum = 0;
 	}
-	
-	draw();
 }
 
 /*
@@ -564,7 +562,7 @@ int main(int argc, char * argv[])
 		
 		step();
 		
-		framework.beginDraw(20, 20, 20, 0);
+		framework.beginDraw(220, 220, 220, 0);
 		{
 			draw();
 		}

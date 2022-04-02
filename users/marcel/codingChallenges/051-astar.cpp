@@ -151,9 +151,9 @@ int main(int argc, char * argv[])
 	
     for (;;)
     {
-    	if (keyboard.wentDown(SDLK_a) && speed < 10)
+    	if (keyboard.wentDown(SDLK_a, true) && speed < 100)
     		speed++;
-    	if (keyboard.wentDown(SDLK_z) && speed > 1)
+    	if (keyboard.wentDown(SDLK_z, true) && speed > 1)
     		speed--;
 		
     	framework.process();
