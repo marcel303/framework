@@ -2049,7 +2049,14 @@ void Framework::getCurrentBackingSize(int & sx, int & sy) const
 
 float Framework::getCurrentBackingScale() const
 {
-	return globals.renderBackingScale;
+	if (globals.renderPass.isActive)
+	{
+		return globals.renderPass.backingScale;
+	}
+	else
+	{
+		return globals.currentWindow->getBackingScale();
+	}
 }
 
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
@@ -3723,7 +3730,7 @@ void applyTransform()
 	applyTransformWithViewportSize(sx, sy);
 }
 
-void applyTransformWithViewportSize(const int sx, const int sy)
+void applyTransformWithViewportSize(const float sx, const float sy)
 {
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
@@ -3986,23 +3993,23 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	return transformToScreen(modelViewProjection, v, w);
 }
 
-static Stack<float, kMaxSurfaceStackSize> s_backingScaleStack;
+static Stack<float, kMaxSurfaceStackSize> s_contentScaleStack;
 
-void pushBackingScale(const float scale)
+void pushContentScale(const float scale)
 {
-	s_backingScaleStack.push(globals.renderBackingScale);
+	s_contentScaleStack.push(globals.contentScale);
 	
-	globals.renderBackingScale = scale;
+	globals.contentScale = scale;
 }
 
-void popBackingScale()
+void popContentScale()
 {
-	globals.renderBackingScale = s_backingScaleStack.popValue();
+	globals.contentScale = s_contentScaleStack.popValue();
 }
 
-float getBackingScale()
+float getContentScale()
 {
-	return globals.renderBackingScale;
+	return globals.contentScale;
 }
 
 void pushSurface(Surface * newSurface, const bool clearSurface)
@@ -4029,7 +4036,7 @@ void pushSurface(Surface * newSurface, const bool clearSurface)
 			clearSurface,
 			0.f,
 			"Backbuffer",
-			globals.renderBackingScale);
+			framework.getCurrentBackingScale());
 	}
 	else
 	{
@@ -4078,6 +4085,8 @@ static Stack<DrawRectState, 32> s_drawRectStack;
 
 static void setDrawRect_physical(int x, int y, int sx, int sy)
 {
+	//logDebug("setDrawRect (physical): (%d, %d) x (%d, %d)", x, y, sx , sy);
+	
 	globals.drawRect.isSet = true;
 	globals.drawRect.x = x;
 	globals.drawRect.y = y;
@@ -4123,8 +4132,6 @@ void setDrawRect(int x, int y, int sx, int sy)
 	ScaleY(y);
 	ScaleX(sx);
 	ScaleY(sy);
-	
-	//logDebug("setDrawRect (physical): (%d, %d) x (%d, %d)", x, y, sx , sy);
 	
 	setDrawRect_physical(x, y, sx, sy);
 }

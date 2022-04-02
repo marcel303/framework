@@ -66,6 +66,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	Assert(s_frameBufferId == 0);
 	Assert(s_oldReadBuffer == 0);
 	Assert(s_oldDrawBuffer == 0);
+	AssertBackingScaleConstraint(backingScale);
 	
 	// capture the currently bound framebuffers. we will restore them at the end of endRenderPass
 	
@@ -221,10 +222,11 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	globals.renderPass.backingScale = backingScale;
+	globals.renderPass.viewportSx = float(backingSx) / backingScale;
+	globals.renderPass.viewportSy = float(backingSy) / backingScale;
 	
-	pushBackingScale(backingScale);
+	pushContentScale(backingScale);
 	
 	// update viewport
 	
@@ -238,6 +240,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
 	Assert(s_frameBufferId == 0);
+	AssertBackingScaleConstraint(backingScale);
 	
 	// capture the currently bound framebuffers. we will restore them at the end of endRenderPass
 	
@@ -314,10 +317,11 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	globals.renderPass.backingScale = backingScale;
+	globals.renderPass.viewportSx = float(backingSx) / backingScale;
+	globals.renderPass.viewportSy = float(backingSy) / backingScale;
 	
-	pushBackingScale(backingScale);
+	pushContentScale(backingScale);
 	
 	// update viewport
 	
@@ -332,7 +336,7 @@ void endRenderPass()
 {
 	// note : for MSAA, SDL uses a separate framebuffer. we ask/store the framebuffer used by the current windows, and set that instead of the framebuffer with id zero
 
-	popBackingScale();
+	popContentScale();
 	
 	globals.renderPass.isActive = false;
 	
@@ -439,6 +443,8 @@ void pushRenderPass(
 	
 	pushDrawRect();
 	
+	pushContentScale(getContentScale());
+	
 	// end the current pass (if any) and begin a new one
 	
 	if (s_renderPasses.empty() == false)
@@ -470,6 +476,8 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	gxPushMatrix();
 	
 	pushDrawRect();
+	
+	pushContentScale(getContentScale());
 	
 	// end the current pass (if any) and begin a new one
 	
@@ -526,6 +534,8 @@ void popRenderPass()
 	gxPopMatrix();
 	
 	popDrawRect();
+	
+	popContentScale();
 }
 
 #endif

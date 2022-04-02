@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "gx_render.h"
+#include "internal.h" // AssertBackingScaleConstraint
 #include <algorithm>
 
 void Surface::construct()
@@ -132,7 +133,9 @@ bool Surface::init(const SurfaceProperties & properties)
 	if (properties.dimensions.backingScale != 0.f)
 		m_backingScale = properties.dimensions.backingScale;
 	else
-		m_backingScale = ::getBackingScale();
+		m_backingScale = framework.getCurrentBackingScale();
+	
+	AssertBackingScaleConstraint(m_backingScale);
 	
 	m_backingSx = sx == 0 ? 0 : std::max<int>(1, sx * m_backingScale);
 	m_backingSy = sy == 0 ? 0 : std::max<int>(1, sy * m_backingScale);

@@ -580,6 +580,8 @@ void pushWindow(Window & window)
 	else
 #endif
 	{
+		Assert(globals.renderPass.isActive == false);
+		
 	#if FRAMEWORK_USE_SDL
 		if (globals.currentWindow->getWindow())
 		{
@@ -594,7 +596,7 @@ void pushWindow(Window & window)
 	#endif
 	}
 	
-	pushBackingScale(window.getBackingScale());
+	pushContentScale(window.getBackingScale());
 }
 
 void popWindow()
@@ -605,7 +607,7 @@ void popWindow()
 	
 	if (globals.currentWindow != nullptr)
 	{
-		popBackingScale();
+		popContentScale();
 		
 		globals.currentWindow->getWindowData()->makeActive();
 		
@@ -615,6 +617,8 @@ void popWindow()
 		}
 		else
 		{
+			Assert(globals.renderPass.isActive == false);
+			
 		#if FRAMEWORK_USE_SDL
 			if (globals.currentWindow->getWindow())
 			{

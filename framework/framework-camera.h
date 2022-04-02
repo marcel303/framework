@@ -65,7 +65,7 @@ public:
 		void tick(const float dt, bool & inputIsCaptured);
 
 		void calculateWorldMatrix(Mat4x4 & out_matrix) const;
-		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
+		void calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const;
 	};
 	
 	struct Ortho
@@ -83,7 +83,7 @@ public:
 		void tick(const float dt, bool & inputIsCaptured);
 		
 		void calculateWorldMatrix(Mat4x4 & out_matrix) const;
-		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
+		void calculateProjectionMatrix(const float viewportSx, const float gviewportSy, Mat4x4 & out_matrix) const;
 	};
 	
 	struct FirstPerson
@@ -124,7 +124,7 @@ public:
 		void tick(const float dt, bool & inputIsCaptured);
 		
 		void calculateWorldMatrix(Mat4x4 & out_matrix) const;
-		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
+		void calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const;
 	};
 	
 public:
@@ -142,9 +142,9 @@ public:
 	void calculateWorldMatrix(Mat4x4 & out_matrix) const;
 	void calculateViewMatrix(Mat4x4 & out_matrix) const;
 
-	void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
+	void calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const;
 	
-	void calculateViewProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
+	void calculateViewProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const;
 
 	void pushProjectionMatrix() const;
 	void popProjectionMatrix() const;

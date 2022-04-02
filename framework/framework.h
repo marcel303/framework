@@ -1570,7 +1570,7 @@ void clearCaches(int caches);
 void setTransform(TRANSFORM transform);
 TRANSFORM getTransform();
 void applyTransform();
-void applyTransformWithViewportSize(const int sx, const int sy);
+void applyTransformWithViewportSize(const float sx, const float sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 void pushTransform();
@@ -1585,9 +1585,9 @@ Vec4 transformToView(const Vec4 & v);
 Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w);
 Vec2 transformToScreen(const Vec3 & v, float & w);
 
-void pushBackingScale(const float scale);
-void popBackingScale();
-float getBackingScale();
+void pushContentScale(const float scale);
+void popContentScale();
+float getContentScale();
 
 void pushSurface(Surface * surface, const bool clearSurface = false);
 void popSurface();

@@ -687,6 +687,9 @@ void beginRenderPass(
 	const float backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
+	AssertBackingScaleConstraint(backingScale);
+	
+	//logDebug("beginRenderPass @%.2f", backingScale);
 	
 	poolhack_begin();
 	
@@ -774,10 +777,11 @@ void beginRenderPass(
 	globals.renderPass.isActive = true;
 	globals.renderPass.backingSx = backingSx;
 	globals.renderPass.backingSy = backingSy;
-	globals.renderPass.viewportSx = std::max<int>(1, ceilf(backingSx / backingScale));
-	globals.renderPass.viewportSy = std::max<int>(1, ceilf(backingSy / backingScale));
+	globals.renderPass.backingScale = backingScale;
+	globals.renderPass.viewportSx = float(backingSx) / backingScale;
+	globals.renderPass.viewportSy = float(backingSy) / backingScale;
 	
-	pushBackingScale(backingScale);
+	pushContentScale(backingScale);
 	
 	// clear draw rect
 	
@@ -813,7 +817,7 @@ void endRenderPass()
 	
 	gxEndDraw();
 	
-	popBackingScale();
+	popContentScale();
 	
 	globals.renderPass.isActive = false;
 	
@@ -857,6 +861,8 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	if (s_activeRenderPass != nullptr)
 		pushDrawRect();
 	
+	pushContentScale(getContentScale());
+	
 	// end the current pass and begin a new one
 	
 	if (s_renderPasses.empty() == false)
@@ -889,6 +895,8 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	
 	if (s_activeRenderPass != nullptr)
 		pushDrawRect();
+	
+	pushContentScale(getContentScale());
 	
 	// end the current pass and begin a new one
 	
@@ -949,6 +957,8 @@ void popRenderPass()
 	
 	if (s_activeRenderPass != nullptr)
 		popDrawRect();
+	
+	popContentScale();
 }
 
 // -- render states --

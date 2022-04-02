@@ -506,7 +506,7 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 {
 	if (contentScale == 0.f)
 	{
-		contentScale = framework.getCurrentBackingScale();
+		contentScale = getContentScale();
 	}
 	
 	// ignore content scale for file formats that don't support it

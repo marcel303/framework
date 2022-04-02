@@ -558,14 +558,15 @@ public:
 #endif
 	int displaySize[2]; // size as passed to init
 	float initialScreenBackingScale;
-	float renderBackingScale;
+	float contentScale;
 	struct
 	{
 		bool isActive;
 		int backingSx;
 		int backingSy;
-		int viewportSx;
-		int viewportSy;
+		float backingScale;
+		float viewportSx;
+		float viewportSy;
 	} renderPass;
 #if ENABLE_PROFILING
 	Remotery * rmt;
@@ -1209,6 +1210,10 @@ public:
 	}
 #endif
 };
+
+//
+
+#define AssertBackingScaleConstraint(backingScale) Assert(roundf(backingScale) == backingScale)
 
 //
 

@@ -180,7 +180,7 @@ void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 		.Translate(0, 0, distance);
 }
 
-void Camera::Orbit::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+void Camera::Orbit::calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const
 {
 #if ENABLE_OPENGL
 	out_matrix.MakePerspectiveGL(
@@ -326,7 +326,7 @@ void Camera::Ortho::calculateWorldMatrix(Mat4x4 & out_matrix) const
 		.RotateX(elevation * float(M_PI) / 180.f);
 }
 
-void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+void Camera::Ortho::calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const
 {
 	const float sx = viewportSx / float(viewportSy);
 
@@ -476,7 +476,7 @@ void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
 		.RotateZ(leanAngle / 180.f * float(M_PI));
 }
 
-void Camera::FirstPerson::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+void Camera::FirstPerson::calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const
 {
 #if ENABLE_OPENGL
 	out_matrix.MakePerspectiveGL(
@@ -558,7 +558,7 @@ void Camera::calculateViewMatrix(Mat4x4 & out_matrix) const
 	out_matrix = worldMatrix.CalcInv();
 }
 
-void Camera::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+void Camera::calculateProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const
 {
 	switch (mode)
 	{
@@ -574,7 +574,7 @@ void Camera::calculateProjectionMatrix(const int viewportSx, const int viewportS
 	}
 }
 
-void Camera::calculateViewProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+void Camera::calculateViewProjectionMatrix(const float viewportSx, const float viewportSy, Mat4x4 & out_matrix) const
 {
 	Mat4x4 projectionMatrix;
 	Mat4x4 worldMatrix;
@@ -600,8 +600,8 @@ void Camera::calculateViewProjectionMatrix(const int viewportSx, const int viewp
 
 void Camera::pushProjectionMatrix() const
 {
-	int viewportSx = 0;
-	int viewportSy = 0;
+	int viewportSx;
+	int viewportSy;
 	framework.getCurrentViewportSize(viewportSx, viewportSy);
 	
 	Mat4x4 matrix;
