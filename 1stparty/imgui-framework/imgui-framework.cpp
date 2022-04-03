@@ -513,6 +513,8 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 
 void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
+	pushDrawRect();
+	
 	for (int i = 0; i < draw_data->CmdListsCount; ++i)
 	{
 		const ImDrawList * cmd_list = draw_data->CmdLists[i];
@@ -598,7 +600,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 		}
 	}
 	
-	clearDrawRect();
+	popDrawRect();
 }
 
 namespace ImGui
