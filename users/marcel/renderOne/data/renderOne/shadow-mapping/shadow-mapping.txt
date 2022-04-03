@@ -36,6 +36,20 @@ vec3 viewToShadowLight(int id, vec3 position_view)
 	return position_light.xyz;
 }
 
+bvec2 lessThanEqual(vec2 a, vec2 b)
+{
+	return bvec2(
+		a.x <= b.x,
+		a.y <= b.y);
+}
+
+bvec2 greaterThanEqual(vec2 a, vec2 b)
+{
+	return bvec2(
+		a.x >= b.x,
+		a.y >= b.y);
+}
+
 bool isOutsideShadowMapExtents(vec2 position_texture)
 {
 #if 0
