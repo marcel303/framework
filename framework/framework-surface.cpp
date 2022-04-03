@@ -123,8 +123,8 @@ bool Surface::init(const SurfaceProperties & properties)
 	
 	m_properties = properties;
 
-	const int sx = properties.dimensions.width  / framework.minification;
-	const int sy = properties.dimensions.height / framework.minification;
+	const int sx = properties.dimensions.width;
+	const int sy = properties.dimensions.height;
 	
 	//
 	

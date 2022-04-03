@@ -152,8 +152,8 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		{
 			if (pixelpos)
 			{
-				x = floorf(x / framework.minification) * framework.minification;
-				y = floorf(y / framework.minification) * framework.minification;
+				x = floorf(x);
+				y = floorf(y);
 			}
 			
 			gxTranslatef(x, y, 0.f);

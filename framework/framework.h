@@ -512,7 +512,6 @@ public:
 	bool enableDrawTiming;
 	bool enableProfiling;
 	bool allowHighDpi;
-	int minification;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool enableRealTimeEditing;

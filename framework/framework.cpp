@@ -84,8 +84,6 @@
 #include "model.h" // updateAnimation
 #include "rte.h"
 
-#define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
-
 #include "Base64.h" // for decoding chibi resource paths
 #include "Csv.h" // for decoding chibi resource paths
 #include "StringEx.h"
@@ -222,7 +220,6 @@ Framework::Framework()
 	enableDrawTiming = true;
 	enableProfiling = false;
 	allowHighDpi = true;
-	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 #if defined(DISTRIBUTION)
@@ -326,10 +323,6 @@ bool Framework::init(int sx, int sy)
 	{
 		SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	}
-	
-#if !ENABLE_DISPLAY_SIZE_SCALING
-	minification = 1;
-#endif
 
 	int flags = 0;
 
@@ -394,13 +387,13 @@ bool Framework::init(int sx, int sy)
 	flags |= SDL_WINDOW_OPENGL;
 #endif
 
-	if (fullscreen && minification == 1)
+	if (fullscreen)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
 	}
 
-	int actualSx = sx / minification;
-	int actualSy = sy / minification;
+	int actualSx = sx;
+	int actualSy = sy;
 
 	bool foundMode = false;
 
@@ -486,7 +479,7 @@ bool Framework::init(int sx, int sy)
 
 	if (!mainWindow)
 	{
-		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
+		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx, sy, 32, SDL_GetError());
 		if (initErrorHandler)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
@@ -1008,7 +1001,6 @@ bool Framework::shutdown()
 	enableDrawTiming = true;
 	enableProfiling = false;
 	allowHighDpi = true;
-	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 #if defined(DISTRIBUTION)
@@ -1326,15 +1318,7 @@ void Framework::process()
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
-				#if ENABLE_DISPLAY_SIZE_SCALING
-					SDL_Event scaledEvent = e;
-					scaledEvent.motion.x = e.motion.x * globals.displaySize[0] / windowSx;
-					scaledEvent.motion.y = e.motion.y * globals.displaySize[1] / windowSy;
-					
-					windowData->mouseData.addEvent(scaledEvent);
-				#else
 					windowData->mouseData.addEvent(e);
-				#endif
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
@@ -2010,20 +1994,8 @@ void Framework::getCurrentViewportSize(int & sx, int & sy) const
 	{
 		// or when no render target is active, the view size of the current window
 	
-	#if ENABLE_DISPLAY_SIZE_SCALING
-		// todo : fix for case with fullscreen desktop mode
-		// fixme : add specific code for setting screen matrix
-		if (globals.currentWindow == globals.mainWindow)
-		{
-			sx = globals.displaySize[0];
-			sy = globals.displaySize[1];
-		}
-		else
-	#endif
-		{
-			sx = globals.currentWindow->getWidth() * framework.minification;
-			sy = globals.currentWindow->getHeight() * framework.minification;
-		}
+		sx = globals.currentWindow->getWidth();
+		sy = globals.currentWindow->getHeight();
 	}
 }
 
@@ -4125,8 +4097,8 @@ void setDrawRect(int x, int y, int sx, int sy)
 	int backingSy;
 	framework.getCurrentBackingSize(backingSx, backingSy);
 	
-	#define ScaleX(x) x = ((x) * backingSx / (viewportSx / framework.minification))
-	#define ScaleY(y) y = ((y) * backingSy / (viewportSy / framework.minification))
+	#define ScaleX(x) x = ((x) * backingSx / viewportSx)
+	#define ScaleY(y) y = ((y) * backingSy / viewportSy)
 	
 	ScaleX(x);
 	ScaleY(y);
