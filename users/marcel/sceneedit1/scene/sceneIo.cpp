@@ -25,6 +25,8 @@
 // std
 #include <string.h>
 
+// todo : don't save component properties when they're set to their default value
+
 static int calculateIndentationLevel(const char * line)
 {
 	int result = 0;
@@ -407,7 +409,6 @@ bool parseSceneObjectStructureFromLines(
 		}
 		
 		current_level = new_level;
-
 		
 		//
 		
