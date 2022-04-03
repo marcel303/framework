@@ -167,7 +167,7 @@ int main(int argc, char * argv[])
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
-	VideoLoop videoLoop("lasers2.mp4");
+	VideoLoop videoLoop("lasers.mp4");
 	
 	double lastFrameTime = 0.0;
 	
