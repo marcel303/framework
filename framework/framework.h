@@ -77,7 +77,7 @@
 #endif
 
 #if !defined(ENABLE_OPENGL) && !defined(ENABLE_METAL)
-	#if (defined(MACOS) || defined(IPHONEOS)) && 0
+	#if (defined(MACOS) || defined(IPHONEOS)) && 1
 		#define ENABLE_METAL 1
 	#else
 		#define ENABLE_OPENGL 1
