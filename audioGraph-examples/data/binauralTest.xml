@@ -1,0 +1,53 @@
+<graph nextNodeId="36" nextLinkId="37">
+    <node id="30" typeName="binauralizer">
+        <input socket="elevation" value="-30.000000"/>
+        <input socket="sampleSet" value="cipic.147"/>
+    </node>
+    <node id="31" typeName="noise.1d">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="32" typeName="voice">
+        <input socket="speaker" value="1"/>
+    </node>
+    <node id="33" typeName="voice">
+        <input socket="speaker" value="2"/>
+    </node>
+    <node id="34" typeName="audio.sine">
+        <input socket="a" value="-90.000000"/>
+        <input socket="b" value="90.000000"/>
+        <input socket="fine" value="0"/>
+        <input socket="frequency" value="0.030000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="35" typeName="audio.sine">
+        <input socket="a" value="-90.000000"/>
+        <input socket="b" value="90.000000"/>
+        <input socket="frequency" value="400.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="type" value="1"/>
+    </node>
+    <link id="33" srcNodeId="32" srcNodeSocketName="audio" dstNodeId="30" dstNodeSocketName="leftEar"/>
+    <link id="34" srcNodeId="33" srcNodeSocketName="audio" dstNodeId="30" dstNodeSocketName="rightEar"/>
+    <link id="35" srcNodeId="30" srcNodeSocketName="azimuth" dstNodeId="34" dstNodeSocketName="audio"/>
+    <link id="36" srcNodeId="30" srcNodeSocketName="audio" dstNodeId="35" dstNodeSocketName="audio"/>
+    <editor nextZKey="297">
+        <dragAndZoom x="-643.57049560546875" y="114.37228393554688" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="30" x="-478.81591796875" y="117.37136840820312" zKey="287"/>
+            <nodeData nodeId="31" x="-954.96038818359375" y="50.28985595703125" zKey="292"/>
+            <nodeData nodeId="32" x="-259.1722412109375" y="79.28985595703125" zKey="276"/>
+            <nodeData nodeId="33" x="-267.1722412109375" y="244.75665283203125" zKey="278"/>
+            <nodeData nodeId="34" x="-745.85162353515625" y="213.80221557617188" zKey="293"/>
+            <nodeData nodeId="35" x="-847.82550048828125" y="116.80221557617188" zKey="296"/>
+        </nodeDatas>
+        <visualizers/>
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" showSocketNames="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

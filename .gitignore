@@ -54,3 +54,6 @@ build/
 users/marcel/bilateralFilter1/data/output
 users/marcel/libgg-psd/libgg-psd-all.cxx
 svg.png
+test.maxpat
+surface-definition.layout.json
+surface-definition.json
