@@ -695,6 +695,7 @@ struct JgplayerObject
 		timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
 		voiceApi = new AllegroVoiceApi(SAMPLE_RATE, true);
 
+		filename = framework.resolveResourcePath(filename);
 		mod = jgmod_load(filename);
 		
 		player = new JGMOD_PLAYER();
@@ -730,7 +731,7 @@ struct JgplayerObject
 		std::vector<std::string> modFiles;
 		{
 			// list all of the module files
-			auto files = listFiles(".", true);
+			auto files = listResourceFiles(".", true);
 			for (auto & file : files)
 			{
 				auto ext = Path::GetExtension(file, true);
@@ -787,6 +788,7 @@ struct JgplayerObject
 			mod = nullptr;
 
 			const char * filename = file->translateValueToKey(file->get());
+			filename = framework.resolveResourcePath(filename);
 			mod = jgmod_load(filename);
 			player->play(mod, true);
 		}

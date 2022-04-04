@@ -1900,6 +1900,7 @@ void setupPaths(const char * chibiResourcePaths);
 void changeDirectory(const char * path);
 std::string getDirectory();
 std::vector<std::string> listFiles(const char * path, bool recurse);
+std::vector<std::string> listResourceFiles(const char * path, bool recurse);
 void showErrorMessage(const char * caption, const char * format, ...);
 
 // builtin shaders

@@ -1854,6 +1854,27 @@ std::vector<std::string> listFiles(const char * path, bool recurse)
 #endif
 }
 
+std::vector<std::string> listResourceFiles(const char * path, bool recurse)
+{
+	std::vector<std::string> result;
+	
+	std::string file_relative;
+	
+	for (auto & resourcePath : framework.resourcePaths)
+	{
+		auto files = listFiles(resourcePath.c_str(), recurse);
+		
+		for (auto & file : files)
+		{
+			file_relative.assign(file, resourcePath.size() + 1);
+			
+			result.push_back(file_relative);
+		}
+	}
+	
+	return result;
+}
+
 void showErrorMessage(const char * caption, const char * format, ...)
 {
 	char text[1024];
@@ -2735,6 +2756,9 @@ void Framework::registerResourcePath(const char * path)
 	logInfo("registerResourcePath: %s", path);
 	
 	resourcePaths.push_back(path);
+	
+	Assert(resourcePaths.back().back() != '/');
+	Assert(resourcePaths.back().find('\\') == std::string::npos);
 }
 
 bool Framework::registerChibiResourcePaths(const char * encoded_text)
