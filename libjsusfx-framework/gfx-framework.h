@@ -32,6 +32,7 @@
 
 //
 
+class ImageData;
 class Surface;
 
 class JsusFx;
@@ -44,6 +45,8 @@ struct JsusFxGfx_Framework; // implements JsusFxGfx
 struct JsusFx_Image
 {
 	bool isValid = false;
+	
+	ImageData * imageData = nullptr;
 	
 	Surface * surface = nullptr;
 	

@@ -28,6 +28,7 @@
 #include <GL/glew.h> // glReadPixels
 #include "framework.h"
 #include "gfx-framework.h"
+#include "image.h"
 #include "jsusfx.h"
 #include "StringEx.h"
 
@@ -52,6 +53,12 @@ void JsusFx_Image::free()
 	{
 		delete surface;
 		surface = nullptr;
+	}
+	
+	if (imageData != nullptr)
+	{
+		delete imageData;
+		imageData = nullptr;
 	}
 	
 	isValid = false;
@@ -834,11 +841,30 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	glPixelStorei(GL_PACK_ALIGNMENT, restorePackAlignment);
 	checkErrorGL();
 #else
-	//AssertMsg(false, "gfx_getpixel: not implemented for current graphics api");
+	auto image = &imageCache.get(currentImageIndex);
 	
-	rgba[0] = 255;
-	rgba[1] = 0;
-	rgba[2] = 255;
+	if (image->imageData != nullptr &&
+		x >= 0 &&
+		y >= 0 &&
+		x < image->imageData->sx &&
+		y < image->imageData->sy)
+	{
+		auto * line = image->imageData->getLine(y);
+		
+		rgba[0] = line[x].r;
+		rgba[1] = line[x].g;
+		rgba[2] = line[x].b;
+		rgba[3] = line[x].a;
+	}
+	else
+	{
+		//AssertMsg(false, "gfx_getpixel: not implemented for current graphics api");
+		
+		rgba[0] = 255;
+		rgba[1] = 0;
+		rgba[2] = 255;
+		rgba[3] = 255;
+	}
 #endif
 	
 	*r = rgba[0];
@@ -862,11 +888,15 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 	{
 		JsusFx_Image & image = imageCache.images[index];
 		
+		image.free();
+		
+		//
+		
 		const char * filename = jsusFx.fileInfos[fileIndex].filename.c_str();
 		
-		const GxTextureId texture = getTexture(filename);
+		ImageData * imageData = loadImage(filename);
 		
-		if (texture == 0)
+		if (imageData == nullptr)
 		{
 			logError("failed to load image %d:%s", index, filename);
 			
@@ -874,21 +904,28 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 		}
 		else
 		{
-			int sx;
-			int sy;
-			gxGetTextureSize(texture, sx, sy);
+			image.imageData = imageData;
 			
-			//
+			GxTexture texture;
+			texture.allocate(imageData->sx, imageData->sy, GX_RGBA8_UNORM, false, true);
+			texture.upload(imageData->imageData, sizeof(ImageData::Pixel), imageData->sx);
 			
-			image.resize(sx, sy);
+			image.resize(texture.sx, texture.sy);
 			
 			pushSurface(image.surface);
 			{
-				gxSetTexture(texture);
-				setColor(colorWhite);
-				pushBlend(BLEND_OPAQUE);
-				drawRect(0, 0, sx, sy);
-				popBlend();
+				gxSetTexture(texture.id);
+				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+				{
+					pushColor(colorWhite);
+					pushBlend(BLEND_OPAQUE);
+					{
+						drawRect(0, 0, texture.sx, texture.sy);
+					}
+					popBlend();
+					popColor();
+				}
+				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 				gxSetTexture(0);
 			}
 			popSurface();
