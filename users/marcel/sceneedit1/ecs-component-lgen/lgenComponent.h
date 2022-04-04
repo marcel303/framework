@@ -13,7 +13,8 @@ struct LgenComponent : Component<LgenComponent>
 	enum GeneratorType
 	{
 		kGeneratorType_OffsetSquare,
-		kGeneratorType_DiamondSquare
+		kGeneratorType_DiamondSquare,
+		kGeneratorType_SimplexNoise
 	};
 	
 	enum FilterType
@@ -88,7 +89,8 @@ struct LgenComponentType : ComponentType<LgenComponent>
 	{
 		typeDB.addEnum<LgenComponent::GeneratorType>("LgenComponent::GeneratorType")
 			.add("offsetSquare", LgenComponent::kGeneratorType_OffsetSquare)
-			.add("diamondSquare", LgenComponent::kGeneratorType_DiamondSquare);
+			.add("diamondSquare", LgenComponent::kGeneratorType_DiamondSquare)
+			.add("simplexNoise", LgenComponent::kGeneratorType_SimplexNoise);
 		
 		typeDB.addEnum<LgenComponent::FilterType>("LgenComponent::FilterType")
 			.add("highpass", LgenComponent::kFilterType_Highpass)

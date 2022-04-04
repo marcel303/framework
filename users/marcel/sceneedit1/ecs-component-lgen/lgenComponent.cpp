@@ -69,6 +69,20 @@ void LgenComponent::generate()
 			g.generate(h.get(), seed);
 		}
 		break;
+		
+	case kGeneratorType_SimplexNoise:
+		{
+			auto & hs = h.get();
+			
+			for (int i = 0; i < hs.w; ++i)
+			{
+				for (int j = 0; j < hs.h; ++j)
+				{
+					hs.height[i][j] = scaled_octave_noise_3d(4, .5f, 1.f / hs.w, -height / 2.f, +height / 2.f, i, j, seed * 321.f);
+				}
+			}
+		}
+		break;
 	}
 	
 	h.rerange(-.5f, +.5f);
