@@ -31,9 +31,4 @@ void Surface::blitTo(Surface * surface) const
 	popSurface();
 }
 
-void blitBackBufferToSurface(Surface * surface)
-{
-	AssertMsg(false, "blitBackBufferToSurface not yet implemented");
-}
-
 #endif

@@ -130,49 +130,4 @@ void Surface::blitTo(Surface * surface) const
 	checkErrorGL();
 }
 
-void blitBackBufferToSurface(Surface * surface)
-{
-	int drawableSx;
-	int drawableSy;
-#if FRAMEWORK_USE_SDL
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-#else
-	fassert(false); // todo : what's the appropriate size ?
-#endif
-	
-	// capture current OpenGL states before we change them
-	
-	int oldDrawBuffer = 0;
-
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
-	checkErrorGL();
-	
-	// create framebuffer object for the destination of the blit operaration
-	GLuint dstFramebuffer = 0;
-	glGenFramebuffers(1, &dstFramebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, dstFramebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, surface->getColorTarget()->getTextureId(), 0);
-	checkErrorGL();
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFramebuffer);
-	checkErrorGL();
-
-	glBlitFramebuffer(
-		0, 0, drawableSx, drawableSy,
-		0, 0, surface->getWidth(), surface->getHeight(),
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-	
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
-	checkErrorGL();
-	
-	// free the temporary framebuffer
-	
-	glDeleteFramebuffers(1, &dstFramebuffer);
-	checkErrorGL();
-}
-
 #endif

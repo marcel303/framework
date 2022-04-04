@@ -839,8 +839,6 @@ public:
 	static SURFACE_FORMAT toSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat);
 };
 
-void blitBackBufferToSurface(Surface * surface);
-
 //
 
 class ShaderBase
