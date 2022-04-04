@@ -7,6 +7,8 @@
 
 #include "Lgen.h"
 
+#include "Noise.h"
+
 LgenComponentMgr g_lgenComponentMgr;
 
 LgenComponent::~LgenComponent()
