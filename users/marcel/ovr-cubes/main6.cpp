@@ -152,8 +152,10 @@ struct ControlPanel
 	
 	Tab activeTab = kTab_Scene;
 
+	bool doWindowResize = true;
+	
 	ControlPanel(const Vec3 position, const float angle, Scene * in_scene, SpatialAudioSystem_Binaural * in_spatialAudioSystem)
-		: window("Window", 340, 340)
+		: window("Window", 340, 340, true)
 	{
 	#if WINDOW_IS_3D
 		const Mat4x4 transform =
@@ -1849,25 +1851,30 @@ struct SpatialAudioSystemAudioStream : AudioStream
 
 void ControlPanel::tick(const float dt)
 {
-	int sx = 0;
-	int sy = 0;
-	
-	if (activeTab == kTab_Scene || activeTab == kTab_Audio || activeTab == kTab_Tracker)
+	if (doWindowResize)
 	{
-		sx = 340;
-		sy = 340;
+		doWindowResize = false;
+			
+		int sx = 0;
+		int sy = 0;
+		
+		if (activeTab == kTab_Scene || activeTab == kTab_Audio || activeTab == kTab_Tracker)
+		{
+			sx = 340;
+			sy = 340;
+		}
+		else if (activeTab == kTab_ParticleEditor)
+		{
+			sx = 1024;
+			sy = 1024;
+		}
+		else
+		{
+			Assert(false);
+		}
+		
+		window.setSize(sx, sy);
 	}
-	else if (activeTab == kTab_ParticleEditor)
-	{
-		sx = 1024;
-		sy = 1024;
-	}
-	else
-	{
-		Assert(false);
-	}
-	
-	window.setSize(sx, sy);
 	
 	pushWindow(window);
 	{
@@ -1886,6 +1893,8 @@ void ControlPanel::tick(const float dt)
 			{
 				if (ImGui::BeginMenuBar())
 				{
+					auto previousTab = activeTab;
+					
 					if (ImGui::Button("Scene"))
 						activeTab = kTab_Scene;
 					if (ImGui::Button("Audio"))
@@ -1894,6 +1903,11 @@ void ControlPanel::tick(const float dt)
 						activeTab = kTab_Tracker;
 					if (ImGui::Button("Particle Editor"))
 						activeTab = kTab_ParticleEditor;
+					
+					if (activeTab != previousTab && (activeTab == kTab_ParticleEditor || previousTab == kTab_ParticleEditor))
+					{
+						doWindowResize = true;
+					}
 					
 					ImGui::EndMenuBar();
 				}
@@ -1978,7 +1992,7 @@ void ControlPanel::tick(const float dt)
 		
 		if (activeTab == kTab_ParticleEditor)
 		{
-			particleEditor.tick(true, sx, sy, dt);
+			particleEditor.tick(true, window.getWidth(), window.getHeight(), dt);
 		}
 	}
 	popWindow();
@@ -2055,7 +2069,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.vrMode = true;
-	framework.enableVrMovement = false;
+	framework.enableVrMovement = FRAMEWORK_IS_NATIVE_VR ? false : true;
 	framework.enableDepthBuffer = true;
 
 	if (!framework.init(800, 600))
