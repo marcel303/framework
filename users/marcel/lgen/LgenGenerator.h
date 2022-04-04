@@ -12,18 +12,22 @@ namespace lgen
 		virtual bool generate(Heightfield & heightfield, const uint32_t seed) = 0;
 	};
 	
-	// R250_521 RNG. okay distribution and speedy
+	// Mersenne Twister RNG. good distribution. requires some time to initialize. okay speed, but needs to repopulate table from time to time, resulting in a not perfectly smooth running time
 	
-	struct R250_521
+	struct MersenneTwister
 	{
-		uint32_t r250_buffer[250];
-		uint32_t r521_buffer[521];
-
-		int r250_index = 0;
-		int r521_index = 0;
+		static const int MT_N = 624;
+		static const int MT_M = 397;
 		
-		R250_521();
-		R250_521(const uint32_t seed);
+		uint32_t mt[MT_N]; /* the array for the state vector  */
+		int mti = MT_N + 1; /* mti==N+1 means mt[N] is not initialized */
+		
+		//
+		
+		MersenneTwister(const uint32_t seed)
+		{
+			init(seed);
+		}
 		
 		void init(const uint32_t seed);
 		

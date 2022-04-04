@@ -20,7 +20,7 @@ namespace lgen
 		#define XSUB(_i, _j) (((_i) - (_j)) & mx)
 		#define YSUB(_i, _j) (((_i) - (_j)) & my)
 
-		R250_521 rng(seed);
+		MersenneTwister rng(seed);
 		
 		const int size =
 			heightfield.w > heightfield.h

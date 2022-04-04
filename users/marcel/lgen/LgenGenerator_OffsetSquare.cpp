@@ -22,7 +22,7 @@ namespace lgen
 		
 		#define RAND(x, y) ((x) + (rng.next() & (y - 1)) - ((y) >> 1))
 		
-		R250_521 rng(seed);
+		MersenneTwister rng(seed);
 	        
 		int rowOffset = 0;  // Start at zero for first row.
 		
