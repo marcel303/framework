@@ -533,10 +533,10 @@ struct Camera
 		sy = y2 - y1;
 
 		glViewport(
-			x1 / framework.minification,
-			y1 / framework.minification,
-			sx / framework.minification,
-			sy / framework.minification);
+			x1,
+			y1,
+			sx,
+			sy);
 	}
 
 	void endView() const
@@ -1205,7 +1205,6 @@ int main(int argc, char * argv[])
 
 #if ENABLE_WINDOWED_MODE || 0
 	framework.fullscreen = false;
-	framework.minification = 1;
 	framework.windowX = 0;
 	framework.windowY = 60;
 #else

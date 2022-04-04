@@ -75,15 +75,12 @@ int main(int argc, char * argv[])
 
 #if FULLSCREEN
 	framework.fullscreen = true;
-#else
-	framework.minification = 2;
 #endif
 
 	for (int i = 1; i < argc; ++i)
 	{
 		if (std::string(argv[i]) =="devmode")
 		{
-			framework.minification = 2;
 			framework.fullscreen = false;
 		}
 	}

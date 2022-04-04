@@ -1374,14 +1374,12 @@ bool App::init()
 
 	if (g_devMode)
 	{
-		framework.minification = 3;
 		framework.fullscreen = false;
 	}
 	else
 	{
 		if (g_windowed)
 		{
-			framework.minification = 3;
 			framework.fullscreen = false;
 		}
 		else

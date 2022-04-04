@@ -1570,7 +1570,6 @@ int main(int argc, char * argv[])
 	if (1 == 1)
 	{
 		framework.fullscreen = false;
-		framework.minification = 2;
 	}
 	else
 #endif

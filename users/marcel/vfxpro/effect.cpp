@@ -3142,7 +3142,7 @@ void Effect_FXAA::draw()
 	Shader shader("fxaa");
 	setShader(shader);
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, true);
-	shader.setImmediate("inverseVP", 1.f / (g_currentSurface->getWidth() / framework.minification), 1.f / (g_currentSurface->getHeight() / framework.minification));
+	shader.setImmediate("inverseVP", 1.f / g_currentSurface->getWidth(), 1.f / g_currentSurface->getHeight());
 	g_currentSurface->postprocess(shader);
 
 	setBlend(BLEND_ADD);

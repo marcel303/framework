@@ -2375,8 +2375,6 @@ int main(int argc, char * argv[])
 	framework.fullscreen = true;
 #endif
 
-	//framework.minification = 2;
-
 #if defined(DEBUG)
 	framework.windowX = 0;
 #endif

@@ -10,8 +10,8 @@
 
 #define ENABLE_VIDEOIN 0
 
-#define GFX_SX 1920
-#define GFX_SY 1080
+#define GFX_SX (2560/2)
+#define GFX_SY (1600/2)
 
 #if ENABLE_VIDEOIN
 	#include "videoin.h"
@@ -742,7 +742,6 @@ int main(int argc, char * argv[])
 
 #if defined(DEBUG)
 	framework.enableRealTimeEditing = true;
-	framework.minification = 2;
 #endif
 
 	framework.enableDepthBuffer = true;
