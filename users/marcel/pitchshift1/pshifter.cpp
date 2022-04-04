@@ -30,6 +30,14 @@
 #include <emmintrin.h>
 #endif
 
+#ifndef ALIGN16
+	#if defined(MACOS) || defined(LINUX) || defined(ANDROID)
+		#define ALIGN16 __attribute__((aligned(16)))
+	#else
+		#define ALIGN16 __declspec(align(16))
+	#endif
+#endif
+
 #include <cmath>
 #include <cstdlib>
 #include <array>
@@ -44,17 +52,17 @@
 
 struct FloatBufferLine
 {
-	float values[FLOAT_BUFFER_SIZE];
+	double values[FLOAT_BUFFER_SIZE];
 	
-	float * begin() { return values; }
-	const float * begin() const { return values; }
+	double * begin() { return values; }
+	const double * begin() const { return values; }
 	
-	float * data() { return values; }
+	double * data() { return values; }
 	
 	void fill_zero(int num_values)
 	{
 		for (int i = 0; i < num_values; ++i)
-			values[i] = 0.f;
+			values[i] = 0.0;
 	}
 };
 
@@ -75,20 +83,20 @@ struct ALCdevice
 #define FRACTIONBITS 16
 #define FRACTIONONE (1 << FRACTIONBITS)
 
-uint32_t fastf2u(float value)
+static  uint32_t fastf2u(float value)
 {
 	return uint32_t(value);
 }
 
-int double2int(double value)
+static  int double2int(double value)
 {
 	return int(value);
 }
 
-template <typename T> void complex_fft(T & buffer, double direction)
+template <typename T> static void complex_fft(T & buffer, double direction)
 {
-	double real[buffer.size()];
-	double imag[buffer.size()];
+	ALIGN16 double real[buffer.size()];
+	ALIGN16 double imag[buffer.size()];
 	
 	const int numBits = Fourier::integerLog2(buffer.size());
 	
@@ -100,20 +108,24 @@ template <typename T> void complex_fft(T & buffer, double direction)
 		imag[i_reversed] = buffer[i].imag();
 	}
 
-	Fourier::fft1D(real, imag, buffer.size(), buffer.size(), direction > 0.0, false);
+	Fourier::fft1D(
+		real,
+		imag,
+		buffer.size(),
+		buffer.size(),
+		direction > 0.0,
+		false);
 	
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
-		buffer[i] = typename T::value_type(real[i], imag[i]);
+		buffer[i] =
+			typename T::value_type(
+				real[i],
+				imag[i]);
 	}
 }
 
-size_t maxz(size_t a, size_t b)
-{
-	return a > b ? a : b;
-}
-
-size_t minz(size_t a, size_t b)
+static size_t minz(size_t a, size_t b)
 {
 	return a < b ? a : b;
 }
@@ -130,7 +142,7 @@ using complex_d = std::complex<double>;
 #define FIFO_LATENCY (STFT_STEP * (OVERSAMP-1))
 
 /* Define a Hann window, used to filter the STFT input and output. */
-std::array<double,STFT_SIZE> InitHannWindow()
+static std::array<double,STFT_SIZE> InitHannWindow()
 {
     std::array<double,STFT_SIZE> ret;
     /* Create lookup table of the Hann window for the desired size, i.e. STFT_SIZE */
@@ -142,14 +154,13 @@ std::array<double,STFT_SIZE> InitHannWindow()
     }
     return ret;
 }
-alignas(16) const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
+static ALIGN16 const std::array<double,STFT_SIZE> HannWindow = InitHannWindow();
 
 struct FrequencyBin {
     double Amplitude;
     double Frequency;
 };
-
 
 struct PshifterState {
 
@@ -170,7 +181,7 @@ struct PshifterState {
     std::array<FrequencyBin,STFT_HALF_SIZE+1> mAnalysisBuffer;
     std::array<FrequencyBin,STFT_HALF_SIZE+1> mSynthesisBuffer;
 
-    alignas(16) FloatBufferLine mBufferOut;
+    ALIGN16 FloatBufferLine mBufferOut;
 
     void deviceUpdate(const ALCdevice *device);
     void update(const EffectProps *props);
@@ -260,7 +271,7 @@ void PshifterState::process(const size_t samplesToDo, const FloatBufferLine & sa
              * amplitude and true frequency in analysis buffer.
              */
             mAnalysisBuffer[k].Amplitude = 2.0 * amplitude;
-            mAnalysisBuffer[k].Frequency = (static_cast<double>(k) + tmp) * freq_per_bin;
+            mAnalysisBuffer[k].Frequency = (static_cast<double>(k) + tmp);
 
             /* Store the actual phase[k] for the next frame. */
             mLastPhase[k] = phase;
@@ -285,7 +296,7 @@ void PshifterState::process(const size_t samplesToDo, const FloatBufferLine & sa
         for(size_t k{0u};k < STFT_HALF_SIZE+1;k++)
         {
             /* Compute bin deviation from scaled freq */
-            const double tmp{mSynthesisBuffer[k].Frequency / freq_per_bin};
+            const double tmp{mSynthesisBuffer[k].Frequency};
 
             /* Calculate actual delta phase and accumulate it to get bin phase */
             mSumPhase[k] += tmp * expected;
