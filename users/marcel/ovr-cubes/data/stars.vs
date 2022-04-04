@@ -1,4 +1,7 @@
-include engine/ShaderVS.txt
+include engine/ShaderVSBase.txt
+
+shader_attrib vec4 in_position VS_POSITION
+shader_attrib vec4 in_color    VS_COLOR
 
 uniform float u_time;
 
@@ -6,7 +9,7 @@ shader_out vec2 v_texcoord;
 
 void main()
 {
-	vec3 position = unpackPosition().xyz;
+	vec3 position = in_position.xyz;
 
 	vec3 oldPosition = position;
 	position.x += sin(u_time * 0.023 * (1.0 + oldPosition.y + oldPosition.z));

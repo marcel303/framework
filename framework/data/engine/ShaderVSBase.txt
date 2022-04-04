@@ -1,0 +1,48 @@
+include engine/ShaderCommon.txt
+
+// uniforms
+
+#if VS_USE_LEGACY_MATRICES
+	#define ModelViewMatrix           gl_ModelViewMatrix
+	#define ModelViewProjectionMatrix gl_ModelViewProjectionMatrix
+	#define ProjectionMatrix          gl_ProjectionMatrix
+#else
+	uniform mat4 ModelViewMatrix;
+	uniform mat4 ModelViewProjectionMatrix;
+	uniform mat4 ProjectionMatrix;
+#endif
+
+// functions
+
+// todo : remove objectToWorld, or add a WorldMatrix uniform
+//        which isn't really possible ..
+
+vec4 objectToWorld(vec4 v)
+{
+	return ModelViewMatrix * v;
+}
+
+vec4 objectToView(vec4 v)
+{
+	return ModelViewMatrix * v;
+}
+
+vec3 objectToView3(vec3 v)
+{
+	return (ModelViewMatrix * vec4(v, 0.0)).xyz;
+}
+
+vec4 objectToProjection(vec4 v)
+{
+	return ModelViewProjectionMatrix * v;
+}
+
+vec4 worldToProjection(vec4 v)
+{
+	return ProjectionMatrix * v;
+}
+
+vec4 viewToProjection(vec4 v)
+{
+	return ProjectionMatrix * v;
+}

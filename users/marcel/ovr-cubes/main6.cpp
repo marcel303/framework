@@ -462,6 +462,8 @@ struct AudioStreamerAudioSource : AudioSource
 
 	void open(const char * filename)
 	{
+		filename = framework.resolveResourcePath(filename);
+		
 		audioSourceVorbis.open(filename, true);
 	}
 
@@ -1930,9 +1932,9 @@ void ControlPanel::tick(const float dt)
 					parameterUi::doParameterUi_recursive(spatialAudioSystem->parameterMgr, nullptr);
 					
 					auto * spatialAudioSystemImpl = (SpatialAudioSystem_Binaural*)spatialAudioSystem;
-					spatialAudioSystemImpl->mutex_sources.lock();
+					spatialAudioSystemImpl->sources_mutex.lock();
 					{
-						for (auto * source : spatialAudioSystemImpl->sources)
+						for (auto * source = spatialAudioSystemImpl->sources; source != nullptr; source = source->next)
 						{
 							ImGui::Text("el: %+07.2f, az: %+07.2f, in: %.2f, rd: %04.2f, hr: %05.2f",
 								source->elevation.load(),
@@ -1942,7 +1944,7 @@ void ControlPanel::tick(const float dt)
 								source->headroomInDb);
 						}
 					}
-					spatialAudioSystemImpl->mutex_sources.unlock();
+					spatialAudioSystemImpl->sources_mutex.unlock();
 				}
 				else if (activeTab == kTab_Tracker)
 				{
@@ -2061,7 +2063,7 @@ int main(int argc, char * argv[])
 	
 	initUi();
 	
-	auto * spatialAudioSystemImpl = new SpatialAudioSystem();
+	auto * spatialAudioSystemImpl = new SpatialAudioSystem_Binaural("binaural");
 	spatialAudioSystem = spatialAudioSystemImpl;
 
 	Scene scene;

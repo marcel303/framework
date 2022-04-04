@@ -63,7 +63,7 @@ add mitronix1
 add motionbank-effect
 add nanovg-canvas
 add nodeDiscovery-examples
-with_platform android.ovr-mobile add ovr-cubes
+add ovr-cubes
 add pbd1
 add pincushion1
 add planetvis

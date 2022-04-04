@@ -1,41 +1,48 @@
-app ovr-cubes1
-	depend_library android-native-app-glue
-	depend_library libgg
-	depend_library ovr-mobile-opengl
-	add_files main1.cpp
+library ovr-cubes-data
+	with_platform macos|iphoneos resource_path "/Users/thecat/Google Drive/Projects/ovr-cubes"
+	add_files resources.cpp
+	
+with_platform android.ovr-mobile	app ovr-cubes1
+with_platform android.ovr-mobile		depend_library android-native-app-glue
+with_platform android.ovr-mobile		depend_library libgg
+with_platform android.ovr-mobile		depend_library ovr-mobile-opengl
+with_platform android.ovr-mobile		add_files main1.cpp
 
-app ovr-cubes2
-	depend_library android-assetcopy
-	depend_library framework
-	add_files main2.cpp
-	resource_path data
+with_platform android.ovr-mobile	app ovr-cubes2
+with_platform android.ovr-mobile		depend_library android-assetcopy
+with_platform android.ovr-mobile		depend_library framework
+with_platform android.ovr-mobile		depend_library ovr-cubes-data
+with_platform android.ovr-mobile		add_files main2.cpp
+with_platform android.ovr-mobile		resource_path data
 
-app ovr-cubes3
-	depend_library android-native-app-glue
-	add_files main3.cpp
+with_platform android.ovr-mobile	app ovr-cubes3
+with_platform android.ovr-mobile		depend_library android-native-app-glue
+with_platform android.ovr-mobile		add_files main3.cpp
 
-app ovr-cubes4
-	depend_library android-assetcopy
-	depend_library audiograph
-	depend_library audiograph-nodes-4dsound-1.6
-	depend_library ecs-parameterui
-	depend_library framework
-	depend_library framework-allegro2
-	depend_library framework-gltf
-	depend_library imgui-framework
-	depend_library libjgmod
-	depend_library magicavoxel-framework
-	add_files main4.cpp
-	resource_path data
+with_platform android.ovr-mobile	app ovr-cubes4
+with_platform android.ovr-mobile		depend_library android-assetcopy
+with_platform android.ovr-mobile		depend_library audiograph
+with_platform android.ovr-mobile		depend_library audiograph-nodes-4dsound-1.6
+with_platform android.ovr-mobile		depend_library ecs-parameterui
+with_platform android.ovr-mobile		depend_library framework
+with_platform android.ovr-mobile		depend_library framework-allegro2
+with_platform android.ovr-mobile		depend_library framework-gltf
+with_platform android.ovr-mobile		depend_library imgui-framework
+with_platform android.ovr-mobile		depend_library libjgmod
+with_platform android.ovr-mobile		depend_library magicavoxel-framework
+with_platform android.ovr-mobile		depend_library ovr-cubes-data
+with_platform android.ovr-mobile		add_files main4.cpp
+with_platform android.ovr-mobile		resource_path data
 
-app ovr-cubes5
-	depend_library ecs-parameterui
-	depend_library framework
-	depend_library framework-gltf
-	depend_library imgui-framework
-	depend_library sse2neon
-	add_files main5.cpp
-	resource_path data
+with_platform android.ovr-mobile	app ovr-cubes5
+with_platform android.ovr-mobile		depend_library ecs-parameterui
+with_platform android.ovr-mobile		depend_library framework
+with_platform android.ovr-mobile		depend_library framework-gltf
+with_platform android.ovr-mobile		depend_library imgui-framework
+with_platform android.ovr-mobile		depend_library ovr-cubes-data
+with_platform android.ovr-mobile		depend_library sse2neon
+with_platform android.ovr-mobile		add_files main5.cpp
+with_platform android.ovr-mobile		resource_path data
 
 app ovr-cubes6
     depend_library audiograph
@@ -46,6 +53,7 @@ app ovr-cubes6
 	depend_library framework-gltf
 	depend_library imgui-framework
 	depend_library libjgmod
+	depend_library ovr-cubes-data
 	depend_library spatialAudioSystem-binaural
 	depend_library sse2neon
 	add_files main6.cpp
