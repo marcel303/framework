@@ -1,0 +1,4 @@
+app marcel-pitchshift1
+	depend_library audiooutput-hd
+	depend_library framework
+	add_files pshifter.cpp

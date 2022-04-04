@@ -69,6 +69,7 @@ add pincushion1
 add planetvis
 add planetvis2
 add phonograph1
+add pitchshift1
 add ps3eye-to-osc
 with_platform macos add rast
 add rawaudio1
