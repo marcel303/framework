@@ -29,22 +29,38 @@ void main()
 	vec2 p3 = params2.xy;
 	float strokeSize = params2.z * 0.5;
 
+	mat2x2 ModelViewMatrix_rot = mat2x2(
+		ModelViewMatrix[0].xy,
+		ModelViewMatrix[1].xy);
+
+	vec2 translation = vec2(ModelViewMatrix[3].x, ModelViewMatrix[3].y);
+
+	// transform - scale
+	
 	if (useScreenSize == 1.0)
 	{
-		// todo ?
+		float scale_rcp = rsqrt(min(
+			dot(ModelViewMatrix_rot[0], ModelViewMatrix_rot[0]),
+			dot(ModelViewMatrix_rot[1], ModelViewMatrix_rot[1])));
+
+		p1 *= scale_rcp;
+		p2 *= scale_rcp;
+		p3 *= scale_rcp;
 	}
 	else
 	{
-		float scale = min(length(ModelViewMatrix[0].xyz), length(ModelViewMatrix[1].xyz));
+		float scale = sqrt(min(
+			dot(ModelViewMatrix_rot[0], ModelViewMatrix_rot[0]),
+			dot(ModelViewMatrix_rot[1], ModelViewMatrix_rot[1])));
 		
 		strokeSize *= scale;
 	}
 	
 	// transform
 	
-	p1 = (ModelViewMatrix * vec4(p1, 0.0, 1.0)).xy;
-	p2 = (ModelViewMatrix * vec4(p2, 0.0, 1.0)).xy;
-	p3 = (ModelViewMatrix * vec4(p3, 0.0, 1.0)).xy;
+	p1 = ModelViewMatrix_rot * p1 + translation;
+	p2 = ModelViewMatrix_rot * p2 + translation;
+	p3 = ModelViewMatrix_rot * p3 + translation;
 	
 	// calculate plane equations along the edge and perpendicular to it
 	

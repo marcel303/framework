@@ -27,7 +27,7 @@
 
 #include "framework.h"
 
-#define VIEW_SX (1920/2)
+#define VIEW_SX (1920*2/3)
 #define VIEW_SY (1080/2)
 
 int main(int argc, char * argv[])
@@ -49,7 +49,10 @@ int main(int argc, char * argv[])
 		{ HQ_FILLED_CIRCLES },
 		{ HQ_STROKED_CIRCLES },
 		{ HQ_FILLED_TRIANGLES },
-		{ HQ_STROKED_TRIANGLES }
+		{ HQ_STROKED_TRIANGLES },
+		{ HQ_LINES },
+		{ HQ_FILLED_ROUNDED_RECTS },
+		{ HQ_STROKED_ROUNDED_RECTS },
 	};
 	
 	const char * modes[] =
@@ -145,6 +148,24 @@ int main(int argc, char * argv[])
 						case HQ_STROKED_TRIANGLES:
 							hqBegin(HQ_STROKED_TRIANGLES, useScreenSize);
 							hqStrokeTriangle(-s, -s, +s, -s, 0, +s, strokeSize);
+							hqEnd();
+							break;
+							
+						case HQ_LINES:
+							hqBegin(HQ_LINES, useScreenSize);
+							hqLine(-s, 0, strokeSize, +s, 0, strokeSize);
+							hqEnd();
+							break;
+							
+						case HQ_FILLED_ROUNDED_RECTS:
+							hqBegin(HQ_FILLED_ROUNDED_RECTS, useScreenSize);
+							hqFillRoundedRect(-s, -s, +s, +s, s/4.f);
+							hqEnd();
+							break;
+							
+						case HQ_STROKED_ROUNDED_RECTS:
+							hqBegin(HQ_STROKED_ROUNDED_RECTS, useScreenSize);
+							hqStrokeRoundedRect(-s, -s, +s, +s, s/4.f, strokeSize);
 							hqEnd();
 							break;
 						}

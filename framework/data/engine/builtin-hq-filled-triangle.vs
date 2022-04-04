@@ -27,12 +27,31 @@ void main()
 	vec2 p1 = params1.xy;
 	vec2 p2 = params1.zw;
 	vec2 p3 = params2.xy;
+
+	mat2x2 ModelViewMatrix_rot = mat2x2(
+		ModelViewMatrix[0].xy,
+		ModelViewMatrix[1].xy);
+
+	vec2 translation = vec2(ModelViewMatrix[3].x, ModelViewMatrix[3].y);
 	
 	// transform
 	
-	p1 = (ModelViewMatrix * vec4(p1, 0.0, 1.0)).xy;
-	p2 = (ModelViewMatrix * vec4(p2, 0.0, 1.0)).xy;
-	p3 = (ModelViewMatrix * vec4(p3, 0.0, 1.0)).xy;
+	if (useScreenSize == 1.0)
+	{
+		float scale_rcp = rsqrt(min(
+			dot(ModelViewMatrix_rot[0], ModelViewMatrix_rot[0]),
+			dot(ModelViewMatrix_rot[1], ModelViewMatrix_rot[1])));
+
+		p1 = ModelViewMatrix_rot * p1 * scale_rcp + translation;
+		p2 = ModelViewMatrix_rot * p2 * scale_rcp + translation;
+		p3 = ModelViewMatrix_rot * p3 * scale_rcp + translation;
+	}
+	else
+	{
+		p1 = ModelViewMatrix_rot * p1 + translation;
+		p2 = ModelViewMatrix_rot * p2 + translation;
+		p3 = ModelViewMatrix_rot * p3 + translation;
+	}
 	
 	// calculate plane equations along the edge and perpendicular to it
 	
