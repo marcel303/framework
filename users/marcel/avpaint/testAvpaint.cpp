@@ -493,9 +493,9 @@ int main(int argc, char * argv[])
 						{
 							//setColorf(1.f, 1.f, 1.f, 1.f);
 							setColorf(1.f, 1.f, 1.f, Calc::Lerp(0.f, 1.f, mouse.x / float(GFX_SX)));
-							gxSetTexture(layerVideos[i]);
+							gxSetTexture(layerVideos[i], GX_SAMPLE_LINEAR, true);
 							drawRect(0, 0, GFX_SX, GFX_SY);
-							gxSetTexture(0);
+							gxClearTexture();
 						}
 						popSurface();
 						

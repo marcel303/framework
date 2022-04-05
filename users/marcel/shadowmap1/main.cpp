@@ -838,10 +838,10 @@ int main(int argc, char * argv[])
 			{
 			#if LINEAR_DEPTH_FOR_CAMERA
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_camera_linear.getTexture());
+				gxSetTexture(view_camera_linear.getTexture(), GX_SAMPLE_NEAREST, true);
 				setLumif(depthLinearDrawScale);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 				
 				setColor(100, 100, 100);

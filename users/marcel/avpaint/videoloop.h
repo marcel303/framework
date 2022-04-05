@@ -103,7 +103,7 @@ struct VideoLoop
 					
 					pushSurface(firstFrame);
 					{
-						gxSetTexture(mediaPlayer->getTexture());
+						gxSetTexture(mediaPlayer->getTexture(), GX_SAMPLE_LINEAR, true);
 						setColor(colorWhite);
 						gxBegin(GX_QUADS);
 						{
@@ -113,7 +113,7 @@ struct VideoLoop
 							gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, sy );
 						}
 						gxEnd();
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 					popSurface();
 				}

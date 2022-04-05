@@ -675,14 +675,14 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						gxSetTexture(particleSurface->getTexture());
+						gxSetTexture(particleSurface->getTexture(), GX_SAMPLE_LINEAR, true);
 						{
 							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
 							drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
 							popBlend();
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 
 				#if DO_VIDEO
@@ -701,7 +701,7 @@ int main(int argc, char * argv[])
 							
 							if (texture != 0)
 							{
-								gxSetTexture(texture);
+								gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 								{
 									pushBlend(BLEND_ALPHA);
 									{
@@ -713,7 +713,7 @@ int main(int argc, char * argv[])
 									}
 									popBlend();
 								}
-								gxSetTexture(0);
+								gxClearTexture();
 
 								pushBlend(BLEND_ALPHA);
 								{
@@ -730,14 +730,14 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 
-					gxSetTexture(videoOverlay->getTexture());
+					gxSetTexture(videoOverlay->getTexture(), GX_SAMPLE_NEAREST, true);
 					{
 						pushBlend(BLEND_ALPHA);
 						setColor(colorWhite);
 						drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
 						popBlend();
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				#endif
 
 					//
@@ -770,25 +770,25 @@ int main(int argc, char * argv[])
 					}
 					popSurface();
 
-					gxSetTexture(textOverlay->getTexture());
+					gxSetTexture(textOverlay->getTexture(), GX_SAMPLE_NEAREST, true);
 					{
 						pushBlend(BLEND_ALPHA);
 						setColor(colorWhite);
 						drawRect(0, 0, finalSurface->getWidth(), finalSurface->getHeight());
 						popBlend();
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				#endif
 				}
 				popSurface();
 
-				gxSetTexture(finalSurface->getTexture());
+				gxSetTexture(finalSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 				{
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
 					drawRect(0, 0, GFX_SX_SCALED, GFX_SY_SCALED);
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			framework.endDraw();
 		}

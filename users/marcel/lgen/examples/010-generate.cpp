@@ -57,7 +57,7 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 			gxBegin(GX_QUADS);
 			{
 				const float x1 = 0;
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 				gxTexCoord2f(0, s); gxVertex2f(x1, y2);
 			}
 			gxEnd();
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		framework.endDraw();
 	}

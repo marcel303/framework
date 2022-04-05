@@ -1114,12 +1114,12 @@ int main(int argc, char * argv[])
 
 				setBlend(BLEND_OPAQUE);
 
-				gxSetTexture(surface.getTexture());
+				gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 				{
 					gxColor4f(1.f, 1.f, 1.f, 1.f);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			framework.endDraw();
 		}

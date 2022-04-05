@@ -234,10 +234,11 @@ static void testRaster()
 			popSurface();
 			
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(surface.getTexture());
+			gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 			setColor(colorWhite);
 			setLumif(1.f / 20.f);
 			drawRect(0, 0, 256, 256);
+			gxClearTexture();
 			popBlend();
 		}
 		framework.endDraw();

@@ -921,11 +921,11 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		{
 			setColor(colorWhite);
 			pushColorPost(POST_SET_ALPHA_TO_ONE);
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_MIPMAP, true);
 			{
 				drawRect(textureX, y + textureY, textureX + textureSx, y + textureY + textureSy);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			popColorPost();
 		}
 		
@@ -5766,9 +5766,9 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				{
 					pushBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					gxSetTexture(textureId);
+					gxSetTexture(textureId, GX_SAMPLE_MIPMAP, true);
 					drawRect(0, 0, sx, sy);
-					gxSetTexture(0);
+					gxClearTexture();
 					popBlend();
 				}
 			}

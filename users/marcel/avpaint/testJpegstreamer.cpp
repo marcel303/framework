@@ -1070,9 +1070,9 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_OPAQUE);
 				#endif
 					setColor(255, 255, 255, 15);
-					gxSetTexture(jpegLoop[0]->texture.id);
+					gxSetTexture(jpegLoop[0]->texture.id, GX_SAMPLE_LINEAR, true);
 					drawRect(0, 0, GFX_SX, GFX_SY);
-					gxSetTexture(0);
+					gxClearTexture();
 					popBlend();
 				}
 				popSurface();
@@ -1111,9 +1111,9 @@ int main(int argc, char * argv[])
 								gxTranslatef(x, y, 0);
 								pushBlend(BLEND_ALPHA);
 								setColor(255, 255, 255, 227);
-								gxSetTexture(jpegLoop[i]->texture.id);
+								gxSetTexture(jpegLoop[i]->texture.id, GX_SAMPLE_LINEAR, true);
 								drawRect(0, 0, sx, sy);
-								gxSetTexture(0);
+								gxClearTexture();
 								setColor(100, 100, 100);
 								drawRectLine(0, 0, sx, sy);
 								popBlend();
@@ -1147,9 +1147,9 @@ int main(int argc, char * argv[])
 				
 				pushBlend(BLEND_OPAQUE);
 				setColor(colorWhite);
-				gxSetTexture(surface->getTexture());
+				gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 			framework.endDraw();
