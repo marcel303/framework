@@ -288,15 +288,15 @@ int main(int argc, char * argv[])
 				y += 10;
 				
 				x += 10;
-				gxSetTexture(draw2d_world.getTexture());
+				gxSetTexture(draw2d_world.getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(x, y, x + draw2d_world.getWidth(), y + draw2d_world.getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				x += draw2d_world.getWidth();
 				
 				x += 10;
-				gxSetTexture(draw2d_view.getTexture());
+				gxSetTexture(draw2d_view.getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(x, y, x + draw2d_view.getWidth(), y + draw2d_view.getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				x += draw2d_view.getWidth();
 				
 				x = 0;
@@ -304,15 +304,15 @@ int main(int argc, char * argv[])
 				y += 10;
 				
 				x += 10;
-				gxSetTexture(draw2d_clip.getTexture());
+				gxSetTexture(draw2d_clip.getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(x, y, x + draw2d_clip.getWidth(), y + draw2d_clip.getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				x += draw2d_clip.getWidth();
 				
 				x += 10;
-				gxSetTexture(draw3d_persp.getTexture());
+				gxSetTexture(draw3d_persp.getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(x, y, x + draw3d_persp.getWidth(), y + draw3d_persp.getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				x += draw3d_persp.getWidth();
 			}
 			popBlend();

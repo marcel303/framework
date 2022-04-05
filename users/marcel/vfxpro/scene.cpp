@@ -529,10 +529,10 @@ void SceneLayer::draw()
 						setBlend(BLEND_OPAQUE);
 					else
 						setBlend(BLEND_ALPHA);
-					gxSetTexture(g_currentSurface->getTexture());
+					gxSetTexture(g_currentSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 					gxColor4f(1.f, 1.f, 1.f, m_copyPreviousLayerAlpha.get());
 					drawRect(0, 0, m_surface->getWidth(), m_surface->getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popSurface();
 			}
@@ -564,7 +564,7 @@ void SceneLayer::draw()
 	{
 		// compose
 
-		gxSetTexture(m_surface->getTexture());
+		gxSetTexture(m_surface->getTexture(), GX_SAMPLE_NEAREST, true);
 		{
 			Shader alphaTestShader("layer_compose_alphatest");
 
@@ -612,7 +612,7 @@ void SceneLayer::draw()
 
 			clearShader();
 		}
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 }
 

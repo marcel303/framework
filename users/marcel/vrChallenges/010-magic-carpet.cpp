@@ -221,8 +221,6 @@ struct World
 			}
 			
 			setColor(colorWhite);
-			gxSetTexture(terrainTexture.id);
-			gxSetTextureSampler(GX_SAMPLE_MIPMAP, false);
 			shader.setImmediate("u_hasTexture", 1.f);
 			shader.setTexture("u_texture", 0, terrainTexture.id, true, false);
 			
@@ -255,9 +253,6 @@ struct World
 				}
 			}
 			gxEnd();
-			
-			gxSetTextureSampler(GX_SAMPLE_NEAREST, true);
-			gxSetTexture(0);
 		}
 	}
 };

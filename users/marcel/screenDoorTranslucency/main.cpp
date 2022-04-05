@@ -77,9 +77,9 @@ int main(int argc, char * argv[])
 			auto textureId = createTextureFromR8(transparencytable, 16, 16, false, false);
 			
 			setColor(colorWhite);
-			gxSetTexture(textureId);
+			gxSetTexture(textureId, GX_SAMPLE_NEAREST, true);
 			drawRect(0, 0, 16*4, 16*4);
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			Shader shader("alpha-test");
 			setShader(shader);
@@ -133,9 +133,9 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD_OPAQUE);
 					setColorf(d, d, d, d);
 					
-					gxSetTexture(buffer->getTextureId());
+					gxSetTexture(buffer->getTextureId(), GX_SAMPLE_NEAREST, true);
 					drawRect(0, 0, 640, 480);
-					gxSetTexture(0);
+					gxClearTexture();
 					
 					popBlend();
 				}
@@ -167,9 +167,9 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			{
 				setColor(colorWhite);
-				gxSetTexture(buffer->getTextureId());
+				gxSetTexture(buffer->getTextureId(), GX_SAMPLE_NEAREST, true);
 				drawRect(0, 0, 640, 480);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			popBlend();
 			

@@ -68,11 +68,11 @@ int main(int argc, char * argv[])
 				if (texture != 0)
 				{
 					setColor(colorWhite);
-					gxSetTexture(texture);
+					gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 					pushBlend(BLEND_OPAQUE);
 					drawRect(0, 0, 800, 400);
 					popBlend();
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				
 				// draw the progress bar

@@ -182,8 +182,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
-			gxSetTexture(m_texture->textures[cellIndex].id);
-			gxSetTextureSampler(
+			gxSetTexture(m_texture->textures[cellIndex].id,
 				filter == FILTER_POINT ? GX_SAMPLE_NEAREST :
 				filter == FILTER_LINEAR ? GX_SAMPLE_LINEAR :
 				filter == FILTER_MIPMAP ? GX_SAMPLE_MIPMAP : GX_SAMPLE_NEAREST,
@@ -203,8 +202,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		}
 		gxPopMatrix();
 
-		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 }
 

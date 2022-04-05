@@ -971,9 +971,9 @@ int main(int argc, char * argv[])
 				const int N = cube->size;
 				texture.upload(cube->density.data() + IX_3D(0, 0, z), 4, 0);
 				
-				gxSetTexture(texture.id);
+				gxSetTexture(texture.id, GX_SAMPLE_LINEAR, true);
 				drawRect(-.5f, -.5f, .5f, .5f);
-				gxSetTexture(0);
+				gxClearTexture();
 				gxPopMatrix();
 			}
 			
@@ -986,12 +986,12 @@ int main(int argc, char * argv[])
 			gxScalef(SCALE, SCALE, 1);
 			
 			texture.upload(cube->density.data(), 4, 0);
-			gxSetTexture(texture.id);
+			gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 			setColorClamp(false);
 			setColor(2000, 2000, 2000);
 			drawRect(0, 0, cube->size, cube->size);
 			setColorClamp(true);
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			pushBlend(BLEND_ADD);
 			hqBegin(HQ_LINES);

@@ -604,14 +604,14 @@ int main(int argc, char * argv[])
 				gxPushMatrix();
 				{
 					gxTranslatef(10, GFX_SY - view3D.getHeight() - 50 - 10, 0);
-					gxSetTexture(view3D.getTexture());
+					gxSetTexture(view3D.getTexture(), GX_SAMPLE_NEAREST, true);
 					{
 						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						drawRect(0, 0, view3D.getWidth(), view3D.getHeight());
 						popBlend();
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				gxPopMatrix();
 			#endif

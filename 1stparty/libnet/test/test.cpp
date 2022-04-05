@@ -1438,9 +1438,9 @@ static void presentImage(ImageMem & image)
 		if (texture != 0)
 		{
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 			drawRect(0, 0, image.sx, image.sy);
-			gxSetTexture(0);
+			gxClearTexture();
 			popBlend();
 			
 			freeTexture(texture);

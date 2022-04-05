@@ -485,11 +485,11 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 			pushBlend(BLEND_OPAQUE);
 			drawRect(0, 0, 800, 600);
 			popBlend();
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		framework.endDraw();
 		

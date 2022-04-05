@@ -187,12 +187,12 @@ void OrientationGizmo::drawSurface()
 
 void OrientationGizmo::draw() const
 {
-	gxSetTexture(surface->getTexture());
+	gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 	{
 		setColor(colorWhite);
 		drawRect(x, y, x + sx, y + sy);
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 	
 	setColor(colorWhite);
 	drawRectLine(x, y, x + sx, y + sy);

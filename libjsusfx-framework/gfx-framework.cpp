@@ -914,8 +914,7 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 			
 			pushSurface(image.surface);
 			{
-				gxSetTexture(texture.id);
-				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, false);
 				{
 					pushColor(colorWhite);
 					pushBlend(BLEND_OPAQUE);
@@ -925,8 +924,7 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 					popBlend();
 					popColor();
 				}
-				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			popSurface();
 			
@@ -1093,7 +1091,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 			
 			const bool filter = (mode & 0x4) == 0;
 			
-			gxSetTexture(image.surface->getTexture());
+			gxSetTexture(image.surface->getTexture(), filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
 			{
 				const int sx = image.surface->getWidth();
 				const int sy = image.surface->getHeight();
@@ -1102,8 +1100,6 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				
 				const int dstX = (int)*m_gfx_x;
 				const int dstY = (int)*m_gfx_y;
-				
-				gxSetTextureSampler(filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
 				
 				if (scale != 1.f || rotate != 0.f)
 				{
@@ -1119,10 +1115,8 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				{
 					drawRect(dstX, dstY, dstX + sx, dstY + sy);
 				}
-				
-				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			popColorPost();
 			popBlend();
 		}
@@ -1262,10 +1256,8 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 			gxRotatef(angle * 180.f / M_PI, 0, 0, 1);
 			gxTranslatef(-dsx/2.f, -dsy/2.f, 0.f);
 			
-			gxSetTexture(image.surface->getTexture());
+			gxSetTexture(image.surface->getTexture(), filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
 			{
-				gxSetTextureSampler(filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
-				
 				const float x1 = 0;
 				const float y1 = 0;
 				const float x2 = dsx;
@@ -1290,10 +1282,8 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 					gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
 				}
 				gxEnd();
-				
-				gxSetTextureSampler(GX_SAMPLE_LINEAR, false);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		gxPopMatrix();
 		

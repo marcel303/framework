@@ -77,7 +77,7 @@ struct Creature
 	void draw() const
 	{
 		Assert(vfxInstance->texture != 0);
-		gxSetTexture(vfxInstance->texture);
+		gxSetTexture(vfxInstance->texture, GX_SAMPLE_LINEAR, true);
 		{
 			pushBlend(BLEND_OPAQUE);
 			
@@ -88,7 +88,7 @@ struct Creature
 			
 			popBlend();
 		}
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 };
 

@@ -85,9 +85,9 @@ void Mainwin::tick()
 static void drawImage(GxTextureId image, int x, int y, int sx, int sy)
 {
 	setColor(colorWhite);
-	gxSetTexture(image);
+	gxSetTexture(image, GX_SAMPLE_LINEAR, true);
 	drawRect(x, y, x + sx, y + sy);
-	gxSetTexture(0);
+	gxClearTexture();
 }
 
 void Mainwin::draw() const

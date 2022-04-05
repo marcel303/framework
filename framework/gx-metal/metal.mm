@@ -2859,10 +2859,17 @@ void gxVertex4fv(const float * v)
 	gxVertex4f(v[0], v[1], v[2], v[3]);
 }
 
-void gxSetTexture(GxTextureId texture)
+void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
 	s_gxTexture = texture;
 	s_gxTextureEnabled = texture != 0;
+	
+	const int filter_index =
+		filter == GX_SAMPLE_NEAREST ? 0 :
+		filter == GX_SAMPLE_LINEAR ? 1 :
+		2;
+		
+	s_gxTextureSampler = (filter_index << 1) | clamp;
 }
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
@@ -2873,6 +2880,12 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		2;
 		
 	s_gxTextureSampler = (filter_index << 1) | clamp;
+}
+
+void gxClearTexture()
+{
+	s_gxTexture = 0;
+	s_gxTextureEnabled = false;
 }
 
 //

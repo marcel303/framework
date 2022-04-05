@@ -62,11 +62,11 @@ int main(int argc, char * argv[])
 			if (texture != 0)
 			{
 				setColor(colorWhite);
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				pushColorPost(POST_SET_RGB_TO_R);
 				drawRect(0, 0, viewSx, viewSy);
 				popColorPost();
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 		}
 		framework.endDraw();

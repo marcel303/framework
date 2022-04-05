@@ -161,9 +161,9 @@ int main(int argc, char * argv[])
 				clearShader();
 				
 				setColorf(1, 1, 1, 1, 1.f / 4);
-				gxSetTexture(helper.lightIdsTextureId);
+				gxSetTexture(helper.lightIdsTextureId, GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, 200, 200);
-				gxSetTexture(0);
+				gxClearTexture();
 		
 				// show the light volume interpretation by the shader (2d)
 				

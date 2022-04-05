@@ -862,12 +862,12 @@ int main(int argc, char * argv[])
 				
 				auto texture = displayNode ? displayNode->getImage()->getTexture() : 0;
 				
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 				pushBlend(BLEND_OPAQUE);
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				popBlend();
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			
 		#if ENABLE_AUDIO

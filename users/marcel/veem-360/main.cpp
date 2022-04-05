@@ -256,21 +256,21 @@ int main(int argc, char * argv[])
 			}
 			clearShader();
 		#elif 0
-			gxSetTexture(mp->getTexture());
+			gxSetTexture(mp->getTexture(), GX_SAMPLE_LINEAR, true);
 			{
 				setColor(colorWhite);
 				pushBlend(BLEND_OPAQUE);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				popBlend();
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 		#elif 0
 			pushBlend(BLEND_OPAQUE);
 			projectPerspective3d(60.f, .001f, 10.f);
 			cam.pushViewMatrix();
 			
 			setColor(colorWhite);
-			gxSetTexture(mp->getTexture());
+			gxSetTexture(mp->getTexture(), GX_SAMPLE_LINEAR, true);
 			glPointSize(10.f);
 			gxBegin(GX_POINTS);
 			for (float u = -1.f; u <= +1.f; u += 1.f / 200.f)
@@ -289,7 +289,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			gxEnd();
-			gxSetTexture(0);
+			gxClearTexture();
 		
 			cam.popViewMatrix();
 			projectScreen2d();

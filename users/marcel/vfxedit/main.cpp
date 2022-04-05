@@ -1439,12 +1439,12 @@ int main(int argc, char * argv[])
 
 				if (g_audioFileSurface != nullptr)
 				{
-					gxSetTexture(g_audioFileSurface->getTexture());
+					gxSetTexture(g_audioFileSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 					//const int c = 127;
 					//setColor(c, c, c, 255);
 					setColor(colorBlue);
 					drawRect(0, 0, GFX_SX, GFX_SY);
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 
 				if (g_editing.mouseInteract != kMouseInteract_None)

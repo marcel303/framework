@@ -150,10 +150,10 @@ void FileEditor_Video::tick(const int sx, const int sy, const float dt, const bo
 				gxTranslatef((sx - videoSx * scale) / 2, (sy - videoSy * scale) / 2, 0);
 				gxScalef(scale, scale, 1.f);
 				
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				setColor(colorWhite);
 				drawRect(0, 0, videoSx, videoSy);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			gxPopMatrix();
 		}

@@ -59,7 +59,7 @@ static void Draw_EndScene()
 	if (texture != 0)
 	{
 		pushBlend(BLEND_OPAQUE);
-		gxSetTexture(texture);
+		gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 		setColor(colorWhite);
 		
 		if (g_DrawStretch)
@@ -75,7 +75,7 @@ static void Draw_EndScene()
 			drawRect(0, 0, g_BufferSx, g_BufferSy);
 		}
 		
-		gxSetTexture(0);
+		gxClearTexture();
 		popBlend();
 	}
 	

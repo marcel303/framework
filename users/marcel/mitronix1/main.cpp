@@ -1122,10 +1122,10 @@ int main(int argc, char * argv[])
 					popSurface();
 					
 					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
-					gxSetTexture(mainButtonsSurface->getTexture());
+					gxSetTexture(mainButtonsSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 					setColorf(mainButtonsOpacity, mainButtonsOpacity, mainButtonsOpacity, mainButtonsOpacity);
 					drawRect(0, 0, mainButtonsSurface->getWidth(), mainButtonsSurface->getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 					popBlend();
 				}
 				popSurface();

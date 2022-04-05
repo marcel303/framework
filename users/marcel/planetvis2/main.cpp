@@ -671,12 +671,12 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 		pushSurface(&s);
 		{
-			gxSetTexture(getTexture("alex.jpg"));
+			gxSetTexture(getTexture("alex.jpg"), GX_SAMPLE_LINEAR, true);
 			{
 				setColor(colorWhite);
 				drawRect(0, 0, CUBE_PAGE_SIZE, CUBE_PAGE_SIZE);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 
 			glReadBuffer(GL_COLOR_ATTACHMENT0);
 			glCopyTexSubImage3D(
@@ -1811,13 +1811,13 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 						const GLint swizzleMask[] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 						glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 
-						gxSetTexture(cubeSideSurface->getTexture());
+						gxSetTexture(cubeSideSurface->getTexture(), GX_SAMPLE_LINEAR, true);
 						{
 							setBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
 							drawRect(0, 0, GFX_SX, GFX_SY);
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 					framework.endDraw();
 				}
@@ -2237,14 +2237,14 @@ int main(int argc, char * argv[])
 					if (pageLoad(CUBE_PAGE_NAME, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
 					{
 						GxTextureId texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
-						gxSetTexture(texture);
+						gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 						{
 							setColor(colorWhite);
 							setBlend(BLEND_OPAQUE);
 							drawRect(0, 0, pageSize, pageSize);
 							setBlend(BLEND_ALPHA);
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 						freeTexture(texture);
 					}
 

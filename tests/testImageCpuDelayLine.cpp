@@ -177,10 +177,10 @@ void testImageCpuDelayLine()
 				{
 					x += padding;
 					
-					gxSetTexture(mediaPlayer->getTexture());
+					gxSetTexture(mediaPlayer->getTexture(), GX_SAMPLE_LINEAR, true);
 					setColor(colorWhite);
 					drawRect(x, y, x + mediaPlayer->videoFrame->m_width * videoScale, y + mediaPlayer->videoFrame->m_height * videoScale);
-					gxSetTexture(0);
+					gxClearTexture();
 					
 					x += mediaPlayer->videoFrame->m_width * videoScale;
 					
@@ -201,10 +201,10 @@ void testImageCpuDelayLine()
 					
 					//
 					
-					gxSetTexture(texture.id);
+					gxSetTexture(texture.id, GX_SAMPLE_LINEAR, true);
 					setColor(colorWhite);
 					drawRect(x, y, x + delayedImage.image.sx * videoScale, y + delayedImage.image.sy * videoScale);
-					gxSetTexture(0);
+					gxClearTexture();
 					
 					x += delayedImage.image.sx * videoScale;
 					

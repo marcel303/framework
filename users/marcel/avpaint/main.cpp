@@ -474,12 +474,12 @@ struct VideoGame
 				
 				pushBlend(BLEND_ADD);
 				{
-					gxSetTexture(videoEffectL->getTexture());
+					gxSetTexture(videoEffectL->getTexture(), GX_SAMPLE_LINEAR, true);
 					{
 						setColorf(1.f, 1.f, 1.f, opacity);
 						drawRect(0, 0, LOOP_SX, LOOP_SY);
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 			}
@@ -491,12 +491,12 @@ struct VideoGame
 				
 				pushBlend(BLEND_ADD);
 				{
-					gxSetTexture(videoEffectR->getTexture());
+					gxSetTexture(videoEffectR->getTexture(), GX_SAMPLE_LINEAR, true);
 					{
 						setColorf(1.f, 1.f, 1.f, opacity);
 						drawRect(0, 0, LOOP_SX, LOOP_SY);
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 			}
@@ -567,9 +567,9 @@ struct VideoGame
 				pushBlend(BLEND_ADD);
 				{
 					setColorf(1.f, 1.f, 1.f, opacity);
-					gxSetTexture(videoSurface->getTexture());
+					gxSetTexture(videoSurface->getTexture(), GX_SAMPLE_LINEAR, true);
 					drawRect(0, 0, videoSurface->getWidth(), videoSurface->getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 			}
@@ -876,9 +876,9 @@ int main(int argc, char * argv[])
 						pushBlend(BLEND_OPAQUE);
 						{
 							setColor(colorWhite);
-							gxSetTexture(videoGame->postSurface->getTexture());
+							gxSetTexture(videoGame->postSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 							drawRect(0, 0, videoGame->postSurface->getWidth(), videoGame->postSurface->getHeight());
-							gxSetTexture(0);
+							gxClearTexture();
 						}
 						popBlend();
 					}
@@ -931,12 +931,12 @@ int main(int argc, char * argv[])
 							
 							//const float opacity = sinf(uploadedImageFade * M_PI);
 							
-							gxSetTexture(texture);
+							gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 							{
 								setColorf(1.f, 1.f, 1.f, kMixUserContentOpacity * opacity);
 								drawRect(-100, -100, +100, +100);
 							}
-							gxSetTexture(0);
+							gxClearTexture();
 						}
 						gxPopMatrix();
 					}
@@ -957,12 +957,12 @@ int main(int argc, char * argv[])
 						
 						const GxTextureId texture = getTexture(uploadedImages[i].c_str());
 						
-						gxSetTexture(texture);
+						gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 						{
 							setColorf(1.f, 1.f, 1.f, kMixUserContentOpacity);
 							drawRect(x, y, x + sx, y + sy);
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 					
 					mixingPanel.draw();
@@ -972,9 +972,9 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				{
 					setColor(colorWhite);
-					gxSetTexture(surface.getTexture());
+					gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 					drawRect(0, 0, surface.getWidth(), surface.getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 				

@@ -554,7 +554,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 				const GxTextureId textureId = (GxTextureId)(uintptr_t)cmd->TextureId;
 				
 				pushBlend(BLEND_PREMULTIPLIED_ALPHA);
-				gxSetTexture(textureId);
+				gxSetTexture(textureId, GX_SAMPLE_NEAREST, true);
 				{
 					gxBegin(GX_TRIANGLES);
 					{
@@ -581,7 +581,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 					}
 					gxEnd();
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 				
 			#if 0

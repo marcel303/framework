@@ -143,7 +143,7 @@ int main(int arg, char * argv[])
 				gxScalef(scale, scale, .1f);
 				
 				setBlend(BLEND_OPAQUE);
-				gxSetTexture(texture1);
+				gxSetTexture(texture1, GX_SAMPLE_LINEAR, true);
 				gxBegin(GX_QUADS);
 				{
 					const float alpha = 1.f;
@@ -171,7 +171,7 @@ int main(int arg, char * argv[])
 					}
 				}
 				gxEnd();
-				gxSetTexture(0);
+				gxClearTexture();
 				setBlend(BLEND_OPAQUE);
 				
 				gxPushMatrix();
@@ -217,7 +217,7 @@ int main(int arg, char * argv[])
 				
 				GxTextureId texture2 = createTextureFromRGBA8(texture2_data, 16, 16, true, true);
 				
-				gxSetTexture(texture2);
+				gxSetTexture(texture2, GX_SAMPLE_LINEAR, true);
 				gxBegin(GX_TRIANGLE_STRIP);
 				{
 					for (int i = 0; i < 1000; ++i)
@@ -231,7 +231,7 @@ int main(int arg, char * argv[])
 					}
 				}
 				gxEnd();
-				gxSetTexture(0);
+				gxClearTexture();
 				
 				freeTexture(texture2);
 			}

@@ -606,10 +606,10 @@ int main(int argc, char * argv[])
 			
 			if (keyboard.isDown(SDLK_3))
 			{
-				gxSetTexture(skyTarget.getTexture());
+				gxSetTexture(skyTarget.getTexture(), GX_SAMPLE_LINEAR, true);
 				setColor(colorWhite);
 				drawRect(0, 0, skyTarget.getWidth(), skyTarget.getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 		}
 		framework.endDraw();

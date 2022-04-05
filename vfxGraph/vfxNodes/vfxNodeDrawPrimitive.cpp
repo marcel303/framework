@@ -122,7 +122,7 @@ void VfxNodeDrawPrimitive::draw() const
 		setColor(colorWhite);
 	
 	if (image)
-		gxSetTexture(image->getTexture());
+		gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 	
 	if (fill)
 	{
@@ -440,5 +440,5 @@ void VfxNodeDrawPrimitive::draw() const
 		}
 	}
 	
-	gxSetTexture(0);
+	gxClearTexture();
 }

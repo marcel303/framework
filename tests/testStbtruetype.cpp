@@ -99,7 +99,7 @@ void testStbTruetype()
 				gxEnd();
 			};
 			
-			gxSetTexture(fontTexture);
+			gxSetTexture(fontTexture, GX_SAMPLE_NEAREST, true);
 			{
 				setColor(colorWhite);
 				myDrawRect(0, 0, 512*2, 512*2);
@@ -107,7 +107,7 @@ void testStbTruetype()
 				setColor(colorWhite);
 				stbTruetype_Print(300, 300, "Hello World!");
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			drawTestUi();
 		}

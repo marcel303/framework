@@ -470,11 +470,11 @@ namespace rOne
 			{
 				for (auto & depthTarget : depthTargets)
 				{
-					gxSetTexture(depthTarget.getTextureId());
+					gxSetTexture(depthTarget.getTextureId(), GX_SAMPLE_LINEAR, true);
 					setLumif(.1f);
 					drawRect(0, 0, sx, sy);
 					setLumif(1.f);
-					gxSetTexture(0);
+					gxClearTexture();
 					gxTranslatef(sx, 0, 0);
 				}
 			}
@@ -485,9 +485,9 @@ namespace rOne
 			{
 				for (auto & colorTarget : colorTargets)
 				{
-					gxSetTexture(colorTarget.getTextureId());
+					gxSetTexture(colorTarget.getTextureId(), GX_SAMPLE_LINEAR, true);
 					drawRect(0, 0, sx, sy);
-					gxSetTexture(0);
+					gxClearTexture();
 					gxTranslatef(sx, 0, 0);
 				}
 			}
@@ -497,11 +497,11 @@ namespace rOne
 			gxPushMatrix();
 			{
 				pushColorPost(POST_SET_RGB_TO_R);
-				gxSetTexture(depthAtlas.getTextureId());
+				gxSetTexture(depthAtlas.getTextureId(), GX_SAMPLE_LINEAR, true);
 				setLumif(.2f);
 				drawRect(0, 0, sx * depthTargets.size(), sy);
 				setLumif(1.f);
-				gxSetTexture(0);
+				gxClearTexture();
 				popColorPost();
 			}
 			gxPopMatrix();
@@ -509,9 +509,9 @@ namespace rOne
 		
 			gxPushMatrix();
 			{
-				gxSetTexture(colorAtlas.getTextureId());
+				gxSetTexture(colorAtlas.getTextureId(), GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, sx * depthTargets.size(), sy);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			gxPopMatrix();
 			gxTranslatef(0, sy, 0);

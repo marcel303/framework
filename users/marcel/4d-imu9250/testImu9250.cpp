@@ -627,7 +627,7 @@ void testImu9250()
 						
 						gxPushMatrix();
 						gxTranslatef(0, 0, -.1f);
-						gxSetTexture(getTexture("imu9250-front.jpg"));
+						gxSetTexture(getTexture("imu9250-front.jpg"), GX_SAMPLE_LINEAR, true);
 						gxBegin(GX_QUADS);
 						{
 							gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, -1);
@@ -636,12 +636,12 @@ void testImu9250()
 							gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, -1);
 						}
 						gxEnd();
-						gxSetTexture(0);
+						gxClearTexture();
 						gxPopMatrix();
 						
 						gxPushMatrix();
 						gxTranslatef(0, 0, +.1f);
-						gxSetTexture(getTexture("imu9250-back.jpg"));
+						gxSetTexture(getTexture("imu9250-back.jpg"), GX_SAMPLE_LINEAR, true);
 						gxBegin(GX_QUADS);
 						{
 							gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, +1);
@@ -650,7 +650,7 @@ void testImu9250()
 							gxTexCoord2f(0.f, 1.f); gxVertex2f(+1, +1);
 						}
 						gxEnd();
-						gxSetTexture(0);
+						gxClearTexture();
 						gxPopMatrix();
 					}
 					gxPopMatrix();

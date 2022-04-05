@@ -662,11 +662,11 @@ struct AudioVoice : Editable
 	{
 		if (pcmDataSurface != nullptr)
 		{
-			gxSetTexture(pcmDataSurface->getTexture());
+			gxSetTexture(pcmDataSurface->getTexture(), GX_SAMPLE_NEAREST, true);
 
 			setColor(colorBlue);
 			drawRect(0, 0, pcmDataSurface->getWidth(), pcmDataSurface->getHeight());
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 	}
 
@@ -802,7 +802,7 @@ struct AudioCreation : Editable, public AudioStreamEx
 
 				for (auto voice : voices)
 				{
-					gxSetTexture(voice->pcmDataSurface->getTexture());
+					gxSetTexture(voice->pcmDataSurface->getTexture(), GX_SAMPLE_LINEAR, true);
 					{
 						setColor(colorWhite);
 						gxBegin(GX_QUADS);
@@ -814,9 +814,9 @@ struct AudioCreation : Editable, public AudioStreamEx
 						}
 						gxEnd();
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 
-					gxSetTexture(voice->pcmDataSurface->getTexture());
+					gxSetTexture(voice->pcmDataSurface->getTexture(), GX_SAMPLE_LINEAR, true);
 					{
 						setColor(255, 127, 63);
 						gxBegin(GX_QUADS);
@@ -828,7 +828,7 @@ struct AudioCreation : Editable, public AudioStreamEx
 						}
 						gxEnd();
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 			}
 			gxPopMatrix();
@@ -1194,13 +1194,13 @@ struct Picture : Editable
 			else if (image != nullptr)
 			{
 				setColor(colorWhite);
-				gxSetTexture(image->getTexture());
+				gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 				{
 					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 					drawRect(-1.f, -1.f, +1.f, +1.f);
 					popBlend();
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 
 			if (hasMouseHover)
@@ -2686,12 +2686,12 @@ int main(int argc, char * argv[])
 					{
 						Surface * surface = downresSurfaces[i];
 
-						gxSetTexture(surface->getTexture());
+						gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 						{
 							setColor(colorWhite);
 							drawRect(0, 0, surface->getWidth(), surface->getHeight());
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 				}
 				popBlend();
@@ -2705,7 +2705,7 @@ int main(int argc, char * argv[])
 						Surface * surface = blurredSurfaces[i];
 						//Surface * surface = downresSurfaces[i];
 
-						gxSetTexture(surface->getTexture());
+						gxSetTexture(surface->getTexture(), GX_SAMPLE_LINEAR, true);
 						{
 							//const float c = .5f;
 							//setColorf(c, c, c);
@@ -2713,7 +2713,7 @@ int main(int argc, char * argv[])
 							setColor(colorWhite);
 							//drawRect(0, 0, GFX_SX, GFX_SY);
 						}
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 				}
 				popBlend();
@@ -2728,11 +2728,11 @@ int main(int argc, char * argv[])
 				pushSurface(surface);
 				{
 #if 0
-					gxSetTexture(getTexture("lights1.jpg"));
+					gxSetTexture(getTexture("lights1.jpg"), GX_SAMPLE_LINEAR, true);
 					{
 						drawRect(0, 0, surface->getWidth(), surface->getHeight());
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 #endif
 
 					if (doPath)
@@ -2796,7 +2796,7 @@ int main(int argc, char * argv[])
 			#endif
 
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(surface->getTexture());
+				gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 				{
 					setColor(colorWhite);
 					if (keyboard.isDown(SDLK_z))
@@ -2811,7 +2811,7 @@ int main(int argc, char * argv[])
 						drawRect(0, 0, surface->getWidth(), surface->getHeight());
 					}
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			#endif
 			}

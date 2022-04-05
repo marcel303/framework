@@ -302,7 +302,7 @@ bool Framework::init(int sx, int sy)
 	2) Detect DPI for default display.
 	3) Compare DPI with 'standard' dpi. If high (almost 2x more), assume a high dpi display.
 	4) If a high dpi display is detected, set backing scale to 2. This will ensure additional pixel density for surfaces.
-	5) Multiply window size times backing scale, divide mouse coordinates times backing scale. This will ensure additioal pixel density for the back buffers.
+	5) Multiply window size times backing scale, divide mouse coordinates times backing scale. This will ensure additional pixel density for the back buffers.
 	*/
 #endif
 
@@ -1288,7 +1288,13 @@ void Framework::process()
 		
 		WindowData * windowData = findWindowDataById(e.key.windowID);
 		
-	// todo : assert offset of e.key.windowID, e.motion.windowID, e.button.windowID, e.text.windowID, e.wheel.windowID and e.window.windowID are all equal
+		// assert offset of e.key.windowID, e.motion.windowID, e.button.windowID, e.text.windowID, e.wheel.windowID and e.window.windowID are all equal. this so we can more easily fetch the window data for the associate window ID
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_KeyboardEvent, windowID), "SDL event windowID offset mismatch");
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_MouseMotionEvent, windowID), "SDL event windowID offset mismatch");
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_MouseButtonEvent, windowID), "SDL event windowID offset mismatch");
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_TextInputEvent, windowID), "SDL event windowID offset mismatch");
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_MouseWheelEvent, windowID), "SDL event windowID offset mismatch");
+		static_assert(offsetof(SDL_KeyboardEvent, windowID) == offsetof(SDL_WindowEvent, windowID), "SDL event windowID offset mismatch");
 	
 		if (windowData != nullptr)
 		{
@@ -2144,7 +2150,7 @@ void Framework::endDraw()
 void Framework::present()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	if (vrMode) // todo : only if the current window is the main window
+	if (vrMode)
 		frameworkOvr.submitFrameAndPresent();
 #elif FRAMEWORK_USE_SDL
 	// schedule the back buffer for presentation
@@ -2566,9 +2572,9 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 	getCurrentViewportSize(sx, sy);
 	
 	pushBlend(BLEND_OPAQUE);
-	gxSetTexture(surface->getTexture());
+	gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 	drawRect(0, 0, sx, sy);
-	gxSetTexture(0);
+	gxClearTexture();
 	popBlend();
 	
 	//

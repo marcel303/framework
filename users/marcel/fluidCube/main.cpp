@@ -77,7 +77,7 @@ struct FluidCube2dDemo
 				data = cube->density.data();
 			
 			texture.upload(data, 4, 0);
-			gxSetTexture(texture.id);
+			gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 			setColorClamp(false);
 			if (keyboard.isDown(SDLK_v))
 				setColor(10, 10, 10);
@@ -85,7 +85,7 @@ struct FluidCube2dDemo
 				setColor(2000, 2000, 2000);
 			drawRect(0, 0, cube->sizeX, cube->sizeY);
 			setColorClamp(true);
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			pushBlend(BLEND_ADD);
 			hqBegin(HQ_LINES);
@@ -190,9 +190,9 @@ struct FluidCube3dDemo
 				gxTranslatef(0, 0, lerp<float>(-cube->sizeZ, +cube->sizeZ, z / float(cube->sizeZ - 1)));
 				texture.upload(cube->density.data() + cube->index(0, 0, z), 4, 0);
 				
-				gxSetTexture(texture.id);
+				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 				drawRect(-cube->sizeX, -cube->sizeY, +cube->sizeX, +cube->sizeY);
-				gxSetTexture(0);
+				gxClearTexture();
 				gxPopMatrix();
 			}
 			

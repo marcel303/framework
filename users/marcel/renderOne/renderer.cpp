@@ -1846,10 +1846,10 @@ namespace rOne
 
 				pushBlend(BLEND_OPAQUE);
 				{
-					gxSetTexture(result->getTextureId());
+					gxSetTexture(result->getTextureId(), GX_SAMPLE_NEAREST, true);
 					setColor(colorWhite);
 					drawFullscreenQuad(result->getWidth(), result->getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 				
@@ -1879,12 +1879,10 @@ namespace rOne
 							
 							pushBlend(BLEND_OPAQUE);
 							{
-								gxSetTexture(textureId);
-								gxSetTextureSampler(GX_SAMPLE_NEAREST, true);
+								gxSetTexture(textureId, GX_SAMPLE_NEAREST, true);
 								setColor(colorWhite);
 								drawRect(x, y, x + sx, y + sy);
-								gxSetTextureSampler(GX_SAMPLE_LINEAR, false);
-								gxSetTexture(0);
+								gxClearTexture();
 							}
 							popBlend();
 							
@@ -1930,7 +1928,7 @@ namespace rOne
 						}
 					#endif
 					
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 					gxPopMatrix();
 				}

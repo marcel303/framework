@@ -1686,11 +1686,11 @@ int main(int argc, char * argv[])
 			#if DO_DISTANCE_TEXTURE
 				if (texture != 0)
 				{
-					gxSetTexture(texture);
+					gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 					{
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 			#endif
 

@@ -176,9 +176,9 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			{
 				setColor(colorWhite);
-				gxSetTexture(opticalFlow.opticalFlow.getTexture());
+				gxSetTexture(opticalFlow.opticalFlow.getTexture(), GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, VIEW_SX, VIEW_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			popBlend();
 			
@@ -199,9 +199,9 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				{
 					setColor(255, 255, 255, 63);
-					gxSetTexture(mediaPlayer.getTexture());
+					gxSetTexture(mediaPlayer.getTexture(), GX_SAMPLE_LINEAR, true);
 					drawRect(0, 0, VIEW_SX, VIEW_SY);
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 				
@@ -218,9 +218,9 @@ int main(int argc, char * argv[])
 				{
 					auto & texture = opticalFlow.luminance[opticalFlow.current_luminance];
 					setColor(colorWhite);
-					gxSetTexture(texture.getTexture());
+					gxSetTexture(texture.getTexture(), GX_SAMPLE_NEAREST, true);
 					drawRect(0, 0, texture.getWidth(), texture.getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 			}
@@ -230,9 +230,9 @@ int main(int argc, char * argv[])
 				{
 					auto & texture = opticalFlow.sobel[opticalFlow.current_sobel];
 					setColor(colorWhite);
-					gxSetTexture(texture.getTexture());
+					gxSetTexture(texture.getTexture(), GX_SAMPLE_NEAREST, true);
 					drawRect(0, 0, texture.getWidth(), texture.getHeight());
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popBlend();
 			}

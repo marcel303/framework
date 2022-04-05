@@ -255,9 +255,9 @@ int main(int argc, char * argv[])
 				const float offsetY = (sy - rectSy) / 2.f;
 				
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(videoLoop.getTexture());
+				gxSetTexture(videoLoop.getTexture(), GX_SAMPLE_LINEAR, true);
 				drawRect(offsetX, offsetY, offsetX + rectSx, offsetY + rectSy);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 		}

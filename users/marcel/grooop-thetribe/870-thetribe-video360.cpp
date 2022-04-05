@@ -468,12 +468,12 @@ struct Videoclip
 		{
 			gxMultMatrixf(soundVolume.transform.m_v);
 			
-			gxSetTexture(mp.getTexture());
+			gxSetTexture(mp.getTexture(), GX_SAMPLE_LINEAR, true);
 			{
 				setLumi(hover ? 255 : 200);
 				drawRect(-1, -1, +1, +1);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		gxPopMatrix();
 	}
@@ -542,12 +542,12 @@ struct Vfxclip
 			
 			const GxTextureId texture = displayNode ? displayNode->getImage()->getTexture() : 0;
 			
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 			{
 				setLumi(255);
 				drawRect(-1, -1, +1, +1);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			if (hover)
 			{
@@ -1268,7 +1268,7 @@ int main(int argc, char * argv[])
             popSurface();
             
             pushBlend(BLEND_OPAQUE);
-            gxSetTexture(preview.getTexture());
+            gxSetTexture(preview.getTexture(), GX_SAMPLE_LINEAR, true);
             {
                 setColor(colorWhite);
                 //drawRect(10, 10, 10 + preview.getWidth(), 10 + preview.getHeight());
@@ -1289,7 +1289,7 @@ int main(int argc, char * argv[])
 				}
 				gxEnd();
             }
-            gxSetTexture(0);
+            gxClearTexture();
             popBlend();
             
 			world.draw2d();

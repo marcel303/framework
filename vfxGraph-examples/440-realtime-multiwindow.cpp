@@ -92,12 +92,12 @@ int main(int argc, char * argv[])
 				{
 					if (texture != 0)
 					{
-						gxSetTexture(texture);
+						gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 						pushBlend(BLEND_OPAQUE);
 						setColor(colorWhite);
 						drawRect(0, 0, visualsWindow->getWidth(), visualsWindow->getHeight());
 						popBlend();
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 				}
 				framework.endDraw();

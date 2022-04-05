@@ -171,7 +171,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 {
 	if (globals.isInTextBatchCounter == 0)
 	{
-		gxSetTexture(globals.font->textureAtlas->texture);
+		gxSetTexture(globals.font->textureAtlas->texture, GX_SAMPLE_NEAREST, true);
 		
 		gxBegin(GX_QUADS);
 	}
@@ -228,7 +228,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 	{
 		gxEnd();
 		
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 }
 
@@ -309,8 +309,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		
 		if (elem.texture != 0)
 		{
-			gxSetTexture(elem.texture);
-			gxSetTextureSampler(GX_SAMPLE_NEAREST, true);
+			gxSetTexture(elem.texture, GX_SAMPLE_NEAREST, true);
 
 			gxBegin(GX_QUADS);
 			{
@@ -333,7 +332,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		}
 	}
 
-	gxSetTexture(0);
+	gxClearTexture();
 #endif
 }
 

@@ -380,12 +380,12 @@ void VfxGraph::draw() const
 	
 	if (texture != 0)
 	{
-		gxSetTexture(texture);
+		gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 		pushBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
 		drawRect(0, 0, sx, sy);
 		popBlend();
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 }
 

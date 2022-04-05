@@ -1316,11 +1316,11 @@ static void Execute()
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 			pushBlend(BLEND_OPAQUE);
 			drawRect(0, 0, surface.sx, surface.sy);
 			popBlend();
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		framework.endDraw();
 

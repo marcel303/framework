@@ -592,7 +592,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
-							gxSetTexture(getTexture("tile2.jpg"));
+							gxSetTexture(getTexture("tile2.jpg"), GX_SAMPLE_LINEAR, true);
 							gxBegin(GX_QUADS);
 							{
 								const float s = 70.f;
@@ -603,7 +603,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 								gxTexCoord2f(0.f, 1.f); gxVertex3f(-s, 0.f, +s);
 							}
 							gxEnd();
-							gxSetTexture(0);
+							gxClearTexture();
 							popBlend();
 						}
 					}
@@ -849,25 +849,25 @@ int main(int argc, char * argv[])
 
 						if (videoTexture != 0)
 						{
-							gxSetTexture(videoTexture);
+							gxSetTexture(videoTexture, GX_SAMPLE_LINEAR, true);
 							{
 								drawRect(0, 0, videoSx, videoSy);
 							}
-							gxSetTexture(0);
+							gxClearTexture();
 						}
 					}
 					popSurface();
 				}
 			#endif
 
-				gxSetTexture(surface->getTexture());
+				gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 				{
 					pushBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 					popBlend();
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			framework.endDraw();
 		}

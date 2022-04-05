@@ -947,11 +947,11 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 	#endif
 	
-		gxSetTexture(getTexture("logo-white.png"));
+		gxSetTexture(getTexture("logo-white.png"), GX_SAMPLE_LINEAR, true);
 		{
 			drawRect(-1, -1, +1, +1);
 		}
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 	gxPopMatrix();
 }

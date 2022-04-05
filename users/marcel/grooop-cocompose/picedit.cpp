@@ -31,7 +31,7 @@ void PicEdit::drawEnd()
 
 	pushSurface(&surfaceComposed);
 	{
-		gxSetTexture(surfaceEditing.getTexture());
+		gxSetTexture(surfaceEditing.getTexture(), GX_SAMPLE_NEAREST, true);
 		{
 			setBlend(BLEND_PREMULTIPLIED_ALPHA);
 			{
@@ -40,7 +40,7 @@ void PicEdit::drawEnd()
 			}
 			setBlend(BLEND_ALPHA);
 		}
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 	popSurface();
 
@@ -294,7 +294,7 @@ void PicEdit::drawEditingSurface(const float alpha) const
 #endif
 
 #if 0
-	gxSetTexture(surfaceComposed.getTexture());
+	gxSetTexture(surfaceComposed.getTexture(), GX_SAMPLE_NEAREST, true);
 	{
 		pushBlend(BLEND_OPAQUE);
 		{
@@ -303,9 +303,9 @@ void PicEdit::drawEditingSurface(const float alpha) const
 		}
 		popBlend();
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 
-	gxSetTexture(surfaceEditing.getTexture());
+	gxSetTexture(surfaceEditing.getTexture(), GX_SAMPLE_NEAREST, true);
 	{
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 		{
@@ -314,7 +314,7 @@ void PicEdit::drawEditingSurface(const float alpha) const
 		}
 		popBlend();
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 #endif
 }
 
@@ -338,13 +338,13 @@ void PicEdit::draw(const float alpha) const
 	}
 	popSurface();
 
-	gxSetTexture(surface.getTexture());
+	gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 	{
 		setBlend(BLEND_ALPHA);
 		setColorf(1.f, 1.f, 1.f, alpha);
 		drawRect(0, 0, surface.getWidth(), surface.getHeight());
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 }
 
 void PicEdit::blitTo(Surface * surface) const

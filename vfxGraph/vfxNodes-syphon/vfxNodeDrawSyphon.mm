@@ -124,7 +124,7 @@ void VfxNodeDrawSyphon::draw() const
 				gxMatrixMode(GX_PROJECTION);
 				gxLoadIdentity();
 				
-				gxSetTexture(image->getTexture());
+				gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 				{
 					pushBlend(BLEND_OPAQUE);
 					{
@@ -133,7 +133,7 @@ void VfxNodeDrawSyphon::draw() const
 					}
 					popBlend();
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			[server unbindAndPublish];
 			checkErrorGL();

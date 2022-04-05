@@ -236,7 +236,7 @@ static void testParticleLib()
 			framework.beginDraw(0, 0, 0, 0);
 			{
 			#if 1
-				gxSetTexture(Sprite(pei2.materialName).getTexture());
+				gxSetTexture(Sprite(pei2.materialName).getTexture(), GX_SAMPLE_LINEAR, true);
 				for (Particle * p = pp.head; p; p = p->next)
 				{
 					const float particleLife = 1.f - p->life;
@@ -260,7 +260,7 @@ static void testParticleLib()
 						+ size / 2.f);
 					gxPopMatrix();
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			#endif
 
 			#if 1

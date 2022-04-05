@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setColor(colorWhite);
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_NEAREST, false);
 			gxBegin(GX_QUADS);
 			{
 				const float x1 = 0;
@@ -81,7 +81,7 @@ int main(int argc, char * argv[])
 				gxTexCoord2f(0, s); gxVertex2f(x1, y2);
 			}
 			gxEnd();
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			setColor(colorBlue);
 			drawRectLine(filter.clipX1, filter.clipY1, filter.clipX2, filter.clipY2);

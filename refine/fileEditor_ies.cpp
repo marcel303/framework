@@ -185,8 +185,7 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 			const float scale = fminf(scaleX, scaleY);
 			const float x = (sx - scale * kPreviewResolution) / 2.f;
 			const float y = (sy - scale * kPreviewResolution) / 2.f;
-			gxSetTexture(previewTexture);
-			gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+			gxSetTexture(previewTexture, GX_SAMPLE_LINEAR, true);
 			pushColorPost(POST_SET_RGB_TO_R);
 			setColor(colorWhite);
 			drawRect(
@@ -195,8 +194,7 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 				x + kPreviewResolution * scale,
 				y + kPreviewResolution * scale);
 			popColorPost();
-			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		
 		popBlend();

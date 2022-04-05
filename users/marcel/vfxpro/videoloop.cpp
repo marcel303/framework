@@ -70,7 +70,7 @@ void VideoLoop::tick(const float dt)
 				
 				pushSurface(firstFrame);
 				{
-					gxSetTexture(mediaPlayer->getTexture());
+					gxSetTexture(mediaPlayer->getTexture(), GX_SAMPLE_LINEAR, true);
 					setColor(colorWhite);
 					gxBegin(GX_QUADS);
 					{
@@ -80,7 +80,7 @@ void VideoLoop::tick(const float dt)
 						gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, sy );
 					}
 					gxEnd();
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				popSurface();
 			}

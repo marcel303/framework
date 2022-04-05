@@ -571,9 +571,9 @@ namespace ImGui
 		pushBlend(BLEND_OPAQUE);
 		{
 			setColor(colorWhite);
-			gxSetTexture(getTexture(previewFilename));
+			gxSetTexture(getTexture(previewFilename), GX_SAMPLE_LINEAR, true);
 			drawRect(0, 0, sx/2, sy/2);
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			Shader shader("renderOne/postprocess/color-grade");
 			setShader(shader);

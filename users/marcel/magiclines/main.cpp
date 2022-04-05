@@ -624,13 +624,13 @@ int main(int argc, char * argv[])
 				}
 				popSurface();
 
-				gxSetTexture(surface.getTexture());
+				gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 				{
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			framework.endDraw();
 		}

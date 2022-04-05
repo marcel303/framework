@@ -109,20 +109,20 @@ void testCamera3d()
 					gxScalef(.3f, .3f, .3f);
 					
 					setColor(colorWhite);
-					gxSetTexture(getTexture("happysun.jpg"));
+					gxSetTexture(getTexture("happysun.jpg"), GX_SAMPLE_LINEAR, true);
 					drawRect3d(0, 1);
 					drawRect3d(2, 0);
-					gxSetTexture(0);
+					gxClearTexture();
 				}
 				gxPopMatrix();
 				
 				setColor(colorWhite);
-				gxSetTexture(getTexture("picture.jpg"));
+				gxSetTexture(getTexture("picture.jpg"), GX_SAMPLE_LINEAR, true);
 				if (mouse.isDown(BUTTON_LEFT))
 					drawGrid3dLine(100, 100, 0, 2);
 				else
 					drawGrid3d(10, 10, 0, 2);
-				gxSetTexture(0);
+				gxClearTexture();
 				
 				popDepthTest();
 			}

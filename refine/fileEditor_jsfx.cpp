@@ -893,14 +893,14 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 				popFontMode();
 				
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(surface->getTexture());
+				gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(
 					x + offsetX,
 					y + offsetY,
 					x + offsetX + surface->getWidth(),
 					y + offsetY + surface->getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 		}

@@ -216,10 +216,10 @@ void testDotDetector()
 				if (mp.getTexture())
 				{
 					pushBlend(BLEND_OPAQUE);
-					gxSetTexture(mp.getTexture());
+					gxSetTexture(mp.getTexture(), GX_SAMPLE_LINEAR, true);
 					setColor(colorWhite);
 					drawRect(0, 0, sx, sy);
-					gxSetTexture(0);
+					gxClearTexture();
 					popBlend();
 				}
 			}
@@ -372,9 +372,9 @@ void testDotDetector()
 			
 			pushBlend(BLEND_OPAQUE);
 			setColor(colorWhite);
-			gxSetTexture(surface.getTexture());
+			gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 			drawRect(0, 0, sx, sy);
-			gxSetTexture(0);
+			gxClearTexture();
 			popBlend();
 			
 			// draw detected dots

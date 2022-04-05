@@ -248,11 +248,11 @@ void testPs3eye()
 				keyboard.isDown(SDLK_l) ? textureLumi.id :
 				texture.id;
 			
-			gxSetTexture(textureId);
+			gxSetTexture(textureId, GX_SAMPLE_LINEAR, true);
 			{
 				drawRect(0, 0, GFX_SX, GFX_SY);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			gxPushMatrix();
 			{

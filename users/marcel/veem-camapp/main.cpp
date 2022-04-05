@@ -399,10 +399,10 @@ struct Controller
 				texture.upload(recorder->frameData, 1, 0);
 				texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 
-				gxSetTexture(texture.id);
+				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(0, 0, CAMVIEW_SX, CAMVIEW_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 		}
 		

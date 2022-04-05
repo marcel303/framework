@@ -52,9 +52,9 @@ void testMacWebcam()
 				setColor(colorWhite);
 				gxPushMatrix();
 				gxTranslatef(0, 0, 0);
-				gxSetTexture(texture.id);
+				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 				drawRect(0, 0, texture.sx, texture.sy);
-				gxSetTexture(0);
+				gxClearTexture();
 				gxPopMatrix();
 			}
 			

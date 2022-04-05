@@ -2035,9 +2035,9 @@ int main(int argc, char * argv[])
 					if (image.isValid)
 					{
 						setColor(colorWhite);
-						gxSetTexture(image.surface->getTexture());
+						gxSetTexture(image.surface->getTexture(), GX_SAMPLE_LINEAR, true);
 						drawRect(x, 0, x + 40, 40);
-						gxSetTexture(0);
+						gxClearTexture();
 						
 						drawText(x + 4, 4, 10, +1, +1, "%d", index);
 						

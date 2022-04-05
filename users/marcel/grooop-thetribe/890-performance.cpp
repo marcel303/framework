@@ -313,11 +313,11 @@ static std::vector<std::string> doMediaPicker()
 				
 				setColor(colorWhite);
 				setLumi(hover ? 255 : 200);
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				{
 					drawRect(x1, y1, x2, y2);
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 				
 				if (e->selected)
 				{

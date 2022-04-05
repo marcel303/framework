@@ -671,7 +671,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	}
 
 	setColor(colorWhite);
-	gxSetTexture(surfaceTexture);
+	gxSetTexture(surfaceTexture, GX_SAMPLE_NEAREST, true);
 	{
 		gxBegin(GX_QUADS);
 		{
@@ -682,7 +682,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 		}
 		gxEnd();
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 
 	//glEnable(GL_DEPTH_TEST);
 	setBlend(BLEND_ADD);
@@ -2239,9 +2239,9 @@ int main(int argc, char * argv[])
 				{
 					setBlend(BLEND_ADD);
 					setColor(colorWhite);
-					gxSetTexture(g_pcmTexture);
+					gxSetTexture(g_pcmTexture, GX_SAMPLE_NEAREST, true);
 					drawRect(0, 0, GFX_SX, GFX_SY);
-					gxSetTexture(0);
+					gxClearTexture();
 					setBlend(BLEND_ALPHA);
 				}
 			#endif
@@ -2258,7 +2258,7 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 					setColorf(s, s, s, .5f);
-					gxSetTexture(g_fftTexture.id);
+					gxSetTexture(g_fftTexture.id, GX_SAMPLE_NEAREST, true);
 					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(x,      y     );
@@ -2267,7 +2267,7 @@ int main(int argc, char * argv[])
 						gxTexCoord2f(0.f, 1.f); gxVertex2f(x,      y + sy);
 					}
 					gxEnd();
-					gxSetTexture(0);
+					gxClearTexture();
 
 					setBlend(BLEND_ALPHA);
 

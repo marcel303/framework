@@ -339,9 +339,9 @@ void testHqPrimitives()
 			surface.invert();
 			
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(surface.getTexture());
+			gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 			drawRect(0, 0, GFX_SX, GFX_SY);
-			gxSetTexture(0);
+			gxClearTexture();
 			popBlend();
 			
 			drawTestUi();

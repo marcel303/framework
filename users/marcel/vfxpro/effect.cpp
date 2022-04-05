@@ -391,13 +391,13 @@ void Effect_StarCluster::draw()
 	if (m_alpha.get() <= 0.f)
 		return;
 
-	gxSetTexture(Sprite("prayer.png").getTexture());
+	gxSetTexture(Sprite("prayer.png").getTexture(), GX_SAMPLE_LINEAR, true);
 	{
 		setColor(colorWhite);
 
 		m_particleSystem.draw(m_alpha.get());
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 }
 
 //
@@ -861,13 +861,13 @@ void Effect_Rain::draw()
 	if (m_alpha.get() <= 0.f)
 		return;
 
-	gxSetTexture(Sprite("rain.png").getTexture());
+	gxSetTexture(Sprite("rain.png").getTexture(), GX_SAMPLE_LINEAR, true);
 	{
 		setColor(colorWhite);
 
 		m_particleSystem.draw(m_alpha.get());
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 }
 
 //
@@ -1421,9 +1421,9 @@ void Effect_Video::draw()
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha.get());
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 		}
 		gxPopMatrix();
@@ -1555,9 +1555,9 @@ void Effect_VideoLoop::draw()
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha.get());
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, sx, sy);
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 		}
 		gxPopMatrix();
@@ -1999,7 +1999,7 @@ void Effect_Blit::draw()
 			gxTranslatef(-m_srcSx.get() / 2.f, -m_srcSy.get() / 2.f, 0.f);
 
 		gxColor4f(1.f, 1.f, 1.f, m_alpha.get());
-		gxSetTexture(layer->m_surface->getTexture());
+		gxSetTexture(layer->m_surface->getTexture(), GX_SAMPLE_LINEAR, true);
 		{
 			gxBegin(GX_QUADS);
 			{
@@ -2016,7 +2016,7 @@ void Effect_Blit::draw()
 			}
 			gxEnd();
 		}
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 	gxPopMatrix();
 }
@@ -2907,9 +2907,9 @@ void Effect_Smoke::draw()
 		// draw the current surface
 
 		setColorf(1.f, 1.f, 1.f, m_alpha.get());
-		gxSetTexture(m_surface->getTexture());
+		gxSetTexture(m_surface->getTexture(), GX_SAMPLE_NEAREST, true);
 		drawRect(0, 0, g_currentSurface->getWidth(), g_currentSurface->getHeight());
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 
 	// apply flow map to current surface contents
@@ -2968,9 +2968,9 @@ void Effect_Smoke::captureSurface()
 	{
 		pushSurface(m_surface);
 		{
-			gxSetTexture(layer->m_surface->getTexture());
+			gxSetTexture(layer->m_surface->getTexture(), GX_SAMPLE_NEAREST, true);
 			drawRect(0, 0, m_surface->getWidth(), m_surface->getHeight());
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		popSurface();
 	}

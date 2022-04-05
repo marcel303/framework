@@ -494,8 +494,7 @@ void Window::draw3d() const
 		const Mat4x4 transformForDraw = getTransformForDraw();
 		gxMultMatrixf(transformForDraw.m_v);
 
-		gxSetTexture(getColorTarget()->getTextureId());
-		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+		gxSetTexture(getColorTarget()->getTextureId(), GX_SAMPLE_LINEAR, true);
 		{
 			setColor(colorWhite);
 
@@ -515,8 +514,7 @@ void Window::draw3d() const
 			}
 			gxEnd();
 		}
-		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 	gxPopMatrix();
 }

@@ -320,9 +320,9 @@ int main(int argc, char * argv[])
 			framework.getCurrentViewportSize(sx, sy);
 			
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(videoLoop.getTexture());
+			gxSetTexture(videoLoop.getTexture(), GX_SAMPLE_LINEAR, true);
 			drawRect(0, 0, sx/2, sy);
-			gxSetTexture(0);
+			gxClearTexture();
 			popBlend();
 			
 			// draw the frames received on the slave side
@@ -338,13 +338,13 @@ int main(int argc, char * argv[])
 					auto & texture = slaveState.texture;
 					
 					pushBlend(BLEND_OPAQUE);
-					gxSetTexture(texture.id);
+					gxSetTexture(texture.id, GX_SAMPLE_LINEAR, true);
 					drawRect(
 						sx/2,
 						(index + 0) * sy / numSlaves,
 						sx,
 						(index + 1) * sy / numSlaves);
-					gxSetTexture(0);
+					gxClearTexture();
 					popBlend();
 					
 					index++;

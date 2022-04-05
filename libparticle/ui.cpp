@@ -141,7 +141,7 @@ void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 	if (checkersTexture.isValid() == false)
 		initUi();
 	
-	gxSetTexture(checkersTexture.id);
+	gxSetTexture(checkersTexture.id, GX_SAMPLE_NEAREST, false);
 	{
 		gxBegin(GX_QUADS);
 		{
@@ -152,7 +152,7 @@ void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 		}
 		gxEnd();
 	}
-	gxSetTexture(0);
+	gxClearTexture();
 }
 
 void drawUiCircle(const float x, const float y, const float radius, const float r, const float g, const float b, const float a)

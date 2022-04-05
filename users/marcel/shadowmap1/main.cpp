@@ -790,10 +790,10 @@ int main(int argc, char * argv[])
 			{
 			#if 1
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_camera.getTexture());
+				gxSetTexture(view_camera.getTexture(), GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			#else
 				// would be necessary to capture shadow map textures for forward shadow casting lights
@@ -828,10 +828,10 @@ int main(int argc, char * argv[])
 			else if (drawMode == kDrawMode_CameraDepth)
 			{
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_camera.getDepthTexture());
+				gxSetTexture(view_camera.getDepthTexture(), GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 			else if (drawMode == kDrawMode_CameraDepthLinear)
@@ -870,10 +870,10 @@ int main(int argc, char * argv[])
 						lightDrawer.drawShadowMapEnd(*light);
 						
 						pushBlend(BLEND_OPAQUE);
-						gxSetTexture(lightDrawer.getShadowMapSurface()->getTexture());
+						gxSetTexture(lightDrawer.getShadowMapSurface()->getTexture(), GX_SAMPLE_LINEAR, true);
 						setColor(colorWhite);
 						drawRect(x, 0, x + size, size);
-						gxSetTexture(0);
+						gxClearTexture();
 						popBlend();
 						
 						x += size;
@@ -884,10 +884,10 @@ int main(int argc, char * argv[])
 			{
 			#if DEPTH_TO_WORLD
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_camera_world_position.getTexture());
+				gxSetTexture(view_camera_world_position.getTexture(), GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			#endif
 			}
@@ -934,10 +934,10 @@ int main(int argc, char * argv[])
 			else if (drawMode == kDrawMode_CameraNormal)
 			{
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_camera_normal.getTexture());
+				gxSetTexture(view_camera_normal.getTexture(), GX_SAMPLE_NEAREST, true);
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 			else if (drawMode == kDrawMode_LightBuffer)
@@ -973,19 +973,19 @@ int main(int argc, char * argv[])
 				
 				pushBlend(BLEND_OPAQUE);
 				setColor(colorWhite);
-				gxSetTexture(lightDrawer.getLightMapSurface()->getTexture());
+				gxSetTexture(lightDrawer.getLightMapSurface()->getTexture(), GX_SAMPLE_NEAREST, true);
 				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 			
 		#if 0
 			{
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_light.getDepthTexture());
+				gxSetTexture(view_light.getDepthTexture(), GX_SAMPLE_LINEAR, true);
 				setColor(colorWhite);
 				drawRect(0, 500, 100, 600);
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 		#endif

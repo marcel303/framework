@@ -3848,8 +3848,7 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						setColorf(1, 1, 1, opacity);
 					}
 					
-					gxSetTexture(simpleTextureId);
-					gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+					gxSetTexture(simpleTextureId, GX_SAMPLE_LINEAR, true);
 					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-kSize, +kSize * 2.f);
@@ -3858,8 +3857,6 @@ void SceneEditor::drawEditorGizmosTranslucent() const
 						gxTexCoord2f(0.f, 1.f); gxVertex2f(-kSize, 0.f);
 					}
 					gxEnd();
-					gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-					gxSetTexture(0);
 					
 					if (highlight)
 					{

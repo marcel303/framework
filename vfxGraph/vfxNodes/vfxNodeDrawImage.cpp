@@ -132,7 +132,7 @@ void VfxNodeDrawImage::draw() const
 				Assert(false);
 			}
 			
-			gxSetTexture(image->getTexture());
+			gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 			{
 				gxPushMatrix();
 				{
@@ -143,7 +143,7 @@ void VfxNodeDrawImage::draw() const
 				}
 				gxPopMatrix();
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 		else
 		{
@@ -199,7 +199,7 @@ void VfxNodeDrawImage::draw() const
 				Assert(false);
 			}
 			
-			gxSetTexture(image->getTexture());
+			gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 			{
 				gxPushMatrix();
 				{
@@ -210,7 +210,7 @@ void VfxNodeDrawImage::draw() const
 				}
 				gxPopMatrix();
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 		}
 	}
 }

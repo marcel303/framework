@@ -389,12 +389,12 @@ struct Vfxclip
 			
 			const GxTextureId texture = displayNode ? displayNode->getImage()->getTexture() : 0;
 			
-			gxSetTexture(texture);
+			gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 			{
 				setLumi(255);
 				drawRect(-1, -1, +1, +1);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			if (hover)
 			{
@@ -1246,14 +1246,14 @@ struct NewBeat
 				gxScalef(sx/2.f, sy/2.f, 1);
 				gxScalef(scale, scale, 1.f);
 				
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				setColorf(1.f, 1.f, 1.f, opacity);
 				pushBlend(BLEND_ALPHA);
 				{
 					drawRect(-1, -1, +1, +1);
 				}
 				popBlend();
-				gxSetTexture(0);
+				gxClearTexture();
 			}
 			gxPopMatrix();
 		}
@@ -2751,11 +2751,11 @@ void VideoLandscape::draw()
 	
 	pushBlend(BLEND_MUL);
 	setColor(colorWhite);
-	gxSetTexture(s_circleMask->getTexture());
+	gxSetTexture(s_circleMask->getTexture(), GX_SAMPLE_LINEAR, true);
 	pushColorPost(POST_SET_RGB_TO_R);
 	drawRect(0, 0, GFX_SX, GFX_SY);
 	popColorPost();
-	gxSetTexture(0);
+	gxClearTexture();
 	popBlend();
 	
 	//

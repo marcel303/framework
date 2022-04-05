@@ -213,10 +213,10 @@ void testDeepbelief()
 			gxPushMatrix();
 			{
 				gxTranslatef(GFX_SX-size-padding, GFX_SY-size-padding, 0);
-				gxSetTexture(texture);
+				gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 				setColor(colorWhite);
 				drawRect(0, 0, size, size);
-				gxSetTexture(0);
+				gxClearTexture();
 				setColor(colorGreen);
 				drawRectLine(0, 0, size, size);
 			}

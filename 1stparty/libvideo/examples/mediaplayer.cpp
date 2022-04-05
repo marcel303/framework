@@ -311,11 +311,11 @@ int main(int argc, char * argv[])
 						gxScalef(scale, scale, 1);
 						
 						setColor(colorWhite);
-						gxSetTexture(texture);
+						gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 						pushBlend(BLEND_OPAQUE);
 						drawRect(0, 0, sx, sy);
 						popBlend();
-						gxSetTexture(0);
+						gxClearTexture();
 					}
 					gxPopMatrix();
 				}

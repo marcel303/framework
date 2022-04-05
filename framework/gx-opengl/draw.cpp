@@ -901,24 +901,25 @@ void gxVertex4fv(const float * v)
 	gxVertex4f(v[0], v[1], v[2], v[3]);
 }
 
-void gxSetTexture(GxTextureId texture)
+void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
-	if (texture)
-	{
-		s_gxTextureEnabled = true;
-		s_gxTexture = texture;
-	}
-	else
-	{
-		s_gxTextureEnabled = false;
-		s_gxTexture = 0;
-	}
+	s_gxTextureEnabled = texture != 0;
+	s_gxTexture = texture;
+	
+	s_gxTextureFilter = filter;
+	s_gxTextureClamp = clamp;
 }
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
 	s_gxTextureFilter = filter;
 	s_gxTextureClamp = clamp;
+}
+
+void gxClearTexture()
+{
+	s_gxTextureEnabled = false;
+	s_gxTexture = 0;
 }
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height)
@@ -1101,13 +1102,15 @@ void gxEmitVertices(GLenum type, int numVertices)
 		glVertex2f(0.f, 0.f);
 }
 
-void gxSetTexture(GxTextureId texture)
+void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
 	if (texture)
 	{
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		checkErrorGL();
+		
+		gxSetTextureSampler(filter, clamp)
 	}
 	else
 	{

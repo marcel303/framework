@@ -361,7 +361,7 @@ static void drawCubeSlices(const Cube & cube)
 
 	if (texture)
 	{
-		gxSetTexture(texture);
+		gxSetTexture(texture, GX_SAMPLE_LINEAR, true);
 		gxPushMatrix();
 		{
 			gxTranslatef(73, 52, 0);
@@ -369,7 +369,7 @@ static void drawCubeSlices(const Cube & cube)
 			drawRect(0, 0, SX * SZ, SY);
 		}
 		gxPopMatrix();
-		gxSetTexture(0);
+		gxClearTexture();
 
 		freeTexture(texture);
 	}

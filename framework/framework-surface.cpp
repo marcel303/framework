@@ -505,9 +505,9 @@ void Surface::blit(BLEND_MODE blendMode) const
 	pushColorWriteMask(1, 1, 1, 1);
 	pushDepthWrite(false);
 	{
-		gxSetTexture(getTexture());
+		gxSetTexture(getTexture(), GX_SAMPLE_NEAREST, true);
 		drawRect(0, 0, getWidth(), getHeight());
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 	popDepthWrite();
 	popColorWriteMask();

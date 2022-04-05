@@ -224,9 +224,9 @@ void ofFbo::draw(const float x, const float y)
 {
 	if (surface != nullptr)
 	{
-		gxSetTexture(surface->getTexture());
+		gxSetTexture(surface->getTexture(), GX_SAMPLE_NEAREST, true);
 		drawRect(x, y, x + surface->getWidth(), y + surface->getHeight());
-		gxSetTexture(0);
+		gxClearTexture();
 	}
 }
 

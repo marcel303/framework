@@ -87,12 +87,12 @@ void testTextureAtlas()
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(ta.texture->id);
+				gxSetTexture(ta.texture->id, GX_SAMPLE_NEAREST, true);
 				{
 					setColor(colorWhite);
 					drawRect(0, 0, ta.a.sx, ta.a.sy);
 				}
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 				
 			#if 1
@@ -348,12 +348,12 @@ void testDynamicTextureAtlas()
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(ta.texture->id);
+			gxSetTexture(ta.texture->id, GX_SAMPLE_NEAREST, true);
 			{
 				setColor(colorWhite);
 				drawRect(0, 0, ta.a.sx, ta.a.sy);
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			popBlend();
 			
 		#if 1

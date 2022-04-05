@@ -161,23 +161,23 @@ void testBlobDetection()
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			gxSetTexture(surface.getTexture());
+			gxSetTexture(surface.getTexture(), GX_SAMPLE_NEAREST, true);
 			{
 				pushBlend(BLEND_OPAQUE);
 				setColor(colorWhite);
 				drawRect(0, 0, surface.getWidth(), surface.getHeight());
 				popBlend();
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			gxTranslatef(SURFACE_SX, 0, 0);
-			gxSetTexture(texture.id);
+			gxSetTexture(texture.id, GX_SAMPLE_LINEAR, true);
 			{
 				pushBlend(BLEND_OPAQUE);
 				drawRect(0, 0, surface.getWidth(), surface.getHeight());
 				popBlend();
 			}
-			gxSetTexture(0);
+			gxClearTexture();
 			
 			hqBegin(HQ_STROKED_CIRCLES);
 			{

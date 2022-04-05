@@ -1458,8 +1458,7 @@ void drawParticles(
 	char materialPath[PATH_MAX];
 	sprintf_s(materialPath, sizeof(materialPath), "%s/%s", basePath, pei.materialName);
 	
-	gxSetTexture(Sprite(materialPath).getTexture());
-	gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+	gxSetTexture(Sprite(materialPath).getTexture(), GX_SAMPLE_LINEAR, true);
 
 	if (pi.blendMode == ParticleInfo::kBlendMode_AlphaBlended)
 		pushBlend(BLEND_ALPHA);
@@ -1498,8 +1497,7 @@ void drawParticles(
 	}
 	gxEnd();
 	
-	gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-	gxSetTexture(0);
+	gxClearTexture();
 	
 	popBlend();
 }

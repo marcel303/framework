@@ -92,10 +92,10 @@ void FileEditor_VfxGraph::tick(const int sx, const int sy, const float dt, const
 	// draw vfx graph
 	
 	pushBlend(BLEND_OPAQUE);
-	gxSetTexture(instance->texture);
+	gxSetTexture(instance->texture, GX_SAMPLE_NEAREST, true);
 	setColor(colorWhite);
 	drawRect(0, 0, instance->sx, instance->sy);
-	gxSetTexture(0);
+	gxClearTexture();
 	popBlend();
 	
 	// update visualizers and draw editor

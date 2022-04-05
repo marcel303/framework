@@ -165,9 +165,9 @@ static void testHierachicalHoleFilling()
 		GxTextureId texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, false, true);
 		
 		setColor(colorWhite);
-		gxSetTexture(texture);
+		gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 		drawRect(draw_x, draw_y, draw_x + image->sx, draw_y + image->sy);
-		gxSetTexture(0);
+		gxClearTexture();
 		
 		draw_x += image->sx;
 		
@@ -223,9 +223,9 @@ static void testHierachicalHoleFilling()
 		GxTextureId texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, false, true);
 		
 		setColor(colorWhite);
-		gxSetTexture(texture);
+		gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
 		drawRect(draw_x, draw_y, draw_x + image->sx, draw_y + image->sy);
-		gxSetTexture(0);
+		gxClearTexture();
 		
 		draw_x += image->sx;
 		

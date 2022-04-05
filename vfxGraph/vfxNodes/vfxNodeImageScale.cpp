@@ -114,9 +114,9 @@ void VfxNodeImageScale::draw() const
 			{
 				pushBlend(BLEND_OPAQUE);
 				setColor(colorWhite);
-				gxSetTexture(image->getTexture());
+				gxSetTexture(image->getTexture(), GX_SAMPLE_LINEAR, true);
 				drawRect(0, 0, surface->getWidth(), surface->getHeight());
-				gxSetTexture(0);
+				gxClearTexture();
 				popBlend();
 			}
 			popSurface();
