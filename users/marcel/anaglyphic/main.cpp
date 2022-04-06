@@ -382,12 +382,9 @@ struct Camera
 		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
 		// in real life, the head and eyes rotate a little more complicated
 
-		matrix = Mat4x4(true)
-			.Translate(controllerCamera.position)
-			.Translate(eyeX, eyeY, 0.f)
-			.RotateY(controllerCamera.yaw * M_PI / 180.f)
-			.RotateX(controllerCamera.pitch * M_PI / 180.f)
-			.Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
+		matrix =
+			controllerCamera.getWorldMatrix()
+			.Translate(eyeOffset, 0, 0);
 	}
 };
 
@@ -551,10 +548,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 	#if ENABLE_OPENGL
 		Mat4x4 matP;
 		matP.MakePerspectiveGL(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
+		matP = matP.Scale(1, -1, 1);
 	#else
 		Mat4x4 matP;
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
-		matP = matP.Scale(1, -1, 1);
 	#endif
 
 		Mat4x4 matC(true);
