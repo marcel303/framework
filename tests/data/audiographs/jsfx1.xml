@@ -1,6 +1,6 @@
 <graph nextNodeId="45" nextLinkId="115">
     <node id="24" typeName="jgmod">
-        <input socket="filename" value="point_of_departure.s3m"/>
+        <input socket="filename" value="modules/point_of_departure.s3m"/>
         <input socket="pitch" value="1.300000"/>
         <input socket="speed" value="1.100000"/>
     </node>
