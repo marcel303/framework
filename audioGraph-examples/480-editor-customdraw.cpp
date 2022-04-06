@@ -314,6 +314,8 @@ int main(int argc, char * argv[])
 
 			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, showDefaultEditor == false);
 			
+			audioGraphMgr.tickMain();
+			
 			framework.beginDraw(220, 220, 220, 0);
 			{
 				setFont("calibri.ttf");

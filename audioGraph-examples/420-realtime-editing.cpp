@@ -83,8 +83,10 @@ int main(int argc, char * argv[])
 			
 			for (auto & file : framework.droppedFiles)
 				audioGraphMgr.selectedFile->graphEdit->load(file.c_str());
-				
+			
 			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
+			
+			audioGraphMgr.tickMain();
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
