@@ -5006,7 +5006,7 @@ void GraphEdit::draw() const
 					editorOptions.gridColor.rgba[1],
 					editorOptions.gridColor.rgba[2],
 					editorOptions.gridColor.rgba[3]);
-				hqBegin(HQ_LINES, true);
+				hqBegin(HQ_LINES);
 				{
 					for (int cx = cx1; cx <= cx2; ++cx)
 					{
