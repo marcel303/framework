@@ -1015,7 +1015,7 @@ static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmedi
 	Assert(index >= 0 && index < cacheElem->textureInfos.size());
 	auto & info = cacheElem->textureInfos[index];
 	
-// todo : this always uses mip mapping ?
+	// note : this always uses mip mapping when filter is enabled
 	const int sampler_index = ((filter ? 2 : 0) << 1) | clamp;
 	
 	if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)

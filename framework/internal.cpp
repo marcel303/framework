@@ -2230,7 +2230,9 @@ MsdfFontCacheElem & MsdfFontCache::findOrCreate(const char * name)
 //
 
 BuiltinShaders::BuiltinShaders()
-	: gaussianBlurH("engine/builtin-gaussian-h")
+	: generic("engine/Generic")
+	, genericColor("engine/GenericColor")
+	, gaussianBlurH("engine/builtin-gaussian-h")
 	, gaussianBlurV("engine/builtin-gaussian-v")
 	, gaussianKernelBuffer()
 	, colorMultiply("engine/builtin-colormultiply")

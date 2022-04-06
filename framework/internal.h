@@ -1145,6 +1145,9 @@ public:
 	BuiltinShaders();
 	~BuiltinShaders();
 	
+	BuiltinShader generic;
+	BuiltinShader genericColor;
+	
 	BuiltinShader gaussianBlurH;
 	BuiltinShader gaussianBlurV;
 	ShaderBuffer gaussianKernelBuffer;
