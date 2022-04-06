@@ -2872,16 +2872,6 @@ void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 	s_gxTextureSampler = (filter_index << 1) | clamp;
 }
 
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
-{
-	const int filter_index =
-		filter == GX_SAMPLE_NEAREST ? 0 :
-		filter == GX_SAMPLE_LINEAR ? 1 :
-		2;
-		
-	s_gxTextureSampler = (filter_index << 1) | clamp;
-}
-
 void gxClearTexture()
 {
 	s_gxTexture = 0;

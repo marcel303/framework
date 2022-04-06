@@ -143,7 +143,6 @@ void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture);
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 

@@ -910,12 +910,6 @@ void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 	s_gxTextureClamp = clamp;
 }
 
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
-{
-	s_gxTextureFilter = filter;
-	s_gxTextureClamp = clamp;
-}
-
 void gxClearTexture()
 {
 	s_gxTextureEnabled = false;
@@ -1102,23 +1096,6 @@ void gxEmitVertices(GLenum type, int numVertices)
 		glVertex2f(0.f, 0.f);
 }
 
-void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
-{
-	if (texture)
-	{
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		
-		gxSetTextureSampler(filter, clamp)
-	}
-	else
-	{
-		glDisable(GL_TEXTURE_2D);
-		checkErrorGL();
-	}
-}
-
 static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
 {
 	if (filter == GX_SAMPLE_NEAREST)
@@ -1132,10 +1109,14 @@ static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
 	}
 }
 
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
-	if (glIsEnabled(GL_TEXTURE_2D))
+	if (texture)
 	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		checkErrorGL();
+		
 		const GLenum openglFilter = toOpenGLSampleFilter(filter);
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
@@ -1144,6 +1125,11 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		checkErrorGL();
+	}
+	else
+	{
+		glDisable(GL_TEXTURE_2D);
 		checkErrorGL();
 	}
 }

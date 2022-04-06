@@ -31,9 +31,9 @@ void main()
 
 	// transform - scale
 
-	if (useScreenSize == 1.0)
+	if (useScreenSize == 1.0 && false)
 	{
-		float scale_rcp = rsqrt(min(
+		float scale_rcp = inversesqrt(min(
 			dot(ModelViewMatrix_rot[0], ModelViewMatrix_rot[0]),
 			dot(ModelViewMatrix_rot[1], ModelViewMatrix_rot[1])));
 

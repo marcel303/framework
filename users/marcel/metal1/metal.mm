@@ -1490,11 +1490,6 @@ void gxSetTexture(GxTextureId texture)
 	s_gxTextureEnabled = texture != 0;
 }
 
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
-{
-	Assert(false); // todo
-}
-
 //
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)

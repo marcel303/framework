@@ -1793,7 +1793,6 @@ static inline void gxVertex3fv(const float * v) { }
 static inline void gxVertex4f(float x, float y, float z, float w) { }
 static inline void gxVertex4fv(const float * v) { }
 static inline void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp) { }
-static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 static inline void gxClearTexture() { }
 
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
@@ -1836,7 +1835,6 @@ void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp);
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 void gxClearTexture();
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
@@ -1882,7 +1880,6 @@ void gxColor3fv(const float * v);
 #define gxVertex4f glVertex4f
 #define gxVertex4fv glVertex4fv
 void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp);
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 void gxClearTexture();
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
