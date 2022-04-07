@@ -427,10 +427,12 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 	
 	if (metal_is_encoding_draw_commands())
 	{
+		logError("GxTexture::downloadContents: called while encoding draw commands");
 		return false;
 	}
 	else if (id == 0)
 	{
+		logError("GxTexture::downloadContents: texture is invalid");
 		return false;
 	}
 	else
@@ -445,6 +447,7 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 		
 		if (bytesPerPixel == 0)
 		{
+			logError("GxTexture::downloadContents: pixel format not (yet) supported");
 			return false;
 		}
 		
@@ -452,13 +455,21 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 		
 		if (numBytes != numBytesNeeded)
 		{
+			logError("GxTexture::downloadContents: output buffer doesn't match size requirement. size: %d, required: %d", numBytes, numBytesNeeded);
 			return false;
 		}
 		
 		@autoreleasepool
 		{
+			// synchronize the texture and wait for the GPU to become idle
+			
 			auto queue = metal_get_command_queue();
 			auto cmd_buf = [queue commandBuffer];
+			{
+				auto blit_enc = [cmd_buf blitCommandEncoder];
+				[blit_enc synchronizeTexture:texture slice:0 level:0];
+				[blit_enc endEncoding];
+			}
 			[cmd_buf commit];
 			[cmd_buf waitUntilCompleted];
 		}
