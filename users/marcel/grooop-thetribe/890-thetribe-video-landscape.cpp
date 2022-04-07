@@ -313,12 +313,10 @@ struct Videoclip
 			shader.setTexture("mask", 1, (GxTextureId)s_videoMask->getTexture(), true, true);
 			shader.setImmediate("saturation", s_videoSaturation);
 			shader.setImmediate("perlin", perlin1, perlin2);
-			gxSetTexture(texture);
 			{
 				setLumi(hover ? 255 : 200);
 				drawRect(-1, -1, +1, +1);
 			}
-			gxSetTexture(0);
 			clearShader();
 		}
 		gxPopMatrix();

@@ -7,14 +7,14 @@ app thegrooop-860-thetribe-spokenword
 	add_files textScroller.cpp
 	add_files textScroller.h
 	resource_path data
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-862-thetribe-cagedsounds
 	depend_library audiograph
 	depend_library libvideo
 	add_files 862-thetribe-cagedsounds.cpp
 	resource_path data
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-870-thetribe-video360
 	depend_library audiograph
@@ -25,14 +25,14 @@ app thegrooop-870-thetribe-video360
 	add_files textScroller.cpp
 	add_files textScroller.h
 	resource_path data
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-872-thetribe-videomixer
 	depend_library audiograph
 	depend_library libvideo
 	add_files 872-thetribe-videomixer.cpp
 	resource_path data
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-874-thetribe-videotube
 	depend_library audiograph
@@ -43,12 +43,12 @@ app thegrooop-874-thetribe-videotube
 	add_files textScroller.cpp
 	add_files textScroller.h
 	resource_path data
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-880-talkawave
 	depend_library audiograph
 	add_files 880-talkawave.cpp
-	resource_path data
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-890-performance
 	depend_library audiograph
@@ -62,7 +62,7 @@ app thegrooop-890-performance
 	add_files audioMixer.h
 	add_files textScroller.cpp
 	add_files textScroller.h
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
 
 app thegrooop-892-landart
 	depend_library audiograph
@@ -71,4 +71,4 @@ app thegrooop-892-landart
 	depend_library vfxgraph-nodes
 	add_files 892-landart.cpp
 	add_files 892-landart.h
-	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	resource_path "/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - The Tribe"
