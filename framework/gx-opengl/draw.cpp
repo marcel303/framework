@@ -509,7 +509,9 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-		const bool useGenericShader = (globals.shader == nullptr);
+		const bool useGenericShader =
+			globals.shader == nullptr ||
+			globals.shader == &globals.builtinShaders->generic.get();
 		
 		Shader & shader =
 			useGenericShader
@@ -585,15 +587,12 @@ static void gxFlush(bool endOfBatch)
 				globals.colorClamp);
 		}
 
-		if (globals.gxShaderIsDirty)
+		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
-			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			{
-				shader.setTexture(
-					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-					s_gxTextureFilter != GX_SAMPLE_NEAREST,
-					s_gxTextureClamp);
-			}
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
 		}
 		
 		if (shader.isValid())
@@ -707,7 +706,9 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
 	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
-	const bool useGenericShader = (globals.shader == nullptr);
+	const bool useGenericShader =
+		globals.shader == nullptr ||
+		globals.shader == &globals.builtinShaders->generic.get();
 
 	Shader & shader =
 		useGenericShader
@@ -1296,7 +1297,9 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	const bool useGenericShader = (globals.shader == nullptr);
+	const bool useGenericShader =
+		globals.shader == nullptr ||
+		globals.shader == &globals.builtinShaders->generic.get();
 
 	Shader & shader =
 		useGenericShader
@@ -1373,7 +1376,9 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	const bool useGenericShader = (globals.shader == nullptr);
+	const bool useGenericShader =
+		globals.shader == nullptr ||
+		globals.shader == &globals.builtinShaders->generic.get();
 
 	Shader & shader =
 		useGenericShader
@@ -1427,7 +1432,9 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	const bool useGenericShader = (globals.shader == nullptr);
+	const bool useGenericShader =
+		globals.shader == nullptr ||
+		globals.shader == &globals.builtinShaders->generic.get();
 
 	Shader & shader =
 		useGenericShader
@@ -1504,7 +1511,9 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 
 void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	const bool useGenericShader = (globals.shader == nullptr);
+	const bool useGenericShader =
+		globals.shader == nullptr ||
+		globals.shader == &globals.builtinShaders->generic.get();
 
 	Shader & shader =
 		useGenericShader
