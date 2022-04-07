@@ -1,6 +1,5 @@
 #pragma once
 
-#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE
 #include "Calc.h"
 #include "framework.h"
 #include <cmath>
@@ -77,10 +76,7 @@ struct VectorParticleSystem
 	{
 		const float kMaxSize = 4.f;
 
-		glEnable(GL_PROGRAM_POINT_SIZE);
-		checkErrorGL();
-		
-		gxBegin(GX_POINTS);
+		gxBegin(GX_QUADS);
 		{
 			for (int i = 0; i < kMaxParticles; ++i)
 			{
@@ -91,14 +87,12 @@ struct VectorParticleSystem
 					const float size = std::sin(l * Calc::mPI) * ((6.f - std::cos(l * Calc::mPI * 7.f)) / 5.f) * kMaxSize;
 
 					gxTexCoord2f(size, 0.f);
-					gxVertex3f(x[i], y[i], z[i]);
+					for (int v = 0; v < 4; ++v)
+						gxVertex3f(x[i], y[i], z[i]);
 				}
 			}
 		}
 		gxEnd();
-		
-		glDisable(GL_PROGRAM_POINT_SIZE);
-		checkErrorGL();
 	}
 };
 
