@@ -92,7 +92,6 @@ namespace rOne
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(viewToProjection.m_v);
-		gxScalef(1, -1, 1);
 		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
@@ -121,6 +120,8 @@ namespace rOne
 		gxPopMatrix();
 		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
+		
+		updateCullFlip();
 	}
 
 	static void stencilVolumeTestBegin()
