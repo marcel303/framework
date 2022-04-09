@@ -594,7 +594,6 @@ int main(int argc, char * argv[])
 							1.0f / vbSize,
 							1.0f / vbSize);
 
-
 						const float offsetX = map.m_sizeX / 2.0f;
 						const float offsetY = map.m_sizeY / 2.0f;
 						
@@ -603,6 +602,9 @@ int main(int argc, char * argv[])
 							(y - offsetY) * vbSize,
 							0.0f);
 
+						Shader shader("shader");
+						setShader(shader);
+						
 						const GxVertexInput vsInputs[1] =
 						{
 							{ VS_POSITION, 3, GX_ELEMENT_FLOAT32, false, 0, sizeof(Vec3) }
