@@ -252,7 +252,12 @@ void VfxNodeDrawMesh::draw() const
 						const int bufferSize = 4096;
 						const int maxInstances = bufferSize / sizeof(Mat4x4);
 						
-						shaderBuffer.alloc(bufferSize);
+						if (bufferSize != shaderBuffer.getBufferSize())
+						{
+							shaderBuffer.free();
+							
+							shaderBuffer.alloc(bufferSize);
+						}
 						
 						if (maxInstances > 0)
 						{

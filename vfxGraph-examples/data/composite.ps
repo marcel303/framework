@@ -9,11 +9,10 @@ void main()
 {	
 	vec4 color = texture(source, texcoord);
 
-	// the correct way to blend:
-	//color = vec4(color.rgb, color.a) * opacity;
+	// add some translucency
+	color.a = mix(0.0, 0.8, color.a);
 
-	// not correct, but the nice looking way to blend:
-	color = vec4(color.rgb, color.a * (1.4 - color.a)) * opacity;
+	color = color * opacity;
 
     shader_fragColor = color;
 }
