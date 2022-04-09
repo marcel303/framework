@@ -100,6 +100,7 @@ struct VideoLoop
 					Assert(sampleAspectRatio == 1.0);
 					
 					firstFrame = new Surface(sx, sy, false);
+					firstFrame->setName("VideoLoop.FirstFrame");
 					
 					pushSurface(firstFrame);
 					{

@@ -114,8 +114,12 @@ void applyFsfx(Surface & surface, const char * name, const float strength = 1.f,
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+	changeDirectory("/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - Welcome/app");
 
+	framework.allowHighDpi = false;
+	
 	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if VFXGRAPH_ENABLE_LEAPMOTION
@@ -130,8 +134,10 @@ int main(int argc, char * argv[])
 	
 		Surface surface(GFX_SX, GFX_SY, false);
 		surface.clear();
+		surface.setName("Surface");
 		
 		Surface mask(GFX_SX, GFX_SY, false);
+		mask.setName("Mask");
 		
 		Surface * layerColors[NUM_LAYERS] = { };
 		Surface * layerAlphas[NUM_LAYERS] = { };
@@ -140,9 +146,11 @@ int main(int argc, char * argv[])
 		{
 			layerColors[i] = new Surface(GFX_SX, GFX_SY, true);
 			layerColors[i]->clear();
+			layerColors[i]->setName("LayerColor");
 			
 			layerAlphas[i] = new Surface(GFX_SX, GFX_SY, false);
 			layerAlphas[i]->clear();
+			layerAlphas[i]->setName("LayerAlpha");
 		}
 		
 	#if 0
@@ -666,7 +674,13 @@ int main(int argc, char * argv[])
 					applyFsfx(surface, "fsfx/invert.ps", (-cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
 					
 					pushBlend(BLEND_OPAQUE);
-					setShader_ColorTemperature(surface.getTexture(), (cosf(framework.time / 2.f) + 1.f) / 2.f, 1.f);
+					setShader_ColorTemperature(
+						surface.getTexture(),
+						lerp<float>(
+							1000.f,
+							12000.f,
+							(cosf(framework.time / 2.f) + 1.f) / 2.f),
+						1.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();

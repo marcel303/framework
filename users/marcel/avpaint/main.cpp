@@ -723,7 +723,7 @@ int main(int argc, char * argv[])
 	#ifdef WIN32
 		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome/app");
 	#else
-		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
+		changeDirectory("/Users/thecat/Google Drive/The Grooop - Lokaal/The Grooop - Welcome/app");
 	#endif
 	
 		framework.fillCaches(true);
