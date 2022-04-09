@@ -505,6 +505,7 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 		{
 			// synchronize the texture and wait for the GPU to become idle
 			
+		#if defined(MACOS)
 			auto queue = metal_get_command_queue();
 			auto cmd_buf = [queue commandBuffer];
 			{
@@ -514,6 +515,12 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 			}
 			[cmd_buf commit];
 			[cmd_buf waitUntilCompleted];
+		#else
+			auto queue = metal_get_command_queue();
+			auto cmd_buf = [queue commandBuffer];
+			[cmd_buf commit];
+			[cmd_buf waitUntilCompleted];
+		#endif
 		}
 		
 		[texture getBytes:bytes bytesPerRow:sx*bytesPerPixel fromRegion:MTLRegionMake2D(x, y, sx, sy) mipmapLevel:0];
