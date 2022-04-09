@@ -293,9 +293,10 @@ static const int s_gxMaxVertexCount = GX_VERTEX_BUFFER_SIZE;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
+static GxTextureId s_gxTexture = 0;
+static bool s_gxTextureIsDirty = false;
 static GX_SAMPLE_FILTER s_gxTextureFilter = GX_SAMPLE_NEAREST;
 static bool s_gxTextureClamp = false;
-static GxTextureId s_gxTexture = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -587,8 +588,10 @@ static void gxFlush(bool endOfBatch)
 				globals.colorClamp);
 		}
 
-		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+		if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
+			s_gxTextureIsDirty = false;
+			
 			shader.setTexture(
 				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
 				s_gxTextureFilter != GX_SAMPLE_NEAREST,
@@ -738,15 +741,14 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			globals.colorClamp);
 	}
 
-	if (globals.gxShaderIsDirty)
+	if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 	{
-		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-		{
-			shader.setTexture(
-				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-				s_gxTextureFilter != GX_SAMPLE_NEAREST,
-				s_gxTextureClamp);
-		}
+		s_gxTextureIsDirty = false;
+		
+		shader.setTexture(
+			shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+			s_gxTextureFilter != GX_SAMPLE_NEAREST,
+			s_gxTextureClamp);
 	}
 
 	//
@@ -896,6 +898,7 @@ void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
 	s_gxTextureEnabled = texture != 0;
 	s_gxTexture = texture;
+	s_gxTextureIsDirty = true;
 	
 	s_gxTextureFilter = filter;
 	s_gxTextureClamp = clamp;
@@ -905,6 +908,7 @@ void gxClearTexture()
 {
 	s_gxTextureEnabled = false;
 	s_gxTexture = 0;
+	s_gxTextureIsDirty = true;
 }
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height)
@@ -1334,15 +1338,14 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 				globals.colorClamp);
 		}
 
-		if (globals.gxShaderIsDirty)
+		if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
-			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			{
-				shader.setTexture(
-					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-					s_gxTextureFilter != GX_SAMPLE_NEAREST,
-					s_gxTextureClamp);
-			}
+			s_gxTextureIsDirty = false;
+			
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
 		}
 		
 		//
@@ -1403,15 +1406,14 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 				globals.colorClamp);
 		}
 
-		if (globals.gxShaderIsDirty)
+		if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
-			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			{
-				shader.setTexture(
-					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-					s_gxTextureFilter != GX_SAMPLE_NEAREST,
-					s_gxTextureClamp);
-			}
+			s_gxTextureIsDirty = false;
+			
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
 		}
 		
 		//
@@ -1469,15 +1471,14 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 				globals.colorClamp);
 		}
 
-		if (globals.gxShaderIsDirty)
+		if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
-			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			{
-				shader.setTexture(
-					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-					s_gxTextureFilter != GX_SAMPLE_NEAREST,
-					s_gxTextureClamp);
-			}
+			s_gxTextureIsDirty = false;
+			
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
 		}
 		
 		//
@@ -1538,15 +1539,14 @@ void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE t
 				globals.colorClamp);
 		}
 
-		if (globals.gxShaderIsDirty)
+		if (useGenericShader && s_gxTextureIsDirty && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 		{
-			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			{
-				shader.setTexture(
-					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
-					s_gxTextureFilter != GX_SAMPLE_NEAREST,
-					s_gxTextureClamp);
-			}
+			s_gxTextureIsDirty = false;
+			
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
 		}
 		
 		//
