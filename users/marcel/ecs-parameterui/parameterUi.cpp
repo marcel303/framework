@@ -23,7 +23,7 @@
 
 namespace ImGui
 {
-	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, float power);
+	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, int flags);
 }
 
 namespace parameterUi
@@ -916,7 +916,7 @@ namespace ImGui
 	// adapted from ImGui's SliderScalarN, to handle different min/max for each element
 	
 	// Add multiple sliders on 1 line for compact edition of multiple components
-	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, float power)
+	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, int flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -932,7 +932,7 @@ namespace ImGui
 			PushID(i);
 			if (i > 0)
 				SameLine(0, g.Style.ItemInnerSpacing.x);
-			value_changed |= SliderScalar("", ImGuiDataType_Float, &v[i], &v_min[i], &v_max[i], format, power);
+			value_changed |= SliderScalar("", ImGuiDataType_Float, &v[i], &v_min[i], &v_max[i], format, (ImGuiSliderFlags)flags);
 			PopID();
 			PopItemWidth();
 		}
