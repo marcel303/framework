@@ -221,8 +221,8 @@ void VfxNodeSpectrum1D::allocateTextures(const int sx)
 {
 	freeTextures();
 	
-	texture1.allocate(sx, 1, GX_R32_FLOAT, true, true);
-	texture2.allocate(sx, 1, GX_R32_FLOAT, true, true);
+	texture1.allocate(sx, 1, GX_R32_FLOAT);
+	texture2.allocate(sx, 1, GX_R32_FLOAT);
 	
 	texture1.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	texture2.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);

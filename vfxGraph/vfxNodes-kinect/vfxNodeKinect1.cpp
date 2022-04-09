@@ -145,7 +145,7 @@ void VfxNodeKinect1::tick(const float dt)
 			{
 				if (videoTexture.isChanged(kinect->width, kinect->height, GX_R8_UNORM))
 				{
-					videoTexture.alloc(kinect->width, kinect->height, GX_R8_UNORM, true, true);
+					videoTexture.alloc(kinect->width, kinect->height, GX_R8_UNORM);
 					videoTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 				}
 				
@@ -157,7 +157,7 @@ void VfxNodeKinect1::tick(const float dt)
 			{
 				if (videoTexture.isChanged(kinect->width, kinect->height, GX_RGB8_UNORM))
 				{
-					videoTexture.alloc(kinect->width, kinect->height, GX_RGB8_UNORM, true, true);
+					videoTexture.alloc(kinect->width, kinect->height, GX_RGB8_UNORM);
 					videoTexture.setSwizzle(0, 1, 2, GX_SWIZZLE_ONE);
 				}
 				
@@ -180,7 +180,7 @@ void VfxNodeKinect1::tick(const float dt)
 			
 			if (depthTexture.isChanged(kinect->width, kinect->height, GX_R16_UNORM))
 			{
-				depthTexture.alloc(kinect->width, kinect->height, GX_R16_UNORM, true, true);
+				depthTexture.alloc(kinect->width, kinect->height, GX_R16_UNORM);
 				depthTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 			}
 		

@@ -51,7 +51,7 @@ void OpenglImageCapture::recordFramebuffer(const int sx, const int sy)
 //        preferably async ..
 
 	GxTexture * texture = new GxTexture();
-	texture->allocate(sx, sy, GX_RGBA8_UNORM, false, true);
+	texture->allocate(sx, sy, GX_RGBA8_UNORM);
 	
 	if (texture->id != 0)
 	{

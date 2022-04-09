@@ -176,7 +176,7 @@ void VfxNodeWebcam::allocateImage(const int sx, const int sy)
 {
 	freeImage();
 
-	texture.allocate(sx, sy, GX_RGBA8_UNORM, true, true);
+	texture.allocate(sx, sy, GX_RGBA8_UNORM);
 	
 	imageOutput.texture = texture.id;
 }

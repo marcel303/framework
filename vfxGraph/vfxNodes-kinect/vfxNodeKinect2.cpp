@@ -195,7 +195,7 @@ void VfxNodeKinect2::tick(const float dt)
 		
 		if (videoTexture.isChanged(videoFrame->width, videoFrame->height, GX_RGBA8_UNORM))
 		{
-			videoTexture.allocate(videoFrame->width, videoFrame->height, GX_RGBA8_UNORM, true, true);
+			videoTexture.allocate(videoFrame->width, videoFrame->height, GX_RGBA8_UNORM);
 			videoTexture.setSwizzle(2, 1, 0, GX_SWIZZLE_ONE);
 		}
 		
@@ -212,7 +212,7 @@ void VfxNodeKinect2::tick(const float dt)
 		
 		if (depthTexture.isChanged(depthFrame->width, depthFrame->height, GX_R32_FLOAT))
 		{
-			depthTexture.allocate(depthFrame->width, depthFrame->height, GX_R32_FLOAT, true, true);
+			depthTexture.allocate(depthFrame->width, depthFrame->height, GX_R32_FLOAT);
 			depthTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		

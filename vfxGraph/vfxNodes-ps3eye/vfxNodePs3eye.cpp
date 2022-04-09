@@ -283,7 +283,7 @@ void VfxNodePs3eye::allocateImage(const int sx, const int sy, const GX_TEXTURE_F
 {
 	freeImage();
 
-	texture.allocate(sx, sy, format, true, true);
+	texture.allocate(sx, sy, format);
 	
 	imageOutput.texture = texture.id;
 }

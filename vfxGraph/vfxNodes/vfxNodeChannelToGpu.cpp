@@ -61,7 +61,7 @@ void VfxNodeChannelToGpu::tick(const float dt)
 	{
 		vfxGpuTimingBlock(VfxNodeChannelToGpu);
 		
-		if (texture.isChanged(channel->sx, channel->sy, GX_R32_FLOAT) || texture.isSamplingChange(channel->continuous, true))
+		if (texture.isChanged(channel->sx, channel->sy, GX_R32_FLOAT))
 		{
 			allocateImage(channel->sx, channel->sy, channel->continuous);
 		}
@@ -86,7 +86,7 @@ void VfxNodeChannelToGpu::allocateImage(const int sx, const int sy, const bool i
 {
 	freeImage();
 
-	texture.allocate(sx, sy, GX_R32_FLOAT, isContinuous, true);
+	texture.allocate(sx, sy, GX_R32_FLOAT);
 	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 
 	imageOutput.texture = texture.id;

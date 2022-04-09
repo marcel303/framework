@@ -82,7 +82,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	
 	const VfxImageCpu * image = getInputImageCpu(kInput_Image, nullptr);
 	const Channel channel = (Channel)getInputInt(kInput_Channel, 0);
-	const bool filter = getInputBool(kInput_Filter, true);
+	const bool filter = getInputBool(kInput_Filter, true); // todo : remove. specify filter and clamp at draw site
 	const bool clamp = getInputBool(kInput_Clamp, false);
 	
 	const bool wantsTexture = outputs[kOutput_Image].isReferenced();
@@ -113,7 +113,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		
 		if (texture.isChanged(image->sx, image->sy, GX_R8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GX_R8_UNORM, filter, clamp);
+			texture.allocate(image->sx, image->sy, GX_R8_UNORM);
 			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
@@ -126,7 +126,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GX_RGBA8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GX_RGBA8_UNORM, filter, clamp);
+			texture.allocate(image->sx, image->sy, GX_RGBA8_UNORM);
 			texture.setSwizzle(0, 1, 2, 3);
 		}
 		
@@ -186,7 +186,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		if (texture.isChanged(image->sx, image->sy, GX_R8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GX_R8_UNORM, filter, clamp);
+			texture.allocate(image->sx, image->sy, GX_R8_UNORM);
 			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
@@ -214,11 +214,6 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		interleaveBuffer = nullptr;
 		
 		interleaveBufferSize = 0;
-	}
-	
-	if (texture.isSamplingChange(filter, clamp))
-	{
-		texture.setSampling(filter, clamp);
 	}
 	
 	imageOutput.texture = texture.id;
