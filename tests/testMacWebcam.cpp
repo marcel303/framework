@@ -37,7 +37,7 @@ void testMacWebcam()
 		{
 			if (texture.isChanged(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM))
 			{
-				texture.allocate(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM, false, true);
+				texture.allocate(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM);
 			}
 			
 			texture.upload(webcam->image->data, 4, webcam->image->pitch / 4);

@@ -907,14 +907,14 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 			image.imageData = imageData;
 			
 			GxTexture texture;
-			texture.allocate(imageData->sx, imageData->sy, GX_RGBA8_UNORM, false, true);
+			texture.allocate(imageData->sx, imageData->sy, GX_RGBA8_UNORM);
 			texture.upload(imageData->imageData, sizeof(ImageData::Pixel), imageData->sx);
 			
 			image.resize(texture.sx, texture.sy);
 			
 			pushSurface(image.surface);
 			{
-				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, false);
+				gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 				{
 					pushColor(colorWhite);
 					pushBlend(BLEND_OPAQUE);

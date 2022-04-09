@@ -114,7 +114,7 @@ void initUi()
 			rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
 			rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
 			rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
-			checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
+			checkersTexture.allocate(2, 2, GX_RGBA8_UNORM);
 			checkersTexture.upload(rgba, 1, 0);
 		}
 	}

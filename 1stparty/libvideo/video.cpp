@@ -364,7 +364,7 @@ void MediaPlayer::updateTexture()
 			freeTexture();
 			
 			texture = new GxTexture();
-			texture->allocate(sx, sy, format, true, true);
+			texture->allocate(sx, sy, format);
 			
 			if (format == GX_R8_UNORM)
 				texture->setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);

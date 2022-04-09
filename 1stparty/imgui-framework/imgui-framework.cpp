@@ -408,7 +408,7 @@ void FrameworkImGuiContext::updateFontTexture()
 		pixels[i * 4 + 2] = (pixels[i * 4 + 2] * (pixels[i * 4 + 3] + 1)) >> 8;
 	}
 	
-	font_texture.allocate(sx, sy, GX_RGBA8_UNORM, false, true);
+	font_texture.allocate(sx, sy, GX_RGBA8_UNORM);
 	font_texture.upload(pixels, 1, 0);
 	io.Fonts->TexID = (void*)(uintptr_t)font_texture.id;
 	

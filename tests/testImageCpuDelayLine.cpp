@@ -193,7 +193,7 @@ void testImageCpuDelayLine()
 					
 					if (texture.isChanged(delayedImage.image.sx, delayedImage.image.sy, GX_R8_UNORM))
 					{
-						texture.allocate(delayedImage.image.sx, delayedImage.image.sy, GX_R8_UNORM, true, true);
+						texture.allocate(delayedImage.image.sx, delayedImage.image.sy, GX_R8_UNORM);
 						texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 					}
 					

@@ -253,7 +253,7 @@ static int renderCreateTexture(void* uptr, int type, int w, int h, int imageFlag
 	Assert(image.texture == nullptr);
 	
 	image.texture = new GxTexture();
-	image.texture->allocate(w, h, type == NVG_TEXTURE_ALPHA ? GX_R8_UNORM : GX_RGBA8_UNORM, true, true);
+	image.texture->allocate(w, h, type == NVG_TEXTURE_ALPHA ? GX_R8_UNORM : GX_RGBA8_UNORM);
 	image.flags = imageFlags;
 	
 	if (data != nullptr)

@@ -77,14 +77,14 @@ void testPs3eye()
 		
 		//
 		
-		texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GX_RGB8_UNORM : GX_R8_UNORM, true, true);
+		texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GX_RGB8_UNORM : GX_R8_UNORM);
 		if (!enableColor)
 			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		
-		textureLumi.allocate(sx, sy, GX_R8_UNORM, true, true);
+		textureLumi.allocate(sx, sy, GX_R8_UNORM);
 		textureLumi.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		
-		textureMask.allocate(sx, sy, GX_R8_UNORM, true, true);
+		textureMask.allocate(sx, sy, GX_R8_UNORM);
 		textureMask.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 	

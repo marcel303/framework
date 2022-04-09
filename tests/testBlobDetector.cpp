@@ -105,7 +105,7 @@ void testBlobDetection()
 	//exit(0);
 	
 	GxTexture texture;
-	texture.allocate(SURFACE_SX, SURFACE_SY, GX_R8_UNORM, false, true);
+	texture.allocate(SURFACE_SX, SURFACE_SY, GX_R8_UNORM);
 	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	float time = 0.f;
@@ -171,7 +171,7 @@ void testBlobDetection()
 			gxClearTexture();
 			
 			gxTranslatef(SURFACE_SX, 0, 0);
-			gxSetTexture(texture.id, GX_SAMPLE_LINEAR, true);
+			gxSetTexture(texture.id, GX_SAMPLE_NEAREST, true);
 			{
 				pushBlend(BLEND_OPAQUE);
 				drawRect(0, 0, surface.getWidth(), surface.getHeight());
