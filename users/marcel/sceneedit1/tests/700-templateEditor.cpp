@@ -159,7 +159,7 @@ struct TemplateComponentInstance
 				{
 					if (templateProperty.name == member->name)
 					{
-						LineReader line_reader(templateProperty.value_lines, 0, 0);
+						LineReader line_reader(&templateProperty.value_lines, 0, 0);
 						
 						result &= member_fromlines_recursive(typeDB, member, component, line_reader);
 						

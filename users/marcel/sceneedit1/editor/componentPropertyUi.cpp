@@ -131,7 +131,7 @@ namespace ImGui
 					if (result)
 					{
 						auto lines = line_writer.to_lines();
-						LineReader line_reader(lines, 0, 0);
+						LineReader line_reader(&lines, 0, 0);
 						const bool result = member_fromlines_recursive(typeDB, &member, component, line_reader);
 						Assert(result);
 						(void)result;
@@ -912,7 +912,7 @@ namespace ImGui
 											if (copy_result)
 											{
 												auto lines = line_writer.to_lines();
-												LineReader line_reader(lines, 0, 0);
+												LineReader line_reader(&lines, 0, 0);
 												const bool copy_result = member_fromlines_recursive(typeDB, member, object, line_reader);
 												Assert(copy_result);
 												(void)copy_result;

@@ -84,7 +84,7 @@ void loadEditorSettings(FileEditor * editor)
 		
 		if (TextIO::load(filename.c_str(), lines, lineEndings))
 		{
-			LineReader lineReader(lines, 0, 0);
+			LineReader lineReader(&lines, 0, 0);
 			
 			if (object_fromlines_recursive(typeDB, &type, editor, lineReader) == false)
 				LOG_ERR("failed to load object from lines");

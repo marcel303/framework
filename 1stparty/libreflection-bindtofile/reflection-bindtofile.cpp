@@ -269,7 +269,7 @@ static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, voi
 			return false;
 		}
 	
-		LineReader line_reader(lines, 0, 0);
+		LineReader line_reader(&lines, 0, 0);
 	
 		if (object_fromlines_recursive(typeDB, type, object, line_reader) == false)
 		{

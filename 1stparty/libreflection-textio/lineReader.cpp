@@ -29,16 +29,17 @@ static int calculateIndentationLevel(const char * line)
 //
 
 LineReader::LineReader(
-	const std::vector<std::string> & in_lines,
+	const std::vector<std::string> * in_lines,
 	const int in_line_index,
 	const int in_indentation_level)
-	: lines(in_lines)
+	: lines(*in_lines)
 	, line_index(in_line_index)
 	, indentation_level(in_indentation_level)
 	, initial_indentation_level(in_indentation_level)
 	, do_dtor_check(true)
 	, do_jump_check(true)
 {
+	Assert(in_lines != nullptr);
 }
 
 LineReader::~LineReader()

@@ -621,7 +621,7 @@ int main(int argc, char * argv[])
 											
 											auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
 											
-											LineReader line_reader(lines, 0, 0);
+											LineReader line_reader(&lines, 0, 0);
 											if (object_fromlines_recursive(typeDB, componentType, component_copy, line_reader))
 											{
 												//logDebug("success!");

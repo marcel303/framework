@@ -22,7 +22,7 @@ class LineReader
 	
 public:
 	LineReader(
-		const std::vector<std::string> & in_lines,
+		const std::vector<std::string> * in_lines,
 		const int in_line_index,
 		const int in_indentation_level);
 	~LineReader();

@@ -818,7 +818,7 @@ void SceneEditor::updateClipboardInfo()
 	
 	// scan through the clipboard contents to see what's stored inside
 	
-	LineReader line_reader(clipboardInfo.lines, 0, 0);
+	LineReader line_reader(&clipboardInfo.lines, 0, 0);
 	line_reader.disable_jump_check();
 	
 	for (;;)
@@ -1176,7 +1176,7 @@ SceneEditor::ComponentContextMenuResult SceneEditor::doComponentContextMenu(Scen
 	if (ImGui::MenuItem("Paste as new component", nullptr, false, clipboardInfo.hasComponent && !hasComponentOfType))
 	{
 		LineReader line_reader(
-			clipboardInfo.lines,
+			&clipboardInfo.lines,
 			clipboardInfo.component_lineIndex,
 			clipboardInfo.component_lineIndent);
 		
@@ -1200,7 +1200,7 @@ SceneEditor::ComponentContextMenuResult SceneEditor::doComponentContextMenu(Scen
 	if (ImGui::MenuItem("Paste component values", nullptr, false, clipboardInfo.hasComponent && hasComponentOfType))
 	{
 		LineReader line_reader(
-			clipboardInfo.lines,
+			&clipboardInfo.lines,
 			clipboardInfo.component_lineIndex,
 			clipboardInfo.component_lineIndent);
 		
@@ -1767,7 +1767,7 @@ int SceneEditor::updateAttachedScene(const int rootNodeId)
 			if (newTransformComponent != nullptr)
 			{
 				auto lines = line_writer.to_lines();
-				LineReader line_reader(lines, 1, 1);
+				LineReader line_reader(&lines, 1, 1);
 				success &= parseComponentFromLines(
 					*typeDB,
 					line_reader,
@@ -2906,7 +2906,7 @@ void SceneEditor::performAction_undo()
 			Scene tempScene;
 			tempScene.createRootNode();
 
-			LineReader line_reader(lines, 0, 0);
+			LineReader line_reader(&lines, 0, 0);
 			
 			if (parseSceneFromLines(*typeDB, line_reader, "", tempScene) == false)
 			{
@@ -2982,7 +2982,7 @@ void SceneEditor::performAction_redo()
 			Scene tempScene;
 			tempScene.createRootNode();
 			
-			LineReader line_reader(lines, 0, 0);
+			LineReader line_reader(&lines, 0, 0);
 
 			if (parseSceneFromLines(*typeDB, line_reader, "", tempScene) == false)
 			{
@@ -3184,7 +3184,7 @@ bool SceneEditor::performAction_paste(const int parentNodeId)
 			}
 			else
 			{
-				LineReader line_reader(lines, 0, 0);
+				LineReader line_reader(&lines, 0, 0);
 			
 				// iterate over clipboard items
 				
@@ -3456,7 +3456,7 @@ bool SceneEditor::performAction_duplicate()
 				if (copySceneNodeTreeToLines(*typeDB, scene, node.id, line_writer, 0))
 				{
 					auto lines = line_writer.to_lines();
-					LineReader line_reader(lines, 0, 0);
+					LineReader line_reader(&lines, 0, 0);
 					success &= pasteNodeTreeFromLines(node.parentId, line_reader, false);
 				}
 			#else
@@ -3464,7 +3464,7 @@ bool SceneEditor::performAction_duplicate()
 				if (copySceneNodeToLines(*typeDB, node, line_writer, 0))
 				{
 					auto lines = line_writer.to_lines();
-					LineReader line_reader(lines, 0, 0);
+					LineReader line_reader(&lines, 0, 0);
 					success &= pasteNodeFromLines(node.parentId, line_reader);
 				}
 			#endif
@@ -4088,7 +4088,7 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 	tempScene.nodeIdAllocator = &scene;
 	tempScene.createRootNode();
 
-	LineReader line_reader(lines, 0, 0);
+	LineReader line_reader(&lines, 0, 0);
 	
 	if (parseSceneFromLines(*typeDB, line_reader, basePath, tempScene) == false)
 	{

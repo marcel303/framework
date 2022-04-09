@@ -42,7 +42,7 @@ bool instantiateComponentsFromTemplate(
 				return false;
 			}
 			
-			LineReader lineReader(property_template.value_lines, 0, 0);
+			LineReader lineReader(&property_template.value_lines, 0, 0);
 			
 			if (member_fromlines_recursive(typeDB, member, component, lineReader) == false)
 			{

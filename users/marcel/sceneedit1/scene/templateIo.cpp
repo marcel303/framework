@@ -151,7 +151,7 @@ bool parseTemplateFromFile(const char * path, Template & out_template)
 		return false;
 	}
 	
-	LineReader lineReader(lines, 0, 0);
+	LineReader lineReader(&lines, 0, 0);
 	
 	if (!parseTemplateFromLines(lineReader, path, out_template))
 	{

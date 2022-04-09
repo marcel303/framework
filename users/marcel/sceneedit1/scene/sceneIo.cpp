@@ -310,7 +310,7 @@ bool parseSceneFromFile(
 	{
 		const std::string basePath = Path::GetDirectory(path);
 		
-		LineReader line_reader(lines, 0, 0);
+		LineReader line_reader(&lines, 0, 0);
 		
 		const bool result = parseSceneFromLines(
 			typeDB,

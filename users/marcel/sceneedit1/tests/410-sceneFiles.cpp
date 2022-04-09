@@ -42,7 +42,7 @@ int main(int argc, char * argv[])
 	Scene scene;
 	scene.createRootNode();
 	
-	LineReader line_reader(lines, 0, 0);
+	LineReader line_reader(&lines, 0, 0);
 	
 	if (!parseSceneFromLines(typeDB, line_reader, basePath.c_str(), scene))
 	{

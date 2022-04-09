@@ -40,7 +40,7 @@ bool copyObject(const TypeDB & typeDB, const Type * type, const void * srcObject
 		
 	auto lines = line_writer.to_lines();
 	
-	LineReader line_reader(lines, 0, 0); // todo : should pass lines as a pointer, as it doesn't copy the lines
+	LineReader line_reader(&lines, 0, 0); // todo : should pass lines as a pointer, as it doesn't copy the lines
 	if (object_fromlines_recursive(typeDB, type, dstObject, line_reader) == false)
 		return false;
 	
