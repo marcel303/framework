@@ -2,7 +2,95 @@
 
 #include "reflection.h" // bindObjectToFile<T>
 
-// todo : add usage example
+/*
+
+usage : bind an object to file and reload the object on file change
+
+	TypeDB typeDB;
+	reflect(typeDB); // add type definition for SomeStruct to the type DB
+	
+	SomeStruct object;
+	bindObjectToFile(&typeDB, &object, "object.json"); // this will load the object from file and monitor file changes to reload the object
+	
+	for (;;)
+	{
+		// framework detects changed files and puts them in framework.changedFiles
+		
+		framework.process();
+		
+		// tickObjectToFileBinding checks framework.changedFiles and reloads object on change
+		
+		tickObjectToFileBinding();
+		
+		// it's also possible to flush changes you made to file
+		
+		if (keyboard.wentDown(SDLK_f))
+		{
+			object.name = "changed name";
+			flushObjectToFile(&object);
+		}
+	}
+
+usage : detect object changes through versioning
+
+	struct SomeStruct
+	{
+		std::string name;
+		int version = 0;
+		int previousVersion = 0; // note : this member is here to track version changes only
+	};
+	
+	TypeDB typeDB;
+	typeDB.addPlain<int>("int", kDataType_Int);
+	typeDB.addPlain<std::string>("string", kDataType_String);
+	typeDB.addStructured<SomeStruct>("SomeStruct")
+		.add("name", &SomeStruct::name)
+		.add("version", &SomeStruct::version)
+			.addFlag<ObjectVersionFlag>();
+	
+	SomeStruct object;
+	bindObjectToFile(&typeDB, &object, "object.json"); // this will load the object from file and monitor file changes to reload the object
+	
+	for (;;)
+	{
+		// framework detects changed files and puts them in framework.changedFiles
+		
+		framework.process();
+		
+		// tickObjectToFileBinding checks framework.changedFiles and reloads object on change
+		// it will also increment the version number, as we added the ObjectVersionFlag
+		
+		tickObjectToFileBinding();
+		
+		// check if the version number changed
+		
+		if (object.version != object.previousVersion)
+		{
+			object.previousVersion = object.version;
+			
+			logInfo("the object has changed!");
+		}
+	}
+	
+usage : load an object from file
+
+	TypeDB typeDB;
+	reflect(typeDB); // add type definition for SomeStruct to the type DB
+	
+	SomeStruct object;
+	loadObjectFromFile(typeDB, object, "object.json");
+	
+usage : save an object to file
+
+	TypeDB typeDB;
+	reflect(typeDB); // add type definition for SomeStruct to the type DB
+	
+	SomeStruct object;
+	object.name = "some object";
+	object.value = 20;
+	saveObjectToFile(typeDB, object, "object.json"))
+
+*/
 
 /**
  * Add to a member type to flag an integer type field as a version number. The version number automatically gets
