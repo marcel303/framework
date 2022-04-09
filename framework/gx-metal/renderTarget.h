@@ -98,6 +98,8 @@ public:
 	
 	void * getMetalTexture() const { return m_colorTexture; }
 	void * getMetalTextureView() const { return m_colorTextureView; }
+	
+	void setSwizzle(int r, int g, int b, int a);
 };
 
 //

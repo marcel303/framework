@@ -1039,12 +1039,12 @@ static void setTextureUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateInde
 	}
 	else
 	{
-		auto i = s_textures.find(texture);
-		Assert(i != s_textures.end());
+		auto i = s_textureElems.find(texture);
+		Assert(i != s_textureElems.end());
 
-		if (i != s_textures.end())
+		if (i != s_textureElems.end())
 		{
-			auto metal_texture = i->second;
+			auto metal_texture = i->second.textureView;
 			
 			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
 				cacheElem->vsTextures[info.vsOffset] = metal_texture;

@@ -7,7 +7,10 @@
 
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
-	logWarning("Surface::setSwizzle not yet implemented");
+	for (int i = 0; i < 2; ++i)
+	{
+		m_colorTarget[i]->setSwizzle(r, g, b, a);
+	}
 }
 
 void Surface::blitTo(Surface * surface) const

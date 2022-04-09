@@ -32,7 +32,15 @@
 #import <map>
 #import <Metal/Metal.h>
 
-extern std::map<int, id <MTLTexture>> s_textures;
+struct TextureElem
+{
+	id <MTLTexture> texture;
+	id <MTLTexture> textureView;
+};
+
+extern std::map<int, TextureElem> s_textureElems;
 extern int s_nextTextureId;
+
+MTLTextureSwizzle toMetalTextureSwizzle(const int value);
 
 #endif

@@ -40,7 +40,7 @@
 
 id <MTLDevice> metal_get_device();
 
-std::map<int, id <MTLTexture>> s_textures;
+std::map<int, TextureElem> s_textureElems;
 int s_nextTextureId = 1;
 
 static MTLPixelFormat toMetalFormat(const GX_TEXTURE_FORMAT format)
@@ -83,6 +83,28 @@ static int getMetalFormatBytesPerPixel(const GX_TEXTURE_FORMAT format)
 	Assert(false);
 	return -1;
 }
+
+MTLTextureSwizzle toMetalTextureSwizzle(const int value)
+{
+	if (value == GX_SWIZZLE_ZERO)
+		return MTLTextureSwizzleZero;
+	else if (value == GX_SWIZZLE_ONE)
+		return MTLTextureSwizzleOne;
+	else if (value == 0)
+		return MTLTextureSwizzleRed;
+	else if (value == 1)
+		return MTLTextureSwizzleGreen;
+	else if (value == 2)
+		return MTLTextureSwizzleBlue;
+	else if (value == 3)
+		return MTLTextureSwizzleAlpha;
+	else
+	{
+		Assert(false);
+		return MTLTextureSwizzleZero;
+	}
+}
+
 
 //
 
@@ -134,7 +156,7 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 		
 		id = s_nextTextureId++;
 		
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
 		auto device = metal_get_device();
 		
@@ -148,7 +170,8 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 			MTLTextureUsageRenderTarget; // for clear functions
 		//descriptor.storageMode = MTLStorageModePrivate; // note : cannot be private as we may want to download its contents
 		
-		texture = [device newTextureWithDescriptor:descriptor];
+		textureElem.texture = [device newTextureWithDescriptor:descriptor];
+		textureElem.textureView = textureElem.texture;
 	}
 	
 	setSampling(properties.sampling.filter, properties.sampling.clamp);
@@ -158,11 +181,12 @@ void GxTexture::free()
 {
 	if (id != 0)
 	{
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
-		texture = nullptr;
+		textureElem.texture = nullptr;
+		textureElem.textureView = nullptr;
 		
-		s_textures.erase(id);
+		s_textureElems.erase(id);
 		
 		id = 0;
 		sx = 0;
@@ -187,7 +211,25 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	if (id == 0)
 		return;
 
-	// todo : implement GxTexture::setSwizzle using newer Metal version
+	if (@available(macOS 10.15, *))
+	{
+		MTLTextureSwizzleChannels channels;
+		channels.red = toMetalTextureSwizzle(in_r);
+		channels.green = toMetalTextureSwizzle(in_g);
+		channels.blue = toMetalTextureSwizzle(in_b);
+		channels.alpha = toMetalTextureSwizzle(in_a);
+		
+		auto & textureElem = s_textureElems[id];
+		auto texture = textureElem.textureView;
+		
+		textureElem.textureView =
+			[textureElem.texture
+				newTextureViewWithPixelFormat:texture.pixelFormat
+				textureType:texture.textureType
+				levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
+				slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
+				swizzle:channels];
+	}
 }
 
 void GxTexture::setSampling(const bool _filter, const bool _clamp)
@@ -205,9 +247,9 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 	}
 	else
 	{
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
-		ColorTarget target((__bridge void*)texture);
+		ColorTarget target((__bridge void*)textureElem.texture);
 		target.setClearColor(r, g, b, a);
 		
 		pushRenderPass(&target, true, nullptr, false, "GxTexture::clearf");
@@ -226,9 +268,9 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 	}
 	else
 	{
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
-		ColorTarget target((__bridge void*)texture);
+		ColorTarget target((__bridge void*)textureElem.texture);
 		
 		// todo : use blit encoder to write zeroes ?
 		// todo : use a separate shader for this. perhaps a Metal compute shader ?
@@ -362,7 +404,7 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int i
 		
 		// 3. asynchronously copy from the source texture to our own texture
 		
-		auto & dst_texture = s_textures[id];
+		auto & dst_texture = s_textureElems[id].texture;
 		
 		metal_copy_texture_to_texture(
 			src_texture,
@@ -387,8 +429,8 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 	}
 	else
 	{
-		auto src_texture = s_textures[src.id];
-		auto dst_texture = s_textures[id];
+		auto src_texture = s_textureElems[src.id].texture;
+		auto dst_texture = s_textureElems[id].texture;
 		
 		for (int i = 0; i < numRegions; ++i)
 		{
@@ -415,7 +457,7 @@ void GxTexture::generateMipmaps()
 	{
 		Assert(mipmapped);
 		
-		auto texture = s_textures[id];
+		auto texture = s_textureElems[id].texture;
 
 		metal_generate_mipmaps(texture);
 	}
@@ -437,7 +479,7 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 	}
 	else
 	{
-		auto texture = s_textures[id];
+		auto texture = s_textureElems[id].texture;
 		
 		const int bytesPerPixel =
 			texture.pixelFormat == MTLPixelFormatRGBA8Unorm ? 4 :
@@ -550,7 +592,7 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 		
 		id = s_nextTextureId++;
 		
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
 		auto device = metal_get_device();
 		
@@ -564,7 +606,8 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 		descriptor.usage = MTLTextureUsageShaderRead;
 		//descriptor.storageMode = MTLStorageModePrivate; // note : cannot be private as we may want to download its contents
 		
-		texture = [device newTextureWithDescriptor:descriptor];
+		textureElem.texture = [device newTextureWithDescriptor:descriptor];
+		textureElem.textureView = textureElem.texture;
 	}
 }
 
@@ -572,11 +615,12 @@ void GxTexture3d::free()
 {
 	if (id != 0)
 	{
-		auto & texture = s_textures[id];
+		auto & textureElem = s_textureElems[id];
 		
-		texture = nullptr;
+		textureElem.texture = nullptr;
+		textureElem.textureView = nullptr;
 		
-		s_textures.erase(id);
+		s_textureElems.erase(id);
 		
 		id = 0;
 		sx = 0;
@@ -665,7 +709,7 @@ void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int 
 		
 		// 3. asynchronously copy from the source texture to our own texture
 		
-		auto & dst_texture = s_textures[id];
+		auto & dst_texture = s_textureElems[id].texture;
 		
 		metal_copy_texture_to_texture(
 			src_texture,
@@ -696,7 +740,7 @@ void GxTexture3d::generateMipmaps()
 	{
 		Assert(mipmapped);
 		
-		auto texture = s_textures[id];
+		auto texture = s_textureElems[id].texture;
 
 		metal_generate_mipmaps(texture);
 	}
@@ -713,7 +757,7 @@ void gxGetTextureSize(GxTextureId id, int & width, int & height)
 	}
 	else
 	{
-		auto texture = s_textures[id];
+		auto texture = s_textureElems[id].texture;
 
 		width = texture.width;
 		height = texture.height;
@@ -728,7 +772,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	}
 	else
 	{
-		const auto texture = s_textures[id];
+		const auto texture = s_textureElems[id].texture;
 		
 		const MTLPixelFormat format = texture.pixelFormat;
 		

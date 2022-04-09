@@ -1384,7 +1384,9 @@ static GxTextureId createTexture(
 			
 			const GxTextureId textureId = s_nextTextureId++;
 			
-			s_textures[textureId] = texture;
+			auto & textureElem = s_textureElems[textureId];
+			textureElem.texture = texture;
+			textureElem.textureView = texture;
 			
 			return textureId;
 		}
@@ -1460,7 +1462,7 @@ GxTextureId copyTexture(const GxTextureId source)
 	{
 		@autoreleasepool
 		{
-			auto & src = s_textures[source];
+			auto & src = s_textureElems[source].texture;
 			
 			const GxTextureId textureId = s_nextTextureId++;
 			
@@ -1483,7 +1485,9 @@ GxTextureId copyTexture(const GxTextureId source)
 				0, 0, 0,
 				dst.pixelFormat);
 			
-			s_textures[s_nextTextureId] = dst;
+			auto & textureElem = s_textureElems[s_nextTextureId];
+			textureElem.texture = dst;
+			textureElem.textureView = dst;
 			
 			return textureId;
 		}
@@ -1498,16 +1502,17 @@ void freeTexture(GxTextureId & textureId)
 {
 	if (textureId != 0)
 	{
-		auto i = s_textures.find(textureId);
+		auto i = s_textureElems.find(textureId);
 		
-		Assert(i != s_textures.end());
-		if (i != s_textures.end())
+		Assert(i != s_textureElems.end());
+		if (i != s_textureElems.end())
 		{
-			auto & texture = i->second;
+			auto & textureElem = i->second;
 			
-			texture = nullptr;
+			textureElem.texture = nullptr;
+			textureElem.textureView = nullptr;
 			
-			s_textures.erase(i);
+			s_textureElems.erase(i);
 		}
 		
 		textureId = 0;
@@ -3183,12 +3188,12 @@ static void gxValidateShaderResources(const bool useGenericShader)
 			//        needed when: texture changed
 			//                  or shader changed
 			
-			auto i = s_textures.find(s_gxTexture);
+			auto i = s_textureElems.find(s_gxTexture);
 			
-			Assert(i != s_textures.end());
-			if (i != s_textures.end())
+			Assert(i != s_textureElems.end());
+			if (i != s_textureElems.end())
 			{
-				auto & texture = i->second;
+				auto & texture = i->second.textureView;
 				[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			}
 		}

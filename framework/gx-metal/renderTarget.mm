@@ -105,7 +105,10 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 			id <MTLTexture> colorTextureView = [colorTexture newTextureViewWithPixelFormat:pixelFormatForView];
 			m_colorTextureView = (__bridge_retained void*)colorTextureView;
 			m_colorTextureId = s_nextTextureId++;
-			s_textures[m_colorTextureId] = colorTextureView;
+			
+			auto & textureElem = s_textureElems[m_colorTextureId];
+			textureElem.texture = colorTexture;
+			textureElem.textureView = colorTextureView;
 		}
 	}
 
@@ -123,10 +126,10 @@ void ColorTarget::free()
 		colorTexture = nullptr;
 		m_colorTexture = nullptr;
 		
-		auto i = s_textures.find(m_colorTextureId);
-		Assert(i != s_textures.end());
-		if (i != s_textures.end())
-			s_textures.erase(i);
+		auto i = s_textureElems.find(m_colorTextureId);
+		Assert(i != s_textureElems.end());
+		if (i != s_textureElems.end())
+			s_textureElems.erase(i);
 		m_colorTextureId = 0;
 	}
 }
@@ -134,6 +137,26 @@ void ColorTarget::free()
 GxTextureId ColorTarget::getTextureId() const
 {
 	return m_colorTextureId;
+}
+
+void ColorTarget::setSwizzle(int r, int g, int b, int a)
+{
+	MTLTextureSwizzleChannels channels;
+	channels.red = toMetalTextureSwizzle(r);
+	channels.green = toMetalTextureSwizzle(g);
+	channels.blue = toMetalTextureSwizzle(b);
+	channels.alpha = toMetalTextureSwizzle(a);
+	
+	auto & textureElem = s_textureElems[m_colorTextureId];
+	auto texture = textureElem.textureView;
+	
+	textureElem.textureView =
+		[textureElem.texture
+			newTextureViewWithPixelFormat:texture.pixelFormat
+			textureType:texture.textureType
+			levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
+			slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
+			swizzle:channels];
 }
 
 //
@@ -181,7 +204,10 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		{
 			m_depthTexture = (__bridge_retained void*)depthTexture;
 			m_depthTextureId = s_nextTextureId++;
-			s_textures[m_depthTextureId] = depthTexture;
+			
+			auto & textureElem = s_textureElems[m_depthTextureId];
+			textureElem.texture = depthTexture;
+			textureElem.textureView = depthTexture;
 		}
 	}
 
@@ -196,10 +222,10 @@ void DepthTarget::free()
 		depthTexture = nullptr;
 		m_depthTexture = nullptr;
 		
-		auto i = s_textures.find(m_depthTextureId);
-		Assert(i != s_textures.end());
-		if (i != s_textures.end())
-			s_textures.erase(i);
+		auto i = s_textureElems.find(m_depthTextureId);
+		Assert(i != s_textureElems.end());
+		if (i != s_textureElems.end())
+			s_textureElems.erase(i);
 		m_depthTextureId = 0;
 	}
 }
