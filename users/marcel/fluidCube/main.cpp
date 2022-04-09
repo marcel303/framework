@@ -19,7 +19,7 @@ struct FluidCube2dDemo
 	{
 		cube = createFluidCube2d(400, 200, .1f, .1f, 1.f / 30.f);
 		
-		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT, true, true);
+		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT);
 		texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 	
@@ -145,7 +145,7 @@ struct FluidCube3dDemo
 	{
 		cube = createFluidCube3d(40, 40, 100, .01f, .01f, 1.f / 30.f);
 		
-		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT, true, true);
+		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT);
 		texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 

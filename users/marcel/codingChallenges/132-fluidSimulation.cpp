@@ -915,7 +915,7 @@ int main(int argc, char * argv[])
 #endif
 
 	GxTexture texture;
-	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
+	texture.allocate(cube->size, cube->size, GX_R32_FLOAT);
 	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	mouse.showCursor(false);

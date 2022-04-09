@@ -622,7 +622,7 @@ struct Controller
 		if (recorder != nullptr)
 		{
 			GxTexture texture;
-			texture.allocate(CAM_SX, CAM_SY, GX_R8_UNORM, false, true);
+			texture.allocate(CAM_SX, CAM_SY, GX_R8_UNORM);
 			
 			if (texture.isValid())
 			{

@@ -163,9 +163,7 @@ struct World
 		p.dimensions.sy = img.sy;
 		p.format = GX_RGBA8_UNORM;
 		p.mipmapped = true;
-		p.sampling.filter = true;
-		p.sampling.clamp = false;
-		
+			
 		terrainTexture.allocate(p);
 		terrainTexture.upload(img.imageData, 0, 0);
 		

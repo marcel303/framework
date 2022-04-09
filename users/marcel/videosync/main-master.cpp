@@ -305,7 +305,7 @@ int main(int argc, char * argv[])
 			{
 				if (texture.isChanged(data->sx, data->sy, GX_RGBA8_UNORM))
 				{
-					texture.allocate(data->sx, data->sy, GX_RGBA8_UNORM, true, true);
+					texture.allocate(data->sx, data->sy, GX_RGBA8_UNORM);
 				}
 				
 				texture.upload(data->buffer, 1, 0);

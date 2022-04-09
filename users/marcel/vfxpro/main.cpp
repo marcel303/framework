@@ -1759,7 +1759,7 @@ int main(int argc, char * argv[])
 
 			// convert PCM data to shader input texture
 
-			g_pcmTexture.allocate(numSamplesThisFrame, 1, GX_R32_FLOAT, true, true);
+			g_pcmTexture.allocate(numSamplesThisFrame, 1, GX_R32_FLOAT);
 			g_pcmTexture.upload(samplesThisFrame, 4, 0);
 
 			// convert FFT data to shader input texture
@@ -1767,14 +1767,14 @@ int main(int argc, char * argv[])
 			float powerValues[kFFTComplexSize];
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValues[i] = fftPowerValue(i);
-			g_fftTexture.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTexture.allocate(kFFTComplexSize, 1, GX_R32_FLOAT);
 			g_fftTexture.upload(powerValues, 4, 0);
 			
 			static float powerValuesWithFade[kFFTComplexSize] = { };
 			const float fftFadeA = powf(g_scene->m_fftFade.get(), dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
-			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT);
 			g_fftTextureWithFade.upload(powerValuesWithFade, 4, 0);
 
 			//

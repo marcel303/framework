@@ -392,7 +392,7 @@ struct Controller
 		{
 			GxTexture texture;
 			
-			texture.allocate(320, 240, GX_R8_UNORM, false, true);
+			texture.allocate(320, 240, GX_R8_UNORM);
 			
 			if (texture.isValid())
 			{
