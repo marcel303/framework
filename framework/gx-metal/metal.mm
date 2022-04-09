@@ -52,6 +52,12 @@
 
 #define INDEX_TYPE uint32_t
 
+#define TEXTURE_SETTING_USING_USAGE_MASK 1
+#define TEXTURE_SETTING_USING_DIRTY_MASK 1
+
+#define TEXTURE_SETTING_USING_USAGE_MASK_VS (TEXTURE_SETTING_USING_USAGE_MASK == 1 && ShaderCacheElem_Metal::kMaxVsTextures >= 3)
+#define TEXTURE_SETTING_USING_USAGE_MASK_PS (TEXTURE_SETTING_USING_USAGE_MASK == 1 && ShaderCacheElem_Metal::kMaxPsTextures >= 3)
+
 #if !__has_feature(objc_arc)
 	#error "ARC is off!"
 #endif
@@ -1758,6 +1764,8 @@ static GxVertex s_gxVertex = { };
 static GxTextureId s_gxTexture = 0;
 static bool s_gxTextureEnabled = false;
 static int s_gxTextureSampler = 0;
+static bool s_gxTexturePointerIsDirty = false;
+static bool s_gxTextureSamplerIsDirty = false;
 
 static GxVertex s_gxFirstVertex;
 static bool s_gxHasFirstVertex = false;
@@ -2860,15 +2868,26 @@ void gxVertex4fv(const float * v)
 
 void gxSetTexture(GxTextureId texture, GX_SAMPLE_FILTER filter, bool clamp)
 {
-	s_gxTexture = texture;
-	s_gxTextureEnabled = texture != 0;
+	if (texture != s_gxTexture)
+	{
+		s_gxTexture = texture;
+		s_gxTextureEnabled = texture != 0;
+		
+		s_gxTexturePointerIsDirty = true;
+	}
 	
 	const int filter_index =
 		filter == GX_SAMPLE_NEAREST ? 0 :
 		filter == GX_SAMPLE_LINEAR ? 1 :
 		2;
-		
-	s_gxTextureSampler = (filter_index << 1) | clamp;
+	
+	const int sampler_index = (filter_index << 1) | clamp;
+	
+	if (sampler_index != s_gxTextureSampler)
+	{
+		s_gxTextureSampler = sampler_index;
+		s_gxTextureSamplerIsDirty = true;
+	}
 }
 
 void gxClearTexture()
@@ -3180,71 +3199,149 @@ static void gxValidateShaderResources(const bool useGenericShader)
 	auto * shader = static_cast<Shader*>(globals.shader);
 	auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
-	if (useGenericShader) // todo : does this if statement make sense ?
+	if (useGenericShader)
 	{
-		if (s_gxTextureEnabled)
+		if (globals.gxShaderIsDirty || s_gxTexturePointerIsDirty)
 		{
-			// todo : avoid setting textures when not needed
-			//        needed when: texture changed
-			//                  or shader changed
+			s_gxTexturePointerIsDirty = false;
 			
-			auto i = s_textureElems.find(s_gxTexture);
-			
-			Assert(i != s_textureElems.end());
-			if (i != s_textureElems.end())
+			if (s_gxTextureEnabled)
 			{
-				auto & texture = i->second.textureView;
-				[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
+				auto i = s_textureElems.find(s_gxTexture);
+				
+				Assert(i != s_textureElems.end());
+				if (i != s_textureElems.end())
+				{
+					auto & texture = i->second.textureView;
+					[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
+				}
+			}
+			else
+			{
+				[s_activeRenderPass->encoder setFragmentTexture:nil atIndex:0];
 			}
 		}
-		else
-		{
-			[s_activeRenderPass->encoder setFragmentTexture:nil atIndex:0];
-		}
 		
-		__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
-		[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
+		if (globals.gxShaderIsDirty || s_gxTextureSamplerIsDirty)
+		{
+			__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
+			
+			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
+		}
 	}
 	else if (!cacheElem.textureInfos.empty()) // avoid texture setting when the shader doesn't use textures
 	{
-		// todo : don't set textures when not used by the shader
-		// todo : only set texture slots used by the shader
-	#if 0 // todo : something like this..
-		const uint16_t vsTextureSettingMask =
-			globals.gxShaderIsDirty
-				? cacheElem.vsTextureUsageMask
-				: cacheElem.vsTextureDirtyMask;
-	#endif
-	
-		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-			if (cacheElem.vsTextures[i] != nullptr)
-				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
-		
-	#if 0 // todo : keep one or the other. also, consider changing vs texture setting
-		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-			if (cacheElem.psTextures[i] != nullptr)
-				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
-	#else
-		[s_activeRenderPass->encoder setFragmentTextures:cacheElem.psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
-	#endif
-	
-		for (auto & textureInfo : cacheElem.textureInfos)
+		if (cacheElem.vsTextureUsageMask != 0)
 		{
-			// todo : set sampler states at the start of a render pass. or set an invalidation bit
-			//        right now we just set it _always_ to pass validation..
-			
-			if (textureInfo.vsOffset != -1)
+			if constexpr (TEXTURE_SETTING_USING_USAGE_MASK_VS)
 			{
-				const int i = textureInfo.vsOffset;
-				__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
-				[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+				uint32_t pointerMask = cacheElem.vsTextureUsageMask;
+				uint32_t samplerMask = cacheElem.vsTextureUsageMask;
+						
+			#if TEXTURE_SETTING_USING_DIRTY_MASK == 1
+				if (globals.gxShaderIsDirty == false)
+				{
+					pointerMask &= cacheElem.vsTexturePointerDirtyMask;
+					samplerMask &= cacheElem.vsTextureSamplerDirtyMask;
+				}
+			#endif
+			
+				for (int i = 0, pm = pointerMask, sm = samplerMask; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i, pm >>= 1, sm >>= 1)
+				{
+					if ((pm & 1) != 0)
+					{
+						[s_activeRenderPass->encoder
+							setVertexTexture:cacheElem.vsTextures[i]
+							atIndex:i];
+					}
+					
+					if ((sm & 1) != 0)
+					{
+						__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+						
+						[s_activeRenderPass->encoder
+							setVertexSamplerState:samplerState
+							atIndex:i];
+					}
+				}
+				
+			#if TEXTURE_SETTING_USING_DIRTY_MASK == 1
+				cacheElem.vsTexturePointerDirtyMask = 0;
+				cacheElem.vsTextureSamplerDirtyMask = 0;
+			#endif
 			}
-			
-			if (textureInfo.psOffset != -1)
+			else
 			{
-				const int i = textureInfo.psOffset;
-				__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
-				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+				[s_activeRenderPass->encoder
+					setVertexTextures:cacheElem.vsTextures
+					withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxVsTextures)];
+			}
+		}
+		
+		if (cacheElem.psTextureUsageMask != 0)
+		{
+			if constexpr (TEXTURE_SETTING_USING_USAGE_MASK_PS)
+			{
+				uint32_t pointerMask = cacheElem.psTextureUsageMask;
+				uint32_t samplerMask = cacheElem.psTextureUsageMask;
+						
+			#if TEXTURE_SETTING_USING_DIRTY_MASK == 1
+				if (globals.gxShaderIsDirty == false)
+				{
+					pointerMask &= cacheElem.psTexturePointerDirtyMask;
+					samplerMask &= cacheElem.psTextureSamplerDirtyMask;
+				}
+			#endif
+			
+				for (int i = 0, pm = pointerMask, sm = samplerMask; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i, pm >>= 1, sm >>= 1)
+				{
+					if ((pm & 1) != 0)
+					{
+						[s_activeRenderPass->encoder
+							setFragmentTexture:cacheElem.psTextures[i]
+							atIndex:i];
+					}
+					
+					if ((sm & 1) != 0)
+					{
+						__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+						
+						[s_activeRenderPass->encoder
+							setFragmentSamplerState:samplerState
+							atIndex:i];
+					}
+				}
+				
+			#if TEXTURE_SETTING_USING_DIRTY_MASK == 1
+				cacheElem.psTexturePointerDirtyMask = 0;
+				cacheElem.psTextureSamplerDirtyMask = 0;
+			#endif
+			}
+			else
+			{
+				[s_activeRenderPass->encoder
+					setFragmentTextures:cacheElem.psTextures
+					withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
+			}
+		}
+		
+		if constexpr (TEXTURE_SETTING_USING_USAGE_MASK_VS == false || TEXTURE_SETTING_USING_USAGE_MASK_PS == false)
+		{
+			for (auto & textureInfo : cacheElem.textureInfos)
+			{
+				if (TEXTURE_SETTING_USING_USAGE_MASK_VS == false && textureInfo.vsOffset != -1)
+				{
+					const int i = textureInfo.vsOffset;
+					__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+					[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+				}
+				
+				if (TEXTURE_SETTING_USING_USAGE_MASK_PS == false && textureInfo.psOffset != -1)
+				{
+					const int i = textureInfo.psOffset;
+					__unsafe_unretained id <MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+					[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+				}
 			}
 		}
 	}

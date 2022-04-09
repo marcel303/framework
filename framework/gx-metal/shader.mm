@@ -140,6 +140,9 @@ void ShaderCacheElem_Metal::shut()
 	
 	//
 	
+	vsTextureUsageMask = 0;
+	psTextureUsageMask = 0;
+	
 	for (auto & vsTextureSampler : vsTextureSamplers)
 		vsTextureSampler = 0;
 	for (auto & psTextureSampler : psTextureSamplers)
@@ -506,15 +509,32 @@ void ShaderCacheElem_Metal::addTexture(MTLArgument * arg, const char type)
 {
 	Assert(arg.type == MTLArgumentTypeTexture);
 	
-	textureInfos.resize(textureInfos.size() + 1);
-	
-	TextureInfo & info = textureInfos.back();
-	info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
-	
 	if (type == 'v')
-		info.vsOffset = arg.index;
+	{
+		if (arg.index >= 0 && arg.index < kMaxVsTextures)
+		{
+			textureInfos.resize(textureInfos.size() + 1);
+		
+			TextureInfo & info = textureInfos.back();
+			info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
+			info.vsOffset = arg.index;
+			
+			vsTextureUsageMask |= 1 << arg.index;
+		}
+	}
 	else
-		info.psOffset = arg.index;
+	{
+		if (arg.index >= 0 && arg.index < kMaxPsTextures)
+		{
+			textureInfos.resize(textureInfos.size() + 1);
+		
+			TextureInfo & info = textureInfos.back();
+			info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
+			info.psOffset = arg.index;
+			
+			psTextureUsageMask |= 1 << arg.index;
+		}
+	}
 }
 
 void ShaderCacheElem_Metal::addTextures(MTLArgument * arg, const char type)
@@ -529,9 +549,17 @@ void ShaderCacheElem_Metal::addTextures(MTLArgument * arg, const char type)
 			info.name = [member.name cStringUsingEncoding:NSASCIIStringEncoding];
 			
 			if (type == 'v')
+			{
 				info.vsOffset = member.offset;
+				
+				vsTextureUsageMask |= 1 << member.offset;
+			}
 			else
+			{
 				info.psOffset = member.offset;
+				
+				psTextureUsageMask |= 1 << member.offset;
+			}
 		}
 	}
 }
@@ -1010,32 +1038,16 @@ inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name
 	return -1;
 }
 
-static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
-{
-	Assert(index >= 0 && index < cacheElem->textureInfos.size());
-	auto & info = cacheElem->textureInfos[index];
-	
-	// note : this always uses mip mapping when filter is enabled
-	const int sampler_index = ((filter ? 2 : 0) << 1) | clamp;
-	
-	if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-		cacheElem->vsTextureSamplers[info.vsOffset] = sampler_index;
-	if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-		cacheElem->psTextureSamplers[info.psOffset] = sampler_index;
-}
-
-
 static void setTextureUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, int unit, GxTextureId texture)
 {
 	Assert(index >= 0 && index < cacheElem->textureInfos.size());
 	auto & info = cacheElem->textureInfos[index];
 	
+	id <MTLTexture> metal_texture;
+	
 	if (texture == 0)
 	{
-		if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-			cacheElem->vsTextures[info.vsOffset] = nullptr;
-		if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-			cacheElem->psTextures[info.psOffset] = nullptr;
+		metal_texture = nullptr;
 	}
 	else
 	{
@@ -1044,13 +1056,42 @@ static void setTextureUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateInde
 
 		if (i != s_textureElems.end())
 		{
-			auto metal_texture = i->second.textureView;
-			
-			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-				cacheElem->vsTextures[info.vsOffset] = metal_texture;
-			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-				cacheElem->psTextures[info.psOffset] = metal_texture;
+			metal_texture = i->second.textureView;
 		}
+	}
+		
+	if (info.vsOffset != -1 && cacheElem->vsTextures[info.vsOffset] != metal_texture)
+	{
+		cacheElem->vsTextures[info.vsOffset] = metal_texture;
+		cacheElem->vsTexturePointerDirtyMask |= 1 << info.vsOffset;
+	}
+	
+	if (info.psOffset != -1 && cacheElem->psTextures[info.psOffset] != metal_texture)
+	{
+		cacheElem->psTextures[info.psOffset] = metal_texture;
+		cacheElem->psTexturePointerDirtyMask |= 1 << info.psOffset;
+	}
+}
+
+static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
+{
+	Assert(index >= 0 && index < cacheElem->textureInfos.size());
+	auto & info = cacheElem->textureInfos[index];
+	
+	// note : this always uses mip mapping when filter is enabled
+	
+	const int sampler_index = ((filter ? 2 : 0) << 1) | clamp;
+	
+	if (info.vsOffset != -1 && cacheElem->vsTextureSamplers[info.vsOffset] != sampler_index)
+	{
+		cacheElem->vsTextureSamplers[info.vsOffset] = sampler_index;
+		cacheElem->vsTextureSamplerDirtyMask |= 1 << info.vsOffset;
+	}
+	
+	if (info.psOffset != -1 && cacheElem->psTextureSamplers[info.psOffset] != sampler_index)
+	{
+		cacheElem->psTextureSamplers[info.psOffset] = sampler_index;
+		cacheElem->psTextureSamplerDirtyMask |= 1 << info.psOffset;
 	}
 }
 

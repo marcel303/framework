@@ -151,6 +151,15 @@ public:
 	uint8_t vsTextureSamplers[kMaxPsTextures] = { };
 	uint8_t psTextureSamplers[kMaxPsTextures] = { };
 	
+	uint32_t vsTextureUsageMask = 0;
+	uint32_t psTextureUsageMask = 0;
+	
+	mutable uint32_t vsTexturePointerDirtyMask = 0;
+	mutable uint32_t psTexturePointerDirtyMask = 0;
+	
+	mutable uint32_t vsTextureSamplerDirtyMask = 0;
+	mutable uint32_t psTextureSamplerDirtyMask = 0;
+	
 	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
 	std::vector<std::string> errorMessages;
