@@ -69,12 +69,6 @@ struct GxTextureProperties
 	
 	GX_TEXTURE_FORMAT format = GX_UNKNOWN_FORMAT;
 	
-	struct
-	{
-		bool filter = false;
-		bool clamp = true;
-	} sampling;
-	
 	bool mipmapped = false;
 };
 
@@ -96,25 +90,20 @@ struct GxTexture
 	int sy;
 	GX_TEXTURE_FORMAT format;
 	
-	bool filter;
-	bool clamp;
-	
 	bool mipmapped;
 
 	GxTexture();
 	~GxTexture();
 
 	void allocate(const GxTextureProperties & properties);
-	void allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp);
+	void allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format);
 	void free();
 	
 	bool isValid() const { return id != 0; }
 	
 	bool isChanged(const int sx, const int sy, const GX_TEXTURE_FORMAT format) const;
-	bool isSamplingChange(const bool filter, const bool clamp) const;
 
 	void setSwizzle(const int r, const int g, const int b, const int a);
-	void setSampling(const bool filter, const bool clamp);
 
 	void clearf(const float r, const float g, const float b, const float a);
 	void clearAreaToZero(const int x, const int y, const int sx, const int sy);

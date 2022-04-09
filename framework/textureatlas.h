@@ -37,15 +37,12 @@ struct TextureAtlas
 	GxTexture * texture;
 	GX_TEXTURE_FORMAT format;
 	
-	bool filter;
-	bool clamp;
-	
 	int swizzleMask[4];
 	
 	TextureAtlas();
 	~TextureAtlas();
 	
-	void init(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp, const int * swizzleMask);
+	void init(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const int * swizzleMask);
 	void shut();
 	
 	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy, const int border = 0);

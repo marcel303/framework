@@ -33,8 +33,6 @@ TextureAtlas::TextureAtlas()
 	: a()
 	, texture(nullptr)
 	, format(GX_UNKNOWN_FORMAT)
-	, filter(false)
-	, clamp(false)
 	, swizzleMask()
 {
 }
@@ -44,14 +42,11 @@ TextureAtlas::~TextureAtlas()
 	shut();
 }
 
-void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const bool _filter, const bool _clamp, const int * _swizzleMask)
+void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const int * _swizzleMask)
 {
 	a.init(sx, sy);
 	
 	format = _format;
-	
-	filter = _filter;
-	clamp = _clamp;
 	
 	if (_swizzleMask != nullptr)
 	{
@@ -82,7 +77,7 @@ void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _for
 
 void TextureAtlas::shut()
 {
-	init(0, 0, GX_R32_FLOAT, false, false, nullptr);
+	init(0, 0, GX_R32_FLOAT, nullptr);
 }
 
 BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const int border)
@@ -123,7 +118,7 @@ GxTexture * TextureAtlas::allocateTexture(const int sx, const int sy)
 	if (sx > 0 || sy > 0)
 	{
 		newTexture = new GxTexture();
-		newTexture->allocate(sx, sy, format, filter, clamp);
+		newTexture->allocate(sx, sy, format);
 		newTexture->setSwizzle(swizzleMask[0], swizzleMask[1], swizzleMask[2], swizzleMask[3]);
 	}
 	

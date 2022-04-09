@@ -113,8 +113,6 @@ GxTexture::GxTexture()
 	, sx(0)
 	, sy(0)
 	, format(GX_UNKNOWN_FORMAT)
-	, filter(false)
-	, clamp(false)
 	, mipmapped(false)
 {
 }
@@ -124,14 +122,12 @@ GxTexture::~GxTexture()
 	free();
 }
 
-void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp)
+void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format)
 {
 	GxTextureProperties properties;
 	properties.dimensions.sx = sx;
 	properties.dimensions.sy = sy;
 	properties.format = format;
-	properties.sampling.filter = filter;
-	properties.sampling.clamp = clamp;
 	properties.mipmapped = false;
 	
 	allocate(properties);
@@ -173,8 +169,6 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 		textureElem.texture = [device newTextureWithDescriptor:descriptor];
 		textureElem.textureView = textureElem.texture;
 	}
-	
-	setSampling(properties.sampling.filter, properties.sampling.clamp);
 }
 
 void GxTexture::free()
@@ -198,11 +192,6 @@ void GxTexture::free()
 bool GxTexture::isChanged(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _format) const
 {
 	return _sx != sx || _sy != sy || _format != format;
-}
-
-bool GxTexture::isSamplingChange(const bool _filter, const bool _clamp) const
-{
-	return _filter != filter || _clamp != clamp;
 }
 
 void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const int in_a)
@@ -230,13 +219,6 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 				slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
 				swizzle:channels];
 	}
-}
-
-void GxTexture::setSampling(const bool _filter, const bool _clamp)
-{
-	// todo : implement setting texture sampling when the texture is set
-	filter = _filter;
-	clamp = _clamp;
 }
 
 void GxTexture::clearf(const float r, const float g, const float b, const float a)

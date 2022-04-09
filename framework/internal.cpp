@@ -420,8 +420,6 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 			textureProperties.dimensions.sx = cellSx;
 			textureProperties.dimensions.sy = cellSy;
 			textureProperties.format = GX_RGBA8_UNORM;
-			textureProperties.sampling.filter = false;
-			textureProperties.sampling.clamp = true;
 			textureProperties.mipmapped = mipmapped;
 			
 			// todo : try to see if there's a meta data file for this texture,
@@ -1301,12 +1299,12 @@ void FontCacheElem::load(const char * filename)
 	if (loaded)
 	{
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, nullptr);
+		textureAtlas->init(256, 16, GX_R8_UNORM, nullptr);
 	}
 	else
 	{
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(1, 1, GX_R8_UNORM, false, false, nullptr);
+		textureAtlas->init(1, 1, GX_R8_UNORM, nullptr);
 	}
 #endif
 }
@@ -1671,7 +1669,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA16_FLOAT, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA16_FLOAT, nullptr);
 	
 	m_map.clear();
 }
