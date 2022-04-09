@@ -8,10 +8,12 @@ void OpticalFlow::init(const int sx, const int sy)
 		
 		luminance[i].init(sx, sy, SURFACE_R16F /* 16F so we get extra precision out of doing the gaussian blur */, false, true);
 		luminance[i].setName("OpticalFlow.Luminance");
+		luminance[i].setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		luminance[i].clear();
 		
 		sobel[i].init(sx, sy, SURFACE_RG8, false, false);
 		sobel[i].setName("OpticalFlow.Sobel");
+		sobel[i].setSwizzle(0, 1, GX_SWIZZLE_ZERO, GX_SWIZZLE_ONE);
 		sobel[i].clear(127, 127, 0, 0);
 	}
 	

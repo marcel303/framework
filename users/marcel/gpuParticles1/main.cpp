@@ -14,8 +14,8 @@ https://diwi.github.io/PixelFlow/
 
 */
 
-#define VIEW_SX 1080
-#define VIEW_SY 1920
+#define VIEW_SX 800
+#define VIEW_SY 800
 
 static const int kNumParticles = 1024*16;
 
