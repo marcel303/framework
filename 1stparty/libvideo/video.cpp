@@ -407,6 +407,7 @@ bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration, doub
 		sx = 0;
 		sy = 0;
 		duration = 0.0;
+		sampleAspectRatio = 1.0;
 		
 		return false;
 	}
