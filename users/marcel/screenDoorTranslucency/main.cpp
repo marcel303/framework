@@ -69,51 +69,53 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushRenderPass(colorTarget[colorTargetIndex], true, nullptr, false, "Color");
-			pushBlend(BLEND_OPAQUE);
-			gxScalef(bbScale, bbScale, 1);
-			
-			// -- method 1: use a dither texture and perform alpha test --
-			
-			auto textureId = createTextureFromR8(transparencytable, 16, 16, false, false);
-			
-			setColor(colorWhite);
-			gxSetTexture(textureId, GX_SAMPLE_NEAREST, true);
-			drawRect(0, 0, 16*4, 16*4);
-			gxClearTexture();
-			
-			Shader shader("alpha-test");
-			setShader(shader);
 			{
-				shader.setTexture("source", 0, textureId, false, false);
+				pushBlend(BLEND_OPAQUE);
+				gxScalef(bbScale, bbScale, 1);
 				
-				for (int i = 0; i < 10; ++i)
+				// -- method 1: use a dither texture and perform alpha test --
+				
+				auto textureId = createTextureFromR8(transparencytable, 16, 16, false, false);
+				
+				setColor(colorWhite);
+				gxSetTexture(textureId, GX_SAMPLE_NEAREST, true);
+				drawRect(0, 0, 16*4, 16*4);
+				gxClearTexture();
+				
+				Shader shader("alpha-test");
+				setShader(shader);
 				{
-					shader.setImmediate("alphaRef", (sinf(framework.time / (i + 1.f)) + 1.f) / 2.f);
-					shader.setImmediate("alphaPatternSeed", i * 1234, i * 4321);
-					shader.setImmediate("frameIndex", enableDitherPatternAnimation ? (frameIndex % 4) : 0);
-					//shader.setImmediate("frameIndex", frameIndex % 2);
+					shader.setTexture("source", 0, textureId, false, false);
 					
-					const float x = 320 + cosf(framework.time / (i/4.f + 0.56f)) * 100.f;
-					const float y = 240 + sinf(framework.time / (i/4.f + 1.67f)) * 100.f;
-					
-					const Color colors[5] =
+					for (int i = 0; i < 10; ++i)
 					{
-						colorRed,
-						colorGreen,
-						colorBlue,
-						colorWhite,
-						colorYellow,
-					};
-					
-					setColor(colors[i % 5]);
-					fillCircle(x, y, 100, 100);
+						shader.setImmediate("alphaRef", (sinf(framework.time / (i + 1.f)) + 1.f) / 2.f);
+						shader.setImmediate("alphaPatternSeed", i * 1234, i * 4321);
+						shader.setImmediate("frameIndex", enableDitherPatternAnimation ? (frameIndex % 4) : 0);
+						//shader.setImmediate("frameIndex", frameIndex % 2);
+						
+						const float x = 320 + cosf(framework.time / (i/4.f + 0.56f)) * 100.f;
+						const float y = 240 + sinf(framework.time / (i/4.f + 1.67f)) * 100.f;
+						
+						const Color colors[5] =
+						{
+							colorRed,
+							colorGreen,
+							colorBlue,
+							colorWhite,
+							colorYellow,
+						};
+						
+						setColor(colors[i % 5]);
+						fillCircle(x, y, 100, 100);
+					}
 				}
+				clearShader();
+				
+				freeTexture(textureId);
+				
+				popBlend();
 			}
-			clearShader();
-			
-			freeTexture(textureId);
-			
-			popBlend();
 			popRenderPass();
 			
 			ColorTarget * buffer = colorTarget[colorTargetIndex];
@@ -122,21 +124,26 @@ int main(int argc, char * argv[])
 			{
 				pushRenderPass(temporal, false, nullptr, true, "Temporal smoothe");
 				{
+					gxScalef(bbScale, bbScale, 1);
+					
 					const float c = .75f;
 					const float d = 1.f - c;
 					
 					pushBlend(BLEND_MUL);
-					setColorf(c, c, c, c);
-					drawRect(0, 0, 640, 480);
+					{
+						setColorf(c, c, c, c);
+						drawRect(0, 0, 640, 480);
+					}
 					popBlend();
 					
 					pushBlend(BLEND_ADD_OPAQUE);
-					setColorf(d, d, d, d);
-					
-					gxSetTexture(buffer->getTextureId(), GX_SAMPLE_NEAREST, true);
-					drawRect(0, 0, 640, 480);
-					gxClearTexture();
-					
+					{
+						setColorf(d, d, d, d);
+						
+						gxSetTexture(buffer->getTextureId(), GX_SAMPLE_NEAREST, true);
+						drawRect(0, 0, 640, 480);
+						gxClearTexture();
+					}
 					popBlend();
 				}
 				popRenderPass();
@@ -150,11 +157,17 @@ int main(int argc, char * argv[])
 				
 				pushRenderPass(colorTarget[nextColorTargetIndex], true, nullptr, false, "Box blur 2x2");
 				{
-					Shader shader("blur2x2");
-					setShader(shader);
-					shader.setTexture("source", 0, buffer->getTextureId(), false, true);
-					drawRect(0, 0, 640, 480);
-					clearShader();
+					gxScalef(bbScale, bbScale, 1);
+					
+					pushBlend(BLEND_OPAQUE);
+					{
+						Shader shader("blur2x2");
+						setShader(shader);
+						shader.setTexture("source", 0, buffer->getTextureId(), false, true);
+						drawRect(0, 0, 640, 480);
+						clearShader();
+					}
+					popBlend();
 				}
 				popRenderPass();
 				
@@ -179,18 +192,20 @@ int main(int argc, char * argv[])
 			y += 20; drawText(4, y, 18, +1, -1, "Press 't' to toggle temporal AA");
 			y += 20; drawText(4, y, 18, +1, -1, "Press 'b' to toggle box blur 2x2");
 			y += 20; drawText(4, y, 18, +1, -1, "Press 'f' to toggle frame index based dither pattern animation");
-			y += 20; drawText(4, y, 18, +1, -1, "Press '1' to select texture-dither-16x16");
-			y += 20; drawText(4, y, 18, +1, -1, "Press '2' to select oculus-dither-64");
 			
 			//
 			
 			pushAlphaToCoverage(true);
-			setColorf(1, 1, 1, .25f);
-			drawRect(320, 240, 420, 340);
-			setColorf(1, 1, 1, .5f);
-			drawRect(320, 240, 360, 340);
-			setColorf(1, 1, 1, .75f);
-			drawRect(320, 240, 420, 280);
+			{
+				setColorf(1, 1, 1, .25f);
+				drawRect(320, 240, 420, 340);
+				
+				setColorf(1, 1, 1, .5f);
+				drawRect(320, 240, 360, 340);
+				
+				setColorf(1, 1, 1, .75f);
+				drawRect(320, 240, 420, 280);
+			}
 			popAlphaToCoverage();
 		}
 		framework.endDraw();
