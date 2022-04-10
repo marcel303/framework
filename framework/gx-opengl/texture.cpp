@@ -75,8 +75,6 @@ GxTexture::GxTexture()
 	, sx(0)
 	, sy(0)
 	, format(GX_UNKNOWN_FORMAT)
-	, filter(false)
-	, clamp(false)
 	, mipmapped(false)
 {
 }
@@ -86,14 +84,12 @@ GxTexture::~GxTexture()
 	free();
 }
 
-void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp)
+void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format)
 {
 	GxTextureProperties properties;
 	properties.dimensions.sx = sx;
 	properties.dimensions.sy = sy;
 	properties.format = format;
-	properties.sampling.filter = filter;
-	properties.sampling.clamp = clamp;
 	properties.mipmapped = false;
 	
 	allocate(properties);
@@ -155,8 +151,6 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, numLevels - 1);
 	checkErrorGL();
-	
-	setSampling(properties.sampling.filter, properties.sampling.clamp);
 
 	// restore previous OpenGL states
 
@@ -181,11 +175,6 @@ void GxTexture::free()
 bool GxTexture::isChanged(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _format) const
 {
 	return _sx != sx || _sy != sy || _format != format;
-}
-
-bool GxTexture::isSamplingChange(const bool _filter, const bool _clamp) const
-{
-	return _filter != filter || _clamp != clamp;
 }
 
 void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const int in_a)
@@ -230,40 +219,6 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	checkErrorGL();
 #endif
 
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-}
-
-void GxTexture::setSampling(const bool _filter, const bool _clamp)
-{
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	//
-	
-	filter = _filter;
-	clamp = _clamp;
-	
-	glBindTexture(GL_TEXTURE_2D, id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-		filter
-		?
-			(
-				mipmapped
-				? GL_LINEAR_MIPMAP_LINEAR
-				: GL_LINEAR
-			)
-		: GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	checkErrorGL();
-	
 	// restore previous OpenGL states
 
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
