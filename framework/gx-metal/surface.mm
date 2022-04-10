@@ -15,7 +15,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 
 void Surface::blitTo(Surface * surface) const
 {
-	pushSurface(surface);
+	pushSurface(surface, true);
 	{
 		pushDepthTest(false, DEPTH_LESS, false);
 		pushColorWriteMask(1, 1, 1, 1);
@@ -23,8 +23,10 @@ void Surface::blitTo(Surface * surface) const
 		{
 			Shader shader("engine/gx-metal/surface-blit");
 			setShader(shader);
-			shader.setTexture("source", 0, getTexture(), false, true);
-			drawRect(0, 0, getWidth(), getHeight());
+			{
+				shader.setTexture("source", 0, getTexture(), false, true);
+				drawRect(0, 0, surface->getWidth(), surface->getHeight());
+			}
 			clearShader();
 		}
 		popBlend();

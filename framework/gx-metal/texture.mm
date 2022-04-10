@@ -29,6 +29,7 @@
 
 #if ENABLE_METAL
 
+#import "internal.h" // globals.builtinShaders
 #import "metal.h"
 #import "renderTarget.h"
 #import "texture.h"
@@ -244,6 +245,8 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 
 void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const int sy)
 {
+	Assert(globals.shader == nullptr);
+	
 	if (id == 0)
 	{
 		return;
@@ -255,16 +258,26 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 		ColorTarget target((__bridge void*)textureElem.texture);
 		
 		// todo : use blit encoder to write zeroes ?
-		// todo : use a separate shader for this. perhaps a Metal compute shader ?
 		
 		pushRenderPass(&target, false, nullptr, false, "GxTexture::clearf");
+		pushDepthTest(false, DEPTH_LESS, false);
+		pushColorWriteMask(1, 1, 1, 1);
+		pushBlend(BLEND_OPAQUE);
 		{
-			pushBlend(BLEND_OPAQUE);
+			Shader & shader = globals.builtinShaders->genericColor.get();
+			setShader(shader);
 			{
-				drawRect(x, y, x + sx, y + sy);
+				pushColor(colorBlackTranslucent);
+				{
+					drawRect(x, y, x + sx, y + sy);
+				}
+				popColor();
 			}
-			popBlend();
+			clearShader();
 		}
+		popBlend();
+		popColorWriteMask();
+		popDepthTest();
 		popRenderPass();
 	}
 }
