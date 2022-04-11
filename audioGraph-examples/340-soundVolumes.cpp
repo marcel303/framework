@@ -1,5 +1,5 @@
 #include "audioTypes.h"
-#include "binaural_cipic.h"
+#include "binaural_oalsoft.h"
 #include "binauralizer.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
@@ -178,6 +178,8 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		if (source == nullptr)
 		{
+			audioBufferSetZero(audioBuffer, numSamples);
+			
 			return;
 		}
 		
@@ -406,7 +408,7 @@ int main(int argc, char * argv[])
 	MyMutex binauralMutex(audioMutex);
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Oalsoft("binaural/Default HRTF.mhr", sampleSet);
 	sampleSet.finalize();
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();

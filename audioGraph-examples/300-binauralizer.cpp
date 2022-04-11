@@ -29,9 +29,6 @@
 #include "audioThreading.h"
 #include "audioTypes.h"
 #include "binaural.h"
-#include "binaural_cipic.h"
-#include "binaural_ircam.h"
-#include "binaural_mit.h"
 #include "binaural_oalsoft.h"
 #include "binauralizer.h"
 #include "framework.h"
@@ -281,7 +278,7 @@ int main(int argc, char * argv[])
 
 		HRIRSampleSet sampleSet;
 		
-		loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
+		binaural::loadHRIRSampleSet_Oalsoft("binaural/Default HRTF.mhr", sampleSet);
 		
 		sampleSet.finalize();
 		
