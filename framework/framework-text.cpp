@@ -678,6 +678,13 @@ void endTextBatch()
 	}
 }
 
+bool isInTextBatch()
+{
+	return
+		globals.isInTextBatchCounter > 0 ||
+		globals.isInTextBatchMSDFCounter > 0;
+}
+
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...)
 {
 	Assert(globals.font != nullptr);

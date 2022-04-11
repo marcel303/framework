@@ -1719,6 +1719,7 @@ void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(float size, float & sx, float & sy, const char * format, ...);
 void beginTextBatch(Shader * overrideShader = nullptr);
 void endTextBatch();
+bool isInTextBatch();
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
 void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
