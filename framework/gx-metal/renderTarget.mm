@@ -141,22 +141,35 @@ GxTextureId ColorTarget::getTextureId() const
 
 void ColorTarget::setSwizzle(int r, int g, int b, int a)
 {
-	MTLTextureSwizzleChannels channels;
-	channels.red = toMetalTextureSwizzle(r);
-	channels.green = toMetalTextureSwizzle(g);
-	channels.blue = toMetalTextureSwizzle(b);
-	channels.alpha = toMetalTextureSwizzle(a);
-	
-	auto & textureElem = s_textureElems[m_colorTextureId];
-	auto texture = textureElem.textureView;
-	
-	textureElem.textureView =
-		[textureElem.texture
-			newTextureViewWithPixelFormat:texture.pixelFormat
-			textureType:texture.textureType
-			levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
-			slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
-			swizzle:channels];
+	if (r == 0 && g == 1 && b == 2 && a == 3)
+	{
+		auto & textureElem = s_textureElems[m_colorTextureId];
+		
+		textureElem.textureView = textureElem.texture;
+	}
+	else if (@available(macOS 10.15, iOS 13.0, *))
+	{
+		MTLTextureSwizzleChannels channels;
+		channels.red = toMetalTextureSwizzle(r);
+		channels.green = toMetalTextureSwizzle(g);
+		channels.blue = toMetalTextureSwizzle(b);
+		channels.alpha = toMetalTextureSwizzle(a);
+		
+		auto & textureElem = s_textureElems[m_colorTextureId];
+		auto texture = textureElem.textureView;
+		
+		textureElem.textureView =
+			[textureElem.texture
+				newTextureViewWithPixelFormat:texture.pixelFormat
+				textureType:texture.textureType
+				levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
+				slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
+				swizzle:channels];
+	}
+	else
+	{
+		logWarning("ColorTarget::setSwizzle: metal texture swizzle not supported on this version of the OS");
+	}
 }
 
 //
