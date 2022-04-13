@@ -15,6 +15,7 @@
     <node id="176" typeName="draw.primitive">
         <input socket="color" value="142e4f06"/>
         <input socket="fill" value="0"/>
+        <input socket="screenSize" value="1"/>
         <input socket="size" value="0.030000"/>
         <input socket="stroke" value="1"/>
         <input socket="strokeColor" value="e6e99d41"/>
@@ -45,29 +46,29 @@
         <param name="out.min" value="900.000000"/>
     </link>
     <link id="116" srcNodeId="176" srcNodeSocketName="strokeSize" dstNodeId="179" dstNodeSocketName="value">
-        <param name="out.max" value="1.700000"/>
-        <param name="out.min" value="0.300000"/>
+        <param name="out.min" value="1.500000"/>
     </link>
     <link id="117" srcNodeId="176" srcNodeSocketName="size" dstNodeId="179" dstNodeSocketName="value">
-        <param name="out.max" value="0.020000"/>
-        <param name="out.min" value="0.040000"/>
+        <param name="out.max" value="20.000000"/>
+        <param name="out.min" value="40.000000"/>
     </link>
     <link id="118" srcNodeId="164" srcNodeSocketName="source" dstNodeId="180" dstNodeSocketName="any"/>
     <link id="119" srcNodeId="180" srcNodeSocketName="before" dstNodeId="177" dstNodeSocketName="transform"/>
-    <editor nextZKey="924">
-        <dragAndZoom x="120.26533508300781" y="140.4593505859375" zoom="1"/>
+    <editor nextZKey="927">
+        <dragAndZoom x="98.549148559570312" y="54.437576293945312" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="163" x="512" y="-144" zKey="0"/>
             <nodeData nodeId="164" x="384" y="-144" zKey="918"/>
             <nodeData nodeId="168" x="-208" y="-48" zKey="923"/>
-            <nodeData nodeId="176" x="-48" y="-96" zKey="922"/>
+            <nodeData nodeId="176" x="-48" y="-96" zKey="926"/>
             <nodeData nodeId="177" x="96" y="-144" zKey="894"/>
             <nodeData nodeId="178" x="-48" y="-192" zKey="921"/>
-            <nodeData nodeId="179" x="-192" y="160" zKey="906"/>
+            <nodeData nodeId="179" x="-192" y="160" zKey="925"/>
             <nodeData nodeId="180" x="240" y="-144" zKey="917"/>
         </nodeDatas>
         <visualizers/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
+        <comments/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0" g="0" b="0" a="0"/>
                 <key t="1" r="1" g="1" b="1" a="1"/>
