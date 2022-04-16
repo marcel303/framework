@@ -1,0 +1,4 @@
+app lgen-origin
+	depend_library framework
+	scan_files cpp|h
+	resource_path data
