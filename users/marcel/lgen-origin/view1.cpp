@@ -242,16 +242,7 @@ static void draw()
 			rectfill(cmap, vx, vy, vx+128-1, vy+128-1, makecol(0, 0, 0));
 		}
 	}
-
-	static int frame = 0;
-
-#if 0 // todo : text
-	text_mode(makecol(0, 0, 0));
-	textprintf(cmap, font, 0, 0, makecol(255, 255, 255), "%d", frame);
-#endif
-
-	frame++;
-
+	
 	swap_pages();
 }
 
@@ -261,11 +252,7 @@ static void init()
 {
 	clear(cmap);
 
-#if 0
-	view = create_sub_bitmap(cmap, cmap->w>>2, cmap->h>>2, cmap->w>>1, cmap->h>>1);
-#else
 	view = create_sub_bitmap(cmap, 0, 0, cmap->w, cmap->h);
-#endif
 
 	img_map = gen_radarmap(map, 128, false);
 
@@ -286,12 +273,16 @@ static void init()
 			tile[i][j] = get_tile(i, j);
 
 	show_map = true;
+	
+	mouse.setRelative(true);
 }
 
 //---------------------------------------------------------------------------
 
 static void remove()
 {
+	mouse.setRelative(false);
+	
 	destroy_bitmap(img_map);
 	destroy_bitmap(view);
 

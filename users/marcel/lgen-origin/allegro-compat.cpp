@@ -82,8 +82,20 @@ BITMAP * load_bitmap(const char * path, PALETTE pal)
 
 int save_bitmap(const char * path, BITMAP * bmp, PALETTE pal)
 {
-// todo : save bmp
-	return 0;
+	ImageData * image = new ImageData();
+	image->imageData = new ImageData::Pixel[bmp->w * bmp->h];
+	image->sx = bmp->w;
+	image->sy = bmp->h;
+	
+	for (int y = 0; y < bmp->h; ++y)
+		memcpy(image->getLine(y), bmp->line[y], bmp->w * sizeof(ImageData::Pixel));
+		
+	bool result = saveImage(image, path);
+	
+	delete image;
+	image = nullptr;
+	
+	return result ? 0 : -1;
 }
 
 void set_clip(BITMAP * bmp, int cl, int ct, int cr, int cb)
@@ -99,7 +111,8 @@ int makecol(int r, int g, int b)
 	return
 		(r << 0) |
 		(g << 8) |
-		(b << 16);
+		(b << 16) |
+		(0xff << 24);
 }
 
 uint32_t makeacol(int r, int g, int b, int a)
@@ -149,9 +162,32 @@ void blit(BITMAP * src, BITMAP * dst, int src_x, int src_y, int dst_x, int dst_y
 	}
 }
 
-void draw_sprite(BITMAP * dst, BITMAP * src, int x, int y)
+void draw_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y)
 {
-	blit(src, dst, 0, 0, x, y, src->w, src->h);
+	int sx = src->w;
+	int sy = src->h;
+	
+	uint32_t mask = makecol(255, 0, 255);
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
+			continue;
+			
+		uint32_t * src_line = src->line[        y];
+		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+				continue;
+			
+			if (src_line[x] == mask)
+				continue;
+				
+			dst_line[x] = src_line[x];
+		}
+	}
 }
 
 void draw_lit_sprite(BITMAP * dst, BITMAP * src, int x, int y, int c)
@@ -247,19 +283,4 @@ void hsv_to_rgb(float h, float s, float v, int * r, int * g, int * b)
 	*r = color.r * 255.f;
 	*g = color.g * 255.f;
 	*b = color.b * 255.f;
-}
-
-void get_palette(PALETTE pal)
-{
-	// todo : palette
-}
-
-void set_palette(PALETTE pal)
-{
-	// todo : palette
-}
-
-void set_palette_range(PALETTE pal, int begin, int end, int vsync)
-{
-	// todo : palette
 }

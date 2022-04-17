@@ -7,9 +7,9 @@
 
 //---------------------------------------------------------------------------
 
-#define TILE_WATER_START	0
-#define TILE_LAND_START		1
-#define TILE_ROCK_START		2
+#define TILE_WATER_START 0
+#define TILE_LAND_START  1
+#define TILE_ROCK_START  2
 
 typedef struct
 {

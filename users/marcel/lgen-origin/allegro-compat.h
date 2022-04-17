@@ -70,7 +70,3 @@ void bmp_write(uint32_t * addr, int c);
 
 void rgb_to_hsv(int r, int g, int b, float * h, float * s, float * v);
 void hsv_to_rgb(float h, float s, float v, int * r, int * g, int * b);
-
-void get_palette(PALETTE pal);
-void set_palette(PALETTE pal);
-void set_palette_range(PALETTE pal, int begin, int end, int vsync);

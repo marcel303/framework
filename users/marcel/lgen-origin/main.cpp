@@ -133,49 +133,35 @@ static void update()
 {
 	// handle input
 
-#if 0 // todo : key input
-	while (keypressed()) {
-
-		int c = readkey()>>8;
-
-                switch(c) {
-                        case KEY_F1:
-				generate();
-                        break;
-                        case KEY_F2:
-                        	save_image(cmap);
-                        break;
-                        case KEY_F5:
-                        	flags |= F_DRAW;
-                        break;
-                        case KEY_F8:
-                        	dlg_config();
-                        break;
-                        case KEY_1:
-                        	view1();
-                                flags |= F_DRAW;
-                        break;
-                        case KEY_3:
-                        	view3();
-                                flags |= F_DRAW;
-                        break;
-                	case KEY_ESC:
-                        	#if !defined(DEBUG)
-                        	if (dlg_message("are you sure you want to quit?", DLG_YESNO))
-				#endif
-	                        	flags |= F_EXIT;
-			break;
-                        #if !defined(DEBUG)
-                        default:
-                        	dlg_message("unassigned key", DLG_OK);
-                        break;
-                        #endif
-                }
-
-                clear_keybuf();
-
-	}
+	if (keyboard.wentDown(SDLK_F1))
+		generate();
+	if (keyboard.wentDown(SDLK_F2))
+		save_image(cmap);
+	if (keyboard.wentDown(SDLK_F5))
+		flags |= F_DRAW;
+#if 0 // todo : dialog
+	if (keyboard.wentDown(SDLK_F8))
+		dlg_config();
 #endif
+	if (keyboard.wentDown(SDLK_1))
+	{
+		view1();
+		flags |= F_DRAW;
+	}
+	if (keyboard.wentDown(SDLK_2))
+	{
+		view2();
+		flags |= F_DRAW;
+	}
+	if (keyboard.wentDown(SDLK_3))
+	{
+		view3();
+		flags |= F_DRAW;
+	}
+	if (keyboard.wentDown(SDLK_ESCAPE))
+	{
+		flags |= F_EXIT;
+	}
 
 	int b = update_menu();
 
@@ -212,9 +198,6 @@ static void update()
 			break;
 			
 		case M_EXIT:
-			#if !defined(DEBUG)
-			if (dlg_message("are you sure you want to quit?", DLG_YESNO))
-			#endif
 			flags |= F_EXIT;
 			break;
 		}
@@ -367,21 +350,20 @@ bool save_image(BITMAP* bmp)
 	while (index <= 999 && !done)
 	{
 		sprintf(filename, "save%03d.bmp", index);
-	#if 0 // todo : filesystem
-		if (!exists(filename)) {
-		done = true;
-		} else
-		index++;
-	#endif
+		FILE * f = fopen(filename, "rb");
+		if (!f) {
+			done = true;
+		} else {
+			fclose(f);
+			index++;
+		}
 	}
 
 	// no filename found
 
 	if (!done)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: entire 000-999 range is full!!", DLG_OK);
-	#endif
+		logError("entire 000-999 range is full!!");
 		return false;
 	}
 
@@ -389,18 +371,12 @@ bool save_image(BITMAP* bmp)
 
 	if (save_bitmap(filename, bmp, 0))
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to save image!", DLG_OK);
-	#endif
+		logError("unable to save image!");
 		return false;
 	}
 	else
 	{
-	#if !defined(DEBUG)
-		char tmp[64];
-		sprintf(tmp, "info: image saved to %s", filename);
-		dlg_message(tmp, DLG_OK);
-	#endif
+		logInfo("image saved to %s", filename);
 	}
 
 	return true;
@@ -444,9 +420,7 @@ static bool init()
 
 	if (!cmap)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to create buffer", DLG_OK);
-	#endif
+		logError("unable to create buffer");
 		return false;
 	}
 
@@ -455,9 +429,7 @@ static bool init()
 	lmap = create_bitmap(512, 512);
 	if (!lmap)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to create buffer for map", DLG_OK);
-	#endif
+		logError("unable to create buffer for map");
 		return false;
 	}
 
@@ -466,9 +438,7 @@ static bool init()
 	img_main = load_bitmap("./main.bmp", 0);
 	if (!img_main)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to load main graphic", DLG_OK);
-	#endif
+		logError("unable to load main graphic");
 		return false;
 	}
 
@@ -477,9 +447,7 @@ static bool init()
 	img_back = load_bitmap("./back.bmp", 0);
 	if (!img_back)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to load background graphic", DLG_OK);
-	#endif
+		logError("unable to load background graphic");
 		return false;
 	}
 
@@ -488,9 +456,7 @@ static bool init()
 	img_myname = load_bitmap("./myname.bmp", 0);
 	if (!img_myname)
 	{
-	#if 0 // todo : dialog
-		dlg_message("error: unable to load myname graphic", DLG_OK);
-	#endif
+		logError("unable to load myname graphic");
 		return false;
 	}
 
@@ -500,9 +466,7 @@ static bool init()
 		BITMAP* tmp = load_bitmap("./tiles.bmp", nullptr);
 		if (!tmp)
 		{
-		#if 0 // todo : dialog
-			dlg_message("error: unable to load tiles graphic", DLG_OK);
-		#endif
+			logError("unable to load tiles graphic");
 			return false;
 		}
 
@@ -525,8 +489,6 @@ static bool init()
 	config.l = 0.45;
 	config.r = 0.65;
 	config.players = 3;
-
-	// todo : dialog : dlg_init();
 
 	flags = F_DRAW;
 

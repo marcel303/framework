@@ -73,9 +73,8 @@ static void update()
 	if (keyboard.wentDown(SDLK_s))
 		shade_mode = (shade_mode+1)%3;
 
-	int mx, my;
-	mx = mouse.dx;
-	my = mouse.dy;
+	int mx = mouse.dx;
+	int my = mouse.dy;
 
 	x += mx*2;
 	y += my*2;
@@ -104,8 +103,6 @@ static void update()
 
 static void draw()
 {
-	static int frame = 0;
-
 	int x1 = x/64;
 	int y1 = y/64;
 	int x2 = (x+cmap->w)/64+1;
@@ -147,13 +144,6 @@ static void draw()
 		rect(cmap, vx+x*128/size, vy+y*128/size, vx+(x+cmap->w)*128/size, vy+(y+cmap->h)*128/size, makecol(255, 255, 255));
 	}
 
-#if 0 // todo : text
-	text_mode(makecol(0, 0, 0));
-	textprintf(cmap, font, 0, 0, makecol(255, 255, 255), "%d", frame);
-#endif
-
-	frame++;
-
 	swap_pages();
 }
 
@@ -161,12 +151,6 @@ static void draw()
 
 static void init()
 {
-	framework.beginDraw(0, 0, 0, 0);
-	{
-		// todo : text : textprintf(screen, font, 0, 0, makecol(255, 255, 255), "please wait..");
-	}
-	framework.endDraw();
-
 	done = false;
 	x = y = 0;
 
@@ -175,13 +159,12 @@ static void init()
 
 	img_map = gen_radarmap(map, 128, true);
 
-	int mx, my;
-	mx = mouse.dx;
-	my = mouse.dy;
+	mouse.setRelative(true);
 }
 
 //---------------------------------------------------------------------------
 
 static void remove()
 {
+	mouse.setRelative(false);
 }

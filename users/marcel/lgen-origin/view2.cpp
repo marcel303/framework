@@ -46,7 +46,11 @@ void view2()
 			update();
 		}
 
-		draw();
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			draw();
+		}
+		framework.endDraw();
 	}
 
 	remove();
@@ -60,23 +64,20 @@ static void update()
 	if (keyboard.wentDown(SDLK_ESCAPE))
 		done = true;
 
-	int mx, my;
-	mx = mouse.dx;
-	my = mouse.dy;
+	int mx = mouse.dx;
+	int my = mouse.dy;
 
 	x += mx;
 	y += my;
 
-#if 0 // todo : key input
-	if (key[KEY_LEFT])
+	if (keyboard.isDown(SDLK_LEFT))
 		x-=10;
-	if (key[KEY_UP])
+	if (keyboard.isDown(SDLK_UP))
 		y-=10;
-	if (key[KEY_RIGHT])
+	if (keyboard.isDown(SDLK_RIGHT))
 		x+=10;
-	if (key[KEY_DOWN])
+	if (keyboard.isDown(SDLK_DOWN))
 		y+=10;
-#endif
 
 	if (x < 0)
 		x = 0;
@@ -130,11 +131,6 @@ static void draw()
 	rect(cmap, vx, vy, vx+128-1, vy+128-1, makecol(255, 255, 255));
 	rect(cmap, vx+x*128/size, vy+y*128/size, vx+(x+cmap->w)*128/size, vy+(y+cmap->h)*128/size, makecol(255, 255, 255));
 
-#if 0 // todo : text
-	text_mode(makecol(0, 0, 0));
-	textprintf(cmap, font, 0, 0, makecol(255, 255, 255), "%d", frame);
-#endif
-
 	frame++;
 
 	swap_pages();
@@ -144,18 +140,15 @@ static void draw()
 
 static void init()
 {
-#if 0 // todo : text
-	clear(screen);
-	text_mode(-1);
-	textprintf(screen, font, 0, 0, makecol(255, 255, 255), "please wait..");
-#endif
-
 	done = false;
 	x = y = 0;
+	
+	mouse.setRelative(true);
 }
 
 //---------------------------------------------------------------------------
 
 static void remove()
 {
+	mouse.setRelative(false);
 }
