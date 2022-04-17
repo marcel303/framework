@@ -23,8 +23,6 @@
 
 //---------------------------------------------------------------------------
 
-//#define USE_VRAM	// draw directly to screen?
-
 #define PAL_COL(_p, _i, _r, _g, _b)	_i = makecol(_r, _g, _b)
 
 //---------------------------------------------------------------------------
@@ -55,15 +53,6 @@
 #define M_EXIT		6
 
 //---------------------------------------------------------------------------
-// PALETTE STARTING POINTS (FOR COLOUR INDEX TRANSLATIONS ETC)
-
-#define P_STD		0
-#define P_MAIN		32
-#define P_BACK          96
-#define P_LAND          128
-#define P_MYNAME	160
-
-//---------------------------------------------------------------------------
 // STANDARD COLOURS
 
 int C_BLACK = 0;
@@ -92,8 +81,6 @@ static BITMAP* lmap		= 0;
 static BITMAP* img_main		= 0;
 static BITMAP* img_back		= 0;
 static BITMAP* img_myname	= 0;
-static PALETTE palette_main;
-static PALETTE palette_tiles;
 BITMAP** img_tile		= 0;
 int flags			= 0;
 mapgen_config_t config;
@@ -112,41 +99,38 @@ void swap_pages();
 static void generate();
 static int update_menu();
 static void draw_menu();
-static void translate_image(BITMAP* bmp, int base, bool masked);
 
 //---------------------------------------------------------------------------
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
+	if (!init())
+		return -2;
 
-        if (!init())
-        	exit(-2);
+	while (!(flags & F_EXIT))
+	{
+		framework.process();
 
-	while (!(flags & F_EXIT)) {
+		update();
 
-			framework.process();
-			
-        	update();
-        	
-        	framework.beginDraw(0, 0, 0, 0);
-        	{
-                draw();
-			}
-			framework.endDraw();
-
-        }
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			draw();
+		}
+		framework.endDraw();
+	}
 
 	if (!shutdown())
-        	exit(-2);
+		return -2;
 
 	return 0;
-
 }
 
 //---------------------------------------------------------------------------
 // UPDATE/LOGIC FUNCTION
 
-static void update() {
-
+static void update()
+{
 	// handle input
 
 #if 0 // todo : key input
@@ -193,264 +177,242 @@ static void update() {
 	}
 #endif
 
-        int b = update_menu();
+	int b = update_menu();
 
-        if (b >= 0) {
-
-        	switch(b) {
-                	case M_GENERATE:
-                        	generate();
-                        break;
-                        case M_SAVE:
-                        	save_image(cmap);
-                        break;
-                        case M_VIEW_FLAT:
-                        	view3();
-                                flags |= F_DRAW;
-                        break;
-                        case M_VIEW_3D:
-                        	view1();
-                                flags |= F_DRAW;
-                        break;
-                        case M_REDRAW:
-                        	flags |= F_DRAW;
-                        break;
-                        case M_OPTIONS:
-                        #if 0 // todo : dialog
-                        	dlg_config();
-						#endif
-                        break;
-                	case M_EXIT:
-                        	#if !defined(DEBUG)
-                        	if (dlg_message("are you sure you want to quit?", DLG_YESNO))
-				#endif
-	                        	flags |= F_EXIT;
+	if (b >= 0)
+	{
+		switch(b)
+		{
+		case M_GENERATE:
+			generate();
 			break;
-                }
-
-        }
-
-        static int t = 0;
-        t++;
-        PALETTE tmp;
-        for (int i=P_BACK; i<P_BACK+32; i++) {
-        	float h, s, v;
-        	rgb_to_hsv(palette_main[i].r<<2, palette_main[i].g<<2, palette_main[i].b<<2, &h, &s, &v);
-                h = t*0.5;
-                s *= (sin(t*0.00100)+1.0)*0.5;
-                v *= (sin(t*0.00333)+1.0)*0.5;
-                int r, g, b;
-                hsv_to_rgb(h, s, v, &r, &g, &b);
-                tmp[i].r = r>>2;
-                tmp[i].g = g>>2;
-                tmp[i].b = b>>2;
-        }
-        set_palette_range(tmp, P_BACK, P_BACK+32-1, 1);
-
+			
+		case M_SAVE:
+			save_image(cmap);
+			break;
+			
+		case M_VIEW_FLAT:
+			view3();
+			flags |= F_DRAW;
+			break;
+		
+		case M_VIEW_3D:
+			view1();
+			flags |= F_DRAW;
+			break;
+		
+		case M_REDRAW:
+			flags |= F_DRAW;
+			break;
+		
+		case M_OPTIONS:
+			#if 0 // todo : dialog
+			dlg_config();
+			#endif
+			break;
+			
+		case M_EXIT:
+			#if !defined(DEBUG)
+			if (dlg_message("are you sure you want to quit?", DLG_YESNO))
+			#endif
+			flags |= F_EXIT;
+			break;
+		}
+	}
 }
 
 //---------------------------------------------------------------------------
 // DRAWING FUNCTION
 
-static void draw() {
-
+static void draw()
+{
 	flags |= F_DRAW;
 	
 	if (!(flags & F_DRAW))
-        	return;
+		return;
 
-	if (flags & F_DRAW_BG) {
+	if (flags & F_DRAW_BG)
+	{
+		flags -= F_DRAW_BG;
 
-        	flags -= F_DRAW_BG;
+		int repx = cmap->w/img_back->w+1;
+		int repy = cmap->h/img_back->h+1;
 
-                int repx = cmap->w/img_back->w+1;
-                int repy = cmap->h/img_back->h+1;
+		for (int i=0; i<repx; i++)
+			for (int j=0; j<repy; j++)
+				blit(img_back, cmap, 0, 0, i*img_back->w, j*img_back->h, img_back->w, img_back->h);
 
-                for (int i=0; i<repx; i++)
-                	for (int j=0; j<repy; j++)
-                        	blit(img_back, cmap, 0, 0, i*img_back->w, j*img_back->h, img_back->w, img_back->h);
-
-                draw_sprite(cmap, img_myname, cmap->w-img_myname->w-5, cmap->h-img_myname->h-5);
-
+		draw_sprite(cmap, img_myname, cmap->w-img_myname->w-5, cmap->h-img_myname->h-5);
 	}
 
-	if (flags & F_DRAW_MENU) {
-
-        	flags -= F_DRAW_MENU;
+	if (flags & F_DRAW_MENU)
+	{
+		flags -= F_DRAW_MENU;
 
 		draw_menu();
-
 	}
 
-        // map
+	// map
 
-        if (flags & F_DRAW_MAP) {
+	if (flags & F_DRAW_MAP)
+	{
+		flags -= F_DRAW_MAP;
 
-                flags -= F_DRAW_MAP;
-
-	        draw_map();
-
+		draw_map();
 	}
 
 	swap_pages();
-
 }
 
 //---------------------------------------------------------------------------
 // DRAWS A SIMPLE MAP VIEW
 
-static void draw_map() {
-
+static void draw_map()
+{
 	int y = (cmap->h-512)>>1;
 	int x = 200+(cmap->w-512-200)/2;
-        int c[3] = { C_WATER, C_LAND, C_ROCK };
+	int c[3] = { C_WATER, C_LAND, C_ROCK };
 
-        for (int i=0; i<(map?map->size:lmap->w); i++) {
+	for (int i = 0; i < (map ? map->size : lmap->w); i++)
+	{
+		uint32_t * lline = bmp_write_line(lmap, i);
 
-        	uint32_t * lline = bmp_write_line(lmap, i);
+		if (!map)
+		{
+			for (int j = 0; j < lmap->w;)
+			{
+				// unrolled
 
-                if (!map) {
-
-	        	for (int j=0; j<lmap->w;) {
-
-                        	// unrolled
-
-        	        	bmp_write(lline, (i+j)&15);
-                	        lline++;
-                                j++;
-        	        	bmp_write(lline, (i+j)&15);
-                	        lline++;
-                                j++;
-        	        	bmp_write(lline, (i+j)&15);
-                	        lline++;
-                                j++;
-        	        	bmp_write(lline, (i+j)&15);
-                	        lline++;
-                                j++;
+				bmp_write(lline, (i+j)&15);
+				lline++;
+				j++;
+				bmp_write(lline, (i+j)&15);
+				lline++;
+				j++;
+				bmp_write(lline, (i+j)&15);
+				lline++;
+				j++;
+				bmp_write(lline, (i+j)&15);
+				lline++;
+				j++;
 			}
+		}
+		else
+		{
+			// convert height values to image
+			// NOTE: this will swap (x, y)!
 
-		} else {
+			tile_t* tline = map->tile[i];
 
-                	// convert height values to image
-                        // NOTE: this will swap (x, y)!
-
-	                tile_t* tline = map->tile[i];
-
-	        	for (int j=0; j<map->size;) {
-
-        	        	bmp_write(lline, c[tline->type]);
-                	        lline++;
-                                tline++;
-                                j++;
-        	        	bmp_write(lline, c[tline->type]);
-                	        lline++;
-                                tline++;
-                                j++;
-        	        	bmp_write(lline, c[tline->type]);
-                	        lline++;
-                                tline++;
-                                j++;
-        	        	bmp_write(lline, c[tline->type]);
-                	        lline++;
-                                tline++;
-                                j++;
-
+			for (int j = 0; j < map->size;)
+			{
+				bmp_write(lline, c[tline->type]);
+				lline++;
+				tline++;
+				j++;
+				bmp_write(lline, c[tline->type]);
+				lline++;
+				tline++;
+				j++;
+				bmp_write(lline, c[tline->type]);
+				lline++;
+				tline++;
+				j++;
+				bmp_write(lline, c[tline->type]);
+				lline++;
+				tline++;
+				j++;
 			}
-
-                }
+		}
 	}
 
-        // draw players
+	// draw players
 
-        if (map)
-	        for (int i=0; i<map->players; i++)
-        		circle(lmap, map->player[i].y, map->player[i].x, 5, C_PLAYER);
+	if (map)
+		for (int i=0; i<map->players; i++)
+			circle(lmap, map->player[i].y, map->player[i].x, 5, C_PLAYER);
 
-        // fill 512x512 area
+	// fill 512x512 area
 
-        int rep;
-        if (map)
-	        rep = 512/map->size;
+	int rep;
+	if (map)
+		rep = 512/map->size;
 	else
-        	rep = 2;
+		rep = 2;
 
-	int size = map?map->size:256;
+	int size = map ? map->size : 256;
 
-        for (int i=0; i<rep; i++)
-        	for (int j=0; j<rep; j++) {
-		        blit(lmap, cmap, 0, 0, x+i*size, y+j*size, size, size);
-                        rect(cmap, x+i*size, y+j*size, x+(i+1)*size-1, y+(j+1)*size-1, C_BLACK);
+	for (int i=0; i<rep; i++)
+	{
+		for (int j=0; j<rep; j++)
+		{
+			blit(lmap, cmap, 0, 0, x+i*size, y+j*size, size, size);
+			rect(cmap, x+i*size, y+j*size, x+(i+1)*size-1, y+(j+1)*size-1, C_BLACK);
 		}
+	}
 
 	rect(cmap, x-1, y-1, x+512, y+512, C_WHITE);
-
 }
 
 //---------------------------------------------------------------------------
 
-bool save_image(BITMAP* bmp) {
-
+bool save_image(BITMAP* bmp)
+{
 	int index = 0;
-        bool done = false;
-       	char filename[32];
+	bool done = false;
+	char filename[32];
 
-        // find a free filename
+	// find a free filename
 
-	while (index <= 999 && !done) {
-
-                sprintf(filename, "save%03d.bmp", index);
+	while (index <= 999 && !done)
+	{
+		sprintf(filename, "save%03d.bmp", index);
 	#if 0 // todo : filesystem
 		if (!exists(filename)) {
-                	done = true;
-                } else
-	        	index++;
+		done = true;
+		} else
+		index++;
 	#endif
-
-        }
-
-        // no filename found
-
-        if (!done) {
-        #if 0 // todo : dialog
-        	dlg_message("error: entire 000-999 range is full!!", DLG_OK);
-		#endif
-        	return false;
 	}
 
-        // save
+	// no filename found
 
-        PALETTE pal;
-        get_palette(pal);
-	if (save_bitmap(filename, bmp, pal)) {
-		#if 0 // todo : dialog
-        	dlg_message("error: unable to save image!", DLG_OK);
-		#endif
-                return false;
-        } else {
-	        #if !defined(DEBUG)
+	if (!done)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: entire 000-999 range is full!!", DLG_OK);
+	#endif
+		return false;
+	}
+
+	// save
+
+	if (save_bitmap(filename, bmp, 0))
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to save image!", DLG_OK);
+	#endif
+		return false;
+	}
+	else
+	{
+	#if !defined(DEBUG)
 		char tmp[64];
 		sprintf(tmp, "info: image saved to %s", filename);
-       		dlg_message(tmp, DLG_OK);
-	        #endif
-        }
+		dlg_message(tmp, DLG_OK);
+	#endif
+	}
 
 	return true;
-
 }
 
 //---------------------------------------------------------------------------
 
-static bool init() {
-
+static bool init()
+{
 	setupPaths(CHIBI_RESOURCE_PATHS);
-	
-	// uclock is available under DJGPP, don't klnow about the rest..
 
-	#if defined(ALLEGRO_DJGPP)
-	srand(uclock());
-	#endif
-
-        // initialize framework
+	// initialize framework
 
 	framework.init(800, 600);
 
@@ -459,332 +421,244 @@ static bool init() {
 	// standard colors (0..31)
 
 	PAL_COL(main, C_BLACK,		0,	0,	0	);
-        PAL_COL(main, C_WHITE,		255,	255,	255	);
-        PAL_COL(main, C_RED,		255,	0,	0	);
-        PAL_COL(main, C_GREEN,		0,	255,	0	);
-        PAL_COL(main, C_BLUE,		0,	0,	255	);
-        PAL_COL(main, C_DK_GRAY,	63,	63,	63	);
-        PAL_COL(main, C_GRAY,		127,	127,	127	);
-        PAL_COL(main, C_LT_GRAY,	191,	191,	191	);
-        PAL_COL(main, C_BLUE_F,		63,	127,	255	);
-        PAL_COL(main, C_BLUE_B,		31,	63,	127	);
+	PAL_COL(main, C_WHITE,		255,	255,	255	);
+	PAL_COL(main, C_RED,		255,	0,	0	);
+	PAL_COL(main, C_GREEN,		0,	255,	0	);
+	PAL_COL(main, C_BLUE,		0,	0,	255	);
+	PAL_COL(main, C_DK_GRAY,	63,	63,	63	);
+	PAL_COL(main, C_GRAY,		127,	127,	127	);
+	PAL_COL(main, C_LT_GRAY,	191,	191,	191	);
+	PAL_COL(main, C_BLUE_F,		63,	127,	255	);
+	PAL_COL(main, C_BLUE_B,		31,	63,	127	);
 
-        // map colors (96..255)
+	// map colors (96..255)
 
 	PAL_COL(main, C_WATER,	63,	127,	255	);
 	PAL_COL(main, C_LAND,	127,	95,	63	);
 	PAL_COL(main, C_ROCK,	127,	127,	149	);
-        PAL_COL(main, C_PLAYER,	255,	255, 	0	);
+	PAL_COL(main, C_PLAYER,	255,	255, 	0	);
 
-        // create color map (draw direct to screen or back buffer..)
+	// create color map (draw direct to screen or back buffer..)
 
-        #ifdef USE_VRAM
-        cmap = create_sub_bitmap(screen, 0, 0, 800, 600);
-        #else
-        cmap = create_bitmap(800, 600);
-        #endif
+	cmap = create_bitmap(800, 600);
 
-        if (!cmap) {
-        #if 0 // todo : dialog
-        	dlg_message("error: unable to create buffer", DLG_OK);
-		#endif
-                return false;
+	if (!cmap)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to create buffer", DLG_OK);
+	#endif
+		return false;
 	}
 
-        // map image
+	// map image
 
-        lmap = create_bitmap(512, 512);
-        if (!lmap) {
-        #if 0 // todo : dialog
-        	dlg_message("error: unable to create buffer for map", DLG_OK);
-		#endif
-                return false;
-        }
+	lmap = create_bitmap(512, 512);
+	if (!lmap)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to create buffer for map", DLG_OK);
+	#endif
+		return false;
+	}
 
-        // main menu image
+	// main menu image
 
-        PALETTE tmp;
-        img_main = load_bitmap("./main.bmp", tmp);
-        if (!img_main) {
-        #if 0 // todo : dialog
-        	dlg_message("error: unable to load main graphic", DLG_OK);
-		#endif
-                return false;
-        }
-        translate_image(img_main, P_MAIN, false);
+	img_main = load_bitmap("./main.bmp", 0);
+	if (!img_main)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to load main graphic", DLG_OK);
+	#endif
+		return false;
+	}
 
-        // background image
+	// background image
 
-        img_back = load_bitmap("./back.bmp", tmp);
-        if (!img_back) {
-        #if 0 // todo : dialog
-        	dlg_message("error: unable to load background graphic", DLG_OK);
-		#endif
-                return false;
-        }
-        translate_image(img_back, P_BACK, false);
+	img_back = load_bitmap("./back.bmp", 0);
+	if (!img_back)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to load background graphic", DLG_OK);
+	#endif
+		return false;
+	}
 
-        // my name image
+	// my name image
 
-        img_myname = load_bitmap("./myname.bmp", tmp);
-        if (!img_myname) {
-        #if 0 // todo : dialog
-        	dlg_message("error: unable to load myname graphic", DLG_OK);
-		#endif
-                return false;
-        }
-        translate_image(img_myname, P_MYNAME, true);
+	img_myname = load_bitmap("./myname.bmp", 0);
+	if (!img_myname)
+	{
+	#if 0 // todo : dialog
+		dlg_message("error: unable to load myname graphic", DLG_OK);
+	#endif
+		return false;
+	}
 
 	// tiles
 
 	{
-
-        	BITMAP* tmp = load_bitmap("./tiles.bmp", palette_tiles);
-                if (!tmp) {
-			#if 0 // todo : dialog
-	        	dlg_message("error: unable to load tiles graphic", DLG_OK);
-			#endif
-                	return false;
+		BITMAP* tmp = load_bitmap("./tiles.bmp", nullptr);
+		if (!tmp)
+		{
+		#if 0 // todo : dialog
+			dlg_message("error: unable to load tiles graphic", DLG_OK);
+		#endif
+			return false;
 		}
 
-                translate_image(tmp, 32, false);
+		img_tile = new BITMAP*[MAX_TILES];
+		for (int i = 0; i < MAX_TILES; i++)
+		{
+			img_tile[i] = create_bitmap(64, 64);
+			blit(tmp, img_tile[i], i*64, 0, 0, 0, 64, 64);
+		}
+	}
 
-                for (int i=255; i>=32; i--) {
-                	palette_tiles[i].r = palette_tiles[i-32].r;
-                	palette_tiles[i].g = palette_tiles[i-32].g;
-                	palette_tiles[i].b = palette_tiles[i-32].b;
-                }
-                for (int i=0; i<32; i++)
-                	palette_tiles[i] = palette_main[i];
-
-                img_tile = new BITMAP*[MAX_TILES];
-                for (int i=0; i<MAX_TILES; i++) {
-                	img_tile[i] = create_bitmap(64, 64);
-                        blit(tmp, img_tile[i], i*64, 0, 0, 0, 64, 64);
-                }
-
-        }
-
-        config.algo = MAP_OFFSET_SQUARE;
-        config.filt_median = true;
-        config.filt_min = false;
-        config.filt_max = false;
-        config.filt_diff = false;
-        config.filt_mean = true;
-        config.filt_size = 5;
-        config.w = 0.0;
-        config.l = 0.45;
-        config.r = 0.65;
-        config.players = 3;
-
-        set_palette_main();
+	config.algo = MAP_OFFSET_SQUARE;
+	config.filt_median = true;
+	config.filt_min = false;
+	config.filt_max = false;
+	config.filt_diff = false;
+	config.filt_mean = true;
+	config.filt_size = 5;
+	config.w = 0.0;
+	config.l = 0.45;
+	config.r = 0.65;
+	config.players = 3;
 
 	// todo : dialog : dlg_init();
 
-        flags = F_DRAW;
+	flags = F_DRAW;
 
 	return true;
-
 }
 
 //---------------------------------------------------------------------------
 
-static bool shutdown() {
-
+static bool shutdown()
+{
 	for (int i=0; i<MAX_TILES; i++)
-        	destroy_bitmap(img_tile[i]);
-	delete[] img_tile;		img_tile	= 0;
-        destroy_bitmap(img_myname);	img_myname	= 0;
+		destroy_bitmap(img_tile[i]);
+	
+	delete[] img_tile; img_tile = 0;
+	
+	destroy_bitmap(img_myname);	img_myname	= 0;
 	destroy_bitmap(img_back);	img_back	= 0;
 	destroy_bitmap(img_main);	img_main	= 0;
-        destroy_bitmap(lmap);		lmap		= 0;
-        destroy_bitmap(cmap);		cmap		= 0;
+	destroy_bitmap(lmap);		lmap		= 0;
+	destroy_bitmap(cmap);		cmap		= 0;
 
 	framework.shutdown();
 
-        return true;
-
+	return true;
 }
 
 //---------------------------------------------------------------------------
 
-void swap_pages() {
-
+void swap_pages()
+{
 	// copy color map
 
 	pushBlend(BLEND_OPAQUE);
 	{
 		auto texture = createTextureFromRGBA8(cmap->data, cmap->w, cmap->h, false, true);
+		
 		gxSetTexture(texture, GX_SAMPLE_NEAREST, true);
-		setColor(colorWhite);
-		drawRect(0, 0, cmap->w, cmap->h);
+		{
+			setColor(colorWhite);
+			drawRect(0, 0, cmap->w, cmap->h);
+		}
 		gxClearTexture();
+		
 		freeTexture(texture);
 	}
 	popBlend();
-
 }
 
 //---------------------------------------------------------------------------
 
-static void generate() {
-
-	PALETTE pal;
-	get_palette(pal);
-
-        // fade palette
-
-	#if !defined(DEBUG)
-        bool fade = map?true:false;
-        if (fade)
-        	fade_out_range(4, P_LAND, P_LAND+31);
-	#endif
-
+static void generate()
+{
 	map_gen(config.algo, MAP_SIZE);
 
 	flags |= F_DRAW_MAP;
-
-        // restore palette
-
-	#if !defined(DEBUG)
-	draw();
-	if (fade)
-		fade_in_range(pal, 4, P_LAND, P_LAND+31);
-	#endif
-
 }
 
 //---------------------------------------------------------------------------
 // MENU
 
-typedef struct {
-        bool inside;
+typedef struct
+{
+	bool inside;
 	bool down;
 } menu_item_t;
 
 static int menu_item_y[M_ITEMS] = { 28, 60, 108, 140, 188, 220, 268 };
 static menu_item_t menu_item[M_ITEMS];
 
-static int update_menu() {
-
+static int update_menu()
+{
 	int x = mouse.x;
-        int y = mouse.y;
+	int y = mouse.y;
 
-        static bool down = false;
-        bool click;
+	static bool down = false;
+	
+	bool click;
 
-        if (mouse.isDown(BUTTON_LEFT) && !down) {
+	if (mouse.isDown(BUTTON_LEFT) && !down)
+	{
+		click = true;
+		down = true;
+	}
+	else
+	{
+		click = false;
+		if (!mouse.isDown(BUTTON_LEFT))
+			down = false;
+	}
 
-        	click = true;
-                down = true;
+	int ret = -1;
 
-        } else {
-
-        	click = false;
-                if (!mouse.isDown(BUTTON_LEFT))
-	        	down = false;
-
-        }
-
-        int ret = -1;
-
-	for (int i=0; i<M_ITEMS; i++) {
-
-		if (x >= 0 && x <= 200-1 && y >= menu_item_y[i] && y <= menu_item_y[i]+M_ITEM_H-1) {
-
-                	if (!menu_item[i].inside)
-	                	flags |= F_DRAW_MENU;
-                	menu_item[i].inside = true;
-
-		} else {
-
-                	if (menu_item[i].inside)
-	                	flags |= F_DRAW_MENU;
-                	menu_item[i].inside = false;
-
+	for (int i=0; i<M_ITEMS; i++)
+	{
+		if (x >= 0 && x <= 200-1 && y >= menu_item_y[i] && y <= menu_item_y[i]+M_ITEM_H-1)
+		{
+			if (!menu_item[i].inside)
+				flags |= F_DRAW_MENU;
+			menu_item[i].inside = true;
+		}
+		else
+		{
+			if (menu_item[i].inside)
+				flags |= F_DRAW_MENU;
+			menu_item[i].inside = false;
 		}
 
-        	if (click) {
-
-	        	if (menu_item[i].inside)
-                        	menu_item[i].down = true;
+		if (click)
+		{
+			if (menu_item[i].inside)
+				menu_item[i].down = true;
 			else
 				menu_item[i].down = false;
-
-		} else if (!down) {
-
-                	if (menu_item[i].down && menu_item[i].inside)
-	                        ret = i;
+		}
+		else if (!down)
+		{
+			if (menu_item[i].down && menu_item[i].inside)
+				ret = i;
 			menu_item[i].down = false;
+		}
+	}
 
-                }
-
-        }
-
-        return ret;
-
+	return ret;
 }
 
-static void draw_menu() {
-
+static void draw_menu()
+{
 	blit(img_main, cmap, 0, 0, 0, 0, img_main->w, img_main->h);
 
-        // draw item under cursor
+	// draw item under cursor
 
-        for (int i=0; i<M_ITEMS; i++)
-        	if (menu_item[i].inside)
-                       	rect(cmap, 0, menu_item_y[i], 200-1, menu_item_y[i]+M_ITEM_H-1, makecol(255, 255, 255));
-
-}
-
-//---------------------------------------------------------------------------
-// PALETTES
-
-static PALETTE palette_stack[10];
-static int palette_depth = 0;
-
-void push_palette() {
-
-	get_palette(palette_stack[palette_depth]);
-        palette_depth++;
-
-}
-
-void pop_palette() {
-
-	palette_depth--;
-        set_palette(palette_stack[palette_depth]);
-
-}
-
-void set_palette_main() {
-
-	set_palette(palette_main);
-
-}
-
-void set_palette_tiles() {
-
-	set_palette(palette_tiles);
-
-}
-
-//---------------------------------------------------------------------------
-
-static void translate_image(BITMAP* bmp, int base, bool masked) {
-
-	uint32_t* ptr = bmp->line[0];
-
-        for (uint32_t* ptr2=ptr+bmp->w*bmp->h; ptr<ptr2;) {
-
-        	if (!masked || *ptr)
-			*ptr += base;
-		ptr++;
-
-        	if (!masked || *ptr)
-			*ptr += base;
-		ptr++;
-
-        }
-
+	for (int i=0; i<M_ITEMS; i++)
+		if (menu_item[i].inside)
+			rect(cmap, 0, menu_item_y[i], 200-1, menu_item_y[i]+M_ITEM_H-1, makecol(255, 255, 255));
 }

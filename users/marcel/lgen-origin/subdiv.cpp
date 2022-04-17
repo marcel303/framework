@@ -29,7 +29,7 @@ subdiv_t :: ~subdiv_t() {
 void subdiv_t :: setSize(int aSize) {
 
 	if (aSize == size)
-        	return;
+		return;
 
 	if (h) {
 		for (int i=0; i<size; i++)
@@ -56,7 +56,7 @@ void subdiv_t :: setSize(int aSize) {
 void subdiv_t :: clear() {
 
 	if (size <= 0)
-        	return;
+		return;
 
 	for (int i=0; i<size; i++)
 		memset(h[i], 0, sizeof(int)*size);
@@ -70,7 +70,7 @@ void subdiv_t :: getMinMax(int* aMin, int* aMax) {
 	int min = h[0][0];
 	int max = h[0][0];
 	for (int i=0; i<size; i++) {
-        	int* tmp = h[i];
+		int* tmp = h[i];
 		for (int* tmp2=h[i]+size; tmp<tmp2;) {
 			if (*tmp < min)
 				min = *tmp;
@@ -115,21 +115,21 @@ void subdiv_t :: rerange(int aMin, int aMax) {
 	int min, max;
         getMinMax(&min, &max);
 	if (min==max)
-        	return;
-        int tmp = ((aMax-aMin)<<16)/(max-min);
+		return;
+	int tmp = ((aMax-aMin)<<16)/(max-min);
 
-	#define RESCALE(v) \
-		aMin+(((v-min)*tmp)>>16)
+#define RESCALE(v) \
+	aMin+(((v-min)*tmp)>>16)
 
-        for (int i=0; i<size; i++) {
-        	int* line = h[i];
-                for (int* line2=line+size; line<line2;) {
-                	*line = RESCALE(*line);
-                	line++;
-                	*line = RESCALE(*line);
-                	line++;
-                }
-        }
+	for (int i=0; i<size; i++) {
+		int* line = h[i];
+			for (int* line2=line+size; line<line2;) {
+				*line = RESCALE(*line);
+				line++;
+				*line = RESCALE(*line);
+				line++;
+			}
+	}
 
 }
 
