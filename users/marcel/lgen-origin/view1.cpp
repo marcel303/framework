@@ -147,7 +147,6 @@ static inline int C(int mx, int mz, int l)
 	v1 = (uint16_t(v1) * l) >> 8;
 	v2 = (uint16_t(v2) * l) >> 8;
 	v3 = (uint16_t(v3) * l) >> 8;
-	v4 = (uint16_t(v4) * l) >> 8;
 	
 	return
 		(uint32_t(v1) << 0) |

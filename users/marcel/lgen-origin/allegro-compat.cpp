@@ -190,18 +190,83 @@ void draw_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y)
 	}
 }
 
-void draw_lit_sprite(BITMAP * dst, BITMAP * src, int x, int y, int c)
+static inline int C(int c, int l)
 {
-	// todo : draw sprite
+	uint8_t v1 = (c >> 0);
+	uint8_t v2 = (c >> 8);
+	uint8_t v3 = (c >> 16);
+	uint8_t v4 = (c >> 24);
 	
-	blit(src, dst, 0, 0, x, y, src->w, src->h);
+	v1 = (uint16_t(v1) * l) >> 8;
+	v2 = (uint16_t(v2) * l) >> 8;
+	v3 = (uint16_t(v3) * l) >> 8;
+	
+	return
+		(uint32_t(v1) << 0) |
+		(uint32_t(v2) << 8) |
+		(uint32_t(v3) << 16) |
+		(uint32_t(v4) << 24);
 }
 
-void draw_gouraud_sprite(BITMAP * dst, BITMAP * src, int x, int y, int l1, int l2, int l3, int l4)
+void draw_lit_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y, int c)
 {
-	// todo : draw sprite
+	int sx = src->w;
+	int sy = src->h;
 	
-	blit(src, dst, 0, 0, x, y, src->w, src->h);
+	uint32_t mask = makecol(255, 0, 255);
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
+			continue;
+			
+		uint32_t * src_line = src->line[        y];
+		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+				continue;
+			
+			if (src_line[x] == mask)
+				continue;
+				
+			dst_line[x] = C(src_line[x], c);
+		}
+	}
+}
+
+void draw_gouraud_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y, int l1, int l2, int l3, int l4)
+{
+	int sx = src->w;
+	int sy = src->h;
+	
+	uint32_t mask = makecol(255, 0, 255);
+	
+	for (int y = 0; y < sy; ++y)
+	{
+		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
+			continue;
+		
+		int c1 = (l1 * (sy - y) + l3 * y) / sy;
+		int c2 = (l2 * (sy - y) + l4 * y) / sy;
+		
+		uint32_t * src_line = src->line[        y];
+		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		
+		for (int x = 0; x < sx; ++x)
+		{
+			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+				continue;
+			
+			if (src_line[x] == mask)
+				continue;
+			
+			int c = (c1 * (sx - x) + c2 * x) / sx;
+			
+			dst_line[x] = C(src_line[x], c);
+		}
+	}
 }
 
 void circle(BITMAP * bmp, int x, int y, int r, int c)
