@@ -132,27 +132,22 @@ static void update()
 
 //---------------------------------------------------------------------------
 
-static inline int C(int mx, int mz, int l)
+static inline int C(int mx, int mz, uint8_t l)
 {
 	int tmx1 = FIXTOM(mx);
 	int tmz1 = FIXTOM(mz);
 
 	uint32_t c = img_tile[tile[tmx1][tmz1]]->line[FIXTOT(mz)][FIXTOT(mx)];
 	
-	uint8_t v1 = (c >> 0);
-	uint8_t v2 = (c >> 8);
-	uint8_t v3 = (c >> 16);
-	uint8_t v4 = (c >> 24);
+	uint8_t v1 = c;
+	uint8_t v2 = c >> 8;
+	uint8_t v3 = c >> 16;
 	
-	v1 = (uint16_t(v1) * l) >> 8;
-	v2 = (uint16_t(v2) * l) >> 8;
-	v3 = (uint16_t(v3) * l) >> 8;
+	v1 = (v1 * l) >> 8;
+	v2 = (v2 * l) >> 8;
+	v3 = (v3 * l) >> 8;
 	
-	return
-		(uint32_t(v1) << 0) |
-		(uint32_t(v2) << 8) |
-		(uint32_t(v3) << 16) |
-		(uint32_t(v4) << 24);
+	return v1 | (v2 << 8) | (v3 << 16) | (c & 0xff000000);
 }
 
 //---------------------------------------------------------------------------
@@ -160,14 +155,14 @@ static inline int C(int mx, int mz, int l)
 
 static void draw()
 {
-	float s1 = sin(-ry-f*0.5);
-	float c1 = cos(-ry-f*0.5);
-	float s2 = sin(-ry+f*0.5);
-	float c2 = cos(-ry+f*0.5);
+	float s1 = sinf(-ry-f*0.5f);
+	float c1 = cosf(-ry-f*0.5f);
+	float s2 = sinf(-ry+f*0.5f);
+	float c2 = cosf(-ry+f*0.5f);
 
-	float iw = 1.0/(view->w-1.0);
+	float iw = 1.0f/(view->w-1.0f);
 
-	for (int sy = Y1; sy < Y2; sy += 2)
+	for (int sy = Y1; sy < Y2; sy += 1)
 	{
 		// unproject y coordinate
 
@@ -181,23 +176,23 @@ static void draw()
 
 		float d = -y/py;
 
-		float x1 = x+s1*d*20.0;
-		float z1 = z+c1*d*20.0;
-		float x2 = x+s2*d*20.0;
-		float z2 = z+c2*d*20.0;
+		float x1 = x+s1*d*20.0f;
+		float z1 = z+c1*d*20.0f;
+		float x2 = x+s2*d*20.0f;
+		float z2 = z+c2*d*20.0f;
 
 		int mx = FTOFIX(x1);
 		int mz = FTOFIX(z1);
 		int dx = FTOFIX((x2-x1)*iw);
 		int dz = FTOFIX((z2-z1)*iw);
 
-		int l = clamp<int>(int(255.0/(d+1.0)), 0, 255);
+		uint8_t l = clamp<int>(int(255.0f/(d+1.0f)), 0, 255);
 
-		uint32_t * addr = bmp_write_line(view, sy);
-		uint32_t * addr1 = addr;
-		uint32_t * addr2 = addr+view->w;
+		uint32_t * __restrict addr = bmp_write_line(view, sy);
+		uint32_t * __restrict addr1 = addr;
+		uint32_t * __restrict addr2 = addr+view->w;
 
-		for (uint32_t * sx = addr1; sx < addr2;)
+		for (uint32_t * __restrict sx = addr1; sx < addr2;)
 		{
 			bmp_write(sx++, C(mx, mz, l));
 			mx += dx;

@@ -66,7 +66,7 @@ void rectfill(BITMAP * bmp, int x1, int y1, int x2, int y2, int c);
 void line(BITMAP * bmp, int x1, int y1, int x2, int y2, int c);
 
 uint32_t * bmp_write_line(BITMAP * bmp, int y);
-void bmp_write(uint32_t * addr, int c);
+inline void bmp_write(uint32_t * addr, int c) { *addr = c; }
 
 void rgb_to_hsv(int r, int g, int b, float * h, float * s, float * v);
 void hsv_to_rgb(float h, float s, float v, int * r, int * g, int * b);

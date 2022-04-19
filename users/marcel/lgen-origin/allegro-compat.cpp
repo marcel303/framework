@@ -65,8 +65,8 @@ BITMAP * load_bitmap(const char * path, PALETTE pal)
 	
 	for (int y = 0; y < dst->h; ++y)
 	{
-		auto * src_line = image->getLine(y);
-		auto * dst_line = bmp_write_line(dst, y);
+		auto * __restrict src_line = image->getLine(y);
+		auto * __restrict dst_line = bmp_write_line(dst, y);
 		
 		for (int x = 0; x < dst->w; ++x)
 		{
@@ -133,7 +133,7 @@ void clear(BITMAP * bmp)
 {
 	for (int y = 0; y < bmp->h; ++y)
 	{
-		auto * line = bmp_write_line(bmp, y);
+		auto * __restrict line = bmp_write_line(bmp, y);
 		
 		for (int x = 0; x < bmp->w; ++x)
 		{
@@ -149,12 +149,15 @@ void blit(BITMAP * src, BITMAP * dst, int src_x, int src_y, int dst_x, int dst_y
 		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
 			continue;
 			
-		uint32_t * src_line = src->line[src_y + y] + src_x;
-		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		uint32_t * __restrict src_line = src->line[src_y + y] + src_x;
+		uint32_t * __restrict dst_line = dst->line[dst_y + y] + dst_x;
+		
+		int cl = dst->cl - dst_x;
+		int cr = dst->cr - dst_x;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+			if (x < cl || x > cr)
 				continue;
 			
 			dst_line[x] = src_line[x];
@@ -174,12 +177,15 @@ void draw_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y)
 		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
 			continue;
 			
-		uint32_t * src_line = src->line[        y];
-		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		uint32_t * __restrict src_line = src->line[        y];
+		uint32_t * __restrict dst_line = dst->line[dst_y + y] + dst_x;
+		
+		int cl = dst->cl - dst_x;
+		int cr = dst->cr - dst_x;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+			if (x < cl || x > cr)
 				continue;
 			
 			if (src_line[x] == mask)
@@ -190,22 +196,17 @@ void draw_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y)
 	}
 }
 
-static inline int C(int c, int l)
+static inline int C(uint32_t c, uint8_t l)
 {
-	uint8_t v1 = (c >> 0);
-	uint8_t v2 = (c >> 8);
-	uint8_t v3 = (c >> 16);
-	uint8_t v4 = (c >> 24);
+	uint8_t v1 = c;
+	uint8_t v2 = c >> 8;
+	uint8_t v3 = c >> 16;
 	
-	v1 = (uint16_t(v1) * l) >> 8;
-	v2 = (uint16_t(v2) * l) >> 8;
-	v3 = (uint16_t(v3) * l) >> 8;
+	v1 = (v1 * l) >> 8;
+	v2 = (v2 * l) >> 8;
+	v3 = (v3 * l) >> 8;
 	
-	return
-		(uint32_t(v1) << 0) |
-		(uint32_t(v2) << 8) |
-		(uint32_t(v3) << 16) |
-		(uint32_t(v4) << 24);
+	return v1 | (v2 << 8) | (v3 << 16) | (c & 0xff000000);
 }
 
 void draw_lit_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y, int c)
@@ -220,12 +221,15 @@ void draw_lit_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y, int c)
 		if (dst_y + y < dst->ct || dst_y + y > dst->cb)
 			continue;
 			
-		uint32_t * src_line = src->line[        y];
-		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		uint32_t * __restrict src_line = src->line[        y];
+		uint32_t * __restrict dst_line = dst->line[dst_y + y] + dst_x;
+		
+		int cl = dst->cl - dst_x;
+		int cr = dst->cr - dst_x;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+			if (x < cl || x > cr)
 				continue;
 			
 			if (src_line[x] == mask)
@@ -251,12 +255,15 @@ void draw_gouraud_sprite(BITMAP * dst, BITMAP * src, int dst_x, int dst_y, int l
 		int c1 = (l1 * (sy - y) + l3 * y) / sy;
 		int c2 = (l2 * (sy - y) + l4 * y) / sy;
 		
-		uint32_t * src_line = src->line[        y];
-		uint32_t * dst_line = dst->line[dst_y + y] + dst_x;
+		uint32_t * __restrict src_line = src->line[        y];
+		uint32_t * __restrict dst_line = dst->line[dst_y + y] + dst_x;
+		
+		int cl = dst->cl - dst_x;
+		int cr = dst->cr - dst_x;
 		
 		for (int x = 0; x < sx; ++x)
 		{
-			if (dst_x + x < dst->cl || dst_x + x > dst->cr)
+			if (x < cl || x > cr)
 				continue;
 			
 			if (src_line[x] == mask)
@@ -285,16 +292,34 @@ void rect(BITMAP * dst, int x1, int y1, int x2, int y2, int c)
 		if (y < dst->ct || y > dst->cb)
 			continue;
 			
-		uint32_t * dst_line = dst->line[y];
+		uint32_t * __restrict dst_line = dst->line[y];
 		
-		for (int x = x1; x <= x2; ++x)
+		if (y == y1 || y == y2)
 		{
-			if (x < dst->cl || x > dst->cr)
-				continue;
-			
-			if (x == x1 || x == x2 || y == y1 || y == y2)
+			for (int x = x1; x <= x2; ++x)
 			{
-				dst_line[x] = c;
+				if (x < dst->cl || x > dst->cr)
+					continue;
+				
+				if (x == x1 || x == x2 || y == y1 || y == y2)
+				{
+					dst_line[x] = c;
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 2; ++i)
+			{
+				int x = i == 0 ? x1 : x2;
+				
+				if (x < dst->cl || x > dst->cr)
+					continue;
+				
+				if (x == x1 || x == x2 || y == y1 || y == y2)
+				{
+					dst_line[x] = c;
+				}
 			}
 		}
 	}
@@ -307,7 +332,7 @@ void rectfill(BITMAP * dst, int x1, int y1, int x2, int y2, int c)
 		if (y < dst->ct || y > dst->cb)
 			continue;
 			
-		uint32_t * dst_line = dst->line[y];
+		uint32_t * __restrict dst_line = dst->line[y];
 		
 		for (int x = x1; x <= x2; ++x)
 		{
@@ -327,11 +352,6 @@ void line(BITMAP * bmp, int x1, int y1, int x2, int y2, int c)
 uint32_t * bmp_write_line(BITMAP * bmp, int y)
 {
 	return bmp->line[y];
-}
-
-void bmp_write(uint32_t * addr, int c)
-{
-	*addr = c;
 }
 
 void rgb_to_hsv(int r, int g, int b, float * h, float * s, float * v)
