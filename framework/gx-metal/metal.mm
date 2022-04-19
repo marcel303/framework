@@ -3349,22 +3349,26 @@ static void gxValidateShaderResources(const bool useGenericShader)
 	// set vertex stage uniform buffers
 	
 	// note : for the vertex stage, we need to preserve any buffers bound as
-	//        inputs for vertex data. so instead of using setVertexBuffers (as
-	//        we do below for the fragment stage), we call setVertexBuffer, only
-	//        for those buffers which have associated uniforms and a buffer set
+	//        inputs for vertex data. so instead of using setVertexBuffers,
+	//        we call setVertexBuffer, only for those buffers which have
+	//        an associated uniforms struct
 	// note : we could easily unify this with vertex data input buffers, if we
 	//        maintain a global list of all buffers. however, it may perhaps be
 	//        more efficient to do what we do here, for the more common use cases
 	
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	if (cacheElem.vsExtraBufferUsageMask != 0)
 	{
-		if (cacheElem.vsInfo.uniformBufferSize[i] != 0 &&
-			cacheElem.vsBuffers[i] != nullptr)
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
 		{
-			[s_activeRenderPass->encoder
-				setVertexBuffer:cacheElem.vsBuffers[i]
-				offset:0
-				atIndex:i];
+			if (cacheElem.vsInfo.uniformBufferSize[i] != 0 && i != cacheElem.vsMainUniformBufferIndex)
+			{
+				Assert(cacheElem.vsExtraBufferUsageMask & (1 << i));
+				
+				[s_activeRenderPass->encoder
+					setVertexBuffer:cacheElem.vsBuffers[i]
+					offset:0
+					atIndex:i];
+			}
 		}
 	}
 	
@@ -3385,25 +3389,33 @@ static void gxValidateShaderResources(const bool useGenericShader)
 	
 	// set fragment stage uniform buffers
 
-#if 1 // todo : cleanup. keep one or the other
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	if (cacheElem.psExtraBufferUsageMask != 0)
 	{
-		if (cacheElem.psInfo.uniformBufferSize[i] != 0 &&
-			cacheElem.psBuffers[i] != nullptr)
+		if (cacheElem.psExtraBufferUsageSize >= 4)
 		{
+			static const NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
+			
 			[s_activeRenderPass->encoder
-				setVertexBuffer:cacheElem.psBuffers[i]
-				offset:0
-				atIndex:i];
+				setFragmentBuffers:cacheElem.psBuffers
+				offsets:offsets
+				withRange:NSMakeRange(0, cacheElem.psExtraBufferUsageSize)];
+		}
+		else
+		{
+			for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+			{
+				if (cacheElem.psInfo.uniformBufferSize[i] != 0 && i != cacheElem.psMainUniformBufferIndex)
+				{
+					Assert(cacheElem.psExtraBufferUsageMask & (1 << i));
+					
+					[s_activeRenderPass->encoder
+						setFragmentBuffer:cacheElem.psBuffers[i]
+						offset:0
+						atIndex:i];
+				}
+			}
 		}
 	}
-#else
-	static const NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
-	[s_activeRenderPass->encoder
-		setFragmentBuffers:cacheElem.psBuffers
-		offsets:offsets
-		withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxBuffers)];
-#endif
 
 	if (cacheElem.psMainUniformBufferIndex != -1)
 	{

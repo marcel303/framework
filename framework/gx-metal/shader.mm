@@ -79,6 +79,8 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 					
 					if (strcmp(bufferName, "ShaderUniforms") == 0)
 						vsMainUniformBufferIndex = arg.index;
+					else
+						vsExtraBufferUsageMask |= 1 << arg.index;
 					
 					Assert(vsUniformData[arg.index] == nullptr);
 					vsUniformData[arg.index] = malloc(arg.bufferDataSize);
@@ -112,7 +114,14 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 					
 					if (strcmp(bufferName, "ShaderUniforms") == 0)
 						psMainUniformBufferIndex = arg.index;
-					
+					else
+					{
+						psExtraBufferUsageMask |= (1 << arg.index);
+						
+						if (arg.index + 1 > psExtraBufferUsageSize)
+							psExtraBufferUsageSize = arg.index + 1;
+					}
+						
 					Assert(psUniformData[arg.index] == nullptr);
 					psUniformData[arg.index] = malloc(arg.bufferDataSize);
 					memset(psUniformData[arg.index], 0, arg.bufferDataSize);
@@ -143,6 +152,12 @@ void ShaderCacheElem_Metal::shut()
 	vsTextureUsageMask = 0;
 	psTextureUsageMask = 0;
 	
+	vsTexturePointerDirtyMask = 0;
+	psTexturePointerDirtyMask = 0;
+	
+	vsTextureSamplerDirtyMask = 0;
+	psTextureSamplerDirtyMask = 0;
+	
 	for (auto & vsTextureSampler : vsTextureSamplers)
 		vsTextureSampler = 0;
 	for (auto & psTextureSampler : psTextureSamplers)
@@ -165,6 +180,11 @@ void ShaderCacheElem_Metal::shut()
 	
 	vsMainUniformBufferIndex = -1;
 	psMainUniformBufferIndex = -1;
+	
+	vsExtraBufferUsageMask = 0;
+	psExtraBufferUsageMask = 0;
+	
+	psExtraBufferUsageSize = 0;
 	
 	for (int i = 0; i < kMaxBuffers; ++i)
 	{

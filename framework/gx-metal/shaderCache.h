@@ -140,6 +140,11 @@ public:
 	int vsMainUniformBufferIndex = -1;
 	int psMainUniformBufferIndex = -1;
 	
+	uint8_t vsExtraBufferUsageMask = 0;
+	uint8_t psExtraBufferUsageMask = 0;
+	
+	uint8_t psExtraBufferUsageSize = 0;
+	
 	__unsafe_unretained id <MTLBuffer> vsBuffers[kMaxBuffers] = { };
 	__unsafe_unretained id <MTLBuffer> psBuffers[kMaxBuffers] = { };
 	
