@@ -14,6 +14,8 @@ namespace assetcopy
 	{
 		std::vector<std::string> result;
 
+		env->PushLocalFrame(256);
+
 		auto getAssets_method = env->GetMethodID(env->GetObjectClass(context_object), "getAssets", "()Landroid/content/res/AssetManager;");
 		auto assetManager_object = env->CallObjectMethod(context_object, getAssets_method);
 		auto list_method = env->GetMethodID(env->GetObjectClass(assetManager_object), "list", "(Ljava/lang/String;)[Ljava/lang/String;");
@@ -40,6 +42,12 @@ namespace assetcopy
 
 			env->DeleteLocalRef(jstr);
 		}
+
+		env->DeleteLocalRef(files_object);
+
+		env->DeleteLocalRef(assetManager_object);
+
+		env->PopLocalFrame(nullptr);
 
 		return result;
 	}
