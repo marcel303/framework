@@ -67,15 +67,18 @@ void GxVertexBuffer::alloc(const int numBytes)
 	const NSUInteger options = MTLResourceStorageModePrivate;
 #endif
 
-	if (numBytes > 0)
+	@autoreleasepool
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:numBytes options:options];
+		if (numBytes > 0)
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithLength:numBytes options:options];
+		}
+		else
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
+		}
 	}
-	else
-	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
-	}
-	
+
 	m_isDynamic = true;
 }
 
@@ -91,13 +94,16 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	const NSUInteger options = MTLResourceStorageModeManaged;
 #endif
 
-	if (numBytes > 0)
+	@autoreleasepool
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
-	}
-	else
-	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
+		if (numBytes > 0)
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
+		}
+		else
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithLength:1 options:options];
+		}
 	}
 }
 
@@ -107,12 +113,15 @@ void GxVertexBuffer::free()
 	
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
-		
-		buffer = nullptr;
+		@autoreleasepool
+		{
+			id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
+			
+			buffer = nullptr;
 
-		m_buffer = nullptr;
-		m_isDynamic = false;
+			m_buffer = nullptr;
+			m_isDynamic = false;
+		}
 	}
 }
 
@@ -141,11 +150,14 @@ void GxVertexBuffer::updateEnd(const int firstByte, const int numBytes)
 
 #if !ENABLE_METAL_UNIFIED_MEMORY
 	__unsafe_unretained id <MTLBuffer> buffer = (__bridge id <MTLBuffer>)m_buffer;
-	
-	NSRange range;
-	range.location = firstByte;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
+		
+	@autoreleasepool
+	{
+		NSRange range;
+		range.location = firstByte;
+		range.length = numBytes;
+		[buffer didModifyRange:range];
+	}
 #endif
 }
 
@@ -204,13 +216,16 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	const NSUInteger options = MTLResourceStorageModeManaged;
 #endif
 
-	if (numBytes > 0)
+	@autoreleasepool
 	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
-	}
-	else
-	{
-		m_buffer = (__bridge_retained void*)[device newBufferWithLength:4 options:options];
+		if (numBytes > 0)
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithBytes:bytes length:numBytes options:options];
+		}
+		else
+		{
+			m_buffer = (__bridge_retained void*)[device newBufferWithLength:4 options:options];
+		}
 	}
 }
 
@@ -220,12 +235,15 @@ void GxIndexBuffer::free()
 	
 	if (m_buffer != nullptr)
 	{
-		id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
-		
-		buffer = nullptr;
-		
-		m_buffer = nullptr;
-		m_isDynamic = false;
+		@autoreleasepool
+		{
+			id <MTLBuffer> buffer = (__bridge_transfer id <MTLBuffer>)m_buffer;
+			
+			buffer = nullptr;
+			
+			m_buffer = nullptr;
+			m_isDynamic = false;
+		}
 	}
 }
 
@@ -249,10 +267,13 @@ void GxIndexBuffer::updateEnd(const int firstIndex, const int numIndices)
 	const int firstByte = firstIndex * indexSize;
 	const int numBytes = numIndices * indexSize;
 	
-	NSRange range;
-	range.location = firstByte;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
+	@autoreleasepool
+	{
+		NSRange range;
+		range.location = firstByte;
+		range.length = numBytes;
+		[buffer didModifyRange:range];
+	}
 #endif
 } 
 

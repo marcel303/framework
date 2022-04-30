@@ -117,20 +117,23 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 
 void ColorTarget::free()
 {
-	if (m_ownsTexture && m_colorTexture != nullptr)
+	@autoreleasepool
 	{
-		id <MTLTexture> colorTextureView = (__bridge_transfer id <MTLTexture>)m_colorTextureView;
-		colorTextureView = nullptr;
-		
-		id <MTLTexture> colorTexture = (__bridge_transfer id <MTLTexture>)m_colorTexture;
-		colorTexture = nullptr;
-		m_colorTexture = nullptr;
-		
-		auto i = s_textureElems.find(m_colorTextureId);
-		Assert(i != s_textureElems.end());
-		if (i != s_textureElems.end())
-			s_textureElems.erase(i);
-		m_colorTextureId = 0;
+		if (m_ownsTexture && m_colorTexture != nullptr)
+		{
+			id <MTLTexture> colorTextureView = (__bridge_transfer id <MTLTexture>)m_colorTextureView;
+			colorTextureView = nullptr;
+			
+			id <MTLTexture> colorTexture = (__bridge_transfer id <MTLTexture>)m_colorTexture;
+			colorTexture = nullptr;
+			m_colorTexture = nullptr;
+			
+			auto i = s_textureElems.find(m_colorTextureId);
+			Assert(i != s_textureElems.end());
+			if (i != s_textureElems.end())
+				s_textureElems.erase(i);
+			m_colorTextureId = 0;
+		}
 	}
 }
 
@@ -141,34 +144,37 @@ GxTextureId ColorTarget::getTextureId() const
 
 void ColorTarget::setSwizzle(int r, int g, int b, int a)
 {
-	if (r == 0 && g == 1 && b == 2 && a == 3)
+	@autoreleasepool
 	{
-		auto & textureElem = s_textureElems[m_colorTextureId];
-		
-		textureElem.textureView = textureElem.texture;
-	}
-	else if (@available(macOS 10.15, iOS 13.0, *))
-	{
-		MTLTextureSwizzleChannels channels;
-		channels.red = toMetalTextureSwizzle(r);
-		channels.green = toMetalTextureSwizzle(g);
-		channels.blue = toMetalTextureSwizzle(b);
-		channels.alpha = toMetalTextureSwizzle(a);
-		
-		auto & textureElem = s_textureElems[m_colorTextureId];
-		auto texture = textureElem.textureView;
-		
-		textureElem.textureView =
-			[textureElem.texture
-				newTextureViewWithPixelFormat:texture.pixelFormat
-				textureType:texture.textureType
-				levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
-				slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
-				swizzle:channels];
-	}
-	else
-	{
-		logWarning("ColorTarget::setSwizzle: metal texture swizzle not supported on this version of the OS");
+		if (r == 0 && g == 1 && b == 2 && a == 3)
+		{
+			auto & textureElem = s_textureElems[m_colorTextureId];
+			
+			textureElem.textureView = textureElem.texture;
+		}
+		else if (@available(macOS 10.15, iOS 13.0, *))
+		{
+			MTLTextureSwizzleChannels channels;
+			channels.red = toMetalTextureSwizzle(r);
+			channels.green = toMetalTextureSwizzle(g);
+			channels.blue = toMetalTextureSwizzle(b);
+			channels.alpha = toMetalTextureSwizzle(a);
+			
+			auto & textureElem = s_textureElems[m_colorTextureId];
+			auto texture = textureElem.textureView;
+			
+			textureElem.textureView =
+				[textureElem.texture
+					newTextureViewWithPixelFormat:texture.pixelFormat
+					textureType:texture.textureType
+					levels:NSMakeRange(texture.parentRelativeLevel, texture.mipmapLevelCount)
+					slices:NSMakeRange(texture.parentRelativeSlice, texture.arrayLength)
+					swizzle:channels];
+		}
+		else
+		{
+			logWarning("ColorTarget::setSwizzle: metal texture swizzle not supported on this version of the OS");
+		}
 	}
 }
 
@@ -229,17 +235,20 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 
 void DepthTarget::free()
 {
-	if (m_ownsTexture && m_depthTexture != nullptr)
+	@autoreleasepool
 	{
-		id <MTLTexture> depthTexture = (__bridge_transfer id <MTLTexture>)m_depthTexture;
-		depthTexture = nullptr;
-		m_depthTexture = nullptr;
-		
-		auto i = s_textureElems.find(m_depthTextureId);
-		Assert(i != s_textureElems.end());
-		if (i != s_textureElems.end())
-			s_textureElems.erase(i);
-		m_depthTextureId = 0;
+		if (m_ownsTexture && m_depthTexture != nullptr)
+		{
+			id <MTLTexture> depthTexture = (__bridge_transfer id <MTLTexture>)m_depthTexture;
+			depthTexture = nullptr;
+			m_depthTexture = nullptr;
+			
+			auto i = s_textureElems.find(m_depthTextureId);
+			Assert(i != s_textureElems.end());
+			if (i != s_textureElems.end())
+				s_textureElems.erase(i);
+			m_depthTextureId = 0;
+		}
 	}
 }
 

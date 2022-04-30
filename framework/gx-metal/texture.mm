@@ -174,19 +174,22 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 
 void GxTexture::free()
 {
-	if (id != 0)
+	@autoreleasepool
 	{
-		auto & textureElem = s_textureElems[id];
-		
-		textureElem.texture = nullptr;
-		textureElem.textureView = nullptr;
-		
-		s_textureElems.erase(id);
-		
-		id = 0;
-		sx = 0;
-		sy = 0;
-		format = GX_UNKNOWN_FORMAT;
+		if (id != 0)
+		{
+			auto & textureElem = s_textureElems[id];
+			
+			textureElem.texture = nullptr;
+			textureElem.textureView = nullptr;
+			
+			s_textureElems.erase(id);
+			
+			id = 0;
+			sx = 0;
+			sy = 0;
+			format = GX_UNKNOWN_FORMAT;
+		}
 	}
 }
 
@@ -625,20 +628,23 @@ void GxTexture3d::allocate(const GxTexture3dProperties & properties)
 
 void GxTexture3d::free()
 {
-	if (id != 0)
+	@autoreleasepool
 	{
-		auto & textureElem = s_textureElems[id];
-		
-		textureElem.texture = nullptr;
-		textureElem.textureView = nullptr;
-		
-		s_textureElems.erase(id);
-		
-		id = 0;
-		sx = 0;
-		sy = 0;
-		sz = 0;
-		format = GX_UNKNOWN_FORMAT;
+		if (id != 0)
+		{
+			auto & textureElem = s_textureElems[id];
+			
+			textureElem.texture = nullptr;
+			textureElem.textureView = nullptr;
+			
+			s_textureElems.erase(id);
+			
+			id = 0;
+			sx = 0;
+			sy = 0;
+			sz = 0;
+			format = GX_UNKNOWN_FORMAT;
+		}
 	}
 }
 

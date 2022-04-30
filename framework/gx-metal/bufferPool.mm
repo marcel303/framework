@@ -49,19 +49,22 @@ void DynamicBufferPool::init(const int numBytesPerBuffer)
 
 void DynamicBufferPool::shut()
 {
-	m_mutex.lock();
+	@autoreleasepool
 	{
-		while (m_freeList != nullptr)
+		m_mutex.lock();
 		{
-			__unsafe_unretained id <MTLBuffer> tmp = m_freeList->m_buffer;
-			m_freeList->m_buffer = nullptr;
-			
-			DynamicBufferPoolElem * next = m_freeList->m_next;
-			delete m_freeList;
-			m_freeList = next;
+			while (m_freeList != nullptr)
+			{
+				__unsafe_unretained id <MTLBuffer> tmp = m_freeList->m_buffer;
+				m_freeList->m_buffer = nullptr;
+				
+				DynamicBufferPoolElem * next = m_freeList->m_next;
+				delete m_freeList;
+				m_freeList = next;
+			}
 		}
+		m_mutex.unlock();
 	}
-	m_mutex.unlock();
 }
 
 DynamicBufferPoolElem * DynamicBufferPool::allocBuffer()
@@ -80,10 +83,13 @@ DynamicBufferPoolElem * DynamicBufferPool::allocBuffer()
 	
 	if (elem == nullptr)
 	{
-		__unsafe_unretained id <MTLDevice> device = metal_get_device();
-		
-		elem = new DynamicBufferPoolElem();
-		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
+		@autoreleasepool
+		{
+			__unsafe_unretained id <MTLDevice> device = metal_get_device();
+			
+			elem = new DynamicBufferPoolElem();
+			elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
+		}
 	}
 	
 	return elem;
