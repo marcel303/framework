@@ -41,5 +41,5 @@ cd %~dp0 || exit /b 1
 
 rem build all of the libraries and example and test app binaries. this will take a while
 mkdir "chibi-build\bin"
-cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_GENERATOR_PLATFORM=x86 ../cmake-files-for-build && cmake --build . --parallel 4 || cd %~dp0 && exit /b 1
+cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release -A Win32 ../cmake-files-for-build && cmake --build . --parallel 4 || cd %~dp0 && exit /b 1
 cd %~dp0 || exit /b 1
