@@ -25,13 +25,18 @@
 #include "nanosvgrast.h"
 
 #if defined(CHIBI_RESOURCE_PATH)
-	#include <unistd.h>
+	#if defined(_MSC_VER)
+		#include <direct.h>
+	#else
+		#include <unistd.h>
+		#define _chdir chdir
+	#endif
 #endif
 
 int main()
 {
 #if defined(CHIBI_RESOURCE_PATH)
-	chdir(CHIBI_RESOURCE_PATH);
+	_chdir(CHIBI_RESOURCE_PATH);
 #endif
 
 	NSVGimage *image = NULL;
