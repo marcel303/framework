@@ -1851,6 +1851,19 @@ XMLPrinter::XMLPrinter( FILE* file, bool compact, int depth ) :
 }
 
 
+void XMLPrinter::PrintText( const char* text )
+{
+	if ( _fp ) {
+		fputs( text, _fp );
+	}
+	else {
+		int len = strlen( text );
+		char* p = _buffer.PushArr( len ) - 1;
+        strcpy( p, text );
+	}
+}
+
+
 void XMLPrinter::Print( const char* format, ... )
 {
     va_list     va;
@@ -1928,7 +1941,7 @@ void XMLPrinter::PrintString( const char* p, bool restricted )
     // Flush the remaining string. This will be the entire
     // string if an entity wasn't found.
     if ( !_processEntities || (q-p > 0) ) {
-        Print( "%s", p );
+        PrintText( p );
     }
 }
 
@@ -1969,9 +1982,11 @@ void XMLPrinter::OpenElement( const char* name )
 void XMLPrinter::PushAttribute( const char* name, const char* value )
 {
     TIXMLASSERT( _elementJustOpened );
-    Print( " %s=\"", name );
+    PrintText( " " );
+    PrintText( name );
+    PrintText( "=\"" );
     PrintString( value, false );
-    Print( "\"" );
+    PrintText( "\"" );
 }
 
 

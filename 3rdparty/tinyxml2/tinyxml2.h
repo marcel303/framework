@@ -2035,6 +2035,7 @@ protected:
 private:
     void PrintSpace( int depth );
     void PrintString( const char*, bool restrictedEntitySet );	// prints out, after detecting entities.
+    void PrintText( const char* text );
     void Print( const char* format, ... );
 
     bool _firstElement;
