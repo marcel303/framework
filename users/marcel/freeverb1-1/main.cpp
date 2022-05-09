@@ -297,10 +297,17 @@ struct UiBinding
 	float min;
 	float max;
 	float init;
-	const char * text;
-	const char * unit;
-	float step;
 	float value;
+	
+	UiBinding(UiEvent & in_event, const char * in_name, const float in_min, const float in_max, const float in_init)
+		: event(in_event)
+		, name(in_name)
+		, min(in_min)
+		, max(in_max)
+		, init(in_init)
+		, value(in_init)
+	{
+	}
 	
 	void operator=(const float in_value)
 	{
@@ -327,13 +334,18 @@ struct Reverb
 {
 	ReverbParameterProcessorParam param;
 	
-	UiBinding roomSizeUi { .event=param.roomSize, .name="Room Size",      .min=0, .max=100, .init=80,  .text="tiny|small|medium|large|hall" };
-	UiBinding dampingUi  { .event=param.damping,  .name="Damping Factor", .min=0, .max=100, .init=50,  .unit="%%", .step=1 };
-	UiBinding wetLevelUi { .event=param.wetLevel, .name="Wet Level",      .min=0, .max=100, .init=33,  .unit="%%", .step=1 };
-	UiBinding dryLevelUi { .event=param.dryLevel, .name="Dry Level",      .min=0, .max=100, .init=40,  .unit="%%", .step=1 };
-	UiBinding widthUi    { .event=param.width,    .name="Width",          .min=0, .max=100, .init=100, .unit="%%", .step=1 };
+	UiBinding roomSizeUi;
+	UiBinding dampingUi;
+	UiBinding wetLevelUi;
+	UiBinding dryLevelUi;
+	UiBinding widthUi;
 	
 	Reverb()
+		: roomSizeUi (param.roomSize, "Room Size",      0, 100, 80  )
+		, dampingUi  (param.damping,  "Damping Factor", 0, 100, 50  )
+		, wetLevelUi (param.wetLevel, "Wet Level",      0, 100, 33  )
+		, dryLevelUi (param.dryLevel, "Dry Level",      0, 100, 40  )
+		, widthUi    (param.width,    "Width",          0, 100, 100 )
 	{
 		roomSizeUi = 80;
 		dampingUi  = 50;
