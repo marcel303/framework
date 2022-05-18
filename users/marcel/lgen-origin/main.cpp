@@ -17,12 +17,6 @@
 
 //---------------------------------------------------------------------------
 
-#if !defined(ALLEGRO_DJGPP) && !defined(ALLEGRO_MINGW32)
-#warning compiling for an untested platform! it is possible you will run into unexpected trouble..
-#endif
-
-//---------------------------------------------------------------------------
-
 #define PAL_COL(_p, _i, _r, _g, _b)	_i = makecol(_r, _g, _b)
 
 //---------------------------------------------------------------------------

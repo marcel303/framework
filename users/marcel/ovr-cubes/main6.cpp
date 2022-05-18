@@ -33,6 +33,8 @@
 #include "Path.h" // GetExtension for jgmod file listing
 #include "Quat.h"
 
+#include <algorithm>
+
 /*
 
 new challenges!

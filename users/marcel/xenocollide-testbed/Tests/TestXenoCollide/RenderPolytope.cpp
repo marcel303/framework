@@ -20,6 +20,7 @@ not be misrepresented as being the original software.
 
 #include <stdio.h>
 #include <map>
+#include <assert.h>
 
 #include "DrawUtil.h"
 #include "HullMaker.h"
