@@ -62,4 +62,6 @@ library freetype2 shared
 	license_file ../freetype2/docs/GPLv2.TXT
 	license_file ../freetype2/docs/LICENSE.TXT
 	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+	
 	header_path ../freetype2/include expose

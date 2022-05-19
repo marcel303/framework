@@ -6,7 +6,7 @@ library libzstd
 library libzstd-example-common
 	depend_library libzstd
 	add_files dummy.c
-	compile_definition _CRT_SECURE_NO_WARNINGS * expose
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS * expose
 	
 app libzstd-example-dictionary_compression
 	depend_library libzstd-example-common
