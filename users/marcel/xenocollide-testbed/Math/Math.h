@@ -411,13 +411,13 @@ inline float32 RadToDeg(float32 rad)
 inline float32 Sqrt(const float32 a)
 {
 	ASSERT(a >= 0.f);
-	return _mm_sqrt_ss(_mm_set_ps1(a))[0];
+	return _mm_extract_ps(_mm_sqrt_ss(_mm_set_ps1(a)), 0);
 }
 inline float32 InvSqrt (const float32 a)
 {
 	ASSERT(a > 0.f);
 	static __m128 s_ssevec1 = _mm_set_ps1(1.f);
-	return _mm_div_ss(s_ssevec1,_mm_sqrt_ss(_mm_set_ps1(a)))[0];
+	return _mm_extract_ps(_mm_div_ss(s_ssevec1,_mm_sqrt_ss(_mm_set_ps1(a))), 0);
 }
 
 inline Euler::Euler(const Matrix& m)
@@ -823,7 +823,7 @@ inline float64 Abs(float64 a)
 
 inline Vector64 CompAbs(const Vector64& a)
 {
-	return Vector64(abs(a.X()), abs(a.Y()), abs(a.Z()));
+	return Vector64(Abs(a.X()), Abs(a.Y()), Abs(a.Z()));
 }
 
 inline Vector64 CompMin(const Vector64& a, const Vector64& b)

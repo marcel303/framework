@@ -87,10 +87,12 @@ ImageData * loadImage_qoi(const char * filename)
 	{
 		Assert(desc.channels == 4);
 		
-		imageData = new ImageData();
-		imageData->sx = desc.width;
-		imageData->sy = desc.height;
-		imageData->imageData = (ImageData::Pixel*)data;
+		imageData = new ImageData(desc.width, desc.height);
+		
+		memcpy(imageData->imageData, data, desc.width * desc.height * 4);
+		
+		free(data);
+		data = nullptr;
 	}
 	
 	return imageData;
