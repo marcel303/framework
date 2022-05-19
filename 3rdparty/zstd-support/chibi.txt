@@ -3,38 +3,43 @@ library libzstd
 	scan_files h path ../zstd/lib traverse
 	header_path ../zstd/lib expose
 
-app libzstd-example-dictionary_compression
+library libzstd-example-common
 	depend_library libzstd
+	add_files dummy.c
+	compile_definition _CRT_SECURE_NO_WARNINGS * expose
+	
+app libzstd-example-dictionary_compression
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/dictionary_compression.c
 
 app libzstd-example-dictionary_decompression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/dictionary_compression.c
 
 app libzstd-example-multiple_simple_compression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/multiple_simple_compression.c
 
 app libzstd-example-multiple_streaming_compression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/multiple_streaming_compression.c
 
 app libzstd-example-simple_compression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/simple_compression.c
 
 app libzstd-example-simple_decompression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/simple_decompression.c
 
 with_platform macos|linux	app libzstd-example-streaming_compression_thread_pool
-with_platform macos|linux		depend_library libzstd
+with_platform macos|linux		depend_library libzstd-example-common
 with_platform macos|linux		add_files ../zstd/examples/streaming_compression_thread_pool.c
 
 app libzstd-example-streaming_decompression
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/streaming_decompression.c
 
 app libzstd-example-streaming_memory_usage
-	depend_library libzstd
+	depend_library libzstd-example-common
 	add_files ../zstd/examples/streaming_memory_usage.c
