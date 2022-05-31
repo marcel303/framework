@@ -1,5 +1,3 @@
-#if defined(MACOS) || defined(LINUX)
-
 #include "Benchmark.h"
 #include "framework.h"
 #include "ps3eye.h"
@@ -351,13 +349,3 @@ void testPs3eye()
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
 }
-
-#else
-
-// fixme
-
-void testPs3eye()
-{
-}
-
-#endif
