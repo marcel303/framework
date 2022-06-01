@@ -90,7 +90,25 @@ void tickObjectToFileBinding()
 	{
 		if (framework.fileHasChanged(objectToFileBinding.filename.c_str()))
 		{
+			// capture version number
+			
+			int * versionMember = findObjectVersionMember(
+				*objectToFileBinding.typeDB,
+				objectToFileBinding.type,
+				objectToFileBinding.object);
+			
+			const int version = versionMember ? *versionMember : 0;
+			
+			// reload the object
+			
 			objectToFileBinding.loadFromFile();
+			
+			// increment version number
+			
+			if (versionMember != nullptr)
+			{
+				*versionMember = version + 1;
+			}
 		}
 	}
 }
@@ -238,16 +256,6 @@ static bool loadObjectFromJsonFile(const TypeDB & typeDB, const Type * type, voi
 		}
 	}
 	
-	if (result)
-	{
-		int * versionMember = findObjectVersionMember(typeDB, type, object);
-		
-		if (versionMember != nullptr)
-		{
-			(*versionMember)++;
-		}
-	}
-	
 	return result;
 }
 
@@ -275,13 +283,6 @@ static bool loadObjectFromTextFile(const TypeDB & typeDB, const Type * type, voi
 		{
 			LOG_ERR("failed to read object from lines");
 			return false;
-		}
-		
-		int * versionMember = findObjectVersionMember(typeDB, type, object);
-		
-		if (versionMember != nullptr)
-		{
-			(*versionMember)++;
 		}
 		
 		return true;
