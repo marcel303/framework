@@ -1,5 +1,6 @@
-[![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/github/marcel303/framework)
 [![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework)
+[![Build status](https://ci.appveyor.com/api/projects/status/kqradcg3ruto0uhy?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-macos)
+[![Build status](https://ci.appveyor.com/api/projects/status/1spm8vp61ax61yox?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-ubuntu)
 
 # README #
 
