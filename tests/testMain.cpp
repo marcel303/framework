@@ -71,9 +71,7 @@ extern void testVfxGraph();
 extern void testCamera3d();
 extern void testOscilloscope();
 extern void testAudioGraph_JsusFx();
-#ifndef WIN32
 extern void testPs3eye();
-#endif
 extern void testBlobDetection();
 #ifdef MACOS
 extern void testMacWebcam();
@@ -507,9 +505,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("TAtl", "Texture Atlas", testTextureAtlas);
 	doButton("Thr", "Threading", testThreading);
 	//doButton("Aud", "Audio Graph", testAudioGraph);
-#ifndef WIN32
 	doButton("PS3", "PS3 Eye Camera", testPs3eye);
-#endif
 	doButton("BlDt", "Blob Detector", testBlobDetection);
 #ifdef MACOS
 	doButton("McCm", "Mac Camera Input", testMacWebcam);
