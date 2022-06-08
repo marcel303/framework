@@ -33,198 +33,201 @@ not be misrepresented as being the original software.
 
 using namespace std;
 
-extern bool gCullFrontFace;
-
-RenderPolytope::RenderPolytope() : mFaces(NULL), mVerts(NULL), mFaceCount(0), mVertCount(0), mListValid(false)
+namespace XenoCollide
 {
-}
+	extern bool gCullFrontFace;
 
-RenderPolytope::~RenderPolytope()
-{
-	int32 i;
-
-	for (i=0; i < mFaceCount; i++)
+	RenderPolytope::RenderPolytope() : mFaces(NULL), mVerts(NULL), mFaceCount(0), mVertCount(0), mListValid(false)
 	{
-		delete[] mFaces[i].mVertList;
 	}
-	delete[] mFaces;
-	mFaces = NULL;
 
-	delete[] mVerts;
-	mVerts = NULL;
-
-	if (mListValid)
+	RenderPolytope::~RenderPolytope()
 	{
-		mMesh.clear();
-		mMeshVB.free();
-		mMeshIB.free();
-		
-		mListValid = false;
-	}
-}
+		int32 i;
 
-void RenderPolytope::Init(CollideGeometry& geom, int32 level)
-{
-	HullMaker hullMaker;
-	ShrinkWrap(&hullMaker, geom, level);
-	Init(hullMaker);
-}
-
-void RenderPolytope::Init(HullMaker& hullMaker)
-{
-	mVertCount = (int32) hullMaker.m_vertCount;
-	mFaceCount = (int32) hullMaker.m_faceCount;
-
-	mVerts = new Vector[ mVertCount ];
-	mFaces = new RenderFace[ mFaceCount ];
-
-	map< ListVector, int32 > indexOfVert;
-
-	int32 i = 0;
-
-	while (!hullMaker.m_faceEdges.empty())
-	{
-		HullMaker::EdgeList faceEdges;
-		HullMaker::Edge* e = hullMaker.m_faceEdges.front();
-		Vector n (e->n1.X(), e->n1.Y(), e->n1.Z());
-		int32 id = e->id1;
-		hullMaker.m_faceEdges.pop_front();
-		faceEdges.push_back(e);
-
-		while (!hullMaker.m_faceEdges.empty() && hullMaker.m_faceEdges.front()->id1 == id)
+		for (i = 0; i < mFaceCount; i++)
 		{
-			e = hullMaker.m_faceEdges.front();
+			delete[] mFaces[i].mVertList;
+		}
+		delete[] mFaces;
+		mFaces = NULL;
+
+		delete[] mVerts;
+		mVerts = NULL;
+
+		if (mListValid)
+		{
+			mMesh.clear();
+			mMeshVB.free();
+			mMeshIB.free();
+
+			mListValid = false;
+		}
+	}
+
+	void RenderPolytope::Init(CollideGeometry& geom, int32 level)
+	{
+		HullMaker hullMaker;
+		ShrinkWrap(&hullMaker, geom, level);
+		Init(hullMaker);
+	}
+
+	void RenderPolytope::Init(HullMaker& hullMaker)
+	{
+		mVertCount = (int32)hullMaker.m_vertCount;
+		mFaceCount = (int32)hullMaker.m_faceCount;
+
+		mVerts = new Vector[mVertCount];
+		mFaces = new RenderFace[mFaceCount];
+
+		map< ListVector, int32 > indexOfVert;
+
+		int32 i = 0;
+
+		while (!hullMaker.m_faceEdges.empty())
+		{
+			HullMaker::EdgeList faceEdges;
+			HullMaker::Edge* e = hullMaker.m_faceEdges.front();
+			Vector n(e->n1.X(), e->n1.Y(), e->n1.Z());
+			int32 id = e->id1;
 			hullMaker.m_faceEdges.pop_front();
 			faceEdges.push_back(e);
-		}
 
-		mFaces[i].mNormal = n;
-		mFaces[i].mVertList = new int32[faceEdges.size()];
-		mFaces[i].mVertCount = (int32) faceEdges.size();
-
-		int32 j = 0;
-
-		while (!faceEdges.empty())
-		{
-			HullMaker::Edge* e = faceEdges.front();
-			faceEdges.pop_front();
-
-			Vector p(e->p1.X(), e->p1.Y(), e->p1.Z());
-			delete e;
-
-			if (indexOfVert.find(p) == indexOfVert.end())
+			while (!hullMaker.m_faceEdges.empty() && hullMaker.m_faceEdges.front()->id1 == id)
 			{
-				mVerts[indexOfVert.size()] = p;
-				indexOfVert[p] = (int32) indexOfVert.size();
+				e = hullMaker.m_faceEdges.front();
+				hullMaker.m_faceEdges.pop_front();
+				faceEdges.push_back(e);
 			}
-			mFaces[i].mVertList[j++] = indexOfVert[p];
+
+			mFaces[i].mNormal = n;
+			mFaces[i].mVertList = new int32[faceEdges.size()];
+			mFaces[i].mVertCount = (int32)faceEdges.size();
+
+			int32 j = 0;
+
+			while (!faceEdges.empty())
+			{
+				HullMaker::Edge* e = faceEdges.front();
+				faceEdges.pop_front();
+
+				Vector p(e->p1.X(), e->p1.Y(), e->p1.Z());
+				delete e;
+
+				if (indexOfVert.find(p) == indexOfVert.end())
+				{
+					mVerts[indexOfVert.size()] = p;
+					indexOfVert[p] = (int32)indexOfVert.size();
+				}
+				mFaces[i].mVertList[j++] = indexOfVert[p];
+			}
+
+			i++;
 		}
 
-		i++;
+		mColor = Vector(RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f));
+		//	mColor = Vector( 0.5f, 0.5f, 0.5f );
 	}
 
-	mColor = Vector( RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f), RandFloat(0.5f, 1.0f) );
-//	mColor = Vector( 0.5f, 0.5f, 0.5f );
-}
-
-extern Shader shader;
-void RenderPolytope::Draw(const Quat& q, const Vector& x)
-{
-	gxPushMatrix();
-	SetTransform(x, q);
-	gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 1.0f );
-
-	if (gCullFrontFace)
+	extern Shader shader;
+	void RenderPolytope::Draw(const Quat& q, const Vector& x)
 	{
-		pushCullMode(CULL_FRONT, CULL_CCW);
-	}
+		gxPushMatrix();
+		SetTransform(x, q);
+		gxColor4f(mColor.X(), mColor.Y(), mColor.Z(), 1.0f);
 
-	auto drawFaces = [this]()
-	{
-		gxBegin(GX_TRIANGLE_STRIP);
+		if (gCullFrontFace)
 		{
-			// a more GPU friendly version would try to maximize triangle area
-			// see: http://www.humus.name/index.php?page=News&ID=228
-			// the current version is case #2 from the article
-			
-			for (int32 i=0; i < mFaceCount; i++)
-			{
-				if (mFaces[i].mVertCount >= 3)
-				{
-					{
-						// degenerate triangle connection to the previous face
-						const Vector& v = mVerts[mFaces[i].mVertList[0]];
-						gxVertex3f(v.X(), v.Y(), v.Z());
-					}
-						
-					gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
+			pushCullMode(CULL_FRONT, CULL_CCW);
+		}
 
-					for (int32 j=0; j < mFaces[i].mVertCount; j++)
+		auto drawFaces = [this]()
+		{
+			gxBegin(GX_TRIANGLE_STRIP);
+			{
+				// a more GPU friendly version would try to maximize triangle area
+				// see: http://www.humus.name/index.php?page=News&ID=228
+				// the current version is case #2 from the article
+
+				for (int32 i = 0; i < mFaceCount; i++)
+				{
+					if (mFaces[i].mVertCount >= 3)
 					{
-						const Vector& v1 = mVerts[mFaces[i].mVertList[j]];
-						gxVertex3f(v1.X(), v1.Y(), v1.Z());
-						
-						const int32 jr = mFaces[i].mVertCount - 1 - j;
-						
-						if (jr == j)
-							break;
-						assert(jr > j);
-						
-						const Vector& v2 = mVerts[mFaces[i].mVertList[jr]];
-						gxVertex3f(v2.X(), v2.Y(), v2.Z());
-					}
-					
-					{
-						// degenerate triangle connection to the next face
-						const Vector& v = mVerts[mFaces[i].mVertList[mFaces[i].mVertCount/2]];
-						gxVertex3f(v.X(), v.Y(), v.Z());
+						{
+							// degenerate triangle connection to the previous face
+							const Vector& v = mVerts[mFaces[i].mVertList[0]];
+							gxVertex3f(v.X(), v.Y(), v.Z());
+						}
+
+						gxNormal3f(mFaces[i].mNormal.X(), mFaces[i].mNormal.Y(), mFaces[i].mNormal.Z());
+
+						for (int32 j = 0; j < mFaces[i].mVertCount; j++)
+						{
+							const Vector& v1 = mVerts[mFaces[i].mVertList[j]];
+							gxVertex3f(v1.X(), v1.Y(), v1.Z());
+
+							const int32 jr = mFaces[i].mVertCount - 1 - j;
+
+							if (jr == j)
+								break;
+							assert(jr > j);
+
+							const Vector& v2 = mVerts[mFaces[i].mVertList[jr]];
+							gxVertex3f(v2.X(), v2.Y(), v2.Z());
+						}
+
+						{
+							// degenerate triangle connection to the next face
+							const Vector& v = mVerts[mFaces[i].mVertList[mFaces[i].mVertCount / 2]];
+							gxVertex3f(v.X(), v.Y(), v.Z());
+						}
 					}
 				}
 			}
-		}
-		gxEnd();
-	};
-	
-	if (mListValid == false)
-	{
-		gxPushMatrix();
-		gxLoadIdentity();
-		gxCaptureMeshBegin(mMesh, mMeshVB, mMeshIB);
+			gxEnd();
+		};
+
+		if (mListValid == false)
 		{
-			drawFaces();
+			gxPushMatrix();
+			gxLoadIdentity();
+			gxCaptureMeshBegin(mMesh, mMeshVB, mMeshIB);
+			{
+				drawFaces();
+			}
+			gxCaptureMeshEnd();
+			gxPopMatrix();
+
+			mListValid = true;
 		}
-		gxCaptureMeshEnd();
+
+		setShader(shader);
+		shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
+		mMesh.draw();
+		clearShader();
+
+		if (gCullFrontFace)
+		{
+			pushBlend(BLEND_ALPHA);
+			popCullMode();
+			gxColor4f(mColor.X(), mColor.Y(), mColor.Z(), 0.5f);
+		}
+
+		setShader(shader);
+		shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
+		mMesh.draw();
+		clearShader();
+
+		if (gCullFrontFace)
+		{
+			popBlend();
+		}
+
 		gxPopMatrix();
-		
-		mListValid = true;
 	}
-	
-	setShader(shader);
-	shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
-	mMesh.draw();
-	clearShader();
 
-	if (gCullFrontFace)
+	void RenderPolytope::SetColor(const Vector& color)
 	{
-		pushBlend(BLEND_ALPHA);
-		popCullMode();
-		gxColor4f( mColor.X(), mColor.Y(), mColor.Z(), 0.5f );
+		mColor = color;
 	}
-
-	setShader(shader);
-	shader.setImmediate("u_geometryColor", mColor.X(), mColor.Y(), mColor.Z());
-	mMesh.draw();
-	clearShader();
-
-	if (gCullFrontFace)
-	{
-		popBlend();
-	}
-
-	gxPopMatrix();
-}
-
-void RenderPolytope::SetColor(const Vector& color)
-{
-	mColor = color;
 }

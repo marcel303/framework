@@ -22,24 +22,26 @@ not be misrepresented as being the original software.
 
 #include "framework.h"
 
-void SetTransform(const Vector& pos, const Quat& q)
+namespace XenoCollide
 {
-	Matrix transform(q);
-	transform.SetTrans(pos);
+	void SetTransform(const Vector& pos, const Quat& q)
+	{
+		Matrix transform(q);
+		transform.SetTrans(pos);
 
-	gxMultMatrixf((float*)&transform);
+		gxMultMatrixf((float*)&transform);
+	}
+
+	void DrawSphere(const Vector& pos, const Quat& q, float radius, const Vector& c)
+	{
+		gxColor3f(c.X(), c.Y(), c.Z());
+		gxPushMatrix();
+		SetTransform(pos, q);
+		// todo : xeno : draw sphere
+		fillCube(Vec3(), Vec3(radius));
+		//GLUquadricObj* quadric = gluNewQuadric();
+		//gluSphere(quadric, radius, 10, 10);
+		//gluDeleteQuadric(quadric);
+		gxPopMatrix();
+	}
 }
-
-void DrawSphere(const Vector& pos, const Quat& q, float radius, const Vector& c)
-{
-	gxColor3f(c.X(), c.Y(), c.Z());
-	gxPushMatrix();
-	SetTransform(pos, q);
-// todo : xeno : draw sphere
-	fillCube(Vec3(), Vec3(radius));
-	//GLUquadricObj* quadric = gluNewQuadric();
-	//gluSphere(quadric, radius, 10, 10);
-	//gluDeleteQuadric(quadric);
-	gxPopMatrix();
-}
-

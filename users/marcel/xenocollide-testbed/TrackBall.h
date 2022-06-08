@@ -22,31 +22,34 @@ not be misrepresented as being the original software.
 
 #include "Math/Math.h"
 
-//////////////////////////////////////////////////////////////////////////////
-// TrackBall is part of the testbed framework.  It keeps track of the
-// camera's orientation in the scene.
-
-class TrackBall
+namespace XenoCollide
 {
+	//////////////////////////////////////////////////////////////////////////////
+	// TrackBall is part of the testbed framework.  It keeps track of the
+	// camera's orientation in the scene.
 
-public:
+	class TrackBall
+	{
 
-	TrackBall(void);
-	~TrackBall(void);
+	public:
 
-	void Roll(float x, float y);
-	void SetMagnitudeScale(float scale);
-	float GetMagnitudeScale(void);
+		TrackBall(void);
+		~TrackBall(void);
 
-	// Quaternion-style accessors
-	Quat GetRotation(void);
-	void SetRotation(const Quat& rot);
+		void Roll(float x, float y);
+		void SetMagnitudeScale(float scale);
+		float GetMagnitudeScale(void);
 
-	// Euler-style accessors
-	void GetYawPitchRoll(float32* yaw, float32* pitch, float* roll);
-	void SetYawPitchRoll(float32 yaw, float32 pitch, float32 roll);
+		// Quaternion-style accessors
+		Quat GetRotation(void);
+		void SetRotation(const Quat& rot);
 
-	float m_magnitudeScale;
-	Quat m_rotation;
+		// Euler-style accessors
+		void GetYawPitchRoll(float32* yaw, float32* pitch, float* roll);
+		void SetYawPitchRoll(float32 yaw, float32 pitch, float32 roll);
 
-};
+		float m_magnitudeScale;
+		Quat m_rotation;
+
+	};
+}

@@ -30,21 +30,24 @@ not be misrepresented as being the original software.
 
 #if XENOSTUB_OUTLINEFONT == 0
 
-class OutlineFont
+namespace XenoCollide
 {
+    class OutlineFont
+    {
 
-public:
+    public:
 
-    OutlineFont( HDC hdc, const char* fontname );
-    virtual ~OutlineFont();
-	
-    void DrawString( const char* str );
+        OutlineFont(HDC hdc, const char* fontname);
+        virtual ~OutlineFont();
 
-private:
+        void DrawString(const char* str);
 
-	GLuint m_listbase;
-    HDC m_hDC;
+    private:
 
-};
+        GLuint m_listbase;
+        HDC m_hDC;
+
+    };
+}
 
 #endif

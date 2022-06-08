@@ -30,185 +30,187 @@ not be misrepresented as being the original software.
 
 //////////////////////////////////////////////////////////////////////////////
 
-class DebugWidget
+namespace XenoCollide
 {
-
-public:
-
-	DebugWidget(int32 lifetime) 
-	{ 
-		m_lifetime = lifetime;
-	}
-
-	int32 GetLifetime()
+	class DebugWidget
 	{
-		return m_lifetime;
-	}
 
-	virtual void Draw() = 0;
+	public:
 
-protected:
+		DebugWidget(int32 lifetime)
+		{
+			m_lifetime = lifetime;
+		}
 
-	int m_lifetime;
-};
+		int32 GetLifetime()
+		{
+			return m_lifetime;
+		}
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual void Draw() = 0;
 
-class DebugPoint : public DebugWidget
-{
-public:
-	DebugPoint(const Vector& p, int32 lifetime = -1) : DebugWidget(lifetime)
+	protected:
+
+		int m_lifetime;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////
+
+	class DebugPoint : public DebugWidget
 	{
-		m_point = p;
-	}
+	public:
+		DebugPoint(const Vector& p, int32 lifetime = -1) : DebugWidget(lifetime)
+		{
+			m_point = p;
+		}
 
-	void Draw()
+		void Draw()
+		{
+			//		DrawGeoSphere(m_point, Quat(0, 0, 0, 1), 1.0f, 4);
+			DrawSphere(m_point, Quat(0, 0, 0, 1), 1.0f, Vector(1, 1, 1));
+		}
+
+		Vector m_point;
+	};
+
+	//////////////////////////////////////////////////////////////////////////////
+
+	class DebugVector : public DebugWidget
 	{
-//		DrawGeoSphere(m_point, Quat(0, 0, 0, 1), 1.0f, 4);
-		DrawSphere(m_point, Quat(0, 0, 0, 1), 1.0f, Vector(1, 1, 1));
-	}
 
-	Vector m_point;
-};
+	public:
 
-//////////////////////////////////////////////////////////////////////////////
+		DebugVector(const Vector& p1, const Vector& p2, int32 lifetime = -1) : DebugWidget(lifetime)
+		{
+			m_v1 = p1;
+			m_v2 = p2;
+		}
 
-class DebugVector : public DebugWidget
-{
-
-public:
-
-	DebugVector(const Vector& p1, const Vector& p2, int32 lifetime = -1) : DebugWidget(lifetime)
-	{
-		m_v1 = p1;
-		m_v2 = p2;
-	}
-
-	void Draw()
-	{
-		gxBegin(GX_LINES);
+		void Draw()
+		{
+			gxBegin(GX_LINES);
 			gxColor3f(1, 0, 0);
 			gxVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
 			gxVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z());
-		gxEnd();
-	}
+			gxEnd();
+		}
 
-	Vector m_v1;
-	Vector m_v2;
-};
+		Vector m_v1;
+		Vector m_v2;
+	};
 
-//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
 
-class DebugTri : public DebugWidget
-{
-
-public:
-
-	DebugTri(const Vector& v1, const Vector& v2, const Vector& v3, const Vector& c, int32 lifetime = -1) : DebugWidget(lifetime)
+	class DebugTri : public DebugWidget
 	{
-		m_v1 = v1; 
-		m_v2 = v2; 
-		m_v3 = v3;
-		m_color = c;
-	}
 
-	void Draw()
-	{
-		Vector n = (m_v3 - m_v2) % (m_v1 - m_v2);
+	public:
 
-		if (n.CanNormalize3())
+		DebugTri(const Vector& v1, const Vector& v2, const Vector& v3, const Vector& c, int32 lifetime = -1) : DebugWidget(lifetime)
 		{
-			n.Normalize3();
+			m_v1 = v1;
+			m_v2 = v2;
+			m_v3 = v3;
+			m_color = c;
+		}
 
-			gxBegin(GX_TRIANGLES);
+		void Draw()
+		{
+			Vector n = (m_v3 - m_v2) % (m_v1 - m_v2);
+
+			if (n.CanNormalize3())
+			{
+				n.Normalize3();
+
+				gxBegin(GX_TRIANGLES);
 				gxColor3f(m_color.X(), m_color.Y(), m_color.Z());
 				gxNormal3f(n.X(), n.Y(), n.Z());
 				gxVertex3f(m_v1.X(), m_v1.Y(), m_v1.Z());
 				gxVertex3f(m_v2.X(), m_v2.Y(), m_v2.Z());
 				gxVertex3f(m_v3.X(), m_v3.Y(), m_v3.Z());
-			gxEnd();
+				gxEnd();
+			}
 		}
-	}
 
-	Vector m_v1;
-	Vector m_v2;
-	Vector m_v3;
-	Vector m_color;
+		Vector m_v1;
+		Vector m_v2;
+		Vector m_v3;
+		Vector m_color;
 
-};
+	};
 
-//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
 
-class DebugPolytope : public DebugWidget
-{
-public:
-
-	DebugPolytope(CollideGeometry& g, const Quat& q, const Vector& t, const Vector& c, int32 lifetime = -1) : DebugWidget(lifetime)
+	class DebugPolytope : public DebugWidget
 	{
-		m_renderModel.Init(g, 4);
-		m_renderModel.SetColor(c);
-		m_q = q;
-		m_t = t;
-	}
+	public:
 
-	void Draw()
-	{
-		m_renderModel.Draw(m_q, m_t);
-	}
+		DebugPolytope(CollideGeometry& g, const Quat& q, const Vector& t, const Vector& c, int32 lifetime = -1) : DebugWidget(lifetime)
+		{
+			m_renderModel.Init(g, 4);
+			m_renderModel.SetColor(c);
+			m_q = q;
+			m_t = t;
+		}
 
-	RenderPolytope m_renderModel;
-	Quat m_q;
-	Vector m_t;
-};
+		void Draw()
+		{
+			m_renderModel.Draw(m_q, m_t);
+		}
 
-//////////////////////////////////////////////////////////////////////////////
+		RenderPolytope m_renderModel;
+		Quat m_q;
+		Vector m_t;
+	};
 
-typedef std::list<DebugWidget*> DebugWidgetList;
-DebugWidgetList g_debugQueue;
+	//////////////////////////////////////////////////////////////////////////////
 
-bool gTrackingOn = false;
+	typedef std::list<DebugWidget*> DebugWidgetList;
+	DebugWidgetList g_debugQueue;
+
+	bool gTrackingOn = false;
 
 #define ENABLE_TRACKING 1
 
-//////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////
 
-inline void DebugPushPolytope(CollideGeometry& g, const Quat& q, const Vector& t, int32 lifetime = -1)
-{
+	inline void DebugPushPolytope(CollideGeometry& g, const Quat& q, const Vector& t, int32 lifetime = -1)
+	{
 #if ENABLE_TRACKING
-	if (gTrackingOn)
-		g_debugQueue.push_back( new DebugPolytope(g, q, t, Vector(0.5f, 0.5f, 0.5f), lifetime) );
+		if (gTrackingOn)
+			g_debugQueue.push_back(new DebugPolytope(g, q, t, Vector(0.5f, 0.5f, 0.5f), lifetime));
 #endif
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
+
+	inline void DebugPushPoint(const Vector& p, int32 lifetime = -1)
+	{
+#if ENABLE_TRACKING
+		if (gTrackingOn)
+			g_debugQueue.push_back(new DebugPoint(p, lifetime));
+#endif
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
+
+	inline void DebugPushVector(const Vector& p1, const Vector& p2, int32 lifetime = -1)
+	{
+#if ENABLE_TRACKING
+		if (gTrackingOn)
+			g_debugQueue.push_back(new DebugVector(p1, p2, lifetime));
+#endif
+	}
+
+	//////////////////////////////////////////////////////////////////////////////
+
+	inline void DebugPushTri(const Vector& v1, const Vector& v2, const Vector& v3, const Vector& c, int32 lifetime = -1)
+	{
+#if ENABLE_TRACKING
+		if (gTrackingOn)
+			g_debugQueue.push_back(new DebugTri(v1, v2, v3, c, lifetime));
+#endif
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-inline void DebugPushPoint(const Vector& p, int32 lifetime = -1)
-{
-#if ENABLE_TRACKING
-	if (gTrackingOn)
-		g_debugQueue.push_back( new DebugPoint(p, lifetime) );
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-inline void DebugPushVector(const Vector& p1, const Vector& p2, int32 lifetime = -1)
-{
-#if ENABLE_TRACKING
-	if (gTrackingOn)
-		g_debugQueue.push_back( new DebugVector(p1, p2, lifetime) );
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-inline void DebugPushTri(const Vector& v1, const Vector& v2, const Vector& v3, const Vector& c, int32 lifetime = -1)
-{
-#if ENABLE_TRACKING
-	if (gTrackingOn)
-		g_debugQueue.push_back( new DebugTri(v1, v2, v3, c, lifetime) );
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////
-

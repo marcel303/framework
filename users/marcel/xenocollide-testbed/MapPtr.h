@@ -30,93 +30,96 @@ not be misrepresented as being the original software.
 #include <map>
 #include <unordered_map>
 
-class MapPtrBase
+namespace XenoCollide
 {
-protected:
-	static std::unordered_map<void*, int> s_refCount;
-};
-
-template <class T>
-class MapPtr : MapPtrBase
-{
-public:
-
-	MapPtr()
+	class MapPtrBase
 	{
-		m_pointer = NULL;
-	}
+	protected:
+		static std::unordered_map<void*, int> s_refCount;
+	};
 
-	MapPtr(T* pointer)
+	template <class T>
+	class MapPtr : MapPtrBase
 	{
-		m_pointer = pointer;
-		if (pointer)
+	public:
+
+		MapPtr()
 		{
-			s_refCount[pointer]++;
-		}
-	}
-
-	MapPtr(const MapPtr& other)
-	{
-		m_pointer = NULL;
-		*this = other;
-	}
-
-	~MapPtr()
-	{
-		if ( m_pointer && --s_refCount[m_pointer] == 0 )
-		{
-			s_refCount.erase(m_pointer);
-			delete m_pointer;
 			m_pointer = NULL;
 		}
-	}
 
-	void Release()
-	{
-		if (m_pointer)
+		MapPtr(T* pointer)
 		{
-			if (--s_refCount[m_pointer] == 0)
+			m_pointer = pointer;
+			if (pointer)
+			{
+				s_refCount[pointer]++;
+			}
+		}
+
+		MapPtr(const MapPtr& other)
+		{
+			m_pointer = NULL;
+			*this = other;
+		}
+
+		~MapPtr()
+		{
+			if (m_pointer && --s_refCount[m_pointer] == 0)
 			{
 				s_refCount.erase(m_pointer);
 				delete m_pointer;
 				m_pointer = NULL;
 			}
 		}
-	}
 
-	void AddRef()
-	{
-		if (m_pointer)
+		void Release()
 		{
-			s_refCount[m_pointer]++;
+			if (m_pointer)
+			{
+				if (--s_refCount[m_pointer] == 0)
+				{
+					s_refCount.erase(m_pointer);
+					delete m_pointer;
+					m_pointer = NULL;
+				}
+			}
 		}
-	}
 
-	MapPtr& operator= (const MapPtr& other)
-	{
-		Release();
-		m_pointer = other.m_pointer;
-		AddRef();
-		return *this;
-	}
+		void AddRef()
+		{
+			if (m_pointer)
+			{
+				s_refCount[m_pointer]++;
+			}
+		}
 
-	T* Pointer()
-	{
-		return m_pointer;
-	}
+		MapPtr& operator= (const MapPtr& other)
+		{
+			Release();
+			m_pointer = other.m_pointer;
+			AddRef();
+			return *this;
+		}
 
-	operator T*()
-	{
-		return m_pointer;
-	}
+		T* Pointer()
+		{
+			return m_pointer;
+		}
 
-	T* operator -> ()
-	{
-		return m_pointer;
-	}
+		operator T* ()
+		{
+			return m_pointer;
+		}
 
-private:
+		T* operator -> ()
+		{
+			return m_pointer;
+		}
 
-	T* m_pointer;
+	private:
 
-};
+		T* m_pointer;
+
+	};
+}
