@@ -31,6 +31,10 @@
 
 #include <stdio.h>
 
+#ifdef _MSC_VER
+	#include <intrin.h>
+#endif
+
 struct Integer
 {
 	static int numberOfLeadingZeros(const uint32_t value)
@@ -38,15 +42,30 @@ struct Integer
 		return
 			value == 0
 			? 32
+		#ifdef _MSC_VER
+			: __lzcnt(value);
+		#else
 			: __builtin_clz(value);
+		#endif
 	}
 	
 	static int numberOfLeadingZeros64(const uint64_t value)
 	{
+	#ifdef _MSC_VER
+		if (value == 0)
+			return 64;
+			
+		const int n = numberOfLeadingZeros(uint32_t(value >> 32));
+		if (n != 0)
+			return n;
+			
+		return 32 + numberOfLeadingZeros(uint32_t(value));
+	#else
 		return
 			value == 0
 			? 64
 			: __builtin_clzll(value);
+	#endif
 	}
 };
 

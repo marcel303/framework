@@ -24,6 +24,7 @@
 
 #include "fourier.h"
 
+#include "Debugging.h"
 #include "Log.h"
 
 #ifdef HAVE_SSE_INTRINSICS
@@ -95,8 +96,12 @@ static  int double2int(double value)
 
 template <typename T> static void complex_fft(T & buffer, double direction)
 {
-	ALIGN16 double real[buffer.size()];
-	ALIGN16 double imag[buffer.size()];
+	const int kMaxBufferSize = 4096;
+
+	Assert(buffer.size() <= kMaxBufferSize);
+
+	ALIGN16 double real[kMaxBufferSize];
+	ALIGN16 double imag[kMaxBufferSize];
 	
 	const int numBits = Fourier::integerLog2(buffer.size());
 	
