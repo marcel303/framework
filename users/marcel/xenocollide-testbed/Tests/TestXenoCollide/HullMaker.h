@@ -24,7 +24,7 @@ not be misrepresented as being the original software.
 #include <stack>
 #include <vector>
 
-#include "Math.h"
+#include "Math/Math.h"
 
 #include "ListVector.h"
 
