@@ -332,8 +332,8 @@ struct CelestialSphereObject
 
 		for (int i = 0; i < numStars; ++i)
 		{
-			const float a1 = random<float>(-M_PI, +M_PI);
-			const float a2 = random<float>(-M_PI, +M_PI);
+			const float a1 = random<float>(-float(M_PI), +float(M_PI));
+			const float a2 = random<float>(-float(M_PI), +float(M_PI));
 
 			const Mat4x4 rotation = Mat4x4(true).RotateX(a1).RotateY(a2);
 			const Vec4 position = rotation * Vec4(0, 0, 1, 1);
@@ -1191,7 +1191,8 @@ void Scene::create()
 		//jgplayer.init("K_vision.s3m");
 		//jgplayer.init("25 - Surfacing.s3m");
 		//jgplayer.init("05 - Shared Dig.s3m");
-		jgplayer.init("UNATCO.it");
+		//jgplayer.init("UNATCO.it");
+		jgplayer.init("mod/Chrysilis.s3m");
 		
 		parameterMgr.addChild(&jgplayer.parameterMgr, ++jgplayerIdx);
 	}
@@ -1799,9 +1800,6 @@ struct SpatialAudioSystemAudioStream : AudioStream
 	
 	virtual int Provide(int numSamples, AudioSample * __restrict samples) override final
 	{
-		ALIGN16 float outputSamplesL[numSamples];
-		ALIGN16 float outputSamplesR[numSamples];
-
 		// note : we update the audio in steps of 32 samples, to improve the timing for notes when the sample size is
 		//        large. hopefully this fixes strange timing issues during Oculus Vr movie recordings. also this will
 		//        reduce (the maximum) binauralization latency by a little and make it more stable/less jittery
@@ -1814,37 +1812,40 @@ struct SpatialAudioSystemAudioStream : AudioStream
 					? numSamplesRemaining
 					: kUpdateSize;
 
+			ALIGN16 float outputSamplesL[kUpdateSize];
+			ALIGN16 float outputSamplesR[kUpdateSize];
+
 			spatialAudioSystem->generateLR(
-				outputSamplesL + i,
-				outputSamplesR + i,
+				outputSamplesL,
+				outputSamplesR,
 				numSamplesThisUpdate);
 			
+		#if AUDIO_BUFFER_VALIDATION
+			for (int j = 0; j < numSamplesThisUpdate; ++j)
+				Assert(isfinite(outputSamplesL[j]) && isfinite(outputSamplesR[j]));
+		#endif
+		
+			limiter.chunk_analyze(outputSamplesL, numSamplesThisUpdate, 16);
+			limiter.chunk_analyze(outputSamplesR, numSamplesThisUpdate, 16);
+			limiter.chunk_applyInPlace(outputSamplesL, numSamplesThisUpdate, 16, 1.f);
+			limiter.chunk_applyInPlace(outputSamplesR, numSamplesThisUpdate, 16, 1.f);
+			limiter.chunk_end(powf(.995f, numSamplesThisUpdate/256.f));
+		
+			const float scale_s16 = (1 << 15) - 1;
+		
+			for (int j = 0; j < numSamplesThisUpdate; ++j)
+			{
+				const int32_t valueL = int32_t(outputSamplesL[j] * scale_s16);
+				const int32_t valueR = int32_t(outputSamplesR[j] * scale_s16);
+
+				Assert(valueL >= -((1 << 15) - 1) && valueL <= +((1 << 15) - 1));
+				Assert(valueR >= -((1 << 15) - 1) && valueR <= +((1 << 15) - 1));
+
+				samples[i + j].channel[0] = valueL;
+				samples[i + j].channel[1] = valueR;
+			}
+
 			i += numSamplesThisUpdate;
-		}
-		
-	#if AUDIO_BUFFER_VALIDATION
-		for (int i = 0; i < numSamples; ++i)
-			Assert(isfinite(outputSamplesL[i]) && isfinite(outputSamplesR[i]));
-	#endif
-		
-		limiter.chunk_analyze(outputSamplesL, numSamples, 16);
-		limiter.chunk_analyze(outputSamplesR, numSamples, 16);
-		limiter.chunk_applyInPlace(outputSamplesL, numSamples, 16, 1.f);
-		limiter.chunk_applyInPlace(outputSamplesR, numSamples, 16, 1.f);
-		limiter.chunk_end(powf(.995f, numSamples/256.f));
-		
-		const float scale_s16 = (1 << 15) - 1;
-		
-		for (int i = 0; i < numSamples; ++i)
-		{
-			const int32_t valueL = int32_t(outputSamplesL[i] * scale_s16);
-			const int32_t valueR = int32_t(outputSamplesR[i] * scale_s16);
-			
-			Assert(valueL >= -((1 << 15) - 1) && valueL <= +((1 << 15) - 1));
-			Assert(valueR >= -((1 << 15) - 1) && valueR <= +((1 << 15) - 1));
-			
-			samples[i].channel[0] = valueL;
-			samples[i].channel[1] = valueR;
 		}
 
 		return numSamples;
