@@ -399,6 +399,8 @@ int main(int argc, char * argv[])
 					provideInfo.outputSamples[c][i] = dst.values[i];
 				}
 			}
+
+			return provideInfo.numOutputChannels;
 		}
 	};
 	
