@@ -2159,6 +2159,7 @@ void Framework::present()
 	{
 		if (window->getWindowData()->needsPresent)
 		{
+			SDL_GL_MakeCurrent(window->getWindow(), globals.glContext);
 			SDL_GL_SwapWindow(window->getWindow());
 			window->getWindowData()->needsPresent = false;
 		}
