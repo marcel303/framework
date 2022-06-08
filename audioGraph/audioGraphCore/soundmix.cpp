@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioTypes-compat.h"
 #include "soundfile/SoundIO.h"
 #include "soundmix.h"
 

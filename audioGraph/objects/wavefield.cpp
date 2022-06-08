@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioTypes-compat.h"
 #include "Noise.h"
 #include "wavefield.h"
 #include <algorithm>
