@@ -29,75 +29,80 @@ not be misrepresented as being the original software.
 
 #include "framework.h"
 
-XenoTestbedApp::XenoTestbedApp()
-: m_mainWindow(NULL)
+namespace XenoCollide
 {
-}
-
-XenoTestbedApp theApp;
-
-bool XenoTestbedApp::RunMainLoop()
-{
-	for (;;)
+	XenoTestbedApp::XenoTestbedApp()
+		: m_mainWindow(NULL)
 	{
-		framework.process();
-		
-		if (framework.quitRequested)
-			break;
-		
-		m_mainWindow->Check();
-		
-		float32 dt = framework.timeStep;
-		
-		if (dt > 0)
+	}
+
+	XenoTestbedApp theApp;
+
+	bool XenoTestbedApp::RunMainLoop()
+	{
+		for (;;)
 		{
-			m_mainWindow->Simulate(dt);
-			
-			m_mainWindow->OnPaint();
+			framework.process();
+
+			if (framework.quitRequested)
+				break;
+
+			m_mainWindow->Check();
+
+			float32 dt = framework.timeStep;
+
+			if (dt > 0)
+			{
+				m_mainWindow->Simulate(dt);
+
+				m_mainWindow->OnPaint();
+			}
 		}
+
+		return true;
 	}
 
-	return true;
-}
-
-bool XenoTestbedApp::InitInstance()
-{
-	framework.enableDepthBuffer = true;
-	framework.enableRealTimeEditing = true;
-	
-	framework.init(800, 600);
-	
-	void* mem = _mm_malloc(sizeof(XenoTestbedWindow), 16);
-
-	m_mainWindow = new(mem) XenoTestbedWindow();
-
-	if ( !m_mainWindow->Init() )
+	bool XenoTestbedApp::InitInstance()
 	{
-		return false;
+		framework.enableDepthBuffer = true;
+		framework.enableRealTimeEditing = true;
+
+		framework.init(800, 600);
+
+		void* mem = _mm_malloc(sizeof(XenoTestbedWindow), 16);
+
+		m_mainWindow = new(mem) XenoTestbedWindow();
+
+		if (!m_mainWindow->Init())
+		{
+			return false;
+		}
+
+		return true;
 	}
 
-	return true;
+	int XenoTestbedApp::ExitInstance()
+	{
+		// Clean up the main window
+		m_mainWindow->~XenoTestbedWindow();		// !!! TODO: MAJOR HACK TO GET AROUND ALIGNMENT ISSUES !!!
+		_mm_free(m_mainWindow);
+		m_mainWindow = NULL;
+
+		// Clean up any globals
+		RegisterTestModule::CleanUp();
+
+		framework.shutdown();
+
+		return true;
+	}
 }
 
-int XenoTestbedApp::ExitInstance()
-{
-	// Clean up the main window
-	m_mainWindow->~XenoTestbedWindow();		// !!! TODO: MAJOR HACK TO GET AROUND ALIGNMENT ISSUES !!!
-	_mm_free(m_mainWindow);
-	m_mainWindow = NULL;
+using namespace XenoCollide;
 
-	// Clean up any globals
-	RegisterTestModule::CleanUp();
-
-	framework.shutdown();
-	
-	return true;
-}
-
-int main(int argc, char * argv[])
+int main(int argc, char* argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
-	
+
 	// Perform application initialization:
 	if (!theApp.InitInstance())
 	{

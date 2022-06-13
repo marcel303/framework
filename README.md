@@ -1,8 +1,9 @@
 | Platform     | Build status
 |:--|:--|
-| macOS        | [![Build status](https://ci.appveyor.com/api/projects/status/kqradcg3ruto0uhy?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-macos) |
-| Ubuntu linux | [![Build status](https://ci.appveyor.com/api/projects/status/1spm8vp61ax61yox?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-ubuntu) |
-| Windows      | [![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework) |
+| macOS             | [![Build status](https://ci.appveyor.com/api/projects/status/kqradcg3ruto0uhy?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-macos) |
+| Ubuntu linux      | [![Build status](https://ci.appveyor.com/api/projects/status/1spm8vp61ax61yox?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-ubuntu) |
+| Windows - VS 2019 | [![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework) |
+| Windows - VS 2022 | [![Build status](https://ci.appveyor.com/api/projects/status/qsm90rcfvid4qoaf?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework-windows-vs2022) |
 
 # README #
 

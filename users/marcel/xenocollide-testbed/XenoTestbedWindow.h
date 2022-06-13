@@ -25,68 +25,70 @@ not be misrepresented as being the original software.
 
 #include "TestModule.h"
 
-// XenoTestbedWindow
-
-class Point
+namespace XenoCollide
 {
-public:
-	Point() {}
-	Point(int32 _x, int32 _y) : x(_x), y(_y) {}
+	// XenoTestbedWindow
 
-	int32 x;
-	int32 y;
-};
+	class Point
+	{
+	public:
+		Point() {}
+		Point(int32 _x, int32 _y) : x(_x), y(_y) {}
 
-class XenoTestbedWindow
-{
+		int32 x;
+		int32 y;
+	};
 
-public:
+	class XenoTestbedWindow
+	{
 
-	XenoTestbedWindow();
-	virtual ~XenoTestbedWindow();
+	public:
 
-public:
+		XenoTestbedWindow();
+		virtual ~XenoTestbedWindow();
 
-	bool Init(void);
-	void Simulate(float32 dt);
-	void Solve( float32* v1, float32* v2, float32 h1, float32 h2, float32 target );
-	void DrawScene(void);
+	public:
 
-	void LoadView();
-	void SaveView();
+		bool Init(void);
+		void Simulate(float32 dt);
+		void Solve(float32* v1, float32* v2, float32 h1, float32 h2, float32 target);
+		void DrawScene(void);
 
-	void SetModelViewProjectionMatrices();
-	void WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p);
+		void LoadView();
+		void SaveView();
 
-	static XenoTestbedWindow* s_this;
+		void SetModelViewProjectionMatrices();
+		void WindowPointToWorldRay(Vector* rayOrigin, Vector* rayDirection, const Point& p);
 
-protected:
+		static XenoTestbedWindow* s_this;
 
-	TrackBall* m_rotation;
-	Vector* m_translation;
+	protected:
 
-	int32 m_moduleIndex;
-	TestModule* m_module;
+		TrackBall* m_rotation;
+		Vector* m_translation;
 
-	bool m_leftButtonDown;
-	bool m_middleButtonDown;
-	bool m_rightButtonDown;
+		int32 m_moduleIndex;
+		TestModule* m_module;
 
-	int32 m_captureCount;
+		bool m_leftButtonDown;
+		bool m_middleButtonDown;
+		bool m_rightButtonDown;
 
-public:
+		int32 m_captureCount;
 
-	void OnPaint();
-	
-	void Check();
-	void CheckLButtonDown();
-	void CheckLButtonUp();
-	void CheckMButtonDown();
-	void CheckMButtonUp();
-	void CheckRButtonDown();
-	void CheckRButtonUp();
-	void CheckMouseMove();
-	void OnKeyDown(int nChar, int nRepCnt, int nFlags);
-	void OnChar(int nChar, int nRepCnt, int nFlags);
-};
+	public:
 
+		void OnPaint();
+
+		void Check();
+		void CheckLButtonDown();
+		void CheckLButtonUp();
+		void CheckMButtonDown();
+		void CheckMButtonUp();
+		void CheckRButtonDown();
+		void CheckRButtonUp();
+		void CheckMouseMove();
+		void OnKeyDown(int nChar, int nRepCnt, int nFlags);
+		void OnChar(int nChar, int nRepCnt, int nFlags);
+	};
+}

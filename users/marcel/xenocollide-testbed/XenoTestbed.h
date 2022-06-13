@@ -20,24 +20,27 @@ not be misrepresented as being the original software.
 
 #pragma once
 
-class XenoTestbedWindow;
-
-class XenoTestbedApp
+namespace XenoCollide
 {
+	class XenoTestbedWindow;
 
-public:
+	class XenoTestbedApp
+	{
 
-	XenoTestbedApp();
+	public:
 
-public:
+		XenoTestbedApp();
 
-	bool InitInstance();
-	int ExitInstance();
+	public:
 
-	// Implementation
-	bool RunMainLoop();
+		bool InitInstance();
+		int ExitInstance();
 
-	XenoTestbedWindow* m_mainWindow;
-};
+		// Implementation
+		bool RunMainLoop();
 
-extern XenoTestbedApp theApp;
+		XenoTestbedWindow* m_mainWindow;
+	};
+
+	extern XenoTestbedApp theApp;
+}

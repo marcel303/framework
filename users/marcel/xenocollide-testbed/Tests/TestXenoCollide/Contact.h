@@ -23,30 +23,32 @@ not be misrepresented as being the original software.
 #include "Math/Math.h"
 #include <list>
 
-class Contact;
-class ContactConstraint;
-class RigidBody;
-
-typedef std::list<Contact*> ContactList;
-
-class Contact
+namespace XenoCollide
 {
+	class Contact;
+	class ContactConstraint;
+	class RigidBody;
 
-public:
+	typedef std::list<Contact*> ContactList;
 
-	ContactConstraint*	constraint;
-	Vector				point;
-	int32				timeStamp;
-	RigidBody*			b1;
-	RigidBody*			b2;
-	Vector				local1;
-	Vector				local2;
-	Vector				normal;
+	class Contact
+	{
 
-	Contact(RigidBody* b1, RigidBody* b2, const Vector& p1, const Vector& p2, const Vector& n);
-	~Contact();
+	public:
 
-	void Update(const Vector& p1, const Vector& p2, const Vector& n);
-	float32 Distance();
-};
+		ContactConstraint* constraint;
+		Vector				point;
+		int32				timeStamp;
+		RigidBody* b1;
+		RigidBody* b2;
+		Vector				local1;
+		Vector				local2;
+		Vector				normal;
 
+		Contact(RigidBody* b1, RigidBody* b2, const Vector& p1, const Vector& p2, const Vector& n);
+		~Contact();
+
+		void Update(const Vector& p1, const Vector& p2, const Vector& n);
+		float32 Distance();
+	};
+}

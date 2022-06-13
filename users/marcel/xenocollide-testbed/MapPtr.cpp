@@ -23,5 +23,8 @@ not be misrepresented as being the original software.
 
 #include "MapPtr.h"
 
-//map<void*, int> MapPtrBase::s_refCount;
-std::unordered_map<void*, int> MapPtrBase::s_refCount;
+namespace XenoCollide
+{
+	//map<void*, int> MapPtrBase::s_refCount;
+	std::unordered_map<void*, int> MapPtrBase::s_refCount;
+}

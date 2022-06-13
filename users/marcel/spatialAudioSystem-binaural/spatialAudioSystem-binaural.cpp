@@ -170,6 +170,10 @@ void SpatialAudioSystem_Binaural::updatePanning()
 
 void SpatialAudioSystem_Binaural::generateLR(float * __restrict outputSamplesL, float * __restrict outputSamplesR, const int numSamples)
 {
+	const int kMaxSamples = binaural::Binauralizer::SampleBuffer::kBufferSize;
+
+	Assert(numSamples <= kMaxSamples);
+
 	memset(outputSamplesL, 0, numSamples * sizeof(float));
 	memset(outputSamplesR, 0, numSamples * sizeof(float));
 
@@ -177,7 +181,7 @@ void SpatialAudioSystem_Binaural::generateLR(float * __restrict outputSamplesL, 
 	{
 		for (Source * source = sources; source != nullptr; source = source->next)
 		{
-			ALIGN16 float inputSamples[numSamples];
+			ALIGN16 float inputSamples[kMaxSamples];
 
 			// generate source audio
 			source->audioSource->generate(inputSamples, numSamples);
@@ -200,8 +204,8 @@ void SpatialAudioSystem_Binaural::generateLR(float * __restrict outputSamplesL, 
 					source->elevation.load(),
 					source->azimuth.load());
 
-				ALIGN16 float samplesL[numSamples];
-				ALIGN16 float samplesR[numSamples];
+				ALIGN16 float samplesL[kMaxSamples];
+				ALIGN16 float samplesR[kMaxSamples];
 				source->binauralizer.generateLR(
 					samplesL,
 					samplesR,

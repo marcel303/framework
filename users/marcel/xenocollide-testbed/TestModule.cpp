@@ -24,6 +24,8 @@ not be misrepresented as being the original software.
 
 using namespace std;
 
-vector<RegisterTestModule::FactoryMethod*>* RegisterTestModule::s_factoryMethods = NULL;
-vector<string>* RegisterTestModule::s_descriptions = NULL;
-
+namespace XenoCollide
+{
+	vector<RegisterTestModule::FactoryMethod*>* RegisterTestModule::s_factoryMethods = NULL;
+	vector<string>* RegisterTestModule::s_descriptions = NULL;
+}

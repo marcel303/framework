@@ -23,280 +23,283 @@ not be misrepresented as being the original software.
 #include "MapPtr.h"
 #include "Math/Math.h"
 
-//////////////////////////////////////////////////////////////////////////////
-// This is the base class for XenoCollide shapes.  To create a new primitive,
-// derive from CollideGeometry and implement the GetSupportPoint()
-// method.  By default, GetCenter() will return (0, 0, 0).  If this isn't
-// a deep interior point for your shape, override this method and return a
-// different point.
-
-class CollideGeometry
+namespace XenoCollide
 {
-//	friend class MapPtr<CollideGeometry>;
-public:
-	virtual ~CollideGeometry() {}
-	virtual Vector GetSupportPoint(const Vector& n) = 0;
-	virtual Vector GetCenter();
-};
+	//////////////////////////////////////////////////////////////////////////////
+	// This is the base class for XenoCollide shapes.  To create a new primitive,
+	// derive from CollideGeometry and implement the GetSupportPoint()
+	// method.  By default, GetCenter() will return (0, 0, 0).  If this isn't
+	// a deep interior point for your shape, override this method and return a
+	// different point.
 
-//////////////////////////////////////////////////////////////////////////////
+	class CollideGeometry
+	{
+		//	friend class MapPtr<CollideGeometry>;
+	public:
+		virtual ~CollideGeometry() {}
+		virtual Vector GetSupportPoint(const Vector& n) = 0;
+		virtual Vector GetCenter();
+	};
 
-class CollidePoint : public CollideGeometry
-{
-	Vector mPoint;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollidePoint : public CollideGeometry
+	{
+		Vector mPoint;
 
-	CollidePoint(const Vector& p);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
-};
+		CollidePoint(const Vector& p);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
+	};
 
-class CollideSegment : public CollideGeometry
-{
-	float32 mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideSegment : public CollideGeometry
+	{
+		float32 mRadius;
 
-	CollideSegment(float32 r);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideSegment(float32 r);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideRectangle : public CollideGeometry
-{
-	Vector mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideRectangle : public CollideGeometry
+	{
+		Vector mRadius;
 
-	CollideRectangle(float32 rx, float32 ry);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideRectangle(float32 rx, float32 ry);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideBox : public CollideGeometry
-{
-	Vector mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideBox : public CollideGeometry
+	{
+		Vector mRadius;
 
-	CollideBox(const Vector& r);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideBox(const Vector& r);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideDisc : public CollideGeometry
-{
-	float32 mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideDisc : public CollideGeometry
+	{
+		float32 mRadius;
 
-	CollideDisc(float32 r);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideDisc(float32 r);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideSphere : public CollideGeometry
-{
-	float32 mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideSphere : public CollideGeometry
+	{
+		float32 mRadius;
 
-	CollideSphere(float32 r);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideSphere(float32 r);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideEllipse : public CollideGeometry
-{
-	Vector mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideEllipse : public CollideGeometry
+	{
+		Vector mRadius;
 
-	CollideEllipse(float32 rx, float32 ry);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideEllipse(float32 rx, float32 ry);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideEllipsoid : public CollideGeometry
-{
-	Vector mRadius;
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideEllipsoid : public CollideGeometry
+	{
+		Vector mRadius;
 
-	CollideEllipsoid(const Vector& r);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideEllipsoid(const Vector& r);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideFootball : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	float32 mLength;
-	float32 mRadius;
+	class CollideFootball : public CollideGeometry
+	{
 
-public:
+		float32 mLength;
+		float32 mRadius;
 
-	CollideFootball(float32 length, float32 radius);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideFootball(float32 length, float32 radius);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideBullet : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	float32 mLengthTip;
-	float32 mLengthTail;
-	float32 mRadius;
+	class CollideBullet : public CollideGeometry
+	{
 
-public:
+		float32 mLengthTip;
+		float32 mLengthTail;
+		float32 mRadius;
 
-	CollideBullet(float32 lengthTip, float32 lengthTail, float32 radius);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
-};
+		CollideBullet(float32 lengthTip, float32 lengthTail, float32 radius);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
+	};
 
-class CollideSaucer : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	float32 mHalfThickness;
-	float32 mRadius;
+	class CollideSaucer : public CollideGeometry
+	{
 
-public:
+		float32 mHalfThickness;
+		float32 mRadius;
 
-	CollideSaucer(float32 radius, float32 halfThickness);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollideSaucer(float32 radius, float32 halfThickness);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollidePolytope : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	Vector* mVert;
-	int32 mVertMax;
-	int32 mVertCount;
+	class CollidePolytope : public CollideGeometry
+	{
 
-public:
+		Vector* mVert;
+		int32 mVertMax;
+		int32 mVertCount;
 
-	CollidePolytope(int32 n);
+	public:
 
-	void AddVert(const Vector& p);
-	virtual Vector GetSupportPoint(const Vector& n);
-};
+		CollidePolytope(int32 n);
 
-//////////////////////////////////////////////////////////////////////////////
+		void AddVert(const Vector& p);
+		virtual Vector GetSupportPoint(const Vector& n);
+	};
 
-class CollideSum : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-public:
+	class CollideSum : public CollideGeometry
+	{
 
-	Quat	q1;
-	Quat	q2;
-	Vector	t1;
-	Vector	t2;
+	public:
 
-	MapPtr<CollideGeometry>	mGeometry1;
-	MapPtr<CollideGeometry>	mGeometry2;
+		Quat	q1;
+		Quat	q2;
+		Vector	t1;
+		Vector	t2;
 
-public:
+		MapPtr<CollideGeometry>	mGeometry1;
+		MapPtr<CollideGeometry>	mGeometry2;
 
-	CollideSum(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
-	CollideSum(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
-	CollideSum(CollideGeometry* g1, CollideGeometry* g2);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
-};
+		CollideSum(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
+		CollideSum(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
+		CollideSum(CollideGeometry* g1, CollideGeometry* g2);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
+	};
 
-class CollideDiff : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	Quat	q1;
-	Quat	q2;
-	Vector	t1;
-	Vector	t2;
+	class CollideDiff : public CollideGeometry
+	{
 
-	MapPtr<CollideGeometry>	mGeometry1;
-	MapPtr<CollideGeometry>	mGeometry2;
+		Quat	q1;
+		Quat	q2;
+		Vector	t1;
+		Vector	t2;
 
-public:
+		MapPtr<CollideGeometry>	mGeometry1;
+		MapPtr<CollideGeometry>	mGeometry2;
 
-	CollideDiff(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
-	CollideDiff(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
-	CollideDiff(CollideGeometry* g1, CollideGeometry* g2);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
-};
+		CollideDiff(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
+		CollideDiff(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
+		CollideDiff(CollideGeometry* g1, CollideGeometry* g2);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
+	};
 
-class CollideNeg : public CollideGeometry
-{
+	//////////////////////////////////////////////////////////////////////////////
 
-	Quat	q1;
-	Vector	t1;
+	class CollideNeg : public CollideGeometry
+	{
 
-	MapPtr<CollideGeometry>	mGeometry1;
+		Quat	q1;
+		Vector	t1;
 
-public:
+		MapPtr<CollideGeometry>	mGeometry1;
 
-	CollideNeg(CollideGeometry* g1, const Quat& q1, const Vector& t1);
-	CollideNeg(CollideGeometry* g1, const Vector& t1);
-	CollideNeg(CollideGeometry* g1);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
-};
+		CollideNeg(CollideGeometry* g1, const Quat& q1, const Vector& t1);
+		CollideNeg(CollideGeometry* g1, const Vector& t1);
+		CollideNeg(CollideGeometry* g1);
 
-//////////////////////////////////////////////////////////////////////////////
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
+	};
 
-class CollideMax : public CollideGeometry
-{
-	Quat	q1;
-	Quat	q2;
-	Vector	t1;
-	Vector	t2;
+	//////////////////////////////////////////////////////////////////////////////
 
-	MapPtr<CollideGeometry>	mGeometry1;
-	MapPtr<CollideGeometry>	mGeometry2;
+	class CollideMax : public CollideGeometry
+	{
+		Quat	q1;
+		Quat	q2;
+		Vector	t1;
+		Vector	t2;
 
-public:
+		MapPtr<CollideGeometry>	mGeometry1;
+		MapPtr<CollideGeometry>	mGeometry2;
 
-	CollideMax(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
-	CollideMax(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
-	CollideMax(CollideGeometry* g1, CollideGeometry* g2);
+	public:
 
-	virtual Vector GetSupportPoint(const Vector& n);
-	virtual Vector GetCenter();
+		CollideMax(CollideGeometry* g1, const Quat& q1, const Vector& t1, CollideGeometry* g2, const Quat& q2, const Vector& t2);
+		CollideMax(CollideGeometry* g1, const Vector& t1, CollideGeometry* g2, const Vector& t2);
+		CollideMax(CollideGeometry* g1, CollideGeometry* g2);
 
-};
+		virtual Vector GetSupportPoint(const Vector& n);
+		virtual Vector GetCenter();
 
-//////////////////////////////////////////////////////////////////////////////
+	};
+
+	//////////////////////////////////////////////////////////////////////////////
+}

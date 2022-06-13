@@ -22,12 +22,15 @@ not be misrepresented as being the original software.
 
 #include "Math/Math.h"
 
-class Body;
-class RenderPolytope;
+namespace XenoCollide
+{
+	class Body;
+	class RenderPolytope;
 
-// Return a random floating-point value in the range [min, max]
-float32 RandFloat(float32 min, float32 max);
+	// Return a random floating-point value in the range [min, max]
+	float32 RandFloat(float32 min, float32 max);
 
-// Compute the mass properties (mass, center of mass, inertia tensor and inverse masses) using
-// a RenderPolytope as an approximation of the body shape.
-void ComputeMassProperties(Body* body, RenderPolytope* model, float32 density);
+	// Compute the mass properties (mass, center of mass, inertia tensor and inverse masses) using
+	// a RenderPolytope as an approximation of the body shape.
+	void ComputeMassProperties(Body* body, RenderPolytope* model, float32 density);
+}
