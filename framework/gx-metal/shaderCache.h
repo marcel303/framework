@@ -140,8 +140,8 @@ public:
 	int vsMainUniformBufferIndex = -1;
 	int psMainUniformBufferIndex = -1;
 	
-	uint8_t vsExtraBufferUsageMask = 0;
-	uint8_t psExtraBufferUsageMask = 0;
+	uint16_t vsExtraBufferUsageMask = 0;
+	uint16_t psExtraBufferUsageMask = 0;
 	
 	uint8_t psExtraBufferUsageSize = 0;
 	
