@@ -30,8 +30,6 @@ void zippyDownload(const char * baseUrl, const std::vector<std::string> & filena
 
 #include "DownloadCache.h"
 
-// todo : font calibri.ttf
-
 static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, const float opacity)
 {
 	if (duration <= 0.0)
@@ -73,7 +71,6 @@ static void zippyDownload(const std::vector<std::string> & urls, const char * ta
 			int viewSy;
 			framework.getCurrentViewportSize(viewSx, viewSy);
 			
-			setFont("calibri.ttf");
 			setColor(colorWhite);
 			drawText(viewSx/2, viewSy*1/3, 16, 0, 0, "Downloading media files..");
 
@@ -97,7 +94,6 @@ static void zippyDownload(const std::vector<std::string> & urls, const char * ta
 			int viewSy;
 			framework.getCurrentViewportSize(viewSx, viewSy);
 			
-			setFont("calibri.ttf");
 			setColor(colorWhite);
 			drawText(viewSx/2, viewSy*1/3, 16, 0, 0, "Downloading media files.. [DONE]");
 		}
