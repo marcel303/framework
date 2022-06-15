@@ -198,7 +198,8 @@ void metal_attach(SDL_Window * window)
 				initWithFrame:sdl_view.frame
 				device:device
 				wantsDepthBuffer:framework.enableDepthBuffer
-				wantsVsync:framework.enableVsync];
+				wantsVsync:framework.enableVsync
+				msaaSampleCount:framework.msaaLevel];
 				
 		[sdl_view addSubview:windowData->metalview];
 
@@ -314,6 +315,9 @@ void metal_acquire_drawable()
 		framework.process();
 		framework.waitForEvents = false;
 	}
+	
+	if (activeWindowData->metalview.useMsaa == false)
+		activeWindowData->metalview.colorTexture = activeWindowData->current_drawable.texture;
 }
 
 void metal_present()
@@ -341,6 +345,9 @@ void metal_present()
 			
 			if (windowData->current_drawable != nullptr)
 			{
+				if (windowData->metalview.useMsaa)
+					[windowData->metalview msaaResolve:windowData->current_drawable.texture];
+				
 				[drawablesToPresent addObject:windowData->current_drawable];
 				windowData->current_drawable = nullptr;
 			}
@@ -708,6 +715,8 @@ void beginRenderPass(
 	int backingSx = 0;
 	int backingSy = 0;
 	
+	int msaaSampleCount = 1;
+	
 	// specify the color and depth attachment(s)
 	
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
@@ -731,6 +740,9 @@ void beginRenderPass(
 			backingSx = colorattachment.texture.width;
 		if (colorattachment.texture.height > backingSy)
 			backingSy = colorattachment.texture.height;
+			
+		if (colorattachment.texture.sampleCount > msaaSampleCount)
+			msaaSampleCount = colorattachment.texture.sampleCount;
 	}
 	
 	if (depthTarget != nullptr)
@@ -748,6 +760,9 @@ void beginRenderPass(
 		if (depthattachment.texture.height > backingSy)
 			backingSy = depthattachment.texture.height;
 		
+		if (depthattachment.texture.sampleCount > msaaSampleCount)
+			msaaSampleCount = depthattachment.texture.sampleCount;
+			
 	#if defined(IPHONEOS)
 		if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
 	#else
@@ -767,6 +782,8 @@ void beginRenderPass(
 	
 	pd.backingSx = backingSx;
 	pd.backingSy = backingSy;
+	
+	renderState.msaaSampleCount = msaaSampleCount;
 	
 	// begin encoding
 	
@@ -802,7 +819,7 @@ void beginRenderPass(
 
 void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const float backingScale)
 {
-	ColorTarget colorTarget((__bridge void*)activeWindowData->current_drawable.texture);
+	ColorTarget colorTarget((__bridge void*)activeWindowData->metalview.colorTexture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
 	
 	DepthTarget depthTarget((__bridge void*)activeWindowData->metalview.depthTexture);
@@ -2145,7 +2162,7 @@ static void gxValidatePipelineState()
 		
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [MTLRenderPipelineDescriptor new];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
-			pipelineDescriptor.sampleCount = 1;
+			pipelineDescriptor.sampleCount = renderState.msaaSampleCount;
 			pipelineDescriptor.vertexFunction = vsFunction;
 			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;

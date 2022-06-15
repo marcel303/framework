@@ -1189,7 +1189,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 
 void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
-	not_implemented;  // todo : metal : implement setBuffer
+	not_implemented;  // todo : metal : implement setBuffer. note : this would require adding a "(name, index) -> vs/ps index" lookup table
 }
 
 void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)

@@ -65,6 +65,7 @@ struct RenderPipelineState
 	BLEND_MODE blendMode = BLEND_ALPHA;
 	uint8_t colorWriteMask = 0xf;
 	bool alphaToCoverageEnabled = false;
+	uint8_t msaaSampleCount = 1;
 	
 	GxVertexInput vertexInputs[kMaxVertexInputs] = { };
 	uint8_t vertexInputCount = 0;

@@ -30,13 +30,21 @@
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#import <Metal/MTLTexture.h>
+
 @interface MetalView : NSView
 
 @property (nonatomic, assign) CAMetalLayer *metalLayer;
 @property (nonatomic, assign) bool wantsDepthBuffer;
 
+@property (nonatomic, retain) id <MTLTexture> colorTexture;
 @property (nonatomic, retain) id <MTLTexture> depthTexture;
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
+@property (nonatomic, assign) bool useMsaa;
+@property (nonatomic, assign) int msaaSampleCount;
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync msaaSampleCount:(int)msaaSampleCount;
+
+- (void)msaaResolve:(id<MTLTexture>)texture;
 
 @end
