@@ -86,6 +86,7 @@
 
 #include "Base64.h" // for decoding chibi resource paths
 #include "Csv.h" // for decoding chibi resource paths
+#include "Path.h"
 #include "StringEx.h"
 #include "Timer.h"
 
@@ -688,7 +689,7 @@ bool Framework::init(int sx, int sy)
 		jmethodID activity_getAssets = env->GetMethodID(activity_class, "getAssets", "()Landroid/content/res/AssetManager;");
 		env->DeleteLocalRef(activity_class);
 		jobject assetManager_java_local = env->CallObjectMethod(activity, activity_getAssets);
-		jobject assetManager_java_global = env->NewGlobalRef(assetManager_java_local); // todo : do we need a global ref? I'm a bit scared to remove this after all the random crashes that, fingers crossed, seem to be gone now (after many attempts rewriting this JNI stuff)
+		jobject assetManager_java_global = env->NewGlobalRef(assetManager_java_local); // note : do we need a global ref? I'm a bit scared to remove this after all the random crashes that, fingers crossed, seem to be gone now (after many attempts rewriting this JNI stuff)
 		//env->DeleteLocalRef(assetManager_java_local);
 		auto * assetManager = AAssetManager_fromJava(env, assetManager_java_global);
 	#else
@@ -2687,7 +2688,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 	// refresh shaders which are using this source
 	
-	g_shaderCache.handleFileChange(name, "txt"); // todo : remove extension
+	g_shaderCache.handleFileChange(name, Path::GetExtension(name, true));
 }
 
 void Framework::unregisterShaderSource(const char * name)

@@ -189,7 +189,7 @@
         <param name="out.max" value="0.400000"/>
         <param name="out.min" value="0.100000"/>
     </link>
-    <editor nextZKey="1363">
+    <editor nextZKey="1364">
         <dragAndZoom x="537.566650390625" y="-266.08013916015625" zoom="0.7976188063621521"/>
         <nodeDatas>
             <nodeData nodeId="114" x="192" y="-64" zKey="1344"/>
@@ -242,7 +242,7 @@
         <visualizers>
             <visualizer id="129" x="80" y="112" zKey="950" nodeId="114" srcSocketName="tension" sx="216" sy="148"/>
             <visualizer id="133" x="320" y="-64" zKey="1149" nodeId="114" dstSocketName="voices" sx="216" sy="148"/>
-            <visualizer id="139" x="320" y="-288" zKey="1012" nodeId="134" dstSocketName="voices" sx="216" sy="148"/>
+            <visualizer id="139" x="448" y="-304" zKey="1363" nodeId="134" dstSocketName="voices" sx="216" sy="148"/>
             <visualizer id="143" x="-224" y="-432" zKey="1041" nodeId="141" dstSocketName="channel" sx="216" sy="148"/>
             <visualizer id="159" x="944" y="-800" zKey="1171" nodeId="158" dstSocketName="result" sx="216" sy="148"/>
             <visualizer id="160" x="496" y="-960" zKey="1180" nodeId="154" dstSocketName="channel" sx="216" sy="148"/>

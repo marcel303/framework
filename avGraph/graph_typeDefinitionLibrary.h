@@ -82,7 +82,7 @@ struct Graph_EnumDefinition
 {
 	struct Elem
 	{
-		std::string valueText; // todo : why is valueText an std::string, and not just an int? because of the FSFX-v2 node that puts the PS filename in here?
+		std::string valueText; // note : valueText is an std::string, so for instance the FSFX-v2 vfx node can put the shader filename in here
 		std::string name;
 	};
 	

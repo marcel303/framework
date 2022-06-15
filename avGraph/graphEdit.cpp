@@ -3689,7 +3689,7 @@ bool GraphEdit::tickTouches()
 		{
 			if (event.type == SDL_FINGERDOWN)
 			{
-				//logDebug("touch down: fingerId=%d", event.tfinger.fingerId);
+				//logDebug("touch down: fingerId=%d, windowID=%d, window=%p", event.tfinger.fingerId, event.tfinger.windowID, &framework.getCurrentWindow());
 				
 				if (touches.finger1.id == 0)
 				{
@@ -3702,7 +3702,7 @@ bool GraphEdit::tickTouches()
 			}
 			else if (event.type == SDL_FINGERUP)
 			{
-				//logDebug("touch up: fingerId=%d", event.tfinger.fingerId);
+				//logDebug("touch up: fingerId=%d, windowID=%d, window=%p", event.tfinger.fingerId, event.tfinger.windowID, &framework.getCurrentWindow());
 				
 				if (event.tfinger.fingerId == touches.finger1.id)
 				{
