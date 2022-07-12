@@ -31,8 +31,6 @@
 
 #if ENABLE_METAL
 
-// todo : for MSAA we would need to create an additional backing layer, and resolve it on endDraw
-
 #import "metalView-ns.h"
 
 #import "metal.h"

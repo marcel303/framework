@@ -219,7 +219,8 @@ void metal_attach(SDL_Window * window)
 				initWithFrame:sdl_view.frame
 				device:device
 				wantsDepthBuffer:framework.enableDepthBuffer
-				wantsVsync:framework.enableVsync];
+				wantsVsync:framework.enableVsync
+				msaaSampleCount:framework.msaaLevel];
 				
 		[sdl_view addSubview:windowData->metalview];
 

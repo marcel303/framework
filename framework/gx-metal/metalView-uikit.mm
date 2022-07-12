@@ -35,6 +35,8 @@
 
 #import "metalView-uikit.h"
 
+#import "metal.h"
+
 #import <Metal/Metal.h>
 #import <UIKit/UIKit.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -56,7 +58,7 @@
     return [self.class.layerClass layer];
 }
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync msaaSampleCount:(int)msaaSampleCount
 {
     if ((self = [super initWithFrame:frame]))
     {
@@ -66,6 +68,8 @@
 			self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
+		self.useMsaa = msaaSampleCount > 1;
+		self.msaaSampleCount = msaaSampleCount;
 		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;
@@ -86,6 +90,34 @@
     }
 
     return self;
+}
+
+- (void)msaaResolve:(id<MTLTexture>)texture
+{
+	Assert(self.useMsaa);
+	
+	@autoreleasepool
+	{
+		// resolve msaa
+		
+		MTLRenderPassDescriptor * renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+		renderPassDescriptor.colorAttachments[0].texture = self.colorTexture;
+		renderPassDescriptor.colorAttachments[0].resolveTexture = texture;
+		renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+		renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+		
+		id <MTLCommandQueue> queue = metal_get_command_queue();
+		
+		id <MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+		{
+			id <MTLCommandEncoder> encoder = [cmdbuf renderCommandEncoderWithDescriptor:renderPassDescriptor];
+			{
+				encoder.label = @"MSAAResolve";
+			}
+			[encoder endEncoding];
+		}
+		[cmdbuf commit];
+	}
 }
 
 - (void)updateDrawableSize
@@ -115,11 +147,43 @@
 		{
 			self.depthTexture = nullptr;
 			
-			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:size.width height:size.height mipmapped:NO];
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
+			if (self.useMsaa)
+			{
+				descriptor.textureType = MTLTextureType2DMultisample;
+				descriptor.sampleCount = self.msaaSampleCount;
+			}
+			else
+			{
+				descriptor.textureType = MTLTextureType2D;
+			}
+			
+			descriptor.pixelFormat = MTLPixelFormatDepth32Float_Stencil8;
+			descriptor.width = size.width;
+			descriptor.height = size.height;
 			descriptor.resourceOptions = MTLResourceStorageModePrivate;
 			descriptor.usage = MTLTextureUsageRenderTarget;
 			
 			self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+		}
+	}
+	
+	if (self.useMsaa)
+	{
+		@autoreleasepool
+		{
+			self.colorTexture = nullptr;
+			
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor new];
+			descriptor.textureType = MTLTextureType2DMultisample;
+			descriptor.sampleCount = self.msaaSampleCount;
+			descriptor.pixelFormat = self.metalLayer.pixelFormat;
+			descriptor.width = size.width;
+			descriptor.height = size.height;
+			descriptor.resourceOptions = MTLResourceStorageModePrivate;
+			descriptor.usage = MTLTextureUsageRenderTarget;
+			
+			self.colorTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
 		}
 	}
 	
