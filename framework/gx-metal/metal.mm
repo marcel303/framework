@@ -72,7 +72,7 @@ static id <MTLDevice> device = nullptr;
 
 static id <MTLCommandQueue> queue = nullptr;
 
-static std::map<SDL_Window*, MetalWindowData*> windowDatas;
+static std::map<Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
 
@@ -181,55 +181,85 @@ void metal_shut()
 	}
 }
 
-void metal_attach(SDL_Window * window)
+static id <MetalViewBase> create_metal_view(const int sx, const int sy)
+{
+	id <MetalViewBase> metalView = [MetalView alloc];
+
+	Assert(metalView != nil);
+	
+	metalView =
+		[metalView
+			initWithFrame:CGRectMake(0, 0, sx, sy)
+			device:device
+			wantsDepthBuffer:framework.enableDepthBuffer
+			wantsVsync:framework.enableVsync
+			msaaSampleCount:framework.msaaLevel];
+	
+	Assert(metalView != nil);
+	
+	return metalView;
+}
+
+static Window * s_viewCreationWindow = nullptr;
+
+static std::function<void*(const int sx, const int sy)> s_viewCreationFunction =
+	[]
+	(const int sx, const int sy) -> void*
+	{
+		id <MetalViewBase> metalView = create_metal_view(sx, sy);
+		
+		auto * window = s_viewCreationWindow->getWindow();
+		
+		if (window != nullptr)
+		{
+		#if defined(MACOS)
+			SDL_SysWMinfo info;
+			SDL_VERSION(&info.version);
+			SDL_GetWindowWMInfo(window, &info);
+			
+			NSView * sdl_view = info.info.cocoa.window.contentView;
+		#endif
+		
+		#if defined(IPHONEOS)
+			SDL_SysWMinfo info;
+			SDL_VERSION(&info.version);
+			SDL_GetWindowWMInfo(window, &info);
+			
+			UIView * sdl_view = info.info.uikit.window.rootViewController.view;
+		#endif
+		
+			[sdl_view addSubview:metalView.view];
+		}
+	
+		return (__bridge void*)metalView;
+	};
+
+void metal_set_view_creation_function(const std::function<void*(const int sx, const int sy)> & function)
+{
+	s_viewCreationFunction = function;
+}
+
+void metal_attach(Window * window)
 {
 	@autoreleasepool
 	{
-	#if defined(MACOS)
-		SDL_SysWMinfo info;
-		SDL_VERSION(&info.version);
-		SDL_GetWindowWMInfo(window, &info);
+		Assert(s_viewCreationWindow == nullptr);
+		s_viewCreationWindow = window;
 		
-		NSView * sdl_view = info.info.cocoa.window.contentView;
-
+		void * metalView_ptr = s_viewCreationFunction(window->getWidth(), window->getHeight());
+		
+		s_viewCreationWindow = nullptr;
+		
+		id <MetalViewBase> metalView = (__bridge id <MetalViewBase>)metalView_ptr;
+		
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview =
-			[[MetalView alloc]
-				initWithFrame:sdl_view.frame
-				device:device
-				wantsDepthBuffer:framework.enableDepthBuffer
-				wantsVsync:framework.enableVsync
-				msaaSampleCount:framework.msaaLevel];
-				
-		[sdl_view addSubview:windowData->metalview];
+		windowData->metalview = metalView;
 
 		windowDatas[window] = windowData;
-	#endif
-	
-	#if defined(IPHONEOS)
-		SDL_SysWMinfo info;
-		SDL_VERSION(&info.version);
-		SDL_GetWindowWMInfo(window, &info);
-		
-		UIView * sdl_view = info.info.uikit.window.rootViewController.view;
-
-		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview =
-			[[MetalView alloc]
-				initWithFrame:sdl_view.frame
-				device:device
-				wantsDepthBuffer:framework.enableDepthBuffer
-				wantsVsync:framework.enableVsync
-				msaaSampleCount:framework.msaaLevel];
-				
-		[sdl_view addSubview:windowData->metalview];
-
-		windowDatas[window] = windowData;
-	#endif
 	}
 }
 
-void metal_detach(SDL_Window * window)
+void metal_detach(Window * window)
 {
 	@autoreleasepool
 	{
@@ -240,26 +270,32 @@ void metal_detach(SDL_Window * window)
 			auto * windowData = i->second;
 			
 		#if defined(MACOS)
-			SDL_SysWMinfo info;
-			SDL_VERSION(&info.version);
-			SDL_GetWindowWMInfo(window, &info);
-			
-			NSView * sdl_view = info.info.cocoa.window.contentView;
-			
-			[sdl_view willRemoveSubview:windowData->metalview];
+			if (window->getWindow() != nullptr)
+			{
+				SDL_SysWMinfo info;
+				SDL_VERSION(&info.version);
+				SDL_GetWindowWMInfo(window->getWindow(), &info);
+				
+				NSView * sdl_view = info.info.cocoa.window.contentView;
+				
+				[sdl_view willRemoveSubview:windowData->metalview.view];
+			}
 
 			windowData->metalview = nullptr;
 		#endif
 		
 		#if defined(IPHONEOS)
-			SDL_SysWMinfo info;
-			SDL_VERSION(&info.version);
-			SDL_GetWindowWMInfo(window, &info);
+			if (window->getWindow() != nullptr)
+			{
+				SDL_SysWMinfo info;
+				SDL_VERSION(&info.version);
+				SDL_GetWindowWMInfo(window->getWinndow(), &info);
+				
+				UIView * sdl_view = info.info.uikit.window;
+				
+				[sdl_view willRemoveSubview:windowData->metalview.view];
+			}
 			
-			UIView * sdl_view = info.info.uikit.window;
-			
-			[sdl_view willRemoveSubview:windowData->metalview];
-
 			windowData->metalview = nullptr;
 		#endif
 			
@@ -271,7 +307,7 @@ void metal_detach(SDL_Window * window)
 	}
 }
 
-void metal_make_active(SDL_Window * window)
+void metal_make_active(Window * window)
 {
 	auto i = windowDatas.find(window);
 	
@@ -456,7 +492,7 @@ void metal_clear_scissor()
 	[s_activeRenderPass->encoder setScissorRect:rect];
 }
 
-float metal_get_backing_scale(SDL_Window * window)
+float metal_get_backing_scale(Window * window)
 {
 #if defined(MACOS)
 	@autoreleasepool
@@ -469,7 +505,7 @@ float metal_get_backing_scale(SDL_Window * window)
 		{
 			auto * windowData = i->second;
 			
-			result = windowData->metalview.layer.contentsScale;
+			result = windowData->metalview.metalLayer.contentsScale;
 		}
 		
 		return result;
@@ -485,7 +521,7 @@ float metal_get_backing_scale(SDL_Window * window)
 		{
 			auto * windowData = i->second;
 			
-			result = windowData->metalview.layer.contentsScale;
+			result = windowData->metalview.metalLayer.contentsScale;
 		}
 		
 		return result;

@@ -41,6 +41,18 @@
 
 @implementation MetalView
 
+@synthesize metalLayer;
+
+@synthesize wantsDepthBuffer;
+
+@synthesize colorTexture;
+@synthesize depthTexture;
+
+@synthesize useMsaa;
+@synthesize msaaSampleCount;
+
+@synthesize view;
+
 + (Class)layerClass
 {
     return [CAMetalLayer class];
@@ -62,10 +74,12 @@
     {
 		self.wantsLayer = YES;
 		self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+		
 		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
 		self.useMsaa = msaaSampleCount > 1;
 		self.msaaSampleCount = msaaSampleCount;
+		self.view = self;
 		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;
@@ -153,7 +167,7 @@
 			descriptor.resourceOptions = MTLResourceStorageModePrivate;
 			descriptor.usage = MTLTextureUsageRenderTarget;
 			
-			self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+			self.depthTexture = [self.metalLayer.device newTextureWithDescriptor:descriptor];
 		}
 	}
 	
@@ -172,7 +186,7 @@
 			descriptor.resourceOptions = MTLResourceStorageModePrivate;
 			descriptor.usage = MTLTextureUsageRenderTarget;
 			
-			self.colorTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+			self.colorTexture = [self.metalLayer.device newTextureWithDescriptor:descriptor];
 		}
 	}
 	

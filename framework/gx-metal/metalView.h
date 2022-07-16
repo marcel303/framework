@@ -27,6 +27,43 @@
 
 #pragma once
 
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+#if defined(MACOS)
+	#import <Cocoa/Cocoa.h>
+#endif
+
+#if defined(IPHONEOS)
+	#import <UIKit/UIView.h>
+#endif
+
+@protocol MetalViewBase
+
+@property (nonatomic, assign) CAMetalLayer * metalLayer;
+
+@property (nonatomic, assign) bool wantsDepthBuffer;
+
+@property (nonatomic, retain) id <MTLTexture> colorTexture;
+@property (nonatomic, retain) id <MTLTexture> depthTexture;
+
+@property (nonatomic, assign) bool useMsaa;
+@property (nonatomic, assign) int msaaSampleCount;
+
+#if defined(MACOS)
+@property (nonatomic, assign) NSView * view;
+#endif
+
+#if defined(IPHONEOS)
+@property (nonatomic, assign) UIView * view;
+#endif
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync msaaSampleCount:(int)msaaSampleCount;
+
+- (void)msaaResolve:(id<MTLTexture>)texture;
+
+@end
+
 #if defined(IPHONEOS)
 	#include "metalView-uikit.h"
 #else

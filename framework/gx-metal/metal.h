@@ -31,6 +31,10 @@
 
 #if ENABLE_METAL
 
+#include <functional>
+
+class Window;
+
 class ColorTarget;
 class DepthTarget;
 
@@ -38,9 +42,10 @@ class DepthTarget;
 
 void metal_init();
 void metal_shut();
-void metal_attach(SDL_Window * window);
-void metal_detach(SDL_Window * window);
-void metal_make_active(SDL_Window * window);
+void metal_set_view_creation_function(const std::function<void*(const int sx, const int sy)> & function);
+void metal_attach(Window * window);
+void metal_detach(Window * window);
+void metal_make_active(Window * window);
 void metal_capture_boundary();
 void metal_acquire_drawable();
 void metal_present();
@@ -48,7 +53,7 @@ void metal_set_viewport(const int sx, const int sy);
 void metal_set_scissor(const int x, const int y, const int sx, const int sy);
 void metal_clear_scissor();
 
-float metal_get_backing_scale(SDL_Window * window);
+float metal_get_backing_scale(Window * window);
 
 #ifdef __OBJC__
 

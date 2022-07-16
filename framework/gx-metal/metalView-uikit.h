@@ -27,19 +27,11 @@
 
 #pragma once
 
-#import <QuartzCore/CAMetalLayer.h>
+#import "metalView.h"
+
 #import <UIKit/UIView.h>
 
-@interface MetalView : UIView
-
-@property (nonatomic, assign) CAMetalLayer *metalLayer;
-@property (nonatomic, assign) bool wantsDepthBuffer;
-
-@property (nonatomic, retain) id <MTLTexture> colorTexture;
-@property (nonatomic, retain) id <MTLTexture> depthTexture;
-
-@property (nonatomic, assign) bool useMsaa;
-@property (nonatomic, assign) int msaaSampleCount;
+@interface MetalView : UIView <MetalViewBase>
 
 - (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync msaaSampleCount:(int)msaaSampleCount;
 
