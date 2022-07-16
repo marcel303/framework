@@ -597,7 +597,7 @@ private:
 #endif
 	
 public:
-	Window(const char * title, const int sx, const int sy, const bool resizable = false, const bool wantsSurface = true);
+	Window(const char * title, const int sx, const int sy, const bool resizable = false, const bool wantsSurface = true, const bool wantsSdlWindow = true);
 	~Window();
 	
 	void setPosition(const int x, const int y);
@@ -665,14 +665,14 @@ private:
 #if FRAMEWORK_USE_SDL
 	// SDL window
 	SDL_Window * m_window;
-#else
+#endif
+
 	// these properties are normally managed by SDL
 	std::string m_title;
 	int m_width;
 	int m_height;
 	bool m_isVisible;
 	bool m_hasFocus;
-#endif
 	
 #if WINDOW_IS_3D
 	Mat4x4 m_transform;

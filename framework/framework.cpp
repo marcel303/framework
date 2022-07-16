@@ -596,11 +596,11 @@ bool Framework::init(int sx, int sy)
 #if ENABLE_METAL
 	metal_init();
 	
-	metal_attach(globals.mainWindow->getWindow());
+	metal_attach(globals.mainWindow);
 	
-	metal_make_active(globals.mainWindow->getWindow());
+	metal_make_active(globals.mainWindow);
 	
-	globals.initialScreenBackingScale = metal_get_backing_scale(globals.mainWindow->getWindow());
+	globals.initialScreenBackingScale = metal_get_backing_scale(globals.mainWindow);
 #endif
 #else // !FRAMEWORK_USE_SDL
 #if FRAMEWORK_USE_OVR_MOBILE
@@ -935,7 +935,7 @@ bool Framework::shutdown()
 #if ENABLE_METAL
 	// destroy metal context
 	
-	metal_detach(globals.mainWindow->getWindow());
+	metal_detach(globals.mainWindow);
 	
 	metal_shut();
 #endif

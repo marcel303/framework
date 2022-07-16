@@ -51,11 +51,12 @@ Window::Window(SDL_Window * window)
 #endif
 #if FRAMEWORK_USE_SDL
 	, m_window(nullptr)
-#else
+#endif
 	, m_title()
+	, m_width(0)
+	, m_height(0)
 	, m_isVisible(true)
 	, m_hasFocus(false)
-#endif
 #if WINDOW_IS_3D
 	, m_transform(true)
 	, m_pixelsPerMeter(DEFAULT_PIXELS_PER_METER)
@@ -74,7 +75,7 @@ Window::Window(SDL_Window * window)
 
 #endif
 
-Window::Window(const char * title, const int sx, const int sy, const bool resizable, const bool wantsSurface)
+Window::Window(const char * title, const int sx, const int sy, const bool resizable, const bool wantsSurface, const bool wantsSdlWindow)
 	: m_prev(nullptr)
 	, m_next(nullptr)
 #if WINDOW_HAS_A_SURFACE
@@ -83,13 +84,12 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 #endif
 #if FRAMEWORK_USE_SDL
 	, m_window(nullptr)
-#else
+#endif
 	, m_title()
 	, m_width(0)
 	, m_height(0)
 	, m_isVisible(true)
 	, m_hasFocus(false)
-#endif
 #if WINDOW_IS_3D
 	, m_transform(true)
 	, m_pixelsPerMeter(DEFAULT_PIXELS_PER_METER)
@@ -108,16 +108,25 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 #endif
 
 #if FRAMEWORK_USE_SDL
-	int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
-	
-#if ENABLE_OPENGL
-	flags |= SDL_WINDOW_OPENGL;
-#endif
+	if (wantsSdlWindow)
+	{
+		int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
+		
+	#if ENABLE_OPENGL
+		flags |= SDL_WINDOW_OPENGL;
+	#endif
 
-	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+		m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	}
+	else
+	{
+		m_title = title;
+		m_width = sx;
+		m_height = sy;
+	}
 	
 #if ENABLE_METAL
-	metal_attach(m_window);
+	metal_attach(this);
 #endif
 #else
 	m_title = title;
@@ -158,12 +167,12 @@ Window::~Window()
 #endif
 
 #if FRAMEWORK_USE_SDL
+#if ENABLE_METAL
+	metal_detach(this);
+#endif
+
 	if (m_window)
 	{
-	#if ENABLE_METAL
-		metal_detach(m_window);
-	#endif
-
 		SDL_DestroyWindow(m_window);
 		m_window = nullptr;
 	}
@@ -208,6 +217,14 @@ void Window::setSize(const int sx, const int sy)
 #if FRAMEWORK_USE_SDL
 	if (m_window)
 		SDL_SetWindowSize(m_window, sx, sy);
+	else
+	{
+		m_width = sx;
+		m_height = sy;
+	}
+#else
+	m_width = sx;
+	m_height = sy;
 #endif
 }
 
@@ -318,8 +335,10 @@ int Window::getWidth() const
 		
 		return sx;
 	}
-	
-	return 0;
+	else
+	{
+		return m_width;
+	}
 #else
 	return m_width;
 #endif
@@ -342,8 +361,10 @@ int Window::getHeight() const
 		
 		return sy;
 	}
-	
-	return 0;
+	else
+	{
+		return m_height;
+	}
 #else
 	return m_height;
 #endif
@@ -586,11 +607,11 @@ void pushWindow(Window & window)
 		#if ENABLE_OPENGL
 			SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 		#endif
-
-		#if ENABLE_METAL
-			metal_make_active(globals.currentWindow->getWindow());
-		#endif
 		}
+		
+	#if ENABLE_METAL
+		metal_make_active(globals.currentWindow);
+	#endif
 	#endif
 	}
 	
@@ -623,11 +644,10 @@ void popWindow()
 			#if ENABLE_OPENGL
 				SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 			#endif
-
-			#if ENABLE_METAL
-				metal_make_active(globals.currentWindow->getWindow());
-			#endif
 			}
+		#if ENABLE_METAL
+			metal_make_active(globals.currentWindow);
+		#endif
 		#endif
 		}
 	}
