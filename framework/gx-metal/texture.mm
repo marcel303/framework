@@ -777,8 +777,8 @@ void gxGetTextureSize(GxTextureId id, int & width, int & height)
 	{
 		auto texture = s_textureElems[id].texture;
 
-		width = texture.width;
-		height = texture.height;
+		width = int(texture.width);
+		height = int(texture.height);
 	}
 }
 

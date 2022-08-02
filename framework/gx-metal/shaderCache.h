@@ -88,7 +88,7 @@ public:
 		
 		void initUniforms(MTLArgument * arg)
 		{
-			uniformBufferSize[arg.index] = arg.bufferDataSize;
+			uniformBufferSize[arg.index] = int(arg.bufferDataSize);
 		}
 		
 		int getBufferIndex(const char * name) const

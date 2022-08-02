@@ -78,7 +78,7 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 					addUniforms(arg, 'v');
 					
 					if (strcmp(bufferName, "ShaderUniforms") == 0)
-						vsMainUniformBufferIndex = arg.index;
+						vsMainUniformBufferIndex = int(arg.index);
 					else
 						vsExtraBufferUsageMask |= 1 << arg.index;
 					
@@ -113,7 +113,7 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 					addUniforms(arg, 'p');
 					
 					if (strcmp(bufferName, "ShaderUniforms") == 0)
-						psMainUniformBufferIndex = arg.index;
+						psMainUniformBufferIndex = int(arg.index);
 					else
 					{
 						psExtraBufferUsageMask |= (1 << arg.index);
@@ -412,27 +412,27 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 			case MTLDataTypeFloat:
 				elemType = 'F';
 				numElems = 1;
-				arrayLen = uniform.arrayType.arrayLength;
+				arrayLen = int(uniform.arrayType.arrayLength);
 				break;
 			case MTLDataTypeFloat2:
 				elemType = 'F';
 				numElems = 2;
-				arrayLen = uniform.arrayType.arrayLength;
+				arrayLen = int(uniform.arrayType.arrayLength);
 				break;
 			case MTLDataTypeFloat3:
 				elemType = 'F';
 				numElems = 3;
-				arrayLen = uniform.arrayType.arrayLength;
+				arrayLen = int(uniform.arrayType.arrayLength);
 				break;
 			case MTLDataTypeFloat4:
 				elemType = 'F';
 				numElems = 4;
-				arrayLen = uniform.arrayType.arrayLength;
+				arrayLen = int(uniform.arrayType.arrayLength);
 				break;
 			case MTLDataTypeFloat4x4:
 				elemType = 'M';
 				numElems = 16;
-				arrayLen = uniform.arrayType.arrayLength;
+				arrayLen = int(uniform.arrayType.arrayLength);
 				break;
 			default:
 				AssertMsg(false, "unknown MTLDataType: %d", uniform.arrayType.elementType);
@@ -485,13 +485,13 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 			
 			if (type == 'v')
 			{
-				uniformInfo->vsBuffer = arg.index;
-				uniformInfo->vsOffset = uniform.offset;
+				uniformInfo->vsBuffer = int(arg.index);
+				uniformInfo->vsOffset = int(uniform.offset);
 			}
 			else
 			{
-				uniformInfo->psBuffer = arg.index;
-				uniformInfo->psOffset = uniform.offset;
+				uniformInfo->psBuffer = int(arg.index);
+				uniformInfo->psOffset = int(uniform.offset);
 			}
 	
 			// fill in the details (shared)
@@ -537,7 +537,7 @@ void ShaderCacheElem_Metal::addTexture(MTLArgument * arg, const char type)
 		
 			TextureInfo & info = textureInfos.back();
 			info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
-			info.vsOffset = arg.index;
+			info.vsOffset = int(arg.index);
 			
 			vsTextureUsageMask |= 1 << arg.index;
 		}
@@ -550,7 +550,7 @@ void ShaderCacheElem_Metal::addTexture(MTLArgument * arg, const char type)
 		
 			TextureInfo & info = textureInfos.back();
 			info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
-			info.psOffset = arg.index;
+			info.psOffset = int(arg.index);
 			
 			psTextureUsageMask |= 1 << arg.index;
 		}
@@ -570,13 +570,13 @@ void ShaderCacheElem_Metal::addTextures(MTLArgument * arg, const char type)
 			
 			if (type == 'v')
 			{
-				info.vsOffset = member.offset;
+				info.vsOffset = int(member.offset);
 				
 				vsTextureUsageMask |= 1 << member.offset;
 			}
 			else
 			{
-				info.psOffset = member.offset;
+				info.psOffset = int(member.offset);
 				
 				psTextureUsageMask |= 1 << member.offset;
 			}
@@ -690,7 +690,7 @@ Shader::Shader()
 
 Shader::Shader(const char * name, const char * outputs)
 {
-	const int name_length = strlen(name);
+	const int name_length = int(strlen(name));
 	const int file_length = name_length + 3 + 1;
 	
 	char * vs = (char*)alloca(file_length * sizeof(char));
@@ -758,7 +758,7 @@ GxImmediateIndex Shader::getImmediateIndex(const char * name) const
 {
 	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
 		if (m_cacheElem->uniformInfos[i].name == name)
-			return i;
+			return int(i);
 	return -1;
 }
 
@@ -799,7 +799,7 @@ std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
 		auto & su = result[count];
 		
 		su.name = u.name;
-		su.index = i;
+		su.index = int(i);
 		su.type = (GX_IMMEDIATE_TYPE)-1;
 		
 		if (u.elemType == 'f')
@@ -836,7 +836,7 @@ std::vector<GxTextureInfo> Shader::getTextureInfos() const
 		auto & st = result[count];
 		
 		st.name = t.name;
-		st.index = i;
+		st.index = int(i);
 		st.type = (GX_IMMEDIATE_TYPE)-1;
 		
 		if (true)
@@ -1054,7 +1054,7 @@ inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name
 {
 	for (size_t i = 0; i < elem.textureInfos.size(); ++i)
 		if (elem.textureInfos[i].name == name)
-			return i;
+			return int(i);
 	return -1;
 }
 

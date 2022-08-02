@@ -774,12 +774,12 @@ void beginRenderPass(
 		pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
 		
 		if (colorattachment.texture.width > backingSx)
-			backingSx = colorattachment.texture.width;
+			backingSx = int(colorattachment.texture.width);
 		if (colorattachment.texture.height > backingSy)
-			backingSy = colorattachment.texture.height;
+			backingSy = int(colorattachment.texture.height);
 			
 		if (colorattachment.texture.sampleCount > msaaSampleCount)
-			msaaSampleCount = colorattachment.texture.sampleCount;
+			msaaSampleCount = int(colorattachment.texture.sampleCount);
 	}
 	
 	if (depthTarget != nullptr)
@@ -793,12 +793,12 @@ void beginRenderPass(
 		pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
 		
 		if (depthattachment.texture.width > backingSx)
-			backingSx = depthattachment.texture.width;
+			backingSx = int(depthattachment.texture.width);
 		if (depthattachment.texture.height > backingSy)
-			backingSy = depthattachment.texture.height;
+			backingSy = int(depthattachment.texture.height);
 		
 		if (depthattachment.texture.sampleCount > msaaSampleCount)
-			msaaSampleCount = depthattachment.texture.sampleCount;
+			msaaSampleCount = int(depthattachment.texture.sampleCount);
 			
 	#if defined(IPHONEOS)
 		if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)

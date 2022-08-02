@@ -132,7 +132,7 @@ int GxVertexBuffer::getNumBytes() const
 	if (buffer == nullptr)
 		return 0;
 	else
-		return buffer.length;
+		return int(buffer.length);
 }
 
 void * GxVertexBuffer::updateBegin()
