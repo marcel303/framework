@@ -620,14 +620,14 @@ void pushWindow(Window & window)
 
 void popWindow()
 {
+	popContentScale();
+	
 	Window * window = s_windowStack.popValue();
 	
 	globals.currentWindow = window;
 	
 	if (globals.currentWindow != nullptr)
 	{
-		popContentScale();
-		
 		globals.currentWindow->getWindowData()->makeActive();
 		
 		if (globals.currentWindow->hasSurface())

@@ -202,9 +202,9 @@ static id <MetalViewBase> create_metal_view(const int sx, const int sy)
 
 static Window * s_viewCreationWindow = nullptr;
 
-static std::function<void*(const int sx, const int sy)> s_viewCreationFunction =
+static std::function<id<MetalViewBase>(const int sx, const int sy)> s_viewCreationFunction =
 	[]
-	(const int sx, const int sy) -> void*
+	(const int sx, const int sy) -> id<MetalViewBase>
 	{
 		id <MetalViewBase> metalView = create_metal_view(sx, sy);
 		
@@ -231,10 +231,10 @@ static std::function<void*(const int sx, const int sy)> s_viewCreationFunction =
 			[sdl_view addSubview:metalView.view];
 		}
 	
-		return (__bridge void*)metalView;
+		return metalView;
 	};
 
-void metal_set_view_creation_function(const std::function<void*(const int sx, const int sy)> & function)
+void metal_set_view_creation_function(const std::function<id<MetalViewBase>(const int sx, const int sy)> & function)
 {
 	s_viewCreationFunction = function;
 }
@@ -246,11 +246,9 @@ void metal_attach(Window * window)
 		Assert(s_viewCreationWindow == nullptr);
 		s_viewCreationWindow = window;
 		
-		void * metalView_ptr = s_viewCreationFunction(window->getWidth(), window->getHeight());
+		id<MetalViewBase> metalView = s_viewCreationFunction(window->getWidth(), window->getHeight());
 		
 		s_viewCreationWindow = nullptr;
-		
-		id <MetalViewBase> metalView = (__bridge id <MetalViewBase>)metalView_ptr;
 		
 		MetalWindowData * windowData = new MetalWindowData();
 		windowData->metalview = metalView;
@@ -289,7 +287,7 @@ void metal_detach(Window * window)
 			{
 				SDL_SysWMinfo info;
 				SDL_VERSION(&info.version);
-				SDL_GetWindowWMInfo(window->getWinndow(), &info);
+				SDL_GetWindowWMInfo(window->getWindow(), &info);
 				
 				UIView * sdl_view = info.info.uikit.window;
 				
@@ -384,7 +382,9 @@ void metal_present()
 			{
 				if (windowData->metalview.useMsaa)
 					[windowData->metalview msaaResolve:windowData->current_drawable.texture];
-				
+				else
+					windowData->metalview.colorTexture = nullptr;
+					
 				[drawablesToPresent addObject:windowData->current_drawable];
 				windowData->current_drawable = nullptr;
 			}

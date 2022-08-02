@@ -53,6 +53,8 @@
 @synthesize useMsaa;
 @synthesize msaaSampleCount;
 
+@synthesize view;
+
 + (Class)layerClass
 {
     return [CAMetalLayer class];
@@ -80,6 +82,7 @@
 		self.depthTexture = nil;
 		self.useMsaa = msaaSampleCount > 1;
 		self.msaaSampleCount = msaaSampleCount;
+		self.view = self;
 		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;

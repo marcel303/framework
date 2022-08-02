@@ -876,6 +876,8 @@ bool Framework::shutdown()
 {
 	bool result = true;
 	
+	g_shaderOutputs.clear();
+	
 	// shut down real time editing
 
 	shutRealTimeEditing();
@@ -1317,22 +1319,21 @@ void Framework::process()
 			}
 			else if (e.type == SDL_MOUSEMOTION)
 			{
+				windowData->mouseData.addEvent(e);
+				
+			#if 0
 				SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
 				
-				if (window == globals.mainWindow->m_window)
+				if (globals.mainWindow->m_window &&
+					window == globals.mainWindow->m_window)
 				{
 					int windowSx;
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
-					windowData->mouseData.addEvent(e);
-					
-					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
+					logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
-				else
-				{
-					windowData->mouseData.addEvent(e);
-				}
+			#endif
 			}
 			else if (e.type == SDL_MOUSEWHEEL)
 			{
@@ -1353,7 +1354,10 @@ void Framework::process()
 				if (windowData == globals.currentWindow->getWindowData())
 					windowIsActive = windowData->isActive;
 				
-				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == globals.mainWindow->m_windowData)
+				if (reloadCachesOnActivate &&
+					e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED &&
+					globals.mainWindow &&
+					windowData == globals.mainWindow->m_windowData)
 				{
 					doReload |= true;
 				}
@@ -1989,8 +1993,10 @@ Window & Framework::getMainWindow() const
 Window & Framework::getCurrentWindow() const
 {
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	{
 		if (window == globals.currentWindow)
 			return *window;
+	}
 	
 	logError("failed to find current window. this should not be possible unless framework failed to initialize!");
 	return *globals.mainWindow;

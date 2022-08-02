@@ -42,7 +42,6 @@ class DepthTarget;
 
 void metal_init();
 void metal_shut();
-void metal_set_view_creation_function(const std::function<void*(const int sx, const int sy)> & function);
 void metal_attach(Window * window);
 void metal_detach(Window * window);
 void metal_make_active(Window * window);
@@ -108,6 +107,12 @@ void metal_copy_texture_to_texture(
 	const MTLPixelFormat pixelFormat);
 
 void metal_generate_mipmaps(__unsafe_unretained id <MTLTexture> texture);
+
+//
+
+@protocol MetalViewBase;
+
+void metal_set_view_creation_function(const std::function<id<MetalViewBase>(const int sx, const int sy)> & function);
 
 #endif
 
