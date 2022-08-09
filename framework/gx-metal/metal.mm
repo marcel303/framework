@@ -34,9 +34,12 @@
 #import "internal.h"
 #import "metal.h"
 #import "metalView.h"
-#import "StringEx.h" // strcpy_s
 #import "texture.h"
 #import "window_data.h"
+
+#import "Benchmark.h"
+#import "StringEx.h" // strcpy_s
+
 #import <map>
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
@@ -119,6 +122,8 @@ void metal_init()
 {
 	@autoreleasepool
 	{
+		Benchmark bm("framework: initialize Metal");
+		
 		device = MTLCreateSystemDefaultDevice();
 	
 		queue = [device newCommandQueue];
@@ -1854,6 +1859,8 @@ static void gxValidateShaderResources(const bool useGenericShader);
 
 void gxInitialize()
 {
+	Benchmark bm("framework: initialize GX");
+	
 	memset(&renderState, 0, sizeof(renderState));
 	renderState.blendMode = BLEND_ALPHA;
 	renderState.colorWriteMask = 0xf;

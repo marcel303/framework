@@ -85,6 +85,7 @@
 #include "rte.h"
 
 #include "Base64.h" // for decoding chibi resource paths
+#include "Benchmark.h"
 #include "Csv.h" // for decoding chibi resource paths
 #include "Path.h"
 #include "StringEx.h"
@@ -777,21 +778,29 @@ bool Framework::init(int sx, int sy)
 	}
 #endif
 
-	// initialize built-in shaders
-	
-	fassert(globals.builtinShaders == nullptr);
-	globals.builtinShaders = new BuiltinShaders();
+	{
+		// initialize built-in shaders
+		
+		Benchmark bm("framework: initialize builtin shaders");
+		
+		fassert(globals.builtinShaders == nullptr);
+		globals.builtinShaders = new BuiltinShaders();
+	}
 
 #if USE_FREETYPE
-	// initialize FreeType
-	
-	fassert(globals.freeType == nullptr);
-	if (FT_Init_FreeType(&globals.freeType) != 0)
 	{
-		logError("failed to initialize FreeType");
-		if (initErrorHandler)
-			initErrorHandler(INIT_ERROR_FREETYPE);
-		return false;
+		// initialize FreeType
+		
+		Benchmark bm("framework: initialize FreeType");
+		
+		fassert(globals.freeType == nullptr);
+		if (FT_Init_FreeType(&globals.freeType) != 0)
+		{
+			logError("failed to initialize FreeType");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_FREETYPE);
+			return false;
+		}
 	}
 #endif
 	
@@ -799,6 +808,8 @@ bool Framework::init(int sx, int sy)
 	
 	if (enableSound)
 	{
+		Benchmark bm("framework: initialize sound");
+		
 	#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOSTREAM
 		fassert(g_audioOutput == nullptr);
 		g_audioOutput = new AudioOutput_Native();
