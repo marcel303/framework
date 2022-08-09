@@ -89,8 +89,8 @@
 		
 		if (@available(macOS 10.13, *))
 			self.metalLayer.displaySyncEnabled = wantsVsync;
-		if (@available(macOS 10.13.2, *))
-			self.metalLayer.maximumDrawableCount = 2;
+		//if (@available(macOS 10.13.2, *))
+		//	self.metalLayer.maximumDrawableCount = 2;
 		
 		self.metalLayer.framebufferOnly = YES;
 
