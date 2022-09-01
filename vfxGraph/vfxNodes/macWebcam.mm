@@ -35,6 +35,12 @@
 #import <AVFoundation/AVFoundation.h>
 #include <SDL2/SDL.h>
 
+#ifdef __SSE2__
+    #define USE_SSE 1
+#else
+    #define USE_SSE 0
+#endif
+
 @interface MacWebcamImpl : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 	@property (assign) AVCaptureSession * session;
 	@property (assign) AVCaptureDevice * device;
@@ -242,6 +248,8 @@
     }
 }
 
+#if USE_SSE == 1
+
 static __m128i swizzle(const __m128i src)
 {
 	__m128i srcL = _mm_unpacklo_epi8(src, _mm_setzero_si128());
@@ -255,6 +263,8 @@ static __m128i swizzle(const __m128i src)
 	
 	return _mm_packus_epi16(srcL, srcH);
 }
+
+#endif
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput
      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
@@ -284,7 +294,7 @@ static __m128i swizzle(const __m128i src)
 	
 	uint64_t t1 = g_TimerRT.TimeUS_get();
 	
-#if 1
+#if USE_SSE == 1
 	for (int y = 0; y < sy; ++y)
 	{
 		const uint8_t * __restrict srcPtr = baseAddress + y * bytesPerRow;
@@ -383,12 +393,20 @@ MacWebcamImage::MacWebcamImage(const int _sx, const int _sy)
 	, pitch(0)
 	, data(nullptr)
 {
+#if USE_SSE == 1
 	data = (uint8_t*)_mm_malloc(sx * sy * 4, 16);
+#else
+    data = (uint8_t*)malloc(sx * sy * 4);
+#endif
 }
 
 MacWebcamImage::~MacWebcamImage()
 {
+#if USE_SSE == 1
 	_mm_free(data);
+#else
+    free(data);
+#endif
 	data = nullptr;
 }
 
