@@ -32,6 +32,8 @@
 /* General platform specific identifiers */
 #include "SDL_platform.h"
 
+#include "TargetConditionals.h"
+
 /* Make sure that this isn't included by Visual C++ */
 #ifdef _MSC_VER
 #error You should run hg revert SDL_config.h 
@@ -201,7 +203,11 @@
 /* #undef HAVE_DBUS_DBUS_H */
 /* #undef HAVE_FCITX_FRONTEND_H */
 /* #undef HAVE_IBUS_IBUS_H */
-#define HAVE_IMMINTRIN_H 1
+#if TARGET_CPU_X86_64
+    #define HAVE_IMMINTRIN_H 1
+#else
+    #undef HAVE_IMMINTRIN_H
+#endif
 /* #undef HAVE_LIBSAMPLERATE_H */
 /* #undef HAVE_LIBUDEV_H */
 
