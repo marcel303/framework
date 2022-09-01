@@ -116,7 +116,7 @@
 		MTLRenderPassDescriptor * renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 		renderPassDescriptor.colorAttachments[0].texture = self.colorTexture;
 		renderPassDescriptor.colorAttachments[0].resolveTexture = texture;
-		renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+		renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
 		renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
 		
 		id <MTLCommandQueue> queue = metal_get_command_queue();
