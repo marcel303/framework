@@ -1,5 +1,6 @@
 #include "zippyDownload.h"
 
+#include "Log.h"
 #include "Path.h"
 
 static void zippyDownload(const std::vector<std::string> & urls, const char * targetPath);
@@ -30,6 +31,13 @@ void zippyDownload(const char * baseUrl, const std::vector<std::string> & filena
 
 #include "DownloadCache.h"
 
+#if defined(WIN32)
+    #include <direct.h>
+#else
+    #include <sys/stat.h> // mkdir
+    #include <sys/errno.h>
+#endif
+
 static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, const float opacity)
 {
 	if (duration <= 0.0)
@@ -50,6 +58,17 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 
 static void zippyDownload(const std::vector<std::string> & urls, const char * targetPath)
 {
+#if defined(WINDOWS)
+    const int err = _mkdir(targetPath);
+#else
+    const int err = mkdir(targetPath, S_IRWXU | S_IRWXG | S_IRWXO);
+#endif
+    
+    if (err != 0 && err != EEXIST)
+    {
+        LOG_ERR("failed to create directory: %s", targetPath);
+    }
+        
 	DownloadCache downloadCache;
 
 	for (auto & url : urls)
