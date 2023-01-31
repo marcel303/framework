@@ -1,0 +1,7 @@
+library oklab
+	add_files oklab.cpp oklab.h
+
+app oklab-test
+	depend_library framework
+	depend_library oklab
+	add_files main.cpp

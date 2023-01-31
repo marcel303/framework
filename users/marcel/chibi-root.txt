@@ -64,6 +64,7 @@ add mitronix1
 add motionbank-effect
 add nanovg-canvas
 add nodeDiscovery-examples
+add oklab
 add ovr-cubes
 add pbd1
 add pincushion1
