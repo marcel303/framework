@@ -620,6 +620,9 @@ bool writeSceneEntitiesToLines(
 	{
 		auto & node = *node_itr.second;
 		
+		if (node.id == scene.rootNodeId)
+			continue;
+		
 		writeSceneEntityToLines(typeDB, node, line_writer, indent);
 		
 		line_writer.append('\n');

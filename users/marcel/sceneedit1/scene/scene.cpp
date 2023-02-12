@@ -109,6 +109,7 @@ void Scene::createRootNode()
 	
 	SceneNode * rootNode = new SceneNode();
 	rootNode->id = allocNodeId();
+	rootNode->name = "root";
 	
 	auto * sceneNodeComponent = g_sceneNodeComponentMgr.createComponent(rootNode->components.id);
 	sceneNodeComponent->name = "root";
