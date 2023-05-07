@@ -75,18 +75,18 @@ std::vector<ShaderOutput> g_shaderOutputs;
 
 // -----
 
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG && ENABLE_OPENGL
 void checkErrorGL_internal(const char * function, int line)
 {
-#if FRAMEWORK_ENABLE_GL_ERROR_LOG
-	const GLenum error = glGetError();
-	
-	if (error != GL_NO_ERROR)
-	{
-		logError("%s: %d: OpenGL error: %x", function, line, error);
-		AssertMsg(error == GL_NO_ERROR, "%s: %d: OpenGL error: %x", function, line, error);
-	}
-#endif
+    const GLenum error = glGetError();
+    
+    if (error != GL_NO_ERROR)
+    {
+        logError("%s: %d: OpenGL error: %x", function, line, error);
+        AssertMsg(error == GL_NO_ERROR, "%s: %d: OpenGL error: %x", function, line, error);
+    }
 }
+#endif
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 static void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)

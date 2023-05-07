@@ -1888,7 +1888,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #endif
 
-#if FRAMEWORK_ENABLE_GL_ERROR_LOG
+#if FRAMEWORK_ENABLE_GL_ERROR_LOG && ENABLE_OPENGL
 	void checkErrorGL_internal(const char * function, int line);
 	#define checkErrorGL() checkErrorGL_internal(__FUNCTION__, __LINE__)
 #else
