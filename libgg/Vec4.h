@@ -16,7 +16,20 @@ public:
 	{
 		m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;
 	}
+    
+    explicit
+    inline Vec4(bool initializeToZero)
+    {
+        if (initializeToZero)
+            m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;
+    }
 
+    explicit
+    inline Vec4(float v)
+    {
+        m_v[0] = m_v[1] = m_v[2] = m_v[3] = v;
+    }
+    
 	inline Vec4(float x, float y, float z, float w)
 	{
 		m_v[0] = x;
