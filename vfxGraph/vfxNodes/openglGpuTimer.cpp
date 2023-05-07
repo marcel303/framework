@@ -39,14 +39,18 @@ OpenglGpuTimer::OpenglGpuTimer()
 	, numBusy(0)
 	, elapsed(0)
 {
+#if ENABLE_OPENGL
 	glGenQueries(kMaxHistory, queries);
 	checkErrorGL();
+#endif
 }
 
 OpenglGpuTimer::~OpenglGpuTimer()
 {
+#if ENABLE_OPENGL
 	glDeleteQueries(kMaxHistory, queries);
 	checkErrorGL();
+#endif
 }
 
 void OpenglGpuTimer::begin()
@@ -61,8 +65,10 @@ void OpenglGpuTimer::begin()
 		poll();
 	}
 	
+#if ENABLE_OPENGL
 	glBeginQuery(GL_TIME_ELAPSED, queries[nextQuery]);
 	checkErrorGL();
+#endif
 }
 
 void OpenglGpuTimer::end()
@@ -70,8 +76,10 @@ void OpenglGpuTimer::end()
 	fassert(s_numRunningTimers == 1);
 	s_numRunningTimers--;
 	
+#if ENABLE_OPENGL
 	glEndQuery(GL_TIME_ELAPSED);
 	checkErrorGL();
+#endif
 	
 	numBusy++;
 	
@@ -85,21 +93,29 @@ void OpenglGpuTimer::poll()
 {
 	while (numBusy > 0)
 	{
+    #if ENABLE_OPENGL
 		GLuint query = queries[nextRead];
 		
 		GLint done = 0;
 		
 		glGetQueryObjectiv(query, GL_QUERY_RESULT_AVAILABLE, &done);
 		checkErrorGL();
-			
+    #else
+        bool done = true;
+    #endif
+        
 		if (done)
 		{
+        #if ENABLE_OPENGL
 			GLuint64 queryResult = 0;
 		
 			glGetQueryObjectui64v(query, GL_QUERY_RESULT, &queryResult);
 			checkErrorGL();
 			
 			elapsed = queryResult;
+        #else
+            elapsed = 0;
+        #endif
 		
 			//logDebug("vfxGraph draw GPU time: %.2f", elapsed / 1000000.0);
 			
@@ -127,14 +143,18 @@ OpenglGpuTimer2::OpenglGpuTimer2()
 	, numBusy(0)
 	, elapsed(0)
 {
+#if ENABLE_OPENGL
 	glGenQueries(kMaxHistory * 2, (GLuint*)queries);
 	checkErrorGL();
+#endif
 }
 
 OpenglGpuTimer2::~OpenglGpuTimer2()
 {
+#if ENABLE_OPENGL
 	glDeleteQueries(kMaxHistory * 2, (GLuint*)queries);
 	checkErrorGL();
+#endif
 }
 
 void OpenglGpuTimer2::begin()
@@ -146,14 +166,18 @@ void OpenglGpuTimer2::begin()
 		poll();
 	}
 	
+#if ENABLE_OPENGL
 	glQueryCounter(queries[nextQuery][0], GL_TIMESTAMP);
 	checkErrorGL();
+#endif
 }
 
 void OpenglGpuTimer2::end()
 {
+#if ENABLE_OPENGL
 	glQueryCounter(queries[nextQuery][1], GL_TIMESTAMP);
 	checkErrorGL();
+#endif
 	
 	numBusy++;
 	
@@ -167,6 +191,7 @@ void OpenglGpuTimer2::poll()
 {
 	while (numBusy > 0)
 	{
+    #if ENABLE_OPENGL
 		GLuint query1 = queries[nextRead][0];
 		GLuint query2 = queries[nextRead][1];
 		
@@ -174,9 +199,13 @@ void OpenglGpuTimer2::poll()
 		
 		glGetQueryObjectiv(query2, GL_QUERY_RESULT_AVAILABLE, &done);
 		checkErrorGL();
-		
+    #else
+        bool done = true;
+    #endif
+        
 		if (done)
 		{
+        #if ENABLE_OPENGL
 			GLuint64 t1 = 0;
 			GLuint64 t2 = 0;
 		
@@ -184,8 +213,11 @@ void OpenglGpuTimer2::poll()
 			checkErrorGL();
 			glGetQueryObjectui64v(query2, GL_QUERY_RESULT, &t2);
 			checkErrorGL();
-			
+            
 			elapsed = t2 - t1;
+        #else
+            elapsed = 0;
+        #endif
 		
 			//logDebug("vfxGraph draw GPU time: %.2f", elapsed / 1000000.0);
 			
